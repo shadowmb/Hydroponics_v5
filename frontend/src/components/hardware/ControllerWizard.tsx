@@ -1,0 +1,489 @@
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Plus, ArrowRight, ArrowLeft, Check, Cpu, Wifi, Usb, Pencil } from 'lucide-react';
+import { hardwareService, type IControllerTemplate, type IController } from '../../services/hardwareService';
+import { toast } from 'sonner';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface ControllerWizardProps {
+    onControllerCreated: () => void;
+    editController?: IController; // If provided, we are in edit mode
+    open?: boolean; // Controlled open state for edit mode
+    onOpenChange?: (open: boolean) => void; // Controlled open handler
+}
+
+type WizardStep = 'type-selection' | 'configuration' | 'review';
+
+export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onControllerCreated, editController, open: controlledOpen, onOpenChange }) => {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const setOpen = isControlled ? onOpenChange! : setInternalOpen;
+
+    const [step, setStep] = useState<WizardStep>('type-selection');
+    const [templates, setTemplates] = useState<IControllerTemplate[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Form State
+    const [selectedTemplate, setSelectedTemplate] = useState<IControllerTemplate | null>(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        macAddress: '',
+        connectionType: 'network' as 'network' | 'serial',
+        ip: '',
+        port: 80,
+        serialPort: '',
+        baudRate: 9600
+    });
+
+    const [serialPorts, setSerialPorts] = useState<any[]>([]);
+    const [openCombobox, setOpenCombobox] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            loadTemplates();
+            loadSerialPorts();
+            if (editController) {
+                // Edit Mode Initialization
+                setStep('configuration');
+                setFormData({
+                    name: editController.name,
+                    description: editController.description || '',
+                    macAddress: editController.macAddress || '',
+                    connectionType: editController.connection.type,
+                    ip: editController.connection.ip || '',
+                    port: editController.connection.port || 80,
+                    serialPort: editController.connection.serialPort || '',
+                    baudRate: editController.connection.baudRate || 9600
+                });
+                // We need the template to display the type label correctly
+                // Fetching templates will handle this, but we can set a placeholder
+                setSelectedTemplate({
+                    key: editController.type,
+                    label: editController.type, // Will be updated when templates load
+                    ports: [],
+                    communication_by: [],
+                    communication_type: []
+                });
+            } else {
+                // Create Mode Initialization
+                setStep('type-selection');
+                resetForm();
+            }
+        }
+    }, [open, editController]);
+
+    // Update selected template label once templates are loaded
+    useEffect(() => {
+        if (editController && templates.length > 0) {
+            const tmpl = templates.find(t => t.key === editController.type);
+            if (tmpl) setSelectedTemplate(tmpl);
+        }
+    }, [templates, editController]);
+
+    const loadTemplates = async () => {
+        try {
+            const data = await hardwareService.getTemplates();
+            setTemplates(data);
+        } catch (error) {
+            toast.error('Failed to load templates');
+        }
+    };
+
+    const loadSerialPorts = async () => {
+        try {
+            const ports = await hardwareService.getSerialPorts();
+            setSerialPorts(ports);
+        } catch (error) {
+            console.error('Failed to load ports');
+        }
+    };
+
+    // Common ports for quick selection
+    const commonPorts = [
+        { path: 'COM1', label: 'COM1 (Windows)' },
+        { path: 'COM3', label: 'COM3 (Windows)' },
+        { path: '/dev/ttyUSB0', label: '/dev/ttyUSB0 (Linux)' },
+        { path: '/dev/ttyACM0', label: '/dev/ttyACM0 (Linux)' },
+        { path: '/dev/tty.usbserial', label: '/dev/tty.usbserial (Mac)' },
+    ];
+
+    const resetForm = () => {
+        setSelectedTemplate(null);
+        setFormData({
+            name: '',
+            description: '',
+            macAddress: '',
+            connectionType: 'network',
+            ip: '',
+            port: 80,
+            serialPort: '',
+            baudRate: 9600
+        });
+    };
+
+    const handleTemplateSelect = (template: IControllerTemplate) => {
+        setSelectedTemplate(template);
+        setFormData(prev => ({ ...prev, name: template.label }));
+        setStep('configuration');
+    };
+
+    const handleSubmit = async () => {
+        if (!selectedTemplate) return;
+
+        try {
+            setLoading(true);
+            const connection = {
+                type: formData.connectionType,
+                ...(formData.connectionType === 'network' ? {
+                    ip: formData.ip,
+                    port: Number(formData.port)
+                } : {
+                    serialPort: formData.serialPort,
+                    baudRate: Number(formData.baudRate)
+                })
+            };
+
+            if (editController) {
+                // Update Logic
+                await hardwareService.updateController(editController._id, {
+                    name: formData.name,
+                    description: formData.description,
+                    macAddress: formData.macAddress || undefined,
+                    connection
+                });
+                toast.success('Controller updated successfully');
+            } else {
+                // Create Logic
+                const payload = {
+                    name: formData.name,
+                    type: selectedTemplate.key,
+                    description: formData.description,
+                    macAddress: formData.macAddress || undefined,
+                    connection,
+                    status: 'offline' as const,
+                    isActive: true,
+                    ports: {}
+                };
+                await hardwareService.createController(payload);
+                toast.success('Controller created successfully');
+            }
+
+            setOpen(false);
+            onControllerCreated();
+        } catch (error: any) {
+            toast.error(error.response?.data?.error || `Failed to ${editController ? 'update' : 'create'} controller`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const renderTypeSelection = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            {templates.map(template => (
+                <Card
+                    key={template.key}
+                    className="cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => handleTemplateSelect(template)}
+                >
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <Cpu className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold">{template.label}</h3>
+                            <p className="text-xs text-muted-foreground">{template.ports.length} Ports</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    );
+
+    const renderConfiguration = () => (
+        <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+                <Label>Name</Label>
+                <Input
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="My Controller"
+                />
+            </div>
+
+            <div className="grid gap-2">
+                <Label>Description</Label>
+                <Textarea
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Location, purpose, etc."
+                />
+            </div>
+
+            <div className="grid gap-2">
+                <Label>Connection Type</Label>
+                <Select
+                    value={formData.connectionType}
+                    onValueChange={(val: 'network' | 'serial') => setFormData({ ...formData, connectionType: val })}
+                >
+                    <SelectTrigger>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="network">Network (WiFi/Ethernet)</SelectItem>
+                        <SelectItem value="serial">Serial (USB)</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {formData.connectionType === 'network' ? (
+                <div className="space-y-4 border-l-2 border-primary/20 pl-4">
+                    <div className="grid gap-2">
+                        <Label>IP Address</Label>
+                        <Input
+                            value={formData.ip}
+                            onChange={e => setFormData({ ...formData, ip: e.target.value })}
+                            placeholder="192.168.1.100"
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Port</Label>
+                        <Input
+                            type="number"
+                            value={formData.port}
+                            onChange={e => setFormData({ ...formData, port: Number(e.target.value) })}
+                            placeholder="80"
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>MAC Address (Optional)</Label>
+                        <Input
+                            value={formData.macAddress}
+                            onChange={e => setFormData({ ...formData, macAddress: e.target.value })}
+                            placeholder="AA:BB:CC:DD:EE:FF"
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-4 border-l-2 border-primary/20 pl-4">
+                    <div className="grid gap-2">
+                        <Label>Serial Port</Label>
+                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openCombobox}
+                                    className="w-full justify-between"
+                                >
+                                    {formData.serialPort
+                                        ? formData.serialPort
+                                        : "Select or type port..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0">
+                                <Command>
+                                    <CommandInput
+                                        placeholder="Search or type custom port..."
+                                        onValueChange={(search) => {
+                                            // Allow custom input if not found
+                                            if (search && !serialPorts.find(p => p.path === search) && !commonPorts.find(p => p.path === search)) {
+                                                // We don't set it immediately to avoid jitter, but user can hit enter or we can have a specific "Use custom" item
+                                            }
+                                        }}
+                                    />
+                                    <CommandList>
+                                        <CommandEmpty>
+                                            <div className="p-2 text-sm text-muted-foreground">
+                                                No matching port found.
+                                                <Button
+                                                    variant="link"
+                                                    className="h-auto p-0 ml-1"
+                                                    onClick={() => {
+                                                        // This is a bit tricky with Command, usually we just let them type in the input
+                                                        // But for now, let's just rely on the selection.
+                                                        // Actually, a better pattern for "Createable" combobox is needed.
+                                                        // For simplicity, we will just list options. If they need custom, they can use the input below.
+                                                    }}
+                                                >
+                                                    Use custom input below
+                                                </Button>
+                                            </div>
+                                        </CommandEmpty>
+
+                                        {serialPorts.length > 0 && (
+                                            <CommandGroup heading="Detected Ports">
+                                                {serialPorts.map((port) => (
+                                                    <CommandItem
+                                                        key={port.path}
+                                                        value={port.path}
+                                                        onSelect={(currentValue) => {
+                                                            setFormData({ ...formData, serialPort: currentValue });
+                                                            setOpenCombobox(false);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                formData.serialPort === port.path ? "opacity-100" : "opacity-0"
+                                                            )}
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <span>{port.path}</span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {port.manufacturer || 'Unknown Manufacturer'}
+                                                            </span>
+                                                        </div>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )}
+
+                                        <CommandSeparator />
+
+                                        <CommandGroup heading="Common Ports">
+                                            {commonPorts.map((port) => (
+                                                <CommandItem
+                                                    key={port.path}
+                                                    value={port.path}
+                                                    onSelect={(currentValue) => {
+                                                        setFormData({ ...formData, serialPort: currentValue });
+                                                        setOpenCombobox(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            formData.serialPort === port.path ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {port.label}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                                <div className="p-2 border-t bg-muted/50">
+                                    <p className="text-xs text-muted-foreground mb-2">Or type custom path manually:</p>
+                                    <Input
+                                        value={formData.serialPort}
+                                        onChange={e => setFormData({ ...formData, serialPort: e.target.value })}
+                                        placeholder="/dev/custom/path"
+                                        className="h-8"
+                                    />
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Baud Rate</Label>
+                        <Select
+                            value={String(formData.baudRate)}
+                            onValueChange={(val) => setFormData({ ...formData, baudRate: Number(val) })}
+                        >
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="9600">9600</SelectItem>
+                                <SelectItem value="115200">115200</SelectItem>
+                                <SelectItem value="57600">57600</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderReview = () => (
+        <div className="space-y-4 py-4">
+            <div className="rounded-lg border p-4 space-y-3">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Type</span>
+                    <span className="font-medium">{selectedTemplate?.label || editController?.type}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Name</span>
+                    <span className="font-medium">{formData.name}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Connection</span>
+                    <span className="font-medium flex items-center gap-2">
+                        {formData.connectionType === 'network' ? <Wifi className="h-4 w-4" /> : <Usb className="h-4 w-4" />}
+                        {formData.connectionType === 'network' ? formData.ip : formData.serialPort}
+                    </span>
+                </div>
+                {formData.macAddress && (
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">MAC</span>
+                        <span className="font-medium">{formData.macAddress}</span>
+                    </div>
+                )}
+            </div>
+            <p className="text-sm text-muted-foreground text-center">
+                {editController
+                    ? "Click Update to save changes."
+                    : "Click Create to register this controller. It will start in 'Offline' state until it connects."}
+            </p>
+        </div>
+    );
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            {!editController && (
+                <DialogTrigger asChild>
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Controller
+                    </Button>
+                </DialogTrigger>
+            )}
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                    <DialogTitle>
+                        {editController
+                            ? 'Edit Controller'
+                            : (step === 'type-selection' ? 'Select Controller Type' : (step === 'configuration' ? 'Configure Controller' : 'Review & Create'))}
+                    </DialogTitle>
+                </DialogHeader>
+
+                {step === 'type-selection' && !editController && renderTypeSelection()}
+                {step === 'configuration' && renderConfiguration()}
+                {step === 'review' && renderReview()}
+
+                <DialogFooter className="flex justify-between sm:justify-between">
+                    {step !== 'type-selection' && !(editController && step === 'configuration') ? (
+                        <Button variant="outline" onClick={() => setStep(step === 'review' ? 'configuration' : 'type-selection')}>
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                        </Button>
+                    ) : <div></div>}
+
+                    {step === 'type-selection' ? (
+                        <Button disabled variant="ghost">Select a type above</Button>
+                    ) : step === 'configuration' ? (
+                        <Button onClick={() => setStep('review')} disabled={!formData.name}>
+                            Next <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    ) : (
+                        <Button onClick={handleSubmit} disabled={loading}>
+                            {loading ? (editController ? 'Updating...' : 'Creating...') : (editController ? 'Update Controller' : 'Create Controller')}
+                            {!loading && <Check className="ml-2 h-4 w-4" />}
+                        </Button>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};

@@ -1,0 +1,28 @@
+{
+    "id": "lifecycle_test_program",
+    "name": "Lifecycle Test Program",
+    "active": true,
+    "blocks": [
+        {
+            "id": "1",
+            "type": "LOG",
+            "params": {
+                "message": "Starting..."
+            }
+        },
+        {
+            "id": "2",
+            "type": "WAIT",
+            "params": {
+                "duration": 10000
+            }
+        },
+        {
+            "id": "3",
+            "type": "LOG",
+            "params": {
+                "message": "Finished"
+            }
+        }
+    ]
+}

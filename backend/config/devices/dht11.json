@@ -1,0 +1,22 @@
+{
+    "id": "dht11",
+    "name": "DHT11 Temp/Humidity",
+    "category": "SENSOR",
+    "capabilities": [
+        "DHT_READ"
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "DHT_READ",
+            "params": {
+                "type": 11
+            }
+        }
+    },
+    "pins": [
+        {
+            "name": "Data",
+            "type": "DIGITAL_IN"
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "id": "relay_active_low",
+    "name": "Relay Module (Active Low)",
+    "category": "ACTUATOR",
+    "capabilities": [
+        "DIGITAL_WRITE"
+    ],
+    "commands": {
+        "ON": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 0
+            }
+        },
+        "OFF": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 1
+            }
+        }
+    },
+    "pins": [
+        {
+            "name": "Signal",
+            "type": "DIGITAL_OUT"
+        }
+    ]
+}

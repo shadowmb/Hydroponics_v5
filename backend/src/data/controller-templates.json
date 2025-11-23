@@ -1,0 +1,1501 @@
+{
+    "Arduino_Uno": {
+        "label": "Arduino Uno R3",
+        "communication_by": [
+            "serial",
+            "wifi",
+            "bluetooth"
+        ],
+        "communication_type": [
+            "raw_serial",
+            "http",
+            "mqtt",
+            "websocket"
+        ],
+        "ports": [
+            {
+                "id": "D0",
+                "label": "RX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D1",
+                "label": "TX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D2",
+                "label": "Digital Pin 2",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D3",
+                "label": "Digital Pin 3 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D4",
+                "label": "Digital Pin 4",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D5",
+                "label": "Digital Pin 5 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D6",
+                "label": "Digital Pin 6 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D7",
+                "label": "Digital Pin 7",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D8",
+                "label": "Digital Pin 8",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D9",
+                "label": "Digital Pin 9 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D10",
+                "label": "Digital Pin 10 (PWM, SS)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D11",
+                "label": "Digital Pin 11 (PWM, MOSI)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D12",
+                "label": "Digital Pin 12 (MISO)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D13",
+                "label": "Digital Pin 13 (SCK, LED)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "A0",
+                "label": "Analog Pin A0",
+                "type": "analog"
+            },
+            {
+                "id": "A1",
+                "label": "Analog Pin A1",
+                "type": "analog"
+            },
+            {
+                "id": "A2",
+                "label": "Analog Pin A2",
+                "type": "analog"
+            },
+            {
+                "id": "A3",
+                "label": "Analog Pin A3",
+                "type": "analog"
+            },
+            {
+                "id": "A4",
+                "label": "SDA (I2C)",
+                "type": "analog",
+                "reserved": true
+            },
+            {
+                "id": "A5",
+                "label": "SCL (I2C)",
+                "type": "analog",
+                "reserved": true
+            }
+        ]
+    },
+    "ESP32": {
+        "label": "ESP32 DevKit",
+        "communication_by": [
+            "serial",
+            "wifi",
+            "bluetooth"
+        ],
+        "communication_type": [
+            "raw_serial",
+            "http",
+            "mqtt",
+            "websocket"
+        ],
+        "ports": [
+            {
+                "id": "GPIO0",
+                "label": "GPIO0",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "GPIO1",
+                "label": "GPIO1 (TX)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "GPIO2",
+                "label": "GPIO2",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "GPIO4",
+                "label": "GPIO4",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "GPIO5",
+                "label": "GPIO5",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "GPIO12",
+                "label": "GPIO12",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "GPIO13",
+                "label": "GPIO13",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "GPIO14",
+                "label": "GPIO14 (PWM, SCK)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "GPIO15",
+                "label": "GPIO15 (SS)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "GPIO16",
+                "label": "GPIO16",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "GPIO17",
+                "label": "GPIO17",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "GPIO18",
+                "label": "GPIO18 (MOSI)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "GPIO19",
+                "label": "GPIO19 (MISO)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "GPIO21",
+                "label": "SDA (I2C)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "GPIO22",
+                "label": "SCL (I2C)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "GPIO23",
+                "label": "GPIO23",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "GPIO25",
+                "label": "DAC1",
+                "type": "analog",
+                "pwm": true
+            },
+            {
+                "id": "GPIO26",
+                "label": "DAC2 / ADC2",
+                "type": "analog",
+                "pwm": true
+            },
+            {
+                "id": "GPIO34",
+                "label": "ADC1 (Input only)",
+                "type": "analog"
+            },
+            {
+                "id": "GPIO35",
+                "label": "ADC (Input only)",
+                "type": "analog"
+            }
+        ]
+    },
+    "Arduino_Mega": {
+        "label": "Arduino Mega 2560 R3",
+        "communication_by": [
+            "serial",
+            "wifi",
+            "bluetooth"
+        ],
+        "communication_type": [
+            "raw_serial",
+            "http",
+            "mqtt",
+            "websocket"
+        ],
+        "ports": [
+            {
+                "id": "D0",
+                "label": "RX0 (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D1",
+                "label": "TX0 (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D2",
+                "label": "Digital Pin 2",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D3",
+                "label": "Digital Pin 3 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D4",
+                "label": "Digital Pin 4",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D5",
+                "label": "Digital Pin 5 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D6",
+                "label": "Digital Pin 6 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D7",
+                "label": "Digital Pin 7",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D8",
+                "label": "Digital Pin 8",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D9",
+                "label": "Digital Pin 9 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D10",
+                "label": "Digital Pin 10 (PWM, SS)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D11",
+                "label": "Digital Pin 11 (PWM, MOSI)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D12",
+                "label": "Digital Pin 12 (MISO)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D13",
+                "label": "Digital Pin 13 (SCK)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D14",
+                "label": "TX1 (Serial 1)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D15",
+                "label": "RX1 (Serial 1)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D16",
+                "label": "TX2 (Serial 2)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D17",
+                "label": "RX2 (Serial 2)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D18",
+                "label": "TX3 (Serial 3)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D19",
+                "label": "RX3 (Serial 3)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D20",
+                "label": "SDA (I2C)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D21",
+                "label": "SCL (I2C)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D22",
+                "label": "Digital Pin 22",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D23",
+                "label": "Digital Pin 23",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D24",
+                "label": "Digital Pin 24",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D25",
+                "label": "Digital Pin 25",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D26",
+                "label": "Digital Pin 26",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D27",
+                "label": "Digital Pin 27",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D28",
+                "label": "Digital Pin 28",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D29",
+                "label": "Digital Pin 29",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D30",
+                "label": "Digital Pin 30 (RX)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D31",
+                "label": "Digital Pin 31 (TX)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D32",
+                "label": "Digital Pin 32",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D33",
+                "label": "Digital Pin 33 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D34",
+                "label": "Digital Pin 34",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D35",
+                "label": "Digital Pin 35 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D36",
+                "label": "Digital Pin 36",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D37",
+                "label": "Digital Pin 37",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D38",
+                "label": "Digital Pin 38",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D39",
+                "label": "Digital Pin 39",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D40",
+                "label": "Digital Pin 40",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D41",
+                "label": "Digital Pin 41",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D42",
+                "label": "Digital Pin 42 (SS)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D43",
+                "label": "Digital Pin 43",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D44",
+                "label": "Digital Pin 44",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D45",
+                "label": "Digital Pin 45 (MOSI)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D46",
+                "label": "Digital Pin 46 (MISO)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D47",
+                "label": "Digital Pin 47 (SCK)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D48",
+                "label": "Digital Pin 48",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D49",
+                "label": "Digital Pin 49 (SS)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D50",
+                "label": "Digital Pin 50 (MISO)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D51",
+                "label": "Digital Pin 51 (MOSI)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D52",
+                "label": "Digital Pin 52 (SCK)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D53",
+                "label": "Digital Pin 53 (SS)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "A0",
+                "label": "Analog Pin A0",
+                "type": "analog"
+            },
+            {
+                "id": "A1",
+                "label": "Analog Pin A1",
+                "type": "analog"
+            },
+            {
+                "id": "A2",
+                "label": "Analog Pin A2",
+                "type": "analog"
+            },
+            {
+                "id": "A3",
+                "label": "Analog Pin A3",
+                "type": "analog"
+            },
+            {
+                "id": "A4",
+                "label": "Analog Pin A4 (SDA)",
+                "type": "analog",
+                "reserved": true
+            },
+            {
+                "id": "A5",
+                "label": "Analog Pin A5 (SCL)",
+                "type": "analog",
+                "reserved": true
+            },
+            {
+                "id": "A6",
+                "label": "Analog Pin A6",
+                "type": "analog"
+            },
+            {
+                "id": "A7",
+                "label": "Analog Pin A7",
+                "type": "analog"
+            },
+            {
+                "id": "A8",
+                "label": "Analog Pin A8",
+                "type": "analog"
+            },
+            {
+                "id": "A9",
+                "label": "Analog Pin A9",
+                "type": "analog"
+            },
+            {
+                "id": "A10",
+                "label": "Analog Pin A10",
+                "type": "analog"
+            },
+            {
+                "id": "A11",
+                "label": "Analog Pin A11",
+                "type": "analog"
+            },
+            {
+                "id": "A12",
+                "label": "Analog Pin A12",
+                "type": "analog"
+            },
+            {
+                "id": "A13",
+                "label": "Analog Pin A13",
+                "type": "analog"
+            },
+            {
+                "id": "A14",
+                "label": "Analog Pin A14",
+                "type": "analog"
+            },
+            {
+                "id": "A15",
+                "label": "Analog Pin A15",
+                "type": "analog"
+            }
+        ]
+    },
+    "WeMos_D1_R2": {
+        "label": "WeMos D1 R2 V2.1.0 (ESP8266)",
+        "communication_by": [
+            "wifi",
+            "serial"
+        ],
+        "communication_type": [
+            "raw_serial",
+            "http",
+            "mqtt",
+            "websocket"
+        ],
+        "ports": [
+            {
+                "id": "D0",
+                "label": "D0 (GPIO16)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D1",
+                "label": "D1 (GPIO5), SCL (I2C)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D2",
+                "label": "D2 (GPIO4), SDA (I2C)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D3",
+                "label": "D3 (GPIO0), Flash",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D4",
+                "label": "D4 (GPIO2), TX (Serial)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D5",
+                "label": "D5 (GPIO14), SCK (SPI)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D6",
+                "label": "D6 (GPIO12), MISO (SPI)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D7",
+                "label": "D7 (GPIO13), MOSI (SPI)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D8",
+                "label": "D8 (GPIO15), SS (SPI)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D9",
+                "label": "RX (Serial)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D10",
+                "label": "TX (Serial)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D11",
+                "label": "D11 (GPIO9), SPI (HSPI CS0)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D12",
+                "label": "D12 (GPIO10), SPI (HSPI CS1)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D13",
+                "label": "D13 (GPIO3), RX (Serial)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D14",
+                "label": "D14 (GPIO1), TX (Serial)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "A0",
+                "label": "Analog Input (ADC)",
+                "type": "analog",
+                "max_voltage": 3.3
+            }
+        ]
+    },
+    "NodeMCU_Amica_V2": {
+        "label": "NodeMCU Amica V2 (ESP8266)",
+        "communication_by": [
+            "wifi",
+            "serial"
+        ],
+        "communication_type": [
+            "raw_serial",
+            "http",
+            "mqtt",
+            "websocket"
+        ],
+        "ports": [
+            {
+                "id": "D0",
+                "label": "D0 (GPIO16)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D1",
+                "label": "D1 (GPIO5), SCL (I2C)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D2",
+                "label": "D2 (GPIO4), SDA (I2C)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D3",
+                "label": "D3 (GPIO0), Flash",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D4",
+                "label": "D4 (GPIO2), LED (Built-in)",
+                "type": "digital",
+                "pwm": true,
+                "reserved": true
+            },
+            {
+                "id": "D5",
+                "label": "D5 (GPIO14), SCK (SPI)",
+                "type": "digital",
+                "pwm": true,
+                "reserved": false
+            },
+            {
+                "id": "D6",
+                "label": "D6 (GPIO12), MISO (SPI)",
+                "type": "digital",
+                "pwm": true,
+                "reserved": false
+            },
+            {
+                "id": "D7",
+                "label": "D7 (GPIO13), MOSI (SPI)",
+                "type": "digital",
+                "pwm": true,
+                "reserved": false
+            },
+            {
+                "id": "D8",
+                "label": "D8 (GPIO15), SS (SPI)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D9",
+                "label": "RX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D10",
+                "label": "TX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D11",
+                "label": "D11 (GPIO9)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D12",
+                "label": "D12 (GPIO10)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D13",
+                "label": "D13 (GPIO3), RX0",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D14",
+                "label": "D14 (GPIO1), TX0",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "A0",
+                "label": "Analog Input (ADC)",
+                "type": "analog",
+                "max_voltage": 3.3
+            }
+        ]
+    },
+    "Mini_Nano_V3_0": {
+        "label": "Mini Nano V3.0 (ATmega328P)",
+        "communication_by": [
+            "serial",
+            "usb"
+        ],
+        "communication_type": [
+            "raw_serial",
+            "http",
+            "mqtt",
+            "websocket"
+        ],
+        "ports": [
+            {
+                "id": "D0",
+                "label": "RX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D1",
+                "label": "TX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D2",
+                "label": "Digital Pin 2",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D3",
+                "label": "Digital Pin 3 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D4",
+                "label": "Digital Pin 4",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D5",
+                "label": "Digital Pin 5 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D6",
+                "label": "Digital Pin 6 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D7",
+                "label": "Digital Pin 7",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D8",
+                "label": "Digital Pin 8",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D9",
+                "label": "Digital Pin 9 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D10",
+                "label": "Digital Pin 10 (PWM, SS)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D11",
+                "label": "Digital Pin 11 (PWM, MOSI)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D12",
+                "label": "Digital Pin 12 (MISO)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D13",
+                "label": "Digital Pin 13 (SCK, LED)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "A0",
+                "label": "Analog Pin A0",
+                "type": "analog"
+            },
+            {
+                "id": "A1",
+                "label": "Analog Pin A1",
+                "type": "analog"
+            },
+            {
+                "id": "A2",
+                "label": "Analog Pin A2",
+                "type": "analog"
+            },
+            {
+                "id": "A3",
+                "label": "Analog Pin A3",
+                "type": "analog"
+            },
+            {
+                "id": "A4",
+                "label": "Analog Pin A4 (SDA)",
+                "type": "analog",
+                "reserved": true
+            },
+            {
+                "id": "A5",
+                "label": "Analog Pin A5 (SCL)",
+                "type": "analog",
+                "reserved": true
+            },
+            {
+                "id": "A6",
+                "label": "Analog Pin A6",
+                "type": "analog"
+            },
+            {
+                "id": "A7",
+                "label": "Analog Pin A7",
+                "type": "analog"
+            }
+        ]
+    },
+    "Arduino_Uno_R4_WiFi": {
+        "label": "Arduino Uno R4 WiFi",
+        "communication_by": [
+            "wifi",
+            "serial"
+        ],
+        "communication_type": [
+            "http",
+            "raw_serial"
+        ],
+        "ports": [
+            {
+                "id": "D0",
+                "label": "RX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D1",
+                "label": "TX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D2",
+                "label": "Digital Pin 2",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D3",
+                "label": "Digital Pin 3 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D4",
+                "label": "Digital Pin 4",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D5",
+                "label": "Digital Pin 5 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D6",
+                "label": "Digital Pin 6 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D7",
+                "label": "Digital Pin 7",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D8",
+                "label": "Digital Pin 8",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D9",
+                "label": "Digital Pin 9 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D10",
+                "label": "Digital Pin 10 (PWM, SS)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D11",
+                "label": "Digital Pin 11 (PWM, MOSI)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D12",
+                "label": "Digital Pin 12 (MISO)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D13",
+                "label": "Digital Pin 13 (SCK, LED)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "A0",
+                "label": "Analog Pin A0",
+                "type": "analog"
+            },
+            {
+                "id": "A1",
+                "label": "Analog Pin A1",
+                "type": "analog"
+            },
+            {
+                "id": "A2",
+                "label": "Analog Pin A2",
+                "type": "analog"
+            },
+            {
+                "id": "A3",
+                "label": "Analog Pin A3",
+                "type": "analog"
+            },
+            {
+                "id": "A4",
+                "label": "Analog Pin A4 (SDA)",
+                "type": "analog",
+                "reserved": true
+            },
+            {
+                "id": "A5",
+                "label": "Analog Pin A5 (SCL)",
+                "type": "analog",
+                "reserved": true
+            }
+        ]
+    },
+    "Arduino_Nano": {
+        "label": "Arduino Nano 328 (ATmega328P)",
+        "communication_by": [
+            "serial"
+        ],
+        "communication_type": [
+            "raw_serial"
+        ],
+        "ports": [
+            {
+                "id": "D0",
+                "label": "RX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D1",
+                "label": "TX (Serial)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "D2",
+                "label": "Digital Pin 2",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D3",
+                "label": "Digital Pin 3 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D4",
+                "label": "Digital Pin 4",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D5",
+                "label": "Digital Pin 5 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D6",
+                "label": "Digital Pin 6 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D7",
+                "label": "Digital Pin 7",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D8",
+                "label": "Digital Pin 8",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D9",
+                "label": "Digital Pin 9 (PWM)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D10",
+                "label": "Digital Pin 10 (PWM, SS)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D11",
+                "label": "Digital Pin 11 (PWM, MOSI)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "D12",
+                "label": "Digital Pin 12 (MISO)",
+                "type": "digital",
+                "reserved": false
+            },
+            {
+                "id": "D13",
+                "label": "Digital Pin 13 (SCK, LED)",
+                "type": "digital",
+                "pwm": true
+            },
+            {
+                "id": "A0",
+                "label": "Analog Pin A0",
+                "type": "analog"
+            },
+            {
+                "id": "A1",
+                "label": "Analog Pin A1",
+                "type": "analog"
+            },
+            {
+                "id": "A2",
+                "label": "Analog Pin A2",
+                "type": "analog"
+            },
+            {
+                "id": "A3",
+                "label": "Analog Pin A3",
+                "type": "analog"
+            },
+            {
+                "id": "A4",
+                "label": "Analog Pin A4 (SDA)",
+                "type": "analog",
+                "reserved": true
+            },
+            {
+                "id": "A5",
+                "label": "Analog Pin A5 (SCL)",
+                "type": "analog",
+                "reserved": true
+            },
+            {
+                "id": "A6",
+                "label": "Analog Pin A6",
+                "type": "analog"
+            },
+            {
+                "id": "A7",
+                "label": "Analog Pin A7",
+                "type": "analog"
+            }
+        ]
+    },
+    "FireBeetle_ESP32_E": {
+        "label": "FireBeetle 2 ESP32-E (ESP32-WROOM-32E)",
+        "communication_by": [
+            "wifi",
+            "bluetooth",
+            "serial"
+        ],
+        "communication_type": [
+            "http",
+            "mqtt",
+            "websocket",
+            "raw_serial"
+        ],
+        "ports": [
+            {
+                "id": "GPIO0",
+                "label": "D5 (GPIO0, Strapping)",
+                "type": "digital",
+                "reserved": true,
+                "pwm": true
+            },
+            {
+                "id": "GPIO1",
+                "label": "TXD (GPIO1, USB)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "GPIO2",
+                "label": "D9 (GPIO2, LED)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO3",
+                "label": "RXD (GPIO3, USB)",
+                "type": "digital",
+                "reserved": true
+            },
+            {
+                "id": "GPIO4",
+                "label": "D12 (GPIO4, Touch T0)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO5",
+                "label": "D8 (GPIO5, RGB LED)",
+                "type": "digital",
+                "reserved": true,
+                "pwm": true
+            },
+            {
+                "id": "GPIO12",
+                "label": "D13 (GPIO12, Touch T5)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO13",
+                "label": "D7 (GPIO13, Touch T4)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO14",
+                "label": "D6 (GPIO14, Touch T6)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO15",
+                "label": "A4 (GPIO15, Touch T3)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO16",
+                "label": "GPIO16 (UART2 RX)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO17",
+                "label": "GPIO17 (UART2 TX)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO18",
+                "label": "SCK (GPIO18, SPI)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO19",
+                "label": "MISO (GPIO19, SPI)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO21",
+                "label": "SDA (GPIO21, I2C)",
+                "type": "digital",
+                "reserved": true,
+                "pwm": true
+            },
+            {
+                "id": "GPIO22",
+                "label": "SCL (GPIO22, I2C)",
+                "type": "digital",
+                "reserved": true,
+                "pwm": true
+            },
+            {
+                "id": "GPIO23",
+                "label": "MOSI (GPIO23, SPI)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO25",
+                "label": "D2 (GPIO25, DAC1)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO26",
+                "label": "D3 (GPIO26, DAC2)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO27",
+                "label": "D4 (GPIO27, Button)",
+                "type": "digital",
+                "reserved": false,
+                "pwm": true
+            },
+            {
+                "id": "GPIO34",
+                "label": "A2 (GPIO34, Input Only)",
+                "type": "analog",
+                "reserved": false
+            },
+            {
+                "id": "GPIO35",
+                "label": "A3 (GPIO35, Input Only)",
+                "type": "analog",
+                "reserved": false
+            },
+            {
+                "id": "GPIO36",
+                "label": "A0 (GPIO36, Input Only)",
+                "type": "analog",
+                "reserved": false
+            },
+            {
+                "id": "GPIO39",
+                "label": "A1 (GPIO39, Input Only)",
+                "type": "analog",
+                "reserved": false
+            }
+        ]
+    }
+}
