@@ -12,7 +12,20 @@ import { Plus } from 'lucide-react';
 const Hardware: React.FC = () => {
     const [activeTab, setActiveTab] = useState("controllers");
     const [isDeviceWizardOpen, setIsDeviceWizardOpen] = useState(false);
+    const [selectedDevice, setSelectedDevice] = useState<any>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const handleEditDevice = (device: any) => {
+        setSelectedDevice(device);
+        setIsDeviceWizardOpen(true);
+    };
+
+    const handleWizardOpenChange = (open: boolean) => {
+        setIsDeviceWizardOpen(open);
+        if (!open) {
+            setSelectedDevice(null);
+        }
+    };
 
     return (
         <div className="container mx-auto p-6 space-y-6">
@@ -58,7 +71,7 @@ const Hardware: React.FC = () => {
                 </div>
                 {activeTab === "devices" && (
                     <div className="pb-2">
-                        <Button onClick={() => setIsDeviceWizardOpen(true)} size="sm">
+                        <Button onClick={() => { setSelectedDevice(null); setIsDeviceWizardOpen(true); }} size="sm">
                             <Plus className="mr-2 h-4 w-4" /> Add Device
                         </Button>
                     </div>
@@ -79,7 +92,7 @@ const Hardware: React.FC = () => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <DeviceList key={refreshTrigger} />
+                            <DeviceList key={refreshTrigger} onEdit={handleEditDevice} />
                         </CardContent>
                     </Card>
                 )}
@@ -87,8 +100,9 @@ const Hardware: React.FC = () => {
 
             <DeviceWizard
                 open={isDeviceWizardOpen}
-                onOpenChange={setIsDeviceWizardOpen}
+                onOpenChange={handleWizardOpenChange}
                 onSuccess={() => setRefreshTrigger(prev => prev + 1)}
+                initialData={selectedDevice}
             />
         </div>
     );

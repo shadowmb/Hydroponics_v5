@@ -10,21 +10,19 @@ export const seedControllerTemplates = async () => {
 
         console.log('🌱 Seeding controller templates...');
 
-        for (const [key, templateData] of Object.entries(templates)) {
+        const templateDocs = Object.entries(templates).map(([key, templateData]) => {
             const template = templateData as any;
+            return {
+                _id: key,
+                key,
+                label: template.label,
+                communication_by: template.communication_by,
+                communication_type: template.communication_type,
+                ports: template.ports
+            };
+        });
 
-            await ControllerTemplate.findOneAndUpdate(
-                { key },
-                {
-                    key,
-                    label: template.label,
-                    communication_by: template.communication_by,
-                    communication_type: template.communication_type,
-                    ports: template.ports
-                },
-                { upsert: true, new: true }
-            );
-        }
+        await ControllerTemplate.insertMany(templateDocs);
 
         console.log('✅ Controller templates seeded successfully');
     } catch (error) {

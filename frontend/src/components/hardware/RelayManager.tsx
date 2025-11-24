@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { hardwareService, type IController } from '../../services/hardwareService';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,8 @@ export const RelayManager: React.FC = () => {
     const [wizardOpen, setWizardOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [editingRelayId, setEditingRelayId] = useState<string | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [relayToDelete, setRelayToDelete] = useState<string | null>(null);
 
     // Wizard State
     const [step, setStep] = useState(1);
@@ -119,13 +122,22 @@ export const RelayManager: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure? This will free up the controller ports.')) return;
+    const handleDeleteClick = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setRelayToDelete(id);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!relayToDelete) return;
         try {
-            await hardwareService.deleteRelay(id);
+            await hardwareService.deleteRelay(relayToDelete);
             toast.success('Relay deleted');
+            setDeleteDialogOpen(false);
+            setRelayToDelete(null);
             fetchData();
         } catch (error) {
+            console.error('Delete failed:', error);
             toast.error('Failed to delete relay');
         }
     };
@@ -290,6 +302,21 @@ export const RelayManager: React.FC = () => {
                 </Dialog>
             </div>
 
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Relay</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <p>Are you sure you want to delete this relay? This will free up the controller ports.</p>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Installed Relays</CardTitle>
@@ -353,7 +380,7 @@ export const RelayManager: React.FC = () => {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                    onClick={() => handleDelete(relay._id)}
+                                                    onClick={(e) => handleDeleteClick(relay._id, e)}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>

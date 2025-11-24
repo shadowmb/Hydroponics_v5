@@ -3,17 +3,22 @@ import { hardwareService } from '../../services/hardwareService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu } from 'lucide-react';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
-export const DeviceList: React.FC = () => {
+interface DeviceListProps {
+    onEdit?: (device: any) => void;
+}
+
+export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
     const [devices, setDevices] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [testResult, setTestResult] = useState<any>(null);
     const [testDialogOpen, setTestDialogOpen] = useState(false);
     const [testing, setTesting] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         loadDevices();
@@ -31,11 +36,19 @@ export const DeviceList: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this device?')) return;
+    const handleDeleteClick = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setDeviceToDelete(id);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deviceToDelete) return;
         try {
-            await hardwareService.deleteDevice(id);
+            await hardwareService.deleteDevice(deviceToDelete);
             toast.success('Device deleted');
+            setDeleteDialogOpen(false);
+            setDeviceToDelete(null);
             loadDevices();
         } catch (error) {
             toast.error('Failed to delete device');
@@ -99,8 +112,19 @@ export const DeviceList: React.FC = () => {
                                     </TableCell>
                                     <TableCell>
                                         <div className="text-sm">
-                                            <span className="text-muted-foreground">Port: </span>
-                                            <Badge variant="secondary" className="font-mono">{device.hardware?.port}</Badge>
+                                            {device.hardware?.parentId ? (
+                                                <>
+                                                    <span className="text-muted-foreground">Port: </span>
+                                                    <Badge variant="secondary" className="font-mono">{device.hardware.port}</Badge>
+                                                </>
+                                            ) : device.hardware?.relayId ? (
+                                                <>
+                                                    <span className="text-muted-foreground">Relay Ch: </span>
+                                                    <Badge variant="secondary" className="font-mono">{device.hardware.channel}</Badge>
+                                                </>
+                                            ) : (
+                                                <span className="text-muted-foreground italic">Disconnected</span>
+                                            )}
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -113,10 +137,21 @@ export const DeviceList: React.FC = () => {
                                             <Button size="icon" variant="ghost" onClick={() => handleTest(device)} title="Test Device">
                                                 <Play className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" title="Edit (Coming Soon)" disabled>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                title="Edit"
+                                                onClick={() => onEdit && onEdit(device)}
+                                                disabled={!onEdit}
+                                            >
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(device._id)}>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="text-destructive hover:text-destructive"
+                                                onClick={(e) => handleDeleteClick(device._id, e)}
+                                            >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -152,6 +187,21 @@ export const DeviceList: React.FC = () => {
                             <p className="text-destructive">Test failed or no result</p>
                         )}
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Device</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this device? This action cannot be undone and will free up any occupied ports.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

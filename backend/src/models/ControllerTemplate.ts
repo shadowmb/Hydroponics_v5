@@ -8,7 +8,8 @@ export interface IPortTemplate {
     pwm?: boolean;
 }
 
-export interface IControllerTemplate extends Document {
+export interface IControllerTemplate extends Omit<Document, '_id'> {
+    _id: string;
     key: string; // e.g., "Arduino_Uno"
     label: string;
     communication_by: string[];
@@ -25,6 +26,7 @@ const PortTemplateSchema = new Schema({
 }, { _id: false });
 
 const ControllerTemplateSchema = new Schema({
+    _id: { type: String, required: true },
     key: { type: String, required: true, unique: true },
     label: { type: String, required: true },
     communication_by: [{ type: String }],

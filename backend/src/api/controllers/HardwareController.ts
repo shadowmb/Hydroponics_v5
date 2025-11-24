@@ -27,8 +27,13 @@ export class HardwareController {
 
     static async getTemplates(req: FastifyRequest, reply: FastifyReply) {
         try {
+            console.log('Schema _id type:', (ControllerTemplate.schema.paths['_id'] as any).instance);
             const templates = await ControllerTemplate.find();
-            return reply.send({ success: true, data: templates });
+            return reply.send({
+                success: true,
+                data: templates,
+                debug: { schemaIdType: (ControllerTemplate.schema.paths['_id'] as any).instance }
+            });
         } catch (error) {
             req.log.error(error);
             return reply.status(500).send({ success: false, error: 'Failed to fetch templates' });
@@ -41,18 +46,12 @@ export class HardwareController {
         try {
             const body = req.body as any;
 
-            // Basic validation
-            if (!body.name || !body.type || !body.connection) {
-                return reply.status(400).send({ success: false, error: 'Missing required fields' });
-            }
-
             // Check if template exists
             const template = await ControllerTemplate.findOne({ key: body.type });
             if (!template) {
                 return reply.status(400).send({ success: false, error: 'Invalid controller type' });
             }
 
-            // Initialize ports from template
             const ports = new Map();
             template.ports.forEach(p => {
                 ports.set(p.id, {
@@ -74,7 +73,7 @@ export class HardwareController {
             if (error.code === 11000) {
                 return reply.status(400).send({ success: false, error: 'Controller with this name or MAC already exists' });
             }
-            return reply.status(500).send({ success: false, error: 'Failed to create controller' });
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to create controller' });
         }
     }
 
@@ -401,27 +400,36 @@ export class HardwareController {
                 return reply.status(400).send({ success: false, error: 'Invalid device template' });
             }
 
-            // 3. Validate Controller & Port (if applicable)
-            if (body.hardware?.parentId && body.hardware?.pin !== undefined) {
+            // 3. Validate Connection (Controller OR Relay)
+            if (body.hardware?.parentId) {
+                // --- Controller Connection ---
                 const controller = await Controller.findById(body.hardware.parentId);
                 if (!controller) {
                     return reply.status(404).send({ success: false, error: 'Controller not found' });
                 }
 
-                // Check if port is available
-                // Note: For digital pins, we might need to map pin number to port ID (e.g. 2 -> D2)
-                // This logic depends on how the frontend sends the pin. 
-                // Let's assume frontend sends the exact Port ID (e.g. "D2", "A0") in `port` field, 
-                // or we map `pin` number to it. 
-                // The Device model has `pin` (number) and `port` (string). 
-                // Let's use `port` for the Controller Port ID.
-
-                const portId = body.hardware.port;
-                if (portId) {
-                    const portState = controller.ports.get(portId);
+                if (body.hardware.port) {
+                    const portState = controller.ports.get(body.hardware.port);
                     if (portState && portState.isOccupied) {
-                        return reply.status(400).send({ success: false, error: `Port ${portId} is already occupied` });
+                        return reply.status(400).send({ success: false, error: `Port ${body.hardware.port} is already occupied` });
                     }
+                }
+            } else if (body.hardware?.relayId) {
+                // --- Relay Connection ---
+                const { Relay } = await import('../../models/Relay');
+                const relay = await Relay.findById(body.hardware.relayId);
+                if (!relay) {
+                    return reply.status(404).send({ success: false, error: 'Relay not found' });
+                }
+
+                const channelIndex = body.hardware.channel;
+                const channel = relay.channels.find((c: any) => c.channelIndex === channelIndex);
+
+                if (!channel) {
+                    return reply.status(400).send({ success: false, error: 'Invalid relay channel' });
+                }
+                if (channel.isOccupied) {
+                    return reply.status(400).send({ success: false, error: `Relay channel ${channelIndex} is already occupied` });
                 }
             }
 
@@ -440,8 +448,9 @@ export class HardwareController {
             const device = new DeviceModel(deviceData);
             await device.save();
 
-            // 5. Occupy Controller Port
+            // 5. Occupy Port/Channel
             if (body.hardware?.parentId && body.hardware?.port) {
+                // Occupy Controller Port
                 const controller = await Controller.findById(body.hardware.parentId);
                 if (controller) {
                     const portState = controller.ports.get(body.hardware.port);
@@ -455,6 +464,23 @@ export class HardwareController {
                         portState.isActive = true;
                         controller.markModified('ports');
                         await controller.save();
+                    }
+                }
+            } else if (body.hardware?.relayId && body.hardware?.channel !== undefined) {
+                // Occupy Relay Channel
+                const { Relay } = await import('../../models/Relay');
+                const relay = await Relay.findById(body.hardware.relayId);
+                if (relay) {
+                    const channel = relay.channels.find((c: any) => c.channelIndex === body.hardware.channel);
+                    if (channel) {
+                        channel.isOccupied = true;
+                        channel.occupiedBy = {
+                            type: 'device',
+                            id: device._id.toString(),
+                            name: device.name
+                        };
+                        relay.markModified('channels');
+                        await relay.save();
                     }
                 }
             }
@@ -492,10 +518,84 @@ export class HardwareController {
                 return reply.status(404).send({ success: false, error: 'Device not found' });
             }
 
-            // Handle Port Changes (Free old, Occupy new) - Simplified for now:
-            // If hardware config changes, we should handle it. 
-            // For this iteration, let's assume we just update the doc. 
-            // TODO: Implement robust port re-mapping for devices similar to Relays.
+            // Handle Hardware Changes (Free old, Occupy new)
+            const oldHardware = device.hardware;
+            const newHardware = body.hardware;
+
+            // Only process if hardware config changed
+            if (newHardware && (
+                oldHardware?.parentId !== newHardware.parentId ||
+                oldHardware?.port !== newHardware.port ||
+                oldHardware?.relayId !== newHardware.relayId ||
+                oldHardware?.channel !== newHardware.channel
+            )) {
+                // 1. Free Old Resources
+                if (oldHardware?.parentId && oldHardware?.port) {
+                    const oldController = await Controller.findById(oldHardware.parentId);
+                    if (oldController) {
+                        const portState = oldController.ports.get(oldHardware.port);
+                        if (portState && portState.occupiedBy?.id === device._id.toString()) {
+                            portState.isOccupied = false;
+                            portState.occupiedBy = undefined;
+                            oldController.markModified('ports');
+                            await oldController.save();
+                        }
+                    }
+                } else if (oldHardware?.relayId && oldHardware?.channel !== undefined) {
+                    const { Relay } = await import('../../models/Relay');
+                    const oldRelay = await Relay.findById(oldHardware.relayId);
+                    if (oldRelay) {
+                        const channel = oldRelay.channels.find((c: any) => c.channelIndex === oldHardware.channel);
+                        if (channel && channel.occupiedBy?.id === device._id.toString()) {
+                            channel.isOccupied = false;
+                            channel.occupiedBy = undefined;
+                            oldRelay.markModified('channels');
+                            await oldRelay.save();
+                        }
+                    }
+                }
+
+                // 2. Occupy New Resources
+                if (newHardware.parentId && newHardware.port) {
+                    const newController = await Controller.findById(newHardware.parentId);
+                    if (newController) {
+                        const portState = newController.ports.get(newHardware.port);
+                        if (portState) {
+                            if (portState.isOccupied) {
+                                return reply.status(400).send({ success: false, error: `Port ${newHardware.port} is already occupied` });
+                            }
+                            portState.isOccupied = true;
+                            portState.occupiedBy = {
+                                type: 'device',
+                                id: device._id.toString(),
+                                name: body.name || device.name
+                            };
+                            portState.isActive = true;
+                            newController.markModified('ports');
+                            await newController.save();
+                        }
+                    }
+                } else if (newHardware.relayId && newHardware.channel !== undefined) {
+                    const { Relay } = await import('../../models/Relay');
+                    const newRelay = await Relay.findById(newHardware.relayId);
+                    if (newRelay) {
+                        const channel = newRelay.channels.find((c: any) => c.channelIndex === newHardware.channel);
+                        if (channel) {
+                            if (channel.isOccupied) {
+                                return reply.status(400).send({ success: false, error: `Channel ${newHardware.channel} is already occupied` });
+                            }
+                            channel.isOccupied = true;
+                            channel.occupiedBy = {
+                                type: 'device',
+                                id: device._id.toString(),
+                                name: body.name || device.name
+                            };
+                            newRelay.markModified('channels');
+                            await newRelay.save();
+                        }
+                    }
+                }
+            }
 
             Object.assign(device, body);
             await device.save();
@@ -517,26 +617,46 @@ export class HardwareController {
                 return reply.status(404).send({ success: false, error: 'Device not found' });
             }
 
-            // Free Controller Port
-            if (device.hardware?.parentId && device.hardware?.port) {
-                const controller = await Controller.findById(device.hardware.parentId);
-                if (controller) {
-                    const portState = controller.ports.get(device.hardware.port);
-                    if (portState && portState.occupiedBy?.id === device._id.toString()) {
-                        portState.isOccupied = false;
-                        portState.occupiedBy = undefined;
-                        controller.markModified('ports');
-                        await controller.save();
+            // Free Resources (Controller OR Relay)
+            try {
+                if (device.hardware?.parentId && device.hardware?.port) {
+                    const controller = await Controller.findById(device.hardware.parentId);
+                    if (controller) {
+                        const portState = controller.ports.get(device.hardware.port);
+                        if (portState && portState.occupiedBy?.id === device._id.toString()) {
+                            portState.isOccupied = false;
+                            portState.occupiedBy = undefined;
+                            controller.markModified('ports');
+                            await controller.save();
+                        }
+                    }
+                } else if (device.hardware?.relayId && device.hardware?.channel !== undefined) {
+                    const { Relay } = await import('../../models/Relay');
+                    const relay = await Relay.findById(device.hardware.relayId);
+                    if (relay) {
+                        const channel = relay.channels.find((c: any) => c.channelIndex === device.hardware.channel);
+                        if (channel && channel.occupiedBy?.id === device._id.toString()) {
+                            channel.isOccupied = false;
+                            channel.occupiedBy = undefined;
+                            relay.markModified('channels');
+                            await relay.save();
+                        }
                     }
                 }
+            } catch (resourceError) {
+                req.log.warn({ err: resourceError, deviceId: device._id }, 'Failed to free resources during device deletion (ignoring)');
             }
-
             await device.softDelete(); // Use soft delete plugin
             return reply.send({ success: true, message: 'Device deleted' });
 
-        } catch (error) {
+        } catch (error: any) {
             req.log.error(error);
-            return reply.status(500).send({ success: false, error: 'Failed to delete device' });
+            return reply.status(500).send({
+                success: false,
+                error: 'Failed to delete device',
+                details: error.message,
+                stack: error.stack
+            });
         }
     }
 
@@ -556,47 +676,18 @@ export class HardwareController {
                 return reply.status(400).send({ success: false, error: 'Device template not found' });
             }
 
-            // 1. Send Command to Controller
-            // We need to construct the command based on the template.
-            // For now, let's assume we use the `hardware.sendCommand` which expects (deviceId, driverId, command, params)
-            // But `hardware.sendCommand` is for the OLD system or needs adaptation.
-            // Let's use the Controller directly to send a raw command if we can, OR adapt `hardware.sendCommand`.
-
-            // Actually, `hardware.sendCommand` in `HardwareService` is designed to route to the correct controller.
-            // But it takes `deviceId` (our database ID).
-
-            // Let's construct the params expected by the controller.
-            // e.g. ANALOG command needs { pin: "A0" }
-
             const commandType = template.requiredCommand;
             const params = {
                 pin: device.hardware?.port, // e.g. "A0" or "D2"
                 ...template.executionConfig.parameters // merge static params
             };
 
-            // We need to find the Controller ID to send to.
             const controllerId = device.hardware?.parentId;
             if (!controllerId) {
                 return reply.status(400).send({ success: false, error: 'Device not connected to a controller' });
             }
 
-            // Execute Command via HardwareService
-            // We'll use a lower-level method if available, or just `sendCommand` if it supports raw controller targeting.
-            // Looking at `HardwareService.ts` (I recall it), it might need `deviceId`.
-            // Let's assume `hardware.sendCommand` can handle it.
-
-            // WAIT: `hardware.sendCommand` uses `DeviceCommandService`. 
-            // We want to bypass the complex logic and just ask the controller "Read Pin X".
-
-            // Let's use `hardware.executeCommand(controllerId, command, params)` if it exists, 
-            // or we might need to add it. 
-            // For now, let's mock the response to verify the flow, 
-            // or use `hardware.sendCommand` if we trust it.
-
-            // MOCKING FOR NOW to ensure API works, as we haven't fully wired the Controller communication for "Generic Devices" yet.
-            // In a real scenario, we'd call:
-            // const rawResult = await hardware.executeRawCommand(controllerId, commandType, params);
-
+            // MOCKING FOR NOW
             const mockRawValue = Math.floor(Math.random() * 1024); // Random ADC
 
             // 2. Convert Result

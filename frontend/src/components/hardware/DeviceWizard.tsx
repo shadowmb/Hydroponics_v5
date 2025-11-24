@@ -7,48 +7,84 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DeviceWizardProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSuccess: () => void;
+    initialData?: any; // For Edit Mode
 }
 
-export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, onSuccess }) => {
+export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, onSuccess, initialData }) => {
     const [step, setStep] = useState(1);
     const [templates, setTemplates] = useState<any[]>([]);
     const [controllers, setControllers] = useState<IController[]>([]);
+    const [relays, setRelays] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Form Data
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+    const [connectionType, setConnectionType] = useState<'direct' | 'relay'>('direct');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         controllerId: '',
-        port: ''
+        port: '',
+        relayId: '',
+        channel: ''
     });
+
+    const isEditMode = !!initialData;
 
     useEffect(() => {
         if (open) {
-            setStep(1);
-            setFormData({ name: '', description: '', controllerId: '', port: '' });
-            setSelectedTemplate(null);
             fetchData();
+            if (initialData) {
+                // Pre-fill for Edit Mode
+                setStep(2); // Skip template selection
+                setFormData({
+                    name: initialData.name,
+                    description: initialData.metadata?.description || '',
+                    controllerId: initialData.hardware?.parentId || '',
+                    port: initialData.hardware?.port || '',
+                    relayId: initialData.hardware?.relayId || '',
+                    channel: initialData.hardware?.channel !== undefined ? String(initialData.hardware.channel) : ''
+                });
+                // Determine connection type
+                if (initialData.hardware?.relayId) {
+                    setConnectionType('relay');
+                } else {
+                    setConnectionType('direct');
+                }
+                // We need to set the template to display correct info
+                // Ideally we fetch it, but for now we might rely on the one in initialData if populated
+                if (initialData.config?.driverId) {
+                    setSelectedTemplate(initialData.config.driverId);
+                }
+            } else {
+                // Reset for New Device
+                setStep(1);
+                setFormData({ name: '', description: '', controllerId: '', port: '', relayId: '', channel: '' });
+                setSelectedTemplate(null);
+                setConnectionType('direct');
+            }
         }
-    }, [open]);
+    }, [open, initialData]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [tpls, ctrls] = await Promise.all([
+            const [tpls, ctrls, rlys] = await Promise.all([
                 hardwareService.getDeviceTemplates(),
-                hardwareService.getControllers()
+                hardwareService.getControllers(),
+                hardwareService.getRelays()
             ]);
             setTemplates(tpls);
             setControllers(ctrls);
+            setRelays(rlys);
         } catch (error) {
             toast.error('Failed to load data');
         } finally {
@@ -64,28 +100,43 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const handleSubmit = async () => {
         try {
             setLoading(true);
-            const payload = {
+            const payload: any = {
                 name: formData.name,
-                type: selectedTemplate.physicalType === 'relay' ? 'ACTUATOR' : 'SENSOR', // Simplified logic
+                type: selectedTemplate?.physicalType === 'relay' ? 'ACTUATOR' : 'SENSOR',
                 config: {
-                    driverId: selectedTemplate._id,
-                    pollInterval: 5000 // Default
-                },
-                hardware: {
-                    parentId: formData.controllerId,
-                    port: formData.port
+                    driverId: selectedTemplate?._id,
+                    pollInterval: 5000
                 },
                 metadata: {
                     description: formData.description
-                }
+                },
+                hardware: {}
             };
 
-            await hardwareService.createDevice(payload);
-            toast.success('Device created successfully');
+            if (connectionType === 'direct') {
+                payload.hardware = {
+                    parentId: formData.controllerId,
+                    port: formData.port
+                };
+            } else {
+                payload.hardware = {
+                    relayId: formData.relayId,
+                    channel: parseInt(formData.channel)
+                };
+            }
+
+            if (isEditMode) {
+                await hardwareService.updateDevice(initialData._id, payload);
+                toast.success('Device updated successfully');
+            } else {
+                await hardwareService.createDevice(payload);
+                toast.success('Device created successfully');
+            }
+
             onSuccess();
             onOpenChange(false);
         } catch (error: any) {
-            toast.error(error.response?.data?.error || 'Failed to create device');
+            toast.error(error.response?.data?.error || `Failed to ${isEditMode ? 'update' : 'create'} device`);
         } finally {
             setLoading(false);
         }
@@ -106,30 +157,46 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         const controller = controllers.find(c => c._id === formData.controllerId);
         if (!controller) return [];
 
-        // Filter ports based on template requirements
-        const req = selectedTemplate?.portRequirements[0]; // Assume single port for now
+        const req = selectedTemplate?.portRequirements[0];
         if (!req) return [];
 
         return Object.entries(controller.ports)
             .filter(([id, state]) => {
-                // Check if occupied
-                if (state.isOccupied) return false;
+                // If editing and this is the current port, allow it
+                if (isEditMode && initialData?.hardware?.parentId === formData.controllerId && initialData?.hardware?.port === id) return true;
 
-                // Check type (simple heuristic)
+                if (state.isOccupied) return false;
                 if (req.type === 'analog' && !id.startsWith('A')) return false;
                 if (req.type === 'digital' && !id.startsWith('D')) return false;
-
                 return true;
             })
             .map(([id]) => id)
             .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     };
 
+    const getAvailableChannels = () => {
+        if (!formData.relayId) return [];
+        const relay = relays.find(r => r._id === formData.relayId);
+        if (!relay) return [];
+
+        return relay.channels
+            .filter((c: any) => {
+                // If editing and this is the current channel, allow it
+                if (isEditMode && initialData?.hardware?.relayId === formData.relayId && initialData?.hardware?.channel === c.channelIndex) return true;
+
+                return !c.isOccupied;
+            })
+            .map((c: any) => ({
+                value: String(c.channelIndex),
+                label: `Channel ${c.channelIndex} ${c.name ? `(${c.name})` : ''}`
+            }));
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] h-[500px] flex flex-col">
+            <DialogContent className="sm:max-w-[600px] h-[600px] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>Add New Device - Step {step}</DialogTitle>
+                    <DialogTitle>{isEditMode ? 'Edit Device' : `Add New Device - Step ${step}`}</DialogTitle>
                 </DialogHeader>
 
                 <div className="flex-1 overflow-y-auto py-4">
@@ -172,50 +239,107 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                     placeholder="Optional description"
                                 />
                             </div>
-                            <div className="p-4 bg-muted/50 rounded-lg flex items-center gap-3">
-                                {getIcon(selectedTemplate?.uiConfig?.icon)}
-                                <div>
-                                    <p className="font-medium">{selectedTemplate?.name}</p>
-                                    <p className="text-xs text-muted-foreground">Type: {selectedTemplate?.physicalType}</p>
+                            {selectedTemplate && (
+                                <div className="p-4 bg-muted/50 rounded-lg flex items-center gap-3">
+                                    {getIcon(selectedTemplate.uiConfig?.icon)}
+                                    <div>
+                                        <p className="font-medium">{selectedTemplate.name}</p>
+                                        <p className="text-xs text-muted-foreground">Type: {selectedTemplate.physicalType}</p>
+                                    </div>
+                                    {!isEditMode && (
+                                        <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setStep(1)}>Change</Button>
+                                    )}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
                     {step === 3 && (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div className="space-y-2">
-                                <Label>Connect to Controller</Label>
-                                <Select
-                                    value={formData.controllerId}
-                                    onValueChange={v => setFormData({ ...formData, controllerId: v, port: '' })}
-                                >
-                                    <SelectTrigger><SelectValue placeholder="Select Controller" /></SelectTrigger>
-                                    <SelectContent>
-                                        {controllers.map(c => (
-                                            <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Label>Connection Type</Label>
+                                <Tabs value={connectionType} onValueChange={(v: any) => setConnectionType(v)} className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2">
+                                        <TabsTrigger value="direct">Direct to Controller</TabsTrigger>
+                                        <TabsTrigger value="relay">Via Relay Module</TabsTrigger>
+                                    </TabsList>
+                                </Tabs>
                             </div>
 
-                            {formData.controllerId && (
-                                <div className="space-y-2">
-                                    <Label>Select Port ({selectedTemplate?.portRequirements[0]?.type})</Label>
-                                    <Select
-                                        value={formData.port}
-                                        onValueChange={v => setFormData({ ...formData, port: v })}
-                                    >
-                                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
-                                        <SelectContent>
-                                            {getAvailablePorts().map(p => (
-                                                <SelectItem key={p} value={p}>{p}</SelectItem>
-                                            ))}
-                                            {getAvailablePorts().length === 0 && (
-                                                <SelectItem value="none" disabled>No available ports</SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
+                            {connectionType === 'direct' ? (
+                                <div className="space-y-4 border p-4 rounded-md">
+                                    <div className="space-y-2">
+                                        <Label>Select Controller</Label>
+                                        <Select
+                                            value={formData.controllerId}
+                                            onValueChange={v => setFormData({ ...formData, controllerId: v, port: '' })}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select Controller" /></SelectTrigger>
+                                            <SelectContent>
+                                                {controllers.map(c => (
+                                                    <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {formData.controllerId && (
+                                        <div className="space-y-2">
+                                            <Label>Select Port ({selectedTemplate?.portRequirements[0]?.type})</Label>
+                                            <Select
+                                                value={formData.port}
+                                                onValueChange={v => setFormData({ ...formData, port: v })}
+                                            >
+                                                <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                                                <SelectContent>
+                                                    {getAvailablePorts().map(p => (
+                                                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                    ))}
+                                                    {getAvailablePorts().length === 0 && (
+                                                        <SelectItem value="none" disabled>No available ports</SelectItem>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4 border p-4 rounded-md">
+                                    <div className="space-y-2">
+                                        <Label>Select Relay Module</Label>
+                                        <Select
+                                            value={formData.relayId}
+                                            onValueChange={v => setFormData({ ...formData, relayId: v, channel: '' })}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select Relay" /></SelectTrigger>
+                                            <SelectContent>
+                                                {relays.map(r => (
+                                                    <SelectItem key={r._id} value={r._id}>{r.name}</SelectItem>
+                                                ))}
+                                                {relays.length === 0 && <SelectItem value="none" disabled>No relays found</SelectItem>}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {formData.relayId && (
+                                        <div className="space-y-2">
+                                            <Label>Select Channel</Label>
+                                            <Select
+                                                value={formData.channel}
+                                                onValueChange={v => setFormData({ ...formData, channel: v })}
+                                            >
+                                                <SelectTrigger><SelectValue placeholder="Select Channel" /></SelectTrigger>
+                                                <SelectContent>
+                                                    {getAvailableChannels().map(c => (
+                                                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                                    ))}
+                                                    {getAvailableChannels().length === 0 && (
+                                                        <SelectItem value="none" disabled>No available channels</SelectItem>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -237,9 +361,13 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     ) : (
                         <Button
                             onClick={handleSubmit}
-                            disabled={!formData.controllerId || !formData.port || loading}
+                            disabled={
+                                (connectionType === 'direct' && (!formData.controllerId || !formData.port)) ||
+                                (connectionType === 'relay' && (!formData.relayId || !formData.channel)) ||
+                                loading
+                            }
                         >
-                            {loading ? 'Creating...' : 'Create Device'}
+                            {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Device' : 'Create Device')}
                         </Button>
                     )}
                 </DialogFooter>

@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IDeviceTemplate extends Document {
+export interface IDeviceTemplate extends Omit<Document, '_id'> {
     _id: string; // Manual ID (e.g., 'dfrobot_ph_pro')
     name: string;
     description: string;
@@ -61,8 +61,7 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
         icon: String
     }
 }, {
-    timestamps: true,
-    _id: false // We use manual _id
+    timestamps: true
 });
 
 export const DeviceTemplate = mongoose.model<IDeviceTemplate>('DeviceTemplate', DeviceTemplateSchema);

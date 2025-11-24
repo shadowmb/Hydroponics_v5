@@ -16,7 +16,7 @@ export interface IRelayChannel {
 export interface IRelay extends Document {
     name: string;
     controllerId: mongoose.Types.ObjectId; // The controller this relay board is connected to
-    type: '4-channel' | '8-channel' | '16-channel';
+    type: '1-channel' | '2-channel' | '4-channel' | '8-channel' | '16-channel';
     channels: IRelayChannel[];
     description?: string;
 }
@@ -37,7 +37,7 @@ const RelayChannelSchema = new Schema({
 const RelaySchema = new Schema({
     name: { type: String, required: true },
     controllerId: { type: Schema.Types.ObjectId, ref: 'Controller', required: true },
-    type: { type: String, enum: ['4-channel', '8-channel', '16-channel'], required: true },
+    type: { type: String, enum: ['1-channel', '2-channel', '4-channel', '8-channel', '16-channel'], required: true },
     channels: [RelayChannelSchema],
     description: { type: String }
 }, {

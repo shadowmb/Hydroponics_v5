@@ -15,7 +15,9 @@ const DeviceSchema = new Schema<IDevice>(
             boardType: String,
             port: String,
             pin: Number,
-            parentId: { type: String, ref: 'Device' },
+            parentId: { type: String, ref: 'Device' }, // Controller ID
+            relayId: { type: String, ref: 'Relay' },   // Relay ID (if connected via relay)
+            channel: Number,                           // Relay Channel Index (if connected via relay)
         },
 
         config: {
