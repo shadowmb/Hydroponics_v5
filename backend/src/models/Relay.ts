@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IRelayChannel {
     channelIndex: number; // 1-based index (1, 2, 3, 4...)
-    controllerPortId: string; // The physical port on the controller (e.g., "D2")
+    controllerPortId?: string; // The physical port on the controller (e.g., "D2")
     name?: string; // Optional custom name for this channel
     state: boolean; // Current state (true=ON, false=OFF)
     isOccupied: boolean; // Is this channel connected to a device?
@@ -23,7 +23,7 @@ export interface IRelay extends Document {
 
 const RelayChannelSchema = new Schema({
     channelIndex: { type: Number, required: true },
-    controllerPortId: { type: String, required: true },
+    controllerPortId: { type: String, required: false },
     name: { type: String },
     state: { type: Boolean, default: false },
     isOccupied: { type: Boolean, default: false },

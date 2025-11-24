@@ -26,7 +26,8 @@ const ExpandedControllerRow: React.FC<{ controllerId: string }> = ({ controllerI
 
                 // Filter for this controller
                 setDevices(allDevices.filter((d: any) => d.hardware?.parentId === controllerId));
-                setRelays(allRelays.filter((r: any) => r.controllerId === controllerId));
+                // Handle both populated object and string ID for controllerId
+                setRelays(allRelays.filter((r: any) => (r.controllerId?._id || r.controllerId) === controllerId));
             } catch (err) {
                 console.error("Failed to fetch details for expanded row", err);
             } finally {
@@ -50,6 +51,12 @@ const ExpandedControllerRow: React.FC<{ controllerId: string }> = ({ controllerI
                                 <Badge variant="outline">Relay</Badge>
                                 <span className="font-medium">{relay.name}</span>
                                 <span className="text-muted-foreground text-xs">({relay.type})</span>
+                                <span className="text-xs text-muted-foreground ml-2">
+                                    Ports: {relay.channels
+                                        .map((c: any) => c.controllerPortId)
+                                        .filter((p: any) => p) // Filter out null/undefined
+                                        .join(', ')}
+                                </span>
                                 <span className="ml-auto text-xs text-muted-foreground">{relay.channels.length} Channels</span>
                             </div>
                         ))}

@@ -71,7 +71,7 @@ export const RelayManager: React.FC = () => {
             setFormData({
                 name: relay.name,
                 type: relay.type,
-                controllerId: relay.controllerId._id,
+                controllerId: relay.controllerId?._id || '', // Handle null controllerId (Unassigned)
                 channelMapping: mapping
             });
         } else {
@@ -88,16 +88,21 @@ export const RelayManager: React.FC = () => {
             const channelCount = parseInt(formData.type.split('-')[0]);
             const channels = [];
 
+            let hasMappedPort = false;
             for (let i = 1; i <= channelCount; i++) {
                 const portId = formData.channelMapping[i];
-                if (!portId) {
-                    toast.error(`Please map Channel ${i} to a controller port`);
-                    return;
+                if (portId) {
+                    hasMappedPort = true;
                 }
                 channels.push({
                     channelIndex: i,
-                    controllerPortId: portId
+                    controllerPortId: portId || null // Send null if not mapped
                 });
+            }
+
+            if (!hasMappedPort) {
+                toast.error('Please map at least one channel to a controller port');
+                return;
             }
 
             const payload = {
@@ -344,7 +349,15 @@ export const RelayManager: React.FC = () => {
                                     <TableRow key={relay._id}>
                                         <TableCell className="font-medium">{relay.name}</TableCell>
                                         <TableCell><Badge variant="outline">{relay.type}</Badge></TableCell>
-                                        <TableCell>{relay.controllerId?.name || 'Unknown'}</TableCell>
+                                        <TableCell>
+                                            {relay.controllerId ? (
+                                                relay.controllerId.name
+                                            ) : (
+                                                <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600 text-white border-0">
+                                                    Unassigned
+                                                </Badge>
+                                            )}
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1">
                                                 {relay.channels.map((ch: any) => (
