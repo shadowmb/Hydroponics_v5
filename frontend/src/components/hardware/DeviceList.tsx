@@ -13,6 +13,8 @@ interface DeviceListProps {
 
 export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
     const [devices, setDevices] = useState<any[]>([]);
+    const [controllers, setControllers] = useState<any[]>([]);
+    const [relays, setRelays] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [testResult, setTestResult] = useState<any>(null);
     const [testDialogOpen, setTestDialogOpen] = useState(false);
@@ -21,16 +23,22 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
     const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
 
     useEffect(() => {
-        loadDevices();
+        loadData();
     }, []);
 
-    const loadDevices = async () => {
+    const loadData = async () => {
         try {
             setLoading(true);
-            const data = await hardwareService.getDevices();
-            setDevices(data);
+            const [devicesData, controllersData, relaysData] = await Promise.all([
+                hardwareService.getDevices(),
+                hardwareService.getControllers(),
+                hardwareService.getRelays()
+            ]);
+            setDevices(devicesData);
+            setControllers(controllersData);
+            setRelays(relaysData);
         } catch (error) {
-            toast.error('Failed to load devices');
+            toast.error('Failed to load data');
         } finally {
             setLoading(false);
         }
@@ -49,7 +57,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
             toast.success('Device deleted');
             setDeleteDialogOpen(false);
             setDeviceToDelete(null);
-            loadDevices();
+            loadData();
         } catch (error) {
             toast.error('Failed to delete device');
         }
@@ -80,6 +88,33 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
         }
     };
 
+    const renderControllerInfo = (device: any) => {
+        if (device.hardware?.parentId) {
+            const ctrl = controllers.find(c => c._id === device.hardware.parentId);
+            return ctrl ? (
+                <span className="font-medium">{ctrl.name}</span>
+            ) : <span className="text-muted-foreground">Unknown</span>;
+        }
+        if (device.hardware?.relayId) {
+            const relay = relays.find(r => r._id === device.hardware.relayId);
+            if (relay) {
+                const ctrlName = relay.controllerId?.name;
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-medium">{ctrlName || 'Unassigned Relay'}</span>
+                        <span className="text-xs text-muted-foreground">via {relay.name}</span>
+                    </div>
+                );
+            }
+            return <span className="text-muted-foreground">Unknown Relay</span>;
+        }
+        return (
+            <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600 text-white border-0">
+                Unassigned
+            </Badge>
+        );
+    };
+
     return (
         <div className="space-y-4">
             <div className="rounded-md border">
@@ -88,6 +123,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Type</TableHead>
+                            <TableHead>Controller</TableHead>
                             <TableHead>Connection</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -96,7 +132,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                     <TableBody>
                         {devices.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                     No devices found. Add one to get started.
                                 </TableCell>
                             </TableRow>
@@ -111,6 +147,9 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                                         <Badge variant="outline">{device.config?.driverId?.name || 'Unknown'}</Badge>
                                     </TableCell>
                                     <TableCell>
+                                        {renderControllerInfo(device)}
+                                    </TableCell>
+                                    <TableCell>
                                         <div className="text-sm">
                                             {device.hardware?.parentId ? (
                                                 <>
@@ -123,9 +162,8 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                                                     <Badge variant="secondary" className="font-mono">{device.hardware.channel}</Badge>
                                                 </>
                                             ) : (
-                                                <span className="text-muted-foreground italic flex items-center gap-1">
-                                                    <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                                                    Unassigned
+                                                <span className="text-muted-foreground italic">
+                                                    -
                                                 </span>
                                             )}
                                         </div>

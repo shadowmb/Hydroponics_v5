@@ -177,16 +177,25 @@ export class HardwareController {
 
             // 3. Validate Ports Availability
             const channels = body.channels as any[];
+            let hasMappedPort = false;
+
             for (const channel of channels) {
                 const portId = channel.controllerPortId;
-                const portState = controller.ports.get(portId);
+                if (portId) {
+                    hasMappedPort = true;
+                    const portState = controller.ports.get(portId);
 
-                if (!portState) {
-                    return reply.status(400).send({ success: false, error: `Invalid port ${portId}` });
+                    if (!portState) {
+                        return reply.status(400).send({ success: false, error: `Invalid port ${portId}` });
+                    }
+                    if (portState.isOccupied) {
+                        return reply.status(400).send({ success: false, error: `Port ${portId} is already occupied` });
+                    }
                 }
-                if (portState.isOccupied) {
-                    return reply.status(400).send({ success: false, error: `Port ${portId} is already occupied` });
-                }
+            }
+
+            if (!hasMappedPort) {
+                return reply.status(400).send({ success: false, error: 'At least one channel must be mapped to a controller port' });
             }
 
             // 4. Create Relay
@@ -202,16 +211,18 @@ export class HardwareController {
             // 5. Update Controller Ports (Mark as Occupied)
             const updatedPorts = controller.ports; // Mongoose Map
             channels.forEach((channel: any) => {
-                const portState = updatedPorts.get(channel.controllerPortId);
-                if (portState) {
-                    portState.isOccupied = true;
-                    portState.occupiedBy = {
-                        type: 'relay',
-                        id: relay._id.toString(),
-                        name: relay.name
-                    };
-                    // Ensure port is active so relay works
-                    portState.isActive = true;
+                if (channel.controllerPortId) {
+                    const portState = updatedPorts.get(channel.controllerPortId);
+                    if (portState) {
+                        portState.isOccupied = true;
+                        portState.occupiedBy = {
+                            type: 'relay',
+                            id: relay._id.toString(),
+                            name: relay.name
+                        };
+                        // Ensure port is active so relay works
+                        portState.isActive = true;
+                    }
                 }
             });
 
@@ -258,11 +269,13 @@ export class HardwareController {
             const oldController = await Controller.findById(relay.controllerId);
             if (oldController) {
                 relay.channels.forEach((channel: any) => {
-                    const portState = oldController.ports.get(channel.controllerPortId);
-                    // Only free if it was occupied by THIS relay
-                    if (portState && portState.occupiedBy?.id === relay._id.toString()) {
-                        portState.isOccupied = false;
-                        portState.occupiedBy = undefined;
+                    if (channel.controllerPortId) {
+                        const portState = oldController.ports.get(channel.controllerPortId);
+                        // Only free if it was occupied by THIS relay
+                        if (portState && portState.occupiedBy?.id === relay._id.toString()) {
+                            portState.isOccupied = false;
+                            portState.occupiedBy = undefined;
+                        }
                     }
                 });
                 oldController.markModified('ports');
@@ -282,19 +295,28 @@ export class HardwareController {
 
             // 5. Validate NEW Ports Availability
             const channels = body.channels as any[];
+            let hasMappedPort = false;
+
             for (const channel of channels) {
                 const portId = channel.controllerPortId;
-                const portState = newController.ports.get(portId);
+                if (portId) {
+                    hasMappedPort = true;
+                    const portState = newController.ports.get(portId);
 
-                if (!portState) {
-                    // Rollback: If validation fails, we should ideally re-occupy old ports, 
-                    // but for simplicity in this context we'll just error. 
-                    // In a real tx we'd abort.
-                    return reply.status(400).send({ success: false, error: `Invalid port ${portId}` });
+                    if (!portState) {
+                        // Rollback: If validation fails, we should ideally re-occupy old ports, 
+                        // but for simplicity in this context we'll just error. 
+                        // In a real tx we'd abort.
+                        return reply.status(400).send({ success: false, error: `Invalid port ${portId}` });
+                    }
+                    if (portState.isOccupied) {
+                        return reply.status(400).send({ success: false, error: `Port ${portId} is already occupied` });
+                    }
                 }
-                if (portState.isOccupied) {
-                    return reply.status(400).send({ success: false, error: `Port ${portId} is already occupied` });
-                }
+            }
+
+            if (!hasMappedPort) {
+                return reply.status(400).send({ success: false, error: 'At least one channel must be mapped to a controller port' });
             }
 
             // 6. Update Relay Document
@@ -308,15 +330,17 @@ export class HardwareController {
             // 7. Occupy NEW Controller Ports
             const updatedPorts = newController.ports;
             channels.forEach((channel: any) => {
-                const portState = updatedPorts.get(channel.controllerPortId);
-                if (portState) {
-                    portState.isOccupied = true;
-                    portState.occupiedBy = {
-                        type: 'relay',
-                        id: relay._id.toString(),
-                        name: relay.name
-                    };
-                    portState.isActive = true;
+                if (channel.controllerPortId) {
+                    const portState = updatedPorts.get(channel.controllerPortId);
+                    if (portState) {
+                        portState.isOccupied = true;
+                        portState.occupiedBy = {
+                            type: 'relay',
+                            id: relay._id.toString(),
+                            name: relay.name
+                        };
+                        portState.isActive = true;
+                    }
                 }
             });
 
@@ -346,10 +370,12 @@ export class HardwareController {
             const controller = await Controller.findById(relay.controllerId);
             if (controller) {
                 relay.channels.forEach((channel: any) => {
-                    const portState = controller.ports.get(channel.controllerPortId);
-                    if (portState && portState.occupiedBy?.id === relay._id.toString()) {
-                        portState.isOccupied = false;
-                        portState.occupiedBy = undefined;
+                    if (channel.controllerPortId) {
+                        const portState = controller.ports.get(channel.controllerPortId);
+                        if (portState && portState.occupiedBy?.id === relay._id.toString()) {
+                            portState.isOccupied = false;
+                            portState.occupiedBy = undefined;
+                        }
                     }
                 });
                 controller.markModified('ports');

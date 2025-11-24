@@ -4,14 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, ArrowRight, ArrowLeft, Check, Cpu, Wifi, Usb, Pencil } from 'lucide-react';
+import { Plus, ArrowRight, ArrowLeft, Check, Cpu, Wifi, Usb, RefreshCw } from 'lucide-react';
 import { hardwareService, type IControllerTemplate, type IController } from '../../services/hardwareService';
 import { toast } from 'sonner';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ControllerWizardProps {
@@ -47,7 +44,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
     });
 
     const [serialPorts, setSerialPorts] = useState<any[]>([]);
-    const [openCombobox, setOpenCombobox] = useState(false);
+    const [loadingPorts, setLoadingPorts] = useState(false);
 
     useEffect(() => {
         if (open) {
@@ -102,10 +99,13 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
 
     const loadSerialPorts = async () => {
         try {
+            setLoadingPorts(true);
             const ports = await hardwareService.getSerialPorts();
             setSerialPorts(ports);
         } catch (error) {
             console.error('Failed to load ports');
+        } finally {
+            setLoadingPorts(false);
         }
     };
 
@@ -278,113 +278,83 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                 <div className="space-y-4 border-l-2 border-primary/20 pl-4">
                     <div className="grid gap-2">
                         <Label>Serial Port</Label>
-                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={openCombobox}
-                                    className="w-full justify-between"
+                        <div className="flex gap-2">
+                            <div className="flex-1 space-y-2">
+                                <Select
+                                    value={
+                                        // If current port is in detected or common list, use it.
+                                        // Otherwise, if it's not empty, it's custom.
+                                        // If empty, it's empty.
+                                        serialPorts.find(p => p.path === formData.serialPort) || commonPorts.find(p => p.path === formData.serialPort)
+                                            ? formData.serialPort
+                                            : (formData.serialPort ? "custom" : "")
+                                    }
+                                    onValueChange={(val) => {
+                                        if (val === "custom") {
+                                            // Keep existing value if switching to custom, or clear if it was a standard port
+                                            // Actually, better to just set a flag or let them type.
+                                            // For now, if they select custom, we just enable the input below.
+                                            // We don't change the actual serialPort value yet until they type.
+                                            // But we need to force the Select to show "custom".
+                                            // Let's just set serialPort to empty string to clear it for typing?
+                                            // No, that clears the input.
+                                            // Let's assume if they pick "custom", we clear the selection to let them type.
+                                            setFormData({ ...formData, serialPort: "" });
+                                        } else {
+                                            setFormData({ ...formData, serialPort: val });
+                                        }
+                                    }}
                                 >
-                                    {formData.serialPort
-                                        ? formData.serialPort
-                                        : "Select or type port..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0">
-                                <Command>
-                                    <CommandInput
-                                        placeholder="Search or type custom port..."
-                                        onValueChange={(search) => {
-                                            // Allow custom input if not found
-                                            if (search && !serialPorts.find(p => p.path === search) && !commonPorts.find(p => p.path === search)) {
-                                                // We don't set it immediately to avoid jitter, but user can hit enter or we can have a specific "Use custom" item
-                                            }
-                                        }}
-                                    />
-                                    <CommandList>
-                                        <CommandEmpty>
-                                            <div className="p-2 text-sm text-muted-foreground">
-                                                No matching port found.
-                                                <Button
-                                                    variant="link"
-                                                    className="h-auto p-0 ml-1"
-                                                    onClick={() => {
-                                                        // This is a bit tricky with Command, usually we just let them type in the input
-                                                        // But for now, let's just rely on the selection.
-                                                        // Actually, a better pattern for "Createable" combobox is needed.
-                                                        // For simplicity, we will just list options. If they need custom, they can use the input below.
-                                                    }}
-                                                >
-                                                    Use custom input below
-                                                </Button>
-                                            </div>
-                                        </CommandEmpty>
-
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a port..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
                                         {serialPorts.length > 0 && (
-                                            <CommandGroup heading="Detected Ports">
-                                                {serialPorts.map((port) => (
-                                                    <CommandItem
-                                                        key={port.path}
-                                                        value={port.path}
-                                                        onSelect={(currentValue) => {
-                                                            setFormData({ ...formData, serialPort: currentValue });
-                                                            setOpenCombobox(false);
-                                                        }}
-                                                    >
-                                                        <Check
-                                                            className={cn(
-                                                                "mr-2 h-4 w-4",
-                                                                formData.serialPort === port.path ? "opacity-100" : "opacity-0"
-                                                            )}
-                                                        />
-                                                        <div className="flex flex-col">
-                                                            <span>{port.path}</span>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {port.manufacturer || 'Unknown Manufacturer'}
-                                                            </span>
-                                                        </div>
-                                                    </CommandItem>
+                                            <SelectGroup>
+                                                <SelectLabel>Detected Ports</SelectLabel>
+                                                {serialPorts.map(port => (
+                                                    <SelectItem key={port.path} value={port.path}>
+                                                        {port.path} <span className="text-xs text-muted-foreground">({port.manufacturer || 'Unknown'})</span>
+                                                    </SelectItem>
                                                 ))}
-                                            </CommandGroup>
+                                            </SelectGroup>
                                         )}
-
-                                        <CommandSeparator />
-
-                                        <CommandGroup heading="Common Ports">
-                                            {commonPorts.map((port) => (
-                                                <CommandItem
-                                                    key={port.path}
-                                                    value={port.path}
-                                                    onSelect={(currentValue) => {
-                                                        setFormData({ ...formData, serialPort: currentValue });
-                                                        setOpenCombobox(false);
-                                                    }}
-                                                >
-                                                    <Check
-                                                        className={cn(
-                                                            "mr-2 h-4 w-4",
-                                                            formData.serialPort === port.path ? "opacity-100" : "opacity-0"
-                                                        )}
-                                                    />
+                                        <SelectGroup>
+                                            <SelectLabel>Common Ports</SelectLabel>
+                                            {commonPorts.map(port => (
+                                                <SelectItem key={port.path} value={port.path}>
                                                     {port.label}
-                                                </CommandItem>
+                                                </SelectItem>
                                             ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                </Command>
-                                <div className="p-2 border-t bg-muted/50">
-                                    <p className="text-xs text-muted-foreground mb-2">Or type custom path manually:</p>
+                                        </SelectGroup>
+                                        <SelectGroup>
+                                            <SelectLabel>Other</SelectLabel>
+                                            <SelectItem value="custom">Enter Custom Path...</SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+
+                                {/* Show input if "custom" is selected OR if the current value is not in the lists (and not empty) */}
+                                {(formData.serialPort === "" || (!serialPorts.find(p => p.path === formData.serialPort) && !commonPorts.find(p => p.path === formData.serialPort))) && (
                                     <Input
                                         value={formData.serialPort}
                                         onChange={e => setFormData({ ...formData, serialPort: e.target.value })}
-                                        placeholder="/dev/custom/path"
-                                        className="h-8"
+                                        placeholder="e.g. /dev/ttyUSB0"
+                                        className="mt-2"
                                     />
-                                </div>
-                            </PopoverContent>
-                        </Popover>
+                                )}
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={loadSerialPorts}
+                                title="Refresh Ports"
+                                disabled={loadingPorts}
+                            >
+                                <RefreshCw className={cn("h-4 w-4", loadingPorts && "animate-spin")} />
+                            </Button>
+                        </div>
                     </div>
                     <div className="grid gap-2">
                         <Label>Baud Rate</Label>
