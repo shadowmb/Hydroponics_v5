@@ -1,4 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
+import { softDeletePlugin, SoftDeleteDocument, SoftDeleteModel } from '../core/softDeletePlugin';
 
 export interface IPortState {
     isActive: boolean;
@@ -11,7 +12,7 @@ export interface IPortState {
     deviceId?: mongoose.Types.ObjectId; // Deprecated but kept for backward compatibility
 }
 
-export interface IController extends Document {
+export interface IController extends SoftDeleteDocument {
     name: string;
     type: string; // Reference to ControllerTemplate key (e.g., "Arduino_Uno")
     description?: string;
@@ -64,4 +65,6 @@ const ControllerSchema = new Schema({
     timestamps: true
 });
 
-export const Controller = mongoose.model<IController>('Controller', ControllerSchema);
+ControllerSchema.plugin(softDeletePlugin);
+
+export const Controller = (mongoose.models.Controller as SoftDeleteModel<IController>) || mongoose.model<IController, SoftDeleteModel<IController>>('Controller', ControllerSchema);

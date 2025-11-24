@@ -124,13 +124,34 @@ export class HardwareController {
 
     static async deleteController(req: FastifyRequest, reply: FastifyReply) {
         try {
+            console.log('Deleting controller...');
             const { id } = req.params as { id: string };
-            const controller = await Controller.findByIdAndDelete(id);
+            const { DeviceModel } = await import('../../models/Device');
+            const { Relay } = await import('../../models/Relay');
+
+            const controller = await Controller.findById(id);
             if (!controller) {
                 return reply.status(404).send({ success: false, error: 'Controller not found' });
             }
-            return reply.send({ success: true, message: 'Controller deleted' });
+
+            // 1. Detach Devices
+            await DeviceModel.updateMany(
+                { 'hardware.parentId': id },
+                { $set: { 'hardware.parentId': null, 'hardware.port': null } }
+            );
+
+            // 2. Detach Relays
+            await Relay.updateMany(
+                { controllerId: id },
+                { $set: { controllerId: null } }
+            );
+
+            // 3. Soft Delete Controller
+            await controller.softDelete();
+
+            return reply.send({ success: true, message: 'Controller deleted and devices/relays detached' });
         } catch (error) {
+            console.error('Error deleting controller:', error);
             req.log.error(error);
             return reply.status(500).send({ success: false, error: 'Failed to delete controller' });
         }

@@ -123,7 +123,10 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                                                     <Badge variant="secondary" className="font-mono">{device.hardware.channel}</Badge>
                                                 </>
                                             ) : (
-                                                <span className="text-muted-foreground italic">Disconnected</span>
+                                                <span className="text-muted-foreground italic flex items-center gap-1">
+                                                    <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                                                    Unassigned
+                                                </span>
                                             )}
                                         </div>
                                     </TableCell>

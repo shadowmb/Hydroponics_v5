@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from 'lucide-react';
 
 const Hardware: React.FC = () => {
-    const [activeTab, setActiveTab] = useState("controllers");
+    const [activeTab, setActiveTab] = useState("devices");
     const [isDeviceWizardOpen, setIsDeviceWizardOpen] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState<any>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -39,14 +39,14 @@ const Hardware: React.FC = () => {
             <div className="flex items-center justify-between border-b">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => setActiveTab("controllers")}
-                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-primary ${activeTab === "controllers"
+                        onClick={() => setActiveTab("devices")}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-primary ${activeTab === "devices"
                             ? "border-b-2 border-primary text-primary"
                             : "text-muted-foreground"
                             }`}
                     >
-                        <Cpu className="h-4 w-4" />
-                        Controllers
+                        <Lightbulb className="h-4 w-4" />
+                        Devices
                     </button>
                     <button
                         onClick={() => setActiveTab("relays")}
@@ -59,14 +59,14 @@ const Hardware: React.FC = () => {
                         Relays
                     </button>
                     <button
-                        onClick={() => setActiveTab("devices")}
-                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-primary ${activeTab === "devices"
+                        onClick={() => setActiveTab("controllers")}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-primary ${activeTab === "controllers"
                             ? "border-b-2 border-primary text-primary"
                             : "text-muted-foreground"
                             }`}
                     >
-                        <Lightbulb className="h-4 w-4" />
-                        Devices
+                        <Cpu className="h-4 w-4" />
+                        Controllers
                     </button>
                 </div>
                 {activeTab === "devices" && (
