@@ -36,7 +36,7 @@ const RelayChannelSchema = new Schema({
 
 const RelaySchema = new Schema({
     name: { type: String, required: true },
-    controllerId: { type: Schema.Types.ObjectId, ref: 'Controller', required: true },
+    controllerId: { type: Schema.Types.ObjectId, ref: 'Controller', required: false },
     type: { type: String, enum: ['1-channel', '2-channel', '4-channel', '8-channel', '16-channel'], required: true },
     channels: [RelayChannelSchema],
     description: { type: String }
