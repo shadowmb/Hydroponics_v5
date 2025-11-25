@@ -7,7 +7,7 @@
     "controllers": [
         {
             "id": "arduino_uno",
-            "displayName": "Arduino Uno R3/R4",
+            "displayName": "Arduino Uno R3 (AVR)",
             "chipset": "ATmega328P/ATmega4809",
             "communicationTypes": [
                 "serial"
@@ -31,6 +31,36 @@
             "baseTemplates": {
                 "serial": "arduino_uno_serial_base.ino",
                 "wifi": null
+            },
+            "isActive": true
+        },
+        {
+            "id": "arduino_uno_r4_wifi",
+            "displayName": "Arduino Uno R4 WiFi",
+            "chipset": "Renesas RA4M1",
+            "communicationTypes": [
+                "serial",
+                "wifi"
+            ],
+            "capabilities": {
+                "analogPins": 6,
+                "digitalPins": 14,
+                "uartCount": 1,
+                "hasHardwareUART": true,
+                "hasRS485": false,
+                "flashMemory": 262144,
+                "sram": 32768
+            },
+            "commandCompatibility": {
+                "compatible": [
+                    "ANALOG"
+                ],
+                "notRecommended": [],
+                "incompatible": []
+            },
+            "baseTemplates": {
+                "serial": "arduino_uno_r4_serial_base.ino",
+                "wifi": "arduino_uno_r4_wifi_base.ino"
             },
             "isActive": true
         }

@@ -13,7 +13,7 @@
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "DIGITAL_WRITE") == 0) {
-  handleDigitalWrite(delimiter + 1);
+  return handleDigitalWrite(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -25,11 +25,10 @@ int parseDigitalWritePin(const char* pinStr) {
   return (pin >= 2 && pin <= 13) ? pin : -1;
 }
 
-void handleDigitalWrite(const char* params) {
+String handleDigitalWrite(const char* params) {
   // Parse params: "D8|1" -> pin=D8, state=1
   if (!params || strlen(params) < 4) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   // Find delimiter
@@ -39,8 +38,7 @@ void handleDigitalWrite(const char* params) {
   
   char* delimiter = strchr(paramsCopy, '|');
   if (!delimiter) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
   }
 
   *delimiter = '\0';
@@ -50,25 +48,25 @@ void handleDigitalWrite(const char* params) {
   // Parse pin
   int pin = parseDigitalWritePin(pinStr);
   if (pin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Parse state (0 or 1)
   int state = atoi(stateStr);
   if (state != 0 && state != 1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}";
   }
 
   // Set pin mode and state
   pinMode(pin, OUTPUT);
   digitalWrite(pin, state);
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"pin\":\"");
-  Serial.print(pinStr);
-  Serial.print("\",\"state\":");
-  Serial.print(state);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"pin\":\"";
+  response += pinStr;
+  response += "\",\"state\":";
+  response += state;
+  response += "}";
+  
+  return response;
 }

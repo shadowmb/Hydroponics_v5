@@ -758,4 +758,15 @@ export class HardwareController {
             return reply.status(500).send({ success: false, error: error.message || 'Test failed' });
         }
     }
+    static async syncStatus(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            logger.info('🔄 Syncing hardware status...');
+            const results = await hardware.syncStatus();
+            return reply.send({ success: true, data: results });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to sync status' });
+        }
+    }
 }
+

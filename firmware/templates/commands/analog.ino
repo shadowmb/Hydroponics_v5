@@ -13,7 +13,7 @@
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "ANALOG") == 0) {
-  handleAnalog(delimiter + 1);
+  return handleAnalog(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -25,27 +25,27 @@ int getAnalogPinNumber(const char* pin) {
   return A0 + (pin[1] - '0');
 }
 
-void handleAnalog(const char* params) {
+String handleAnalog(const char* params) {
   // Parse pin from params (e.g., "A0")
   if (!params || strlen(params) < 2) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   // Validate pin format
   if (!isValidAnalogPin(params)) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Convert pin string to pin number and read analog value (0-1023)
   int analogPin = getAnalogPinNumber(params);
   int value = analogRead(analogPin);
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"pin\":\"");
-  Serial.print(params);
-  Serial.print("\",\"value\":");
-  Serial.print(value);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"pin\":\"";
+  response += params;
+  response += "\",\"value\":";
+  response += value;
+  response += "}";
+  
+  return response;
 }

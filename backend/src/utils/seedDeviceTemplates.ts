@@ -76,7 +76,15 @@ const templates = [
 export const seedDeviceTemplates = async () => {
     try {
         console.log('Seeding Device Templates...');
-        await DeviceTemplate.insertMany(templates);
+
+        for (const template of templates) {
+            await DeviceTemplate.updateOne(
+                { _id: template._id },
+                { $set: template },
+                { upsert: true }
+            );
+        }
+
         console.log(`Seeded ${templates.length} device templates.`);
     } catch (error) {
         console.error('Error seeding device templates:', error);

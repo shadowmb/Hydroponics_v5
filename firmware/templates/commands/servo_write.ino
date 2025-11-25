@@ -15,7 +15,7 @@ int servoPins[6] = {3, 5, 6, 9, 10, 11}; // PWM pins
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "SERVO_WRITE") == 0) {
-  handleServoWrite(delimiter + 1);
+  return handleServoWrite(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -34,11 +34,10 @@ int parseServoPin(const char* pinStr) {
   return (getServoIndex(pin) != -1) ? pin : -1;
 }
 
-void handleServoWrite(const char* params) {
+String handleServoWrite(const char* params) {
   // Parse params: "D9|90" -> pin=D9, angle=90
   if (!params || strlen(params) < 4) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   // Find delimiter
@@ -48,8 +47,7 @@ void handleServoWrite(const char* params) {
   
   char* delimiter = strchr(paramsCopy, '|');
   if (!delimiter) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
   }
 
   *delimiter = '\0';
@@ -59,15 +57,13 @@ void handleServoWrite(const char* params) {
   // Parse pin
   int pin = parseServoPin(pinStr);
   if (pin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Parse angle (0-180)
   int angle = atoi(angleStr);
   if (angle < 0 || angle > 180) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}";
   }
 
   // Attach servo if not already attached
@@ -80,10 +76,12 @@ void handleServoWrite(const char* params) {
   // Set servo position
   servos[servoIndex].write(angle);
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"pin\":\"");
-  Serial.print(pinStr);
-  Serial.print("\",\"angle\":");
-  Serial.print(angle);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"pin\":\"";
+  response += pinStr;
+  response += "\",\"angle\":";
+  response += angle;
+  response += "}";
+  
+  return response;
 }

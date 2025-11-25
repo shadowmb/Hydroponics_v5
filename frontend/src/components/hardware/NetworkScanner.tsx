@@ -18,7 +18,13 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Radar, Loader2, Wifi, Plus, Check } from 'lucide-react';
+import { Radar, Loader2, Wifi, Plus, Check, Code } from 'lucide-react';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from 'sonner';
 import { hardwareService } from '../../services/hardwareService';
 
@@ -27,6 +33,7 @@ interface DiscoveredDevice {
     mac: string;
     model: string;
     firmware: string;
+    capabilities?: string[];
 }
 
 interface NetworkScannerProps {
@@ -36,7 +43,7 @@ interface NetworkScannerProps {
 export function NetworkScanner({ onAddController }: NetworkScannerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
-    const [port, setPort] = useState('44444');
+    const [port, setPort] = useState('8888');
     const [broadcastIp, setBroadcastIp] = useState('255.255.255.255');
     const [devices, setDevices] = useState<DiscoveredDevice[]>([]);
     const [existingMacs, setExistingMacs] = useState<Set<string>>(new Set());
@@ -95,7 +102,7 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                     Scan Network
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[800px]">
                 <DialogHeader>
                     <DialogTitle>Network Scanner</DialogTitle>
                     <DialogDescription>
@@ -111,7 +118,7 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                                 id="port"
                                 value={port}
                                 onChange={(e) => setPort(e.target.value)}
-                                placeholder="44444"
+                                placeholder="8888"
                             />
                         </div>
                         <div className="grid gap-2">
@@ -147,13 +154,14 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                                     <TableHead>MAC Address</TableHead>
                                     <TableHead>Model</TableHead>
                                     <TableHead>Firmware</TableHead>
+                                    <TableHead>Capabilities</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {devices.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                             {isScanning ? 'Listening for responses...' : 'No devices found. Check your settings.'}
                                         </TableCell>
                                     </TableRow>
@@ -166,6 +174,36 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                                                 <TableCell>{device.mac}</TableCell>
                                                 <TableCell>{device.model}</TableCell>
                                                 <TableCell>{device.firmware}</TableCell>
+                                                <TableCell className="text-center">
+                                                    {device.capabilities && device.capabilities.length > 0 ? (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div className="flex items-center gap-1 cursor-help w-fit mx-auto">
+                                                                        <Code className="h-4 w-4 text-muted-foreground" />
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                            {device.capabilities.length}
+                                                                        </span>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <div className="flex flex-col gap-1">
+                                                                        <p className="font-semibold text-xs mb-1">Supported Commands:</p>
+                                                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                                                            {device.capabilities.map((cap, idx) => (
+                                                                                <span key={idx} className="text-xs font-mono">
+                                                                                    {cap}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    ) : (
+                                                        <span className="text-muted-foreground text-xs">-</span>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     {isAdded ? (
                                                         <div className="flex items-center justify-end gap-1 text-green-600">

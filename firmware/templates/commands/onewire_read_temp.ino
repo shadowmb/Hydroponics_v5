@@ -14,7 +14,7 @@
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "ONEWIRE_READ_TEMP") == 0) {
-  handleOneWireReadTemp(delimiter + 1);
+  return handleOneWireReadTemp(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -26,17 +26,15 @@ int parseOneWirePin(const char* pinStr) {
   return (pin >= 2 && pin <= 13) ? pin : -1;
 }
 
-void handleOneWireReadTemp(const char* params) {
+String handleOneWireReadTemp(const char* params) {
   // Parse pin from params (e.g., "D5")
   if (!params || strlen(params) < 2) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   int pin = parseOneWirePin(params);
   if (pin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Initialize OneWire and DallasTemperature
@@ -52,12 +50,13 @@ void handleOneWireReadTemp(const char* params) {
 
   // Check if reading failed
   if (tempC == DEVICE_DISCONNECTED_C) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_SENSOR_NOT_FOUND\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_SENSOR_NOT_FOUND\"}";
   }
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"temp\":");
-  Serial.print(tempC, 2);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"temp\":";
+  response += String(tempC, 2);
+  response += "}";
+  
+  return response;
 }

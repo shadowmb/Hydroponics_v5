@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Controllers from './Controllers';
 import { RelayManager } from '../components/hardware/RelayManager';
-import { Settings2, Cpu, Lightbulb, Code } from 'lucide-react';
+import { Settings2, Cpu, Lightbulb, Code, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+
 
 import { DeviceList } from '../components/hardware/DeviceList';
 import { DeviceWizard } from '../components/hardware/DeviceWizard';
@@ -19,6 +21,33 @@ const Hardware: React.FC = () => {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [pendingControllerData, setPendingControllerData] = useState<any>(null);
     const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+    const [controllerRefreshTrigger, setControllerRefreshTrigger] = useState(0);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleRefreshStatus = async () => {
+        try {
+            setIsSyncing(true);
+
+            // Allow React to render the overlay before starting the work
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            toast.info('Syncing controller status...');
+
+            // Run sync and a 1-second timer in parallel. 
+            await Promise.allSettled([
+                fetch('/api/hardware/sync-status', { method: 'POST' }),
+                new Promise(resolve => setTimeout(resolve, 1000))
+            ]);
+
+            toast.success('Status synced');
+            setControllerRefreshTrigger(prev => prev + 1);
+        } catch (error) {
+            console.error('Sync failed', error);
+            toast.error('Failed to sync status');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const handleEditDevice = (device: any) => {
         setSelectedDevice(device);
@@ -48,6 +77,14 @@ const Hardware: React.FC = () => {
 
     return (
         <div className="container mx-auto p-6 space-y-6">
+            {isSyncing && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <RefreshCw className="h-12 w-12 animate-spin text-white" />
+                        <p className="text-lg font-medium text-white">Checking Hardware Status...</p>
+                    </div>
+                </div>
+            )}
             <div className="flex flex-col gap-2">
                 <h1 className="text-3xl font-bold tracking-tight">Hardware Management</h1>
                 <p className="text-muted-foreground">
@@ -89,7 +126,14 @@ const Hardware: React.FC = () => {
                     </button>
                 </div>
                 <div className="pb-2 flex gap-2">
+                    {activeTab === "controllers" && (
+                        <Button onClick={handleRefreshStatus} size="sm" variant="outline">
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Refresh Status
+                        </Button>
+                    )}
                     <NetworkScanner onAddController={handleScannerAdd} />
+
                     <Button onClick={() => setIsGeneratorOpen(true)} size="sm" variant="outline">
                         <Code className="mr-2 h-4 w-4" />
                         Generate Firmware
@@ -107,7 +151,9 @@ const Hardware: React.FC = () => {
                     <Controllers
                         initialWizardData={pendingControllerData}
                         onWizardClose={() => setPendingControllerData(null)}
+                        refreshTrigger={controllerRefreshTrigger}
                     />
+
                 )}
 
                 {activeTab === "relays" && <RelayManager />}

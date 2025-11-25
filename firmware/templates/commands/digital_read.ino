@@ -13,7 +13,7 @@
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "DIGITAL_READ") == 0) {
-  handleDigitalRead(delimiter + 1);
+  return handleDigitalRead(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -25,27 +25,27 @@ int parseDigitalPin(const char* pinStr) {
   return (pin >= 2 && pin <= 13) ? pin : -1;
 }
 
-void handleDigitalRead(const char* params) {
+String handleDigitalRead(const char* params) {
   // Parse pin from params (e.g., "D3")
   if (!params || strlen(params) < 2) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   int pin = parseDigitalPin(params);
   if (pin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Set pin mode and read state
   pinMode(pin, INPUT);
   int state = digitalRead(pin);
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"pin\":\"");
-  Serial.print(params);
-  Serial.print("\",\"state\":");
-  Serial.print(state);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"pin\":\"";
+  response += params;
+  response += "\",\"state\":";
+  response += state;
+  response += "}";
+  
+  return response;
 }

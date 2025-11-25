@@ -16,7 +16,7 @@ int uartTxPin = -1;
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "UART_READ_DISTANCE") == 0) {
-  handleUARTReadDistance(delimiter + 1);
+  return handleUARTReadDistance(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -28,11 +28,10 @@ int parseUARTPin(const char* pinStr) {
   return (pin >= 2 && pin <= 13) ? pin : -1;
 }
 
-void handleUARTReadDistance(const char* params) {
+String handleUARTReadDistance(const char* params) {
   // Parse params: "D10|D11" -> RX=D10, TX=D11
   if (!params || strlen(params) < 7) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   // Find delimiter between RX and TX pins
@@ -42,8 +41,7 @@ void handleUARTReadDistance(const char* params) {
   
   char* pipePos = strchr(paramsCopy, '|');
   if (!pipePos) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
   }
 
   *pipePos = '\0';
@@ -55,8 +53,7 @@ void handleUARTReadDistance(const char* params) {
   int txPin = parseUARTPin(txPinStr);
   
   if (rxPin == -1 || txPin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Initialize SoftwareSerial if needed or if pins changed
@@ -86,8 +83,7 @@ void handleUARTReadDistance(const char* params) {
   }
 
   if (uartSensor->available() < 4) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}";
   }
 
   // Read 4-byte frame
@@ -98,22 +94,22 @@ void handleUARTReadDistance(const char* params) {
 
   // Validate header (should be 0xFF)
   if (frame[0] != 0xFF) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_HEADER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_HEADER\"}";
   }
 
   // Verify checksum
   uint8_t checksum = (frame[0] + frame[1] + frame[2]) & 0xFF;
   if (checksum != frame[3]) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_CHECKSUM_FAILED\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_CHECKSUM_FAILED\"}";
   }
 
   // Calculate distance in mm
   uint16_t distance = (frame[1] << 8) | frame[2];
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"distance\":");
-  Serial.print(distance);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"distance\":";
+  response += distance;
+  response += "}";
+  
+  return response;
 }
