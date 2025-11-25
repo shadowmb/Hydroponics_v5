@@ -2,18 +2,23 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Controllers from './Controllers';
 import { RelayManager } from '../components/hardware/RelayManager';
-import { Settings2, Cpu, Lightbulb } from 'lucide-react';
+import { Settings2, Cpu, Lightbulb, Code } from 'lucide-react';
 
 import { DeviceList } from '../components/hardware/DeviceList';
 import { DeviceWizard } from '../components/hardware/DeviceWizard';
 import { Button } from "@/components/ui/button";
 import { Plus } from 'lucide-react';
 
+import { NetworkScanner } from '../components/hardware/NetworkScanner';
+import { FirmwareGeneratorDialog } from '../components/hardware/FirmwareGeneratorDialog';
+
 const Hardware: React.FC = () => {
     const [activeTab, setActiveTab] = useState("devices");
     const [isDeviceWizardOpen, setIsDeviceWizardOpen] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState<any>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [pendingControllerData, setPendingControllerData] = useState<any>(null);
+    const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
 
     const handleEditDevice = (device: any) => {
         setSelectedDevice(device);
@@ -25,6 +30,20 @@ const Hardware: React.FC = () => {
         if (!open) {
             setSelectedDevice(null);
         }
+    };
+
+    const handleScannerAdd = (device: any) => {
+        setPendingControllerData({
+            name: `New Controller (${device.model || 'Unknown'})`,
+            description: `Discovered at ${device.ip}`,
+            macAddress: device.mac,
+            connection: {
+                type: 'network',
+                ip: device.ip,
+                port: 80 // Default port, user can change
+            }
+        });
+        setActiveTab("controllers");
     };
 
     return (
@@ -69,17 +88,27 @@ const Hardware: React.FC = () => {
                         Controllers
                     </button>
                 </div>
-                {activeTab === "devices" && (
-                    <div className="pb-2">
+                <div className="pb-2 flex gap-2">
+                    <NetworkScanner onAddController={handleScannerAdd} />
+                    <Button onClick={() => setIsGeneratorOpen(true)} size="sm" variant="outline">
+                        <Code className="mr-2 h-4 w-4" />
+                        Generate Firmware
+                    </Button>
+                    {activeTab === "devices" && (
                         <Button onClick={() => { setSelectedDevice(null); setIsDeviceWizardOpen(true); }} size="sm">
                             <Plus className="mr-2 h-4 w-4" /> Add Device
                         </Button>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             <div className="mt-6">
-                {activeTab === "controllers" && <Controllers />}
+                {activeTab === "controllers" && (
+                    <Controllers
+                        initialWizardData={pendingControllerData}
+                        onWizardClose={() => setPendingControllerData(null)}
+                    />
+                )}
 
                 {activeTab === "relays" && <RelayManager />}
 
@@ -103,6 +132,11 @@ const Hardware: React.FC = () => {
                 onOpenChange={handleWizardOpenChange}
                 onSuccess={() => setRefreshTrigger(prev => prev + 1)}
                 initialData={selectedDevice}
+            />
+
+            <FirmwareGeneratorDialog
+                open={isGeneratorOpen}
+                onOpenChange={setIsGeneratorOpen}
             />
         </div>
     );

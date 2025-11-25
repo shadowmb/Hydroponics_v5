@@ -14,13 +14,14 @@ import { cn } from "@/lib/utils";
 interface ControllerWizardProps {
     onControllerCreated: () => void;
     editController?: IController; // If provided, we are in edit mode
+    initialData?: Partial<IController>; // For pre-filling data (e.g. from scanner)
     open?: boolean; // Controlled open state for edit mode
     onOpenChange?: (open: boolean) => void; // Controlled open handler
 }
 
 type WizardStep = 'type-selection' | 'configuration' | 'review';
 
-export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onControllerCreated, editController, open: controlledOpen, onOpenChange }) => {
+export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onControllerCreated, editController, initialData, open: controlledOpen, onOpenChange }) => {
     const [internalOpen, setInternalOpen] = useState(false);
     const isControlled = controlledOpen !== undefined;
     const open = isControlled ? controlledOpen : internalOpen;
@@ -45,6 +46,16 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
 
     const [serialPorts, setSerialPorts] = useState<any[]>([]);
     const [loadingPorts, setLoadingPorts] = useState(false);
+
+    // Map discovered model names to system template keys
+    const MODEL_MAP: Record<string, string> = {
+        'ArduinoUnoR4WiFi': 'Arduino_Uno',
+        'ArduinoUnoR3': 'Arduino_Uno',
+        'Arduino Uno': 'Arduino_Uno',
+        'ESP32': 'ESP32',
+        'WeMos D1 R2': 'WeMos_D1_R2',
+        'WeMos D1 R2 V2.1.0': 'WeMos_D1_R2'
+    };
 
     useEffect(() => {
         if (open) {
@@ -72,13 +83,61 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                     communication_by: [],
                     communication_type: []
                 });
+            } else if (initialData) {
+                // Pre-fill Mode (e.g. from Scanner)
+                setStep('type-selection'); // Default to selection, but might skip below
+
+                setFormData({
+                    name: initialData.name || '',
+                    description: initialData.description || '',
+                    macAddress: initialData.macAddress || '',
+                    connectionType: initialData.connection?.type || 'network',
+                    ip: initialData.connection?.ip || '',
+                    port: initialData.connection?.port || 80,
+                    serialPort: initialData.connection?.serialPort || '',
+                    baudRate: initialData.connection?.baudRate || 9600
+                });
+
+                // Try to auto-select template
+                // We need to wait for templates to load, but we can't easily do that in this effect 
+                // without complex dependency management. 
+                // Instead, we'll store the target template key and try to match it when templates arrive.
             } else {
                 // Create Mode Initialization
                 setStep('type-selection');
                 resetForm();
             }
         }
-    }, [open, editController]);
+    }, [open, editController, initialData]);
+
+    // Effect to handle auto-selection once templates are loaded
+    useEffect(() => {
+        if (open && !editController && initialData && templates.length > 0) {
+            // Extract model name from initialData (it might be in the name or a separate field if we added one)
+            // The scanner passes: name: `New Controller (${device.model})`
+            // But wait, we don't have the raw model string in initialData as defined in IController.
+            // However, we can parse it from the name or pass it separately.
+            // BETTER APPROACH: Let's assume the name contains the model or we look at the raw device if we could.
+            // But we only get Partial<IController>.
+
+            // Let's parse the model from the name string we constructed in Hardware.tsx:
+            // "New Controller (ArduinoUnoR4WiFi)"
+            const name = initialData.name || '';
+            const match = name.match(/\((.*?)\)/);
+            const modelName = match ? match[1] : '';
+
+            const templateKey = MODEL_MAP[modelName];
+            if (templateKey) {
+                const template = templates.find(t => t.key === templateKey);
+                if (template) {
+                    setSelectedTemplate(template);
+                    setStep('configuration');
+                    // Update name to be cleaner if we want, or keep the descriptive one
+                    // Let's keep the one passed in which is "New Controller (Model)"
+                }
+            }
+        }
+    }, [templates, open, editController, initialData]);
 
     // Update selected template label once templates are loaded
     useEffect(() => {

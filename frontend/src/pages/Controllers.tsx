@@ -116,7 +116,12 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     }
 }
 
-const Controllers: React.FC = () => {
+interface ControllersProps {
+    initialWizardData?: Partial<IController> | null;
+    onWizardClose?: () => void;
+}
+
+const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardClose }) => {
     const [controllers, setControllers] = useState<IController[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -155,6 +160,14 @@ const Controllers: React.FC = () => {
     useEffect(() => {
         fetchControllers();
     }, []);
+
+    useEffect(() => {
+        if (initialWizardData) {
+            setEditWizardOpen(true);
+            // We don't set controllerToEdit because we are creating a new one
+            setControllerToEdit(undefined);
+        }
+    }, [initialWizardData]);
 
     const handleDeleteClick = (id: string) => {
         setControllerToDelete(id);
@@ -329,10 +342,17 @@ const Controllers: React.FC = () => {
                 />
 
                 <ControllerWizard
-                    onControllerCreated={fetchControllers}
+                    onControllerCreated={() => {
+                        fetchControllers();
+                        if (onWizardClose) onWizardClose();
+                    }}
                     editController={controllerToEdit}
+                    initialData={initialWizardData || undefined}
                     open={editWizardOpen}
-                    onOpenChange={setEditWizardOpen}
+                    onOpenChange={(open) => {
+                        setEditWizardOpen(open);
+                        if (!open && onWizardClose) onWizardClose();
+                    }}
                 />
 
                 <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

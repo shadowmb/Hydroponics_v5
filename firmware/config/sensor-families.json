@@ -1,0 +1,153 @@
+{
+    "_meta": {
+        "description": "Sensor family to command mapping for v5 firmware generator",
+        "version": "5.0.0",
+        "purpose": "Maps hardware sensor families to their corresponding firmware commands and MCU primitives"
+    },
+    "sensorFamilies": [
+        {
+            "id": "ANALOG",
+            "displayName": "Analog Sensors",
+            "command": "ANALOG",
+            "commandFormat": "delimited",
+            "primitives": [
+                "READ_ANALOG"
+            ],
+            "examples": [
+                "Capacitive Soil Moisture (SEN0193)",
+                "Analog EC Sensor V2 (DFR0300)",
+                "Analog pH Sensor V2 (SEN0161-V2)",
+                "URM09 Ultrasonic Analog (SEN0307)"
+            ],
+            "suitableControllers": [
+                "arduino_uno",
+                "arduino_nano",
+                "arduino_mega",
+                "wemos_d1",
+                "nodemcu_amica_v2",
+                "esp32",
+                "firebeetle_esp32_e",
+                "arduino_uno_r4_wifi"
+            ],
+            "notes": "All calibration and formula calculations are done in backend"
+        },
+        {
+            "id": "DHT",
+            "displayName": "DHT Pulse Protocol",
+            "command": "DHT_READ",
+            "commandFormat": "delimited",
+            "primitives": [
+                "DHT_READ"
+            ],
+            "examples": [
+                "DHT22 Temp & Humidity (SEN0137)",
+                "DHT11"
+            ],
+            "suitableControllers": [
+                "arduino_uno",
+                "arduino_nano",
+                "arduino_mega",
+                "esp32",
+                "firebeetle_esp32_e"
+            ],
+            "notes": "Timing-sensitive single-wire pulse protocol, different from OneWire"
+        },
+        {
+            "id": "ONE_WIRE",
+            "displayName": "OneWire Protocol",
+            "command": "ONEWIRE_READ_TEMP",
+            "commandFormat": "delimited",
+            "primitives": [
+                "ONEWIRE_READ_TEMP"
+            ],
+            "examples": [
+                "DS18B20 Waterproof (DFR0198)"
+            ],
+            "suitableControllers": [
+                "arduino_uno",
+                "arduino_nano",
+                "arduino_mega",
+                "wemos_d1",
+                "nodemcu_amica_v2",
+                "esp32",
+                "firebeetle_esp32_e"
+            ],
+            "notes": "Multiple sensors can share the same pin using unique addresses"
+        },
+        {
+            "id": "PULSE_FLOW",
+            "displayName": "Pulse/Flow Sensors",
+            "command": "MEASURE_PULSE_RATE",
+            "commandFormat": "delimited",
+            "primitives": [
+                "MEASURE_PULSE_RATE"
+            ],
+            "examples": [
+                "Gravity Water Flow G1/2 (SEN0550)"
+            ],
+            "suitableControllers": [
+                "arduino_mega",
+                "esp32",
+                "firebeetle_esp32_e"
+            ],
+            "notes": "Backend converts pulse count to L/h using formula (1L = 150 pulses). Uno/Nano OK for 1-2 sensors only."
+        },
+        {
+            "id": "TRIG_ECHO",
+            "displayName": "Trigger-Echo Ultrasonic",
+            "command": "ULTRASONIC_TRIG_ECHO",
+            "commandFormat": "delimited",
+            "primitives": [
+                "ULTRASONIC_TRIG_ECHO"
+            ],
+            "examples": [
+                "URM09 Ultrasonic Trig (SEN0388)",
+                "HC-SR04"
+            ],
+            "suitableControllers": [
+                "arduino_uno",
+                "arduino_nano",
+                "arduino_mega",
+                "esp32",
+                "firebeetle_esp32_e"
+            ],
+            "notes": "Standard HC-SR04-style trigger/echo protocol"
+        },
+        {
+            "id": "UART",
+            "displayName": "UART Sensors",
+            "command": "UART_READ_DISTANCE",
+            "commandFormat": "delimited",
+            "primitives": [
+                "UART_READ_DISTANCE"
+            ],
+            "examples": [
+                "A02YYUW Waterproof Ultrasonic (SEN0311)"
+            ],
+            "suitableControllers": [
+                "esp32",
+                "firebeetle_esp32_e",
+                "arduino_mega"
+            ],
+            "notes": "Requires dedicated hardware UART. Avoid SoftwareSerial for reliability. Prefer controllers with multiple UARTs."
+        },
+        {
+            "id": "RS485_MODBUS",
+            "displayName": "RS485/Modbus RTU",
+            "command": "MODBUS_RTU_READ",
+            "commandFormat": "json",
+            "primitives": [
+                "MODBUS_RTU_READ_REGS"
+            ],
+            "examples": [
+                "RS485 PAR Sensor (SEN0641)"
+            ],
+            "suitableControllers": [
+                "esp32",
+                "firebeetle_esp32_e",
+                "arduino_mega"
+            ],
+            "notes": "Requires RS485-to-UART adapter. Avoid Uno/Nano for production Modbus. Complex parameters require JSON format."
+        }
+    ]
+}
