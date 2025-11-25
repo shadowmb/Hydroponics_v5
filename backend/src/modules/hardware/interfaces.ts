@@ -26,7 +26,8 @@ export interface HardwareResponse {
  * Responsible for sending raw bytes and emitting parsed JSON messages.
  */
 export interface IHardwareTransport {
-    connect(path: string): Promise<void>;
+    connect(path: string, options?: any): Promise<void>;
+
     disconnect(): Promise<void>;
     send(packet: HardwarePacket): Promise<void>;
 

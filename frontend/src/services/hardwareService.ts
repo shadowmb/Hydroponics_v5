@@ -85,6 +85,11 @@ export const hardwareService = {
         await axios.delete(`${API_URL}/hardware/controllers/${id}`);
     },
 
+    syncStatus: async (): Promise<any> => {
+        const response = await axios.post(`${API_URL}/hardware/sync-status`);
+        return response.data.data;
+    },
+
     // --- Relays ---
 
     getRelays: async (): Promise<any[]> => {

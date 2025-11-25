@@ -25,6 +25,8 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/hardware/controllers/:id', HardwareController.getController);
     app.put('/api/hardware/controllers/:id', HardwareController.updateController);
     app.delete('/api/hardware/controllers/:id', HardwareController.deleteController);
+    app.post('/api/hardware/sync-status', HardwareController.syncStatus);
+
 
     // Discovery Routes
     app.post('/api/discovery/scan', require('./controllers/discovery-controller').scanNetwork);

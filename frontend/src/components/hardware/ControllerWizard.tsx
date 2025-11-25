@@ -39,7 +39,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
         macAddress: '',
         connectionType: 'network' as 'network' | 'serial',
         ip: '',
-        port: 80,
+        port: 8888,
         serialPort: '',
         baudRate: 9600
     });
@@ -70,7 +70,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                     macAddress: editController.macAddress || '',
                     connectionType: editController.connection.type,
                     ip: editController.connection.ip || '',
-                    port: editController.connection.port || 80,
+                    port: editController.connection.port || 8888,
                     serialPort: editController.connection.serialPort || '',
                     baudRate: editController.connection.baudRate || 9600
                 });
@@ -93,7 +93,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                     macAddress: initialData.macAddress || '',
                     connectionType: initialData.connection?.type || 'network',
                     ip: initialData.connection?.ip || '',
-                    port: initialData.connection?.port || 80,
+                    port: initialData.connection?.port || 8888,
                     serialPort: initialData.connection?.serialPort || '',
                     baudRate: initialData.connection?.baudRate || 9600
                 });
@@ -185,7 +185,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
             macAddress: '',
             connectionType: 'network',
             ip: '',
-            port: 80,
+            port: 8888,
             serialPort: '',
             baudRate: 9600
         });
@@ -316,13 +316,14 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label>Port</Label>
+                        <Label>Port (UDP)</Label>
                         <Input
                             type="number"
                             value={formData.port}
                             onChange={e => setFormData({ ...formData, port: Number(e.target.value) })}
-                            placeholder="80"
+                            placeholder="8888"
                         />
+
                     </div>
                     <div className="grid gap-2">
                         <Label>MAC Address (Optional)</Label>

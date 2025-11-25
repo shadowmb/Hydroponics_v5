@@ -119,9 +119,12 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 interface ControllersProps {
     initialWizardData?: Partial<IController> | null;
     onWizardClose?: () => void;
+    refreshTrigger?: number;
 }
 
-const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardClose }) => {
+
+const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardClose, refreshTrigger }) => {
+
     const [controllers, setControllers] = useState<IController[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -135,6 +138,32 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
 
     const toggleExpand = (id: string) => {
         setExpandedControllerId(prev => prev === id ? null : id);
+    };
+
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleRefresh = async () => {
+        try {
+            setIsSyncing(true);
+
+            // Allow React to render the overlay before starting the work
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Run sync and a 1-second timer in parallel. 
+            // Use allSettled so we wait for the timer even if sync fails immediately.
+            await Promise.allSettled([
+                hardwareService.syncStatus(),
+                new Promise(resolve => setTimeout(resolve, 1000))
+            ]);
+
+            await fetchControllers();
+            toast.success('Hardware status updated');
+        } catch (error) {
+            console.error('Sync failed', error);
+            toast.error('Failed to sync hardware status');
+        } finally {
+            setIsSyncing(false);
+        }
     };
 
     const fetchControllers = async () => {
@@ -159,7 +188,8 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
 
     useEffect(() => {
         fetchControllers();
-    }, []);
+    }, [refreshTrigger]);
+
 
     useEffect(() => {
         if (initialWizardData) {
@@ -198,8 +228,6 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
         setEditWizardOpen(true);
     };
 
-    console.log('Rendering Controllers component. Controllers:', controllers);
-
     if (!Array.isArray(controllers)) {
         console.error('CRITICAL: controllers is not an array!', controllers);
         return <div className="p-4 text-red-500">Error: Controllers data is corrupted (not an array). Check console.</div>;
@@ -207,6 +235,14 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
 
     return (
         <ErrorBoundary>
+            {isSyncing && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <RefreshCw className="h-12 w-12 animate-spin text-white" />
+                        <p className="text-lg font-medium text-white">Checking Hardware Status...</p>
+                    </div>
+                </div>
+            )}
             <div className="container mx-auto py-6 space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
@@ -214,8 +250,8 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                         <p className="text-muted-foreground">Manage your hardware controllers and gateways.</p>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="icon" onClick={fetchControllers}>
-                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isSyncing}>
+                            <RefreshCw className={`h-4 w-4 ${loading && !isSyncing ? 'animate-spin' : ''}`} />
                         </Button>
                         <ControllerWizard onControllerCreated={fetchControllers} />
                     </div>
