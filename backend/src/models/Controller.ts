@@ -45,7 +45,7 @@ const ControllerSchema = new Schema({
     name: { type: String, required: true },
     type: { type: String, required: true }, // We store the key, not ObjectId, for flexibility
     description: { type: String },
-    macAddress: { type: String, unique: true, sparse: true }, // sparse allows null/undefined to not conflict
+    macAddress: { type: String, sparse: true }, // sparse allows null/undefined to not conflict
     status: { type: String, enum: ['online', 'offline', 'error'], default: 'offline' },
     lastSeen: { type: Date },
     connection: {
@@ -64,6 +64,9 @@ const ControllerSchema = new Schema({
 }, {
     timestamps: true
 });
+
+// Partial Index: Enforce unique MAC only for active (non-deleted) controllers
+ControllerSchema.index({ macAddress: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
 
 ControllerSchema.plugin(softDeletePlugin);
 

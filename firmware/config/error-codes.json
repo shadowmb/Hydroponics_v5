@@ -1,0 +1,177 @@
+{
+    "_meta": {
+        "description": "Standardized error codes for v5 firmware responses",
+        "version": "5.0.0",
+        "purpose": "Enables backend to provide localized error messages and categorize failures"
+    },
+    "errorCodes": [
+        {
+            "code": "ERR_INVALID_PIN",
+            "category": "validation",
+            "severity": "error",
+            "description": "Pin parameter is invalid or out of range",
+            "applicableCommands": [
+                "ANALOG",
+                "DHT_READ",
+                "ONEWIRE_READ_TEMP",
+                "MEASURE_PULSE_RATE",
+                "ULTRASONIC_TRIG_ECHO"
+            ]
+        },
+        {
+            "code": "ERR_TIMEOUT",
+            "category": "communication",
+            "severity": "error",
+            "description": "Operation timed out waiting for sensor response",
+            "applicableCommands": [
+                "DHT_READ",
+                "ONEWIRE_READ_TEMP",
+                "UART_READ_DISTANCE",
+                "MODBUS_RTU_READ"
+            ]
+        },
+        {
+            "code": "ERR_NO_RESPONSE",
+            "category": "communication",
+            "severity": "error",
+            "description": "Sensor did not respond to initialization signal",
+            "applicableCommands": [
+                "DHT_READ",
+                "ONEWIRE_READ_TEMP",
+                "MODBUS_RTU_READ"
+            ]
+        },
+        {
+            "code": "ERR_SENSOR_TIMEOUT",
+            "category": "communication",
+            "severity": "error",
+            "description": "Sensor response timeout during data transmission",
+            "applicableCommands": [
+                "DHT_READ",
+                "ONEWIRE_READ_TEMP"
+            ]
+        },
+        {
+            "code": "ERR_BIT_TIMEOUT",
+            "category": "communication",
+            "severity": "error",
+            "description": "Timeout while reading individual data bits",
+            "applicableCommands": [
+                "DHT_READ"
+            ]
+        },
+        {
+            "code": "ERR_CHECKSUM_FAILED",
+            "category": "data_integrity",
+            "severity": "error",
+            "description": "Data checksum validation failed",
+            "applicableCommands": [
+                "DHT_READ",
+                "UART_READ_DISTANCE"
+            ]
+        },
+        {
+            "code": "ERR_CRC_FAILED",
+            "category": "data_integrity",
+            "severity": "error",
+            "description": "CRC16 validation failed",
+            "applicableCommands": [
+                "MODBUS_RTU_READ"
+            ]
+        },
+        {
+            "code": "ERR_INVALID_RESPONSE",
+            "category": "data_integrity",
+            "severity": "error",
+            "description": "Received response is malformed or invalid",
+            "applicableCommands": [
+                "MODBUS_RTU_READ",
+                "UART_READ_DISTANCE"
+            ]
+        },
+        {
+            "code": "ERR_INVALID_DEVICE_ADDRESS",
+            "category": "validation",
+            "severity": "error",
+            "description": "Modbus device address is out of valid range (1-247)",
+            "applicableCommands": [
+                "MODBUS_RTU_READ"
+            ]
+        },
+        {
+            "code": "ERR_INVALID_REGISTER_COUNT",
+            "category": "validation",
+            "severity": "error",
+            "description": "Register count is out of valid range (1-125)",
+            "applicableCommands": [
+                "MODBUS_RTU_READ"
+            ]
+        },
+        {
+            "code": "ERR_INVALID_COMMAND",
+            "category": "validation",
+            "severity": "error",
+            "description": "Command name is not recognized",
+            "applicableCommands": [
+                "*"
+            ]
+        },
+        {
+            "code": "ERR_MISSING_PARAMETER",
+            "category": "validation",
+            "severity": "error",
+            "description": "Required command parameter is missing",
+            "applicableCommands": [
+                "*"
+            ]
+        },
+        {
+            "code": "ERR_INVALID_FORMAT",
+            "category": "validation",
+            "severity": "error",
+            "description": "Command format is invalid (malformed delimited text or JSON)",
+            "applicableCommands": [
+                "*"
+            ]
+        },
+        {
+            "code": "ERR_SENSOR_NOT_FOUND",
+            "category": "hardware",
+            "severity": "error",
+            "description": "Sensor hardware not detected on specified pin",
+            "applicableCommands": [
+                "DHT_READ",
+                "ONEWIRE_READ_TEMP"
+            ]
+        },
+        {
+            "code": "ERR_UART_INIT_FAILED",
+            "category": "hardware",
+            "severity": "error",
+            "description": "Failed to initialize UART communication",
+            "applicableCommands": [
+                "UART_READ_DISTANCE",
+                "MODBUS_RTU_READ"
+            ]
+        },
+        {
+            "code": "ERR_OUT_OF_MEMORY",
+            "category": "system",
+            "severity": "critical",
+            "description": "Insufficient memory to complete operation",
+            "applicableCommands": [
+                "*"
+            ]
+        },
+        {
+            "code": "ERR_BUFFER_OVERFLOW",
+            "category": "system",
+            "severity": "critical",
+            "description": "Data buffer overflow detected",
+            "applicableCommands": [
+                "UART_READ_DISTANCE",
+                "MODBUS_RTU_READ"
+            ]
+        }
+    ]
+}
