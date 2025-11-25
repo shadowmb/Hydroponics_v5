@@ -103,102 +103,16 @@ export class HardwareService {
         if (this.transports.has(controllerId)) {
             const transport = this.transports.get(controllerId)!;
 
-            // Check if config matches
-            // We need to cast to any to access internal properties or add a getConfig method to interface
-            // For now, let's just compare what we know.
-            // Actually, simpler approach:
-            // If it's connected, we assume it's good UNLESS we force a reconnect.
-            // But the user changed the DB.
+            // We can't easily check internal path of SerialTransport without casting or public prop
+            // Let's assume if it's connected, it's connected to *something*.
+            // But if user changed COM port in DB, we need to switch.
+            // We should probably just ALWAYS recreate the transport if we suspect a change?
+            // Or better: Compare with a stored config cache.
 
-            // Let's check if the transport type and destination match.
-            // This is tricky without exposing internal state of transport.
-            // SAFE FIX: For now, let's just close and recreate if the user is asking for a checkHealth
-            // Or better: In checkHealth, we can force a reconnect? No, that's inefficient.
+            const connectionKey = controller.connection.type === 'serial'
+                ? `serial:${controller.connection.serialPort}:${controller.connection.baudRate}`
+                : `network:${controller.connection.ip}:${controller.connection.port || 8888}`;
 
-            // Let's implement a basic check.
-            let isConfigMatch = false;
-            if (transport instanceof SerialTransport && controller.connection.type === 'serial') {
-                // We can't easily check internal path of SerialTransport without casting or public prop
-                // Let's assume if it's connected, it's connected to *something*.
-                // But if user changed COM port in DB, we need to switch.
-                // We should probably just ALWAYS recreate the transport if we suspect a change?
-                // Or better: Compare with a stored config cache.
-            }
-
-            // QUICK FIX: For this specific issue, we can just close the existing transport if we detect a mismatch?
-            // No, we can't see the transport's current config.
-
-            // ROBUST FIX: Store the config used to create the transport in a map.
-        }
-
-        // ...
-        // Wait, I can't easily implement the map logic in a small replace.
-        // Let's just ALWAYS close and recreate for now? No, that breaks persistent connections.
-
-        // Let's look at the code I'm replacing.
-        // I will modify the top of the function to fetch controller FIRST.
-        // Then I will check if existing transport matches.
-
-        // Actually, I'll add a `config` property to the transport interface? No, too big.
-        // I will add a `lastConfig` map to HardwareService.
-
-        // Let's try this:
-        // 1. Get Controller.
-        // 2. Construct the "target" URL/Path.
-        // 3. Compare with what we think the transport has.
-
-        // Since I can't easily change the class state in a replace, I will use a simpler heuristic:
-        // If the transport is UdpTransport, we can just update its target IP/Port?
-        // UdpTransport is connectionless mostly, but we store the target.
-
-        // Let's just destroy the old transport if it exists, to be safe.
-        // This ensures we always pick up the new config.
-        // Is this too heavy?
-        // For Serial: Yes, closing/opening resets Arduino.
-        // For UDP: No cost.
-
-        // Compromise:
-        // Only for UDP (Network), we always recreate?
-        // Or better:
-        // We can just create a new transport instance every time for UDP?
-        // No, we want to keep the socket open.
-
-        // Let's just fix the logic to NOT return early if config changed.
-        // But we don't know if config changed.
-
-        // Okay, I will modify `getOrConnectTransport` to accept an optional `forceReconnect` flag.
-        // And `checkHealth` will call it with `true`?
-        // No, checkHealth runs periodically, we don't want to reset Serial every time.
-
-        // The user changed the config in the UI.
-        // The UI should probably trigger a "reconnect" event?
-        // But here we are just calling `checkHealth`.
-
-        // Let's go with the "Stored Config" approach.
-        // I will add `private transportConfigs = new Map<string, string>();` to the class (I can't do that easily with replace).
-
-        // Alternative:
-        // Just recreate the transport if it's UDP. UDP is cheap.
-        // Serial is expensive.
-
-        // Let's try this logic:
-        // 1. Fetch Controller.
-        // 2. Calculate `connectionKey` (e.g. "serial:COM5:9600" or "network:10.1.1.1:8888").
-        // 3. Check if `this.transports.get(id)` exists AND `this.transportConfigs.get(id) === connectionKey`.
-        // 4. If match, return existing.
-        // 5. If not match, close existing, create new, update map.
-
-        // I need to add `transportConfigs` map. I'll add it near the top of the file or just use a property on the instance if I can.
-        // Typescript won't like me adding a property that isn't declared.
-
-        // Hack: I can attach the config to the transport object itself? `(transport as any)._config = ...`
-
-        const connectionKey = controller.connection.type === 'serial'
-            ? `serial:${controller.connection.serialPort}:${controller.connection.baudRate}`
-            : `network:${controller.connection.ip}:${controller.connection.port || 8888}`;
-
-        if (this.transports.has(controllerId)) {
-            const transport = this.transports.get(controllerId)!;
             const lastConfig = (transport as any)._config;
 
             if (transport.isConnected() && lastConfig === connectionKey) {
@@ -218,6 +132,9 @@ export class HardwareService {
         logger.info({ controllerId, name: controller.name, connection: controller.connection }, '🔍 [HardwareService] Resolving Transport');
 
         let transport: IHardwareTransport;
+        const connectionKey = controller.connection.type === 'serial'
+            ? `serial:${controller.connection.serialPort}:${controller.connection.baudRate}`
+            : `network:${controller.connection.ip}:${controller.connection.port || 8888}`;
 
         // Determine Transport Type
         if (controller.connection?.type === 'serial' && controller.connection.serialPort) {
@@ -382,6 +299,9 @@ export class HardwareService {
     public async syncStatus(): Promise<Record<string, string>> {
         logger.info('🔄 [HardwareService] Starting Status Sync...');
         const controllers = await Controller.find();
+        const { DeviceModel } = await import('../../models/Device');
+        const { Relay } = await import('../../models/Relay');
+
         const results: Record<string, string> = {};
 
         // Run checks in parallel
@@ -394,11 +314,64 @@ export class HardwareService {
             if (controller.status !== newStatus) {
                 controller.status = newStatus;
                 await controller.save();
-                // TODO: Emit socket event for UI update
                 events.emit('controller:update', { id: controller._id, status: newStatus });
             }
 
             results[controller.name] = newStatus;
+
+            // --- Cascade Status to Devices ---
+            try {
+                // 1. Find Relays attached to this controller
+                const controllerRelays = await Relay.find({ controllerId: controller._id });
+                const relayIds = controllerRelays.map(r => r._id);
+
+                // 2. Find Devices (Directly attached OR attached via Relays)
+                const devices = await DeviceModel.find({
+                    $or: [
+                        { 'hardware.parentId': controller._id },
+                        { 'hardware.relayId': { $in: relayIds } }
+                    ]
+                });
+
+                // 3. Update Device Status
+                for (const device of devices) {
+                    // Skip if device is disabled
+                    if (device.isEnabled === false) continue;
+
+                    let newDeviceStatus: 'online' | 'offline' | 'error' = 'offline';
+
+                    if (newStatus === 'offline') {
+                        // Parent Controller is Offline -> Device is Offline
+                        newDeviceStatus = 'offline';
+                    } else {
+                        // Parent Controller is Online
+                        // If device is already in 'error', keep it (Higher Priority)
+                        if (device.status === 'error') {
+                            newDeviceStatus = 'error';
+                        } else {
+                            // Otherwise, it's Online
+                            newDeviceStatus = 'online';
+                        }
+                    }
+
+                    // Only save if changed
+                    if (device.status !== newDeviceStatus) {
+                        logger.info({
+                            deviceId: device._id,
+                            name: device.name,
+                            old: device.status,
+                            new: newDeviceStatus,
+                            reason: `Controller ${newStatus}`
+                        }, '📱 [HardwareService] Device Status Cascade');
+
+                        device.status = newDeviceStatus;
+                        await device.save();
+                        events.emit('device:update', { id: device._id, status: newDeviceStatus });
+                    }
+                }
+            } catch (cascadeError) {
+                logger.error({ err: cascadeError, controllerId: controller._id }, '❌ Failed to cascade status to devices');
+            }
         }));
 
         return results;

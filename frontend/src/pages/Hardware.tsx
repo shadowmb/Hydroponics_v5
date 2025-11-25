@@ -13,6 +13,7 @@ import { Plus } from 'lucide-react';
 
 import { NetworkScanner } from '../components/hardware/NetworkScanner';
 import { FirmwareGeneratorDialog } from '../components/hardware/FirmwareGeneratorDialog';
+import { NetworkScanPrompt } from '../components/hardware/NetworkScanPrompt';
 
 const Hardware: React.FC = () => {
     const [activeTab, setActiveTab] = useState("devices");
@@ -23,6 +24,7 @@ const Hardware: React.FC = () => {
     const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
     const [controllerRefreshTrigger, setControllerRefreshTrigger] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isScanPromptOpen, setIsScanPromptOpen] = useState(false);
 
     const handleRefreshStatus = async () => {
         try {
@@ -73,6 +75,11 @@ const Hardware: React.FC = () => {
             }
         });
         setActiveTab("controllers");
+    };
+
+    const handleDeviceWizardSuccess = () => {
+        setRefreshTrigger(prev => prev + 1);
+        setIsScanPromptOpen(true);
     };
 
     return (
@@ -176,13 +183,18 @@ const Hardware: React.FC = () => {
             <DeviceWizard
                 open={isDeviceWizardOpen}
                 onOpenChange={handleWizardOpenChange}
-                onSuccess={() => setRefreshTrigger(prev => prev + 1)}
+                onSuccess={handleDeviceWizardSuccess}
                 initialData={selectedDevice}
             />
-
             <FirmwareGeneratorDialog
                 open={isGeneratorOpen}
                 onOpenChange={setIsGeneratorOpen}
+            />
+
+            <NetworkScanPrompt
+                open={isScanPromptOpen}
+                onOpenChange={setIsScanPromptOpen}
+                onConfirm={handleRefreshStatus}
             />
         </div>
     );

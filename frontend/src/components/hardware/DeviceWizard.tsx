@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -34,7 +35,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         controllerId: '',
         port: '',
         relayId: '',
-        channel: ''
+        channel: '',
+        isEnabled: true
     });
 
     const isEditMode = !!initialData;
@@ -51,7 +53,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     controllerId: initialData.hardware?.parentId || '',
                     port: initialData.hardware?.port || '',
                     relayId: initialData.hardware?.relayId || '',
-                    channel: initialData.hardware?.channel !== undefined ? String(initialData.hardware.channel) : ''
+                    channel: initialData.hardware?.channel !== undefined ? String(initialData.hardware.channel) : '',
+                    isEnabled: initialData.isEnabled !== undefined ? initialData.isEnabled : true
                 });
                 // Determine connection type
                 if (initialData.hardware?.relayId) {
@@ -67,7 +70,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             } else {
                 // Reset for New Device
                 setStep(1);
-                setFormData({ name: '', description: '', controllerId: '', port: '', relayId: '', channel: '' });
+                setFormData({ name: '', description: '', controllerId: '', port: '', relayId: '', channel: '', isEnabled: true });
                 setSelectedTemplate(null);
                 setConnectionType('direct');
             }
@@ -103,6 +106,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             const payload: any = {
                 name: formData.name,
                 type: selectedTemplate?.physicalType === 'relay' ? 'ACTUATOR' : 'SENSOR',
+                isEnabled: formData.isEnabled,
                 config: {
                     driverId: selectedTemplate?._id,
                     pollInterval: 5000
@@ -239,6 +243,20 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                     placeholder="Optional description"
                                 />
                             </div>
+
+                            <div className="flex items-center justify-between space-x-2 border p-3 rounded-md">
+                                <div className="space-y-0.5">
+                                    <Label className="text-base">Enabled</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Disable to stop polling this device without deleting it.
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={formData.isEnabled}
+                                    onCheckedChange={checked => setFormData({ ...formData, isEnabled: checked })}
+                                />
+                            </div>
+
                             {selectedTemplate && (
                                 <div className="p-4 bg-muted/50 rounded-lg flex items-center gap-3">
                                     {getIcon(selectedTemplate.uiConfig?.icon)}

@@ -2,7 +2,36 @@ import mongoose, { Schema } from 'mongoose';
 import { z } from 'zod';
 import { softDeletePlugin, SoftDeleteDocument, SoftDeleteModel } from '../core/softDeletePlugin';
 
-// ... (Zod omitted for brevity) ...
+// --- Interfaces ---
+export interface IDevice extends SoftDeleteDocument {
+    name: string;
+    type: 'CONTROLLER' | 'SENSOR' | 'ACTUATOR';
+    isEnabled: boolean;
+    status: 'online' | 'offline' | 'error';
+
+    hardware: {
+        boardType?: string;
+        port?: string;
+        pin?: number;
+        parentId?: string; // Controller ID
+        relayId?: string;  // Relay ID
+        channel?: number;
+    };
+
+    config: {
+        driverId: string;
+        pollInterval?: number;
+        calibration?: {
+            multiplier: number;
+            offset: number;
+            points?: { raw: number; value: number }[];
+        };
+    };
+
+    metadata?: {
+        description?: string;
+    };
+}
 
 // --- Mongoose Schema ---
 const DeviceSchema = new Schema<IDevice>(
@@ -10,6 +39,7 @@ const DeviceSchema = new Schema<IDevice>(
         name: { type: String, required: true, unique: true },
         type: { type: String, enum: ['CONTROLLER', 'SENSOR', 'ACTUATOR'], required: true },
         isEnabled: { type: Boolean, default: true },
+        status: { type: String, enum: ['online', 'offline', 'error'], default: 'offline' },
 
         hardware: {
             boardType: String,
