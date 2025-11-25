@@ -13,7 +13,7 @@
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "RELAY_SET") == 0) {
-  handleRelaySet(delimiter + 1);
+  return handleRelaySet(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -25,11 +25,10 @@ int parseRelayPin(const char* pinStr) {
   return (pin >= 2 && pin <= 13) ? pin : -1;
 }
 
-void handleRelaySet(const char* params) {
+String handleRelaySet(const char* params) {
   // Parse params: "D7|1" -> pin=D7, state=1
   if (!params || strlen(params) < 4) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   // Find delimiter
@@ -39,8 +38,7 @@ void handleRelaySet(const char* params) {
   
   char* delimiter = strchr(paramsCopy, '|');
   if (!delimiter) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
   }
 
   *delimiter = '\0';
@@ -50,25 +48,25 @@ void handleRelaySet(const char* params) {
   // Parse pin
   int pin = parseRelayPin(pinStr);
   if (pin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Parse state (0 or 1)
   int state = atoi(stateStr);
   if (state != 0 && state != 1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}";
   }
 
   // Set pin mode and state
   pinMode(pin, OUTPUT);
   digitalWrite(pin, state);
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"pin\":\"");
-  Serial.print(pinStr);
-  Serial.print("\",\"state\":");
-  Serial.print(state);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"pin\":\"";
+  response += pinStr;
+  response += "\",\"state\":";
+  response += state;
+  response += "}";
+  
+  return response;
 }

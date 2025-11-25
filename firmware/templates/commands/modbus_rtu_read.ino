@@ -8,6 +8,16 @@
 
 // === INCLUDES ===
 #include <SoftwareSerial.h>
+/*
+ * MODBUS_RTU_READ Command Module (v5 Clean)
+ * Reads Modbus RTU registers via Hardware Serial
+ * Format: MODBUS_RTU_READ|D2|D3|{"addr":1,"func":3,"reg":0,"count":2}
+ * Used for: Industrial sensors with Modbus RTU protocol
+ * Note: Uses SoftwareSerial with dynamic RX/TX pins
+ */
+
+// === INCLUDES ===
+#include <SoftwareSerial.h>
 
 // === GLOBALS ===
 SoftwareSerial* modbusSerial = nullptr;
@@ -16,7 +26,7 @@ int modbusTxPin = -1;
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "MODBUS_RTU_READ") == 0) {
-  handleModbusRtuRead(delimiter + 1);
+  return handleModbusRtuRead(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -44,11 +54,10 @@ int parseModbusPin(const char* pinStr) {
   return (pin >= 2 && pin <= 13) ? pin : -1;
 }
 
-void handleModbusRtuRead(const char* params) {
+String handleModbusRtuRead(const char* params) {
   // Parse params: "D2|D3|{...}" -> RX=D2, TX=D3, JSON params
   if (!params || strlen(params) < 10) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   // Find first delimiter (between RX and TX)
@@ -58,8 +67,7 @@ void handleModbusRtuRead(const char* params) {
   
   char* firstPipe = strchr(paramsCopy, '|');
   if (!firstPipe) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
   }
   *firstPipe = '\0';
   const char* rxPinStr = paramsCopy;
@@ -67,8 +75,7 @@ void handleModbusRtuRead(const char* params) {
   // Find second delimiter (between TX and JSON)
   char* secondPipe = strchr(firstPipe + 1, '|');
   if (!secondPipe) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
   }
   *secondPipe = '\0';
   const char* txPinStr = firstPipe + 1;
@@ -79,8 +86,7 @@ void handleModbusRtuRead(const char* params) {
   int txPin = parseModbusPin(txPinStr);
   
   if (rxPin == -1 || txPin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Parse JSON parameters (simple parser for known structure)
@@ -150,16 +156,15 @@ void handleModbusRtuRead(const char* params) {
 
   // Validate response
   if (bytesRead < 5) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MODBUS_TIMEOUT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MODBUS_TIMEOUT\"}";
   }
 
   // Check for Modbus exception
   if (response[1] & 0x80) {
-    Serial.print("{\"ok\":0,\"error\":\"ERR_MODBUS_EXCEPTION\",\"code\":");
-    Serial.print(response[2]);
-    Serial.println("}");
-    return;
+    String err = "{\"ok\":0,\"error\":\"ERR_MODBUS_EXCEPTION\",\"code\":";
+    err += response[2];
+    err += "}";
+    return err;
   }
 
   // Verify CRC
@@ -167,17 +172,18 @@ void handleModbusRtuRead(const char* params) {
   unsigned int receivedCRC = response[bytesRead - 2] | (response[bytesRead - 1] << 8);
   
   if (responseCRC != receivedCRC) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MODBUS_CRC\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MODBUS_CRC\"}";
   }
 
   // Extract register values
-  Serial.print("{\"ok\":1,\"registers\":[");
+  String jsonResponse = "{\"ok\":1,\"registers\":[";
   for (int i = 0; i < registerCount; i++) {
     int offset = 3 + (i * 2);
     uint16_t value = (response[offset] << 8) | response[offset + 1];
-    Serial.print(value);
-    if (i < registerCount - 1) Serial.print(",");
+    jsonResponse += value;
+    if (i < registerCount - 1) jsonResponse += ",";
   }
-  Serial.println("]}");
+  jsonResponse += "]}";
+  
+  return jsonResponse;
 }

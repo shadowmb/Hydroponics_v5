@@ -13,15 +13,19 @@ bool i2cInitialized = false;
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "I2C_READ") == 0) {
-  handleI2CRead(delimiter + 1);
+  return handleI2CRead(delimiter + 1);
 }
 
 // === FUNCTIONS ===
 void handleI2CRead(const char* params) {
+  // This function signature is kept for compatibility but implementation is changed to return String
+  // Wait, I need to change the signature in the replacement content too!
+}
+
+String handleI2CRead(const char* params) {
   // Parse params: "0x76|2" -> address=0x76, bytes=2
   if (!params || strlen(params) < 5) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   // Find delimiter
@@ -31,8 +35,7 @@ void handleI2CRead(const char* params) {
   
   char* delimiter = strchr(paramsCopy, '|');
   if (!delimiter) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
   }
 
   *delimiter = '\0';
@@ -50,8 +53,7 @@ void handleI2CRead(const char* params) {
   // Parse bytes to read
   int bytesToRead = atoi(bytesStr);
   if (bytesToRead < 1 || bytesToRead > 32) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}";
   }
 
   // Initialize I2C if needed
@@ -70,8 +72,7 @@ void handleI2CRead(const char* params) {
   }
 
   if (Wire.available() < bytesToRead) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_I2C_TIMEOUT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_I2C_TIMEOUT\"}";
   }
 
   // Read data
@@ -80,13 +81,15 @@ void handleI2CRead(const char* params) {
     data[i] = Wire.read();
   }
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"address\":\"");
-  Serial.print(addrStr);
-  Serial.print("\",\"data\":[");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"address\":\"";
+  response += addrStr;
+  response += "\",\"data\":[";
   for (int i = 0; i < bytesToRead; i++) {
-    Serial.print(data[i]);
-    if (i < bytesToRead - 1) Serial.print(",");
+    response += data[i];
+    if (i < bytesToRead - 1) response += ",";
   }
-  Serial.println("]}");
+  response += "]}";
+  
+  return response;
 }

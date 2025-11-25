@@ -13,7 +13,7 @@
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "PWM_WRITE") == 0) {
-  handlePWMWrite(delimiter + 1);
+  return handlePWMWrite(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -30,11 +30,10 @@ int parsePWMPin(const char* pinStr) {
   return isPWMPin(pin) ? pin : -1;
 }
 
-void handlePWMWrite(const char* params) {
+String handlePWMWrite(const char* params) {
   // Parse params: "D9|128" -> pin=D9, value=128
   if (!params || strlen(params) < 4) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   // Find delimiter
@@ -44,8 +43,7 @@ void handlePWMWrite(const char* params) {
   
   char* delimiter = strchr(paramsCopy, '|');
   if (!delimiter) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
   }
 
   *delimiter = '\0';
@@ -55,25 +53,25 @@ void handlePWMWrite(const char* params) {
   // Parse pin
   int pin = parsePWMPin(pinStr);
   if (pin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // Parse value (0-255)
   int value = atoi(valueStr);
   if (value < 0 || value > 255) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}";
   }
 
   // Set PWM value
   pinMode(pin, OUTPUT);
   analogWrite(pin, value);
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"pin\":\"");
-  Serial.print(pinStr);
-  Serial.print("\",\"value\":");
-  Serial.print(value);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"pin\":\"";
+  response += pinStr;
+  response += "\",\"value\":";
+  response += value;
+  response += "}";
+  
+  return response;
 }

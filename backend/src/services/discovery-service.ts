@@ -6,6 +6,7 @@ export interface DiscoveredDevice {
     mac: string;
     model?: string;
     firmware?: string;
+    capabilities?: string[];
     lastSeen: Date;
 }
 
@@ -19,12 +20,12 @@ export class DiscoveryService extends EventEmitter {
 
     /**
      * Scans the network for controllers via UDP broadcast.
-     * @param port The UDP port to send/receive on (default: 44444)
+     * @param port The UDP port to send/receive on (default: 8888)
      * @param broadcastAddress The broadcast IP (default: 255.255.255.255)
      * @param timeoutMs Duration to listen for responses (default: 3000ms)
      */
     public async scan(
-        port: number = 44444,
+        port: number = 8888,
         broadcastAddress: string = '255.255.255.255',
         timeoutMs: number = 3000
     ): Promise<DiscoveredDevice[]> {
@@ -52,6 +53,7 @@ export class DiscoveryService extends EventEmitter {
                             mac: data.mac,
                             model: data.model || 'Unknown',
                             firmware: data.firmware || 'Unknown',
+                            capabilities: data.capabilities || [],
                             lastSeen: new Date()
                         };
                         this.discoveredDevices.set(data.mac, device);
@@ -66,7 +68,7 @@ export class DiscoveryService extends EventEmitter {
 
                 this.socket.setBroadcast(true);
 
-                const message = Buffer.from(JSON.stringify({ type: 'DISCOVER' }));
+                const message = Buffer.from('HYDROPONICS_DISCOVERY');
 
                 console.log(`[DiscoveryService] Broadcasting to ${broadcastAddress}:${port}...`);
 

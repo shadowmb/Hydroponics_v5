@@ -14,7 +14,7 @@
 
 // === DISPATCHER ===
 else if (strcmp(cmd, "DHT_READ") == 0) {
-  handleDHTRead(delimiter + 1);
+  return handleDHTRead(delimiter + 1);
 }
 
 // === FUNCTIONS ===
@@ -26,17 +26,15 @@ int parseDHTPin(const char* pinStr) {
   return (pin >= 2 && pin <= 13) ? pin : -1;
 }
 
-void handleDHTRead(const char* params) {
+String handleDHTRead(const char* params) {
   // Parse pin from params (e.g., "D4")
   if (!params || strlen(params) < 2) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
   int dataPin = parseDHTPin(params);
   if (dataPin == -1) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
   // DHT22 protocol parameters
@@ -61,24 +59,21 @@ void handleDHTRead(const char* params) {
   // Wait for sensor response (pull low)
   while (digitalRead(dataPin) == HIGH) {
     if (millis() - timeoutStart > TIMEOUT) {
-      Serial.println("{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}");
-      return;
+      return "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}";
     }
   }
 
   // Wait for sensor ready (pull high)
   while (digitalRead(dataPin) == LOW) {
     if (millis() - timeoutStart > TIMEOUT) {
-      Serial.println("{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}");
-      return;
+      return "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}";
     }
   }
 
   // Wait for data start (pull low)
   while (digitalRead(dataPin) == HIGH) {
     if (millis() - timeoutStart > TIMEOUT) {
-      Serial.println("{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}");
-      return;
+      return "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}";
     }
   }
 
@@ -87,8 +82,7 @@ void handleDHTRead(const char* params) {
     // Wait for bit start (high pulse)
     while (digitalRead(dataPin) == LOW) {
       if (millis() - timeoutStart > TIMEOUT) {
-        Serial.println("{\"ok\":0,\"error\":\"ERR_READ_TIMEOUT\"}");
-        return;
+        return "{\"ok\":0,\"error\":\"ERR_READ_TIMEOUT\"}";
       }
     }
 
@@ -96,8 +90,7 @@ void handleDHTRead(const char* params) {
     unsigned long pulseStart = micros();
     while (digitalRead(dataPin) == HIGH) {
       if (millis() - timeoutStart > TIMEOUT) {
-        Serial.println("{\"ok\":0,\"error\":\"ERR_READ_TIMEOUT\"}");
-        return;
+        return "{\"ok\":0,\"error\":\"ERR_READ_TIMEOUT\"}";
       }
     }
     unsigned long pulseDuration = micros() - pulseStart;
@@ -113,8 +106,7 @@ void handleDHTRead(const char* params) {
   // Verify checksum
   byte checksum = data[0] + data[1] + data[2] + data[3];
   if (checksum != data[4]) {
-    Serial.println("{\"ok\":0,\"error\":\"ERR_CHECKSUM_FAILED\"}");
-    return;
+    return "{\"ok\":0,\"error\":\"ERR_CHECKSUM_FAILED\"}";
   }
 
   // Parse DHT22 data (high precision: 0.1°C, 0.1% RH)
@@ -127,10 +119,12 @@ void handleDHTRead(const char* params) {
     temperature = -temperature;
   }
 
-  // Build and send JSON response
-  Serial.print("{\"ok\":1,\"temp\":");
-  Serial.print(temperature, 1);
-  Serial.print(",\"humidity\":");
-  Serial.print(humidity, 1);
-  Serial.println("}");
+  // Build and return JSON response
+  String response = "{\"ok\":1,\"temp\":";
+  response += String(temperature, 1);
+  response += ",\"humidity\":";
+  response += String(humidity, 1);
+  response += "}";
+  
+  return response;
 }

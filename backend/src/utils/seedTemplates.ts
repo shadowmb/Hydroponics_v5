@@ -22,7 +22,13 @@ export const seedControllerTemplates = async () => {
             };
         });
 
-        await ControllerTemplate.insertMany(templateDocs);
+        for (const doc of templateDocs) {
+            await ControllerTemplate.updateOne(
+                { _id: doc._id },
+                { $set: doc },
+                { upsert: true }
+            );
+        }
 
         console.log('✅ Controller templates seeded successfully');
     } catch (error) {
