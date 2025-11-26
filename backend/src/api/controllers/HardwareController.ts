@@ -17,9 +17,19 @@ export class HardwareController {
             const ports = await SerialPort.list();
             return reply.send({ success: true, data: ports });
         } catch (error) {
-            req.log.error(error);
             // Return empty list instead of error to avoid breaking UI
             return reply.send({ success: true, data: [] });
+        }
+    }
+
+    static async refreshDevice(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            await hardware.refreshDeviceStatus(id);
+            return reply.send({ success: true });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to refresh device' });
         }
     }
 

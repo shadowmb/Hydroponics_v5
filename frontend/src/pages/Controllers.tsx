@@ -123,6 +123,8 @@ interface ControllersProps {
 }
 
 
+import { NetworkScanPrompt } from '../components/hardware/NetworkScanPrompt';
+
 const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardClose, refreshTrigger }) => {
 
     const [controllers, setControllers] = useState<IController[]>([]);
@@ -135,6 +137,7 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [controllerToDelete, setControllerToDelete] = useState<string | null>(null);
     const [expandedControllerId, setExpandedControllerId] = useState<string | null>(null);
+    const [isScanPromptOpen, setIsScanPromptOpen] = useState(false);
 
     const toggleExpand = (id: string) => {
         setExpandedControllerId(prev => prev === id ? null : id);
@@ -228,6 +231,12 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
         setEditWizardOpen(true);
     };
 
+    const handleControllerCreated = () => {
+        fetchControllers();
+        if (onWizardClose) onWizardClose();
+        setIsScanPromptOpen(true);
+    };
+
     if (!Array.isArray(controllers)) {
         console.error('CRITICAL: controllers is not an array!', controllers);
         return <div className="p-4 text-red-500">Error: Controllers data is corrupted (not an array). Check console.</div>;
@@ -253,7 +262,7 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                         <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isSyncing}>
                             <RefreshCw className={`h-4 w-4 ${loading && !isSyncing ? 'animate-spin' : ''}`} />
                         </Button>
-                        <ControllerWizard onControllerCreated={fetchControllers} />
+                        <ControllerWizard onControllerCreated={handleControllerCreated} />
                     </div>
                 </div>
 
@@ -378,10 +387,7 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                 />
 
                 <ControllerWizard
-                    onControllerCreated={() => {
-                        fetchControllers();
-                        if (onWizardClose) onWizardClose();
-                    }}
+                    onControllerCreated={handleControllerCreated}
                     editController={controllerToEdit}
                     initialData={initialWizardData || undefined}
                     open={editWizardOpen}
@@ -407,6 +413,12 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+                <NetworkScanPrompt
+                    open={isScanPromptOpen}
+                    onOpenChange={setIsScanPromptOpen}
+                    onConfirm={handleRefresh}
+                />
             </div>
         </ErrorBoundary>
     );

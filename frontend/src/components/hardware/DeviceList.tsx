@@ -3,15 +3,16 @@ import { hardwareService } from '../../services/hardwareService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu } from 'lucide-react';
+import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 interface DeviceListProps {
     onEdit?: (device: any) => void;
+    onRefreshDevice?: (device: any) => void;
 }
 
-export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
+export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice }) => {
     const [devices, setDevices] = useState<any[]>([]);
     const [controllers, setControllers] = useState<any[]>([]);
     const [relays, setRelays] = useState<any[]>([]);
@@ -115,6 +116,25 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
         );
     };
 
+    const getDeviceHealth = (device: any) => {
+        // User requested UI to strictly follow DB status
+        // Backend now handles the logic of updating device status based on controller
+        return device.status || 'offline';
+    };
+    const formatLastCheck = (dateString?: string) => {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) return '< 1 min';
+        if (diffMins < 60) return `${diffMins} min`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours} h`;
+        return `${Math.floor(diffHours / 24)} d`;
+    };
+
     return (
         <div className="space-y-4">
             <div className="rounded-md border">
@@ -125,80 +145,109 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                             <TableHead>Type</TableHead>
                             <TableHead>Controller</TableHead>
                             <TableHead>Connection</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>Health</TableHead>
+                            <TableHead>Last Check</TableHead>
+                            <TableHead>Config</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {devices.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
                                     No devices found. Add one to get started.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            devices.map((device) => (
-                                <TableRow key={device._id}>
-                                    <TableCell className="font-medium flex items-center gap-2">
-                                        {getIcon(device.config?.driverId?.physicalType)}
-                                        {device.name}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline">{device.config?.driverId?.name || 'Unknown'}</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        {renderControllerInfo(device)}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="text-sm">
-                                            {device.hardware?.parentId ? (
-                                                <>
-                                                    <span className="text-muted-foreground">Port: </span>
-                                                    <Badge variant="secondary" className="font-mono">{device.hardware.port}</Badge>
-                                                </>
-                                            ) : device.hardware?.relayId ? (
-                                                <>
-                                                    <span className="text-muted-foreground">Relay Ch: </span>
-                                                    <Badge variant="secondary" className="font-mono">{device.hardware.channel}</Badge>
-                                                </>
-                                            ) : (
-                                                <span className="text-muted-foreground italic">
-                                                    -
+                            devices.map((device) => {
+                                const health = getDeviceHealth(device);
+                                return (
+                                    <TableRow key={device._id}>
+                                        <TableCell className="font-medium flex items-center gap-2">
+                                            {getIcon(device.config?.driverId?.physicalType)}
+                                            {device.name}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline">{device.config?.driverId?.name || 'Unknown'}</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {renderControllerInfo(device)}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="text-sm">
+                                                {device.hardware?.parentId ? (
+                                                    <>
+                                                        <span className="text-muted-foreground">Port: </span>
+                                                        <Badge variant="secondary" className="font-mono">{device.hardware.port}</Badge>
+                                                    </>
+                                                ) : device.hardware?.relayId ? (
+                                                    <>
+                                                        <span className="text-muted-foreground">Relay Ch: </span>
+                                                        <Badge variant="secondary" className="font-mono">{device.hardware.channel}</Badge>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-muted-foreground italic">
+                                                        -
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant={health === 'online' ? 'default' : health === 'error' ? 'destructive' : 'secondary'}
+                                                className={health === 'error' ? 'bg-orange-500 hover:bg-orange-600' : ''}
+                                            >
+                                                {health === 'online' ? 'Online' : health === 'error' ? 'Error' : 'Offline'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-muted-foreground min-w-[60px]">
+                                                    {formatLastCheck(device.lastConnectionCheck)}
                                                 </span>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={device.isEnabled ? 'default' : 'secondary'}>
-                                            {device.isEnabled ? 'Active' : 'Disabled'}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button size="icon" variant="ghost" onClick={() => handleTest(device)} title="Test Device">
-                                                <Play className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                title="Edit"
-                                                onClick={() => onEdit && onEdit(device)}
-                                                disabled={!onEdit}
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="text-destructive hover:text-destructive"
-                                                onClick={(e) => handleDeleteClick(device._id, e)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-6 w-6"
+                                                    onClick={() => onRefreshDevice && onRefreshDevice(device)}
+                                                    title="Refresh Status"
+                                                >
+                                                    <RefreshCw className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={device.isEnabled ? 'outline' : 'secondary'} className={device.isEnabled ? "border-green-500 text-green-600" : ""}>
+                                                {device.isEnabled ? 'Enabled' : 'Disabled'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Button size="icon" variant="ghost" onClick={() => handleTest(device)} title="Test Device">
+                                                    <Play className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    title="Edit"
+                                                    onClick={() => onEdit && onEdit(device)}
+                                                    disabled={!onEdit}
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="text-destructive hover:text-destructive"
+                                                    onClick={(e) => handleDeleteClick(device._id, e)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
