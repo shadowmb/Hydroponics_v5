@@ -42,7 +42,6 @@ export class SerialTransport implements IHardwareTransport {
                     // Setup Parser
                     this.parser = this.port.pipe(new ReadlineParser({ delimiter: '\n' }));
 
-
                     this.parser.on('data', (data: string) => {
                         logger.debug({ data }, '📥 [SerialTransport] Raw Data Received');
                         this.handleData(data);
@@ -98,11 +97,30 @@ export class SerialTransport implements IHardwareTransport {
             message = 'STATUS';
         } else {
             message = packet.cmd;
+
+            // Serialize Parameters based on Command Type
+            // SENSORS (Single Pin)
+            if (['ANALOG', 'DIGITAL_READ', 'DHT_READ', 'ONEWIRE_READ_TEMP'].includes(packet.cmd)) {
+                if (packet.pin !== undefined) message += `|${packet.pin}`;
+            }
+            // ACTUATORS (Pin + State/Value)
+            else if (['RELAY_SET', 'DIGITAL_WRITE'].includes(packet.cmd)) {
+                if (packet.pin !== undefined) message += `|${packet.pin}`;
+                if (packet.state !== undefined) message += `|${packet.state}`;
+            }
+            else if (packet.cmd === 'PWM_WRITE') {
+                if (packet.pin !== undefined) message += `|${packet.pin}`;
+                if (packet.value !== undefined) message += `|${packet.value}`;
+            }
+            else if (packet.cmd === 'SERVO_WRITE') {
+                if (packet.pin !== undefined) message += `|${packet.pin}`;
+                if (packet.angle !== undefined) message += `|${packet.angle}`;
+            }
         }
 
         // Add newline delimiter
         const data = message + '\n';
-        logger.debug({ data: data.trim() }, '📤 [SerialTransport] Sending Raw String');
+        logger.info({ packet, serialized: data.trim() }, '📤 [SerialTransport] Sending Raw String (DEBUG)');
 
         return new Promise((resolve, reject) => {
             this.port.write(data, (err: Error | null) => {

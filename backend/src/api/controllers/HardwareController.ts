@@ -731,47 +731,13 @@ export class HardwareController {
     static async testDevice(req: FastifyRequest, reply: FastifyReply) {
         try {
             const { id } = req.params as { id: string };
-            const { DeviceModel } = await import('../../models/Device');
-            const { ConversionService } = await import('../../services/ConversionService');
 
-            const device = await DeviceModel.findById(id).populate('config.driverId');
-            if (!device) {
-                return reply.status(404).send({ success: false, error: 'Device not found' });
-            }
-
-            const template = device.config.driverId as any as IDeviceTemplate; // Populated
-            if (!template) {
-                return reply.status(400).send({ success: false, error: 'Device template not found' });
-            }
-
-            const commandType = template.requiredCommand;
-            const params = {
-                pin: device.hardware?.port, // e.g. "A0" or "D2"
-                ...template.executionConfig.parameters // merge static params
-            };
-
-            const controllerId = device.hardware?.parentId;
-            if (!controllerId) {
-                return reply.status(400).send({ success: false, error: 'Device not connected to a controller' });
-            }
-
-            // MOCKING FOR NOW
-            const mockRawValue = Math.floor(Math.random() * 1024); // Random ADC
-
-            // 2. Convert Result
-            const convertedValue = ConversionService.convert(
-                mockRawValue,
-                template,
-                device.config.calibration
-            );
+            // Use the new readSensorValue method which handles reading + conversion
+            const result = await hardware.readSensorValue(id);
 
             return reply.send({
                 success: true,
-                data: {
-                    raw: mockRawValue,
-                    value: convertedValue,
-                    unit: template.defaultUnits[0]
-                }
+                data: result
             });
 
         } catch (error: any) {

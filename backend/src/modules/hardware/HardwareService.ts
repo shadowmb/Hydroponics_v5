@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { templates } from './DeviceTemplateManager';
 import { deviceRepository } from '../persistence/repositories/DeviceRepository';
 import { Controller } from '../../models/Controller';
+import { conversionService } from '../../services/conversion/ConversionService';
 
 export interface Device {
     id: string;
@@ -171,7 +172,7 @@ export class HardwareService {
         driverId: string,
         command: string,
         params: Record<string, any> = {},
-        context: { pin?: number; address?: string } = {}
+        context: { pin?: number | string; address?: string } = {}
     ): Promise<any> {
         // 1. Find which controller owns this device
         const { DeviceModel } = await import('../../models/Device');
@@ -194,6 +195,58 @@ export class HardwareService {
 
         // 3. Enqueue
         return this.enqueueCommand(controllerId, packet);
+    }
+
+    /**
+     * Reads a sensor value, returning both RAW and Converted data.
+     */
+    public async readSensorValue(deviceId: string): Promise<{ raw: number, value: number }> {
+        const { DeviceModel } = await import('../../models/Device');
+        const device = await DeviceModel.findById(deviceId);
+        if (!device) throw new Error('Device not found');
+
+
+
+        // Execute 'READ' command
+        // Note: We assume the driver implements 'READ' and returns a numeric value or object with 'val'/'value'
+        const rawResponse = await this.sendCommand(
+            deviceId,
+            device.config.driverId,
+            'READ',
+            {},
+            { pin: device.hardware?.port || device.hardware?.pin }
+        );
+
+        let raw = 0;
+        if (typeof rawResponse === 'number') {
+            raw = rawResponse;
+        } else if (typeof rawResponse === 'object') {
+            if ('val' in rawResponse) raw = Number(rawResponse.val);
+            else if ('value' in rawResponse) raw = Number(rawResponse.value);
+            else if ('raw' in rawResponse) raw = Number(rawResponse.raw);
+            else raw = Number(rawResponse); // Try casting the whole object? Unlikely.
+        }
+
+        if (isNaN(raw)) {
+            logger.warn({ deviceId, rawResponse }, '⚠️ [HardwareService] Could not parse RAW value from sensor');
+            raw = 0;
+        }
+
+        const value = conversionService.convert(device, raw);
+
+        // Save last reading to DB
+        try {
+            device.lastReading = {
+                value,
+                raw,
+                timestamp: new Date()
+            };
+            await device.save();
+        } catch (error) {
+            logger.warn({ deviceId, error }, '⚠️ Failed to save lastReading to DB');
+        }
+
+        return { raw, value };
     }
 
     /**

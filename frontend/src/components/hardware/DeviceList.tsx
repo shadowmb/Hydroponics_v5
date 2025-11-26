@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { DeviceTestDialog } from '../devices/test/DeviceTestDialog';
 
 interface DeviceListProps {
     onEdit?: (device: any) => void;
@@ -17,9 +18,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
     const [controllers, setControllers] = useState<any[]>([]);
     const [relays, setRelays] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [testResult, setTestResult] = useState<any>(null);
-    const [testDialogOpen, setTestDialogOpen] = useState(false);
-    const [testing, setTesting] = useState(false);
+    const [testDialogOpen, setTestDialogOpen] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
 
@@ -64,19 +63,8 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
         }
     };
 
-    const handleTest = async (device: any) => {
-        try {
-            setTesting(true);
-            setTestResult(null);
-            setTestDialogOpen(true);
-            const result = await hardwareService.testDevice(device._id);
-            setTestResult(result);
-        } catch (error: any) {
-            toast.error(error.response?.data?.error || 'Test failed');
-            setTestDialogOpen(false);
-        } finally {
-            setTesting(false);
-        }
+    const handleTest = (device: any) => {
+        setTestDialogOpen(device._id);
     };
 
     const getIcon = (type: string) => {
@@ -253,32 +241,12 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
                 </Table>
             </div>
 
-            <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Device Test</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4 flex flex-col items-center justify-center min-h-[100px]">
-                        {testing ? (
-                            <div className="flex flex-col items-center gap-2">
-                                <Activity className="h-8 w-8 animate-spin text-primary" />
-                                <p>Reading from device...</p>
-                            </div>
-                        ) : testResult ? (
-                            <div className="text-center space-y-2">
-                                <div className="text-4xl font-bold text-primary">
-                                    {testResult.value} <span className="text-xl text-muted-foreground">{testResult.unit}</span>
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                    Raw Value: {testResult.raw}
-                                </div>
-                            </div>
-                        ) : (
-                            <p className="text-destructive">Test failed or no result</p>
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <DeviceTestDialog
+                open={!!testDialogOpen}
+                onOpenChange={(open) => !open && setTestDialogOpen(null)}
+                device={devices.find(d => d._id === testDialogOpen)}
+                onDeviceUpdate={loadData}
+            />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>

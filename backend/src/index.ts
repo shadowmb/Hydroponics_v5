@@ -10,6 +10,7 @@ import { LogBlockExecutor, WaitBlockExecutor, ActuatorSetBlockExecutor } from '.
 import { socketService } from './core/SocketService';
 import { seedControllerTemplates } from './utils/seedTemplates';
 import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
+import { hardware } from './modules/hardware/HardwareService';
 
 const app = Fastify({
     logger: false // We use our own Pino instance
@@ -57,6 +58,10 @@ async function bootstrap() {
         automation.registerExecutor(new ActuatorSetBlockExecutor());
 
         app.get('/health', async () => ({ status: 'ok', uptime: process.uptime() }));
+
+        // 5. Initialize Hardware Service
+        console.log('Initializing Hardware Service...');
+        await hardware.initialize();
 
         // 6. Start Server
         console.log('Starting Server...');
