@@ -337,7 +337,7 @@ export class HardwareService {
         await controller.save();
 
         if (statusChanged) {
-            events.emit('controller:update', { id: controller._id, status: newStatus });
+            events.emit('controller:update', { id: controller._id.toString(), status: newStatus });
         }
 
         // --- Cascade Status to Devices ---
@@ -397,7 +397,7 @@ export class HardwareService {
                 await device.save();
 
                 if (statusChanged) {
-                    events.emit('device:update', { id: device._id, status: newDeviceStatus });
+                    events.emit('device:update', { id: device._id.toString(), status: newDeviceStatus });
                 }
             }
         } catch (cascadeError) {
