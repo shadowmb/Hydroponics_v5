@@ -17,11 +17,12 @@ interface ControllerWizardProps {
     initialData?: Partial<IController>; // For pre-filling data (e.g. from scanner)
     open?: boolean; // Controlled open state for edit mode
     onOpenChange?: (open: boolean) => void; // Controlled open handler
+    hideTrigger?: boolean;
 }
 
 type WizardStep = 'type-selection' | 'configuration' | 'review';
 
-export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onControllerCreated, editController, initialData, open: controlledOpen, onOpenChange }) => {
+export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onControllerCreated, editController, initialData, open: controlledOpen, onOpenChange, hideTrigger }) => {
     const [internalOpen, setInternalOpen] = useState(false);
     const isControlled = controlledOpen !== undefined;
     const open = isControlled ? controlledOpen : internalOpen;
@@ -472,7 +473,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            {!editController && (
+            {!editController && !hideTrigger && (
                 <DialogTrigger asChild>
                     <Button>
                         <Plus className="mr-2 h-4 w-4" />

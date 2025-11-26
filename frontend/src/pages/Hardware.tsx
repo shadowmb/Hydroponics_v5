@@ -15,10 +15,14 @@ import { NetworkScanner } from '../components/hardware/NetworkScanner';
 import { FirmwareGeneratorDialog } from '../components/hardware/FirmwareGeneratorDialog';
 import { NetworkScanPrompt } from '../components/hardware/NetworkScanPrompt';
 import { hardwareService } from '../services/hardwareService';
+import { RelayWizard } from '../components/hardware/RelayWizard';
+import { ControllerWizard } from '../components/hardware/ControllerWizard';
 
 const Hardware: React.FC = () => {
     const [activeTab, setActiveTab] = useState("devices");
     const [isDeviceWizardOpen, setIsDeviceWizardOpen] = useState(false);
+    const [isRelayWizardOpen, setIsRelayWizardOpen] = useState(false);
+    const [isControllerWizardOpen, setIsControllerWizardOpen] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState<any>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [pendingControllerData, setPendingControllerData] = useState<any>(null);
@@ -102,6 +106,20 @@ const Hardware: React.FC = () => {
         setIsScanPromptOpen(true);
     };
 
+    const handleRelayWizardSuccess = () => {
+        // Trigger relay list refresh if needed, but RelayManager fetches on mount.
+        // We might need a trigger for RelayManager if we want instant update.
+        // For now, let's assume RelayManager handles its own data or we force a remount?
+        // Better: Pass a refresh trigger to RelayManager.
+        // But RelayManager is simple. Let's just close wizard.
+        // Actually, RelayManager needs to know to refetch.
+        // Let's add a key to RelayManager like we did for DeviceList.
+    };
+
+    const handleControllerCreated = () => {
+        setControllerRefreshTrigger(prev => prev + 1);
+    };
+
     return (
         <div className="container mx-auto p-6 space-y-6">
             {isSyncing && (
@@ -153,12 +171,10 @@ const Hardware: React.FC = () => {
                     </button>
                 </div>
                 <div className="pb-2 flex gap-2">
-                    {activeTab === "controllers" && (
-                        <Button onClick={handleRefreshStatus} size="sm" variant="outline">
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Refresh Status
-                        </Button>
-                    )}
+                    <Button onClick={handleRefreshStatus} size="sm" variant="outline">
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Refresh Status
+                    </Button>
                     <NetworkScanner onAddController={handleScannerAdd} />
 
                     <Button onClick={() => setIsGeneratorOpen(true)} size="sm" variant="outline">
@@ -170,6 +186,23 @@ const Hardware: React.FC = () => {
                             <Plus className="mr-2 h-4 w-4" /> Add Device
                         </Button>
                     )}
+                    {activeTab === "relays" && (
+                        <Button onClick={() => setIsRelayWizardOpen(true)} size="sm">
+                            <Plus className="mr-2 h-4 w-4" /> Add Relay
+                        </Button>
+                    )}
+                    {activeTab === "controllers" && (
+                        <ControllerWizard
+                            onControllerCreated={handleControllerCreated}
+                            open={isControllerWizardOpen}
+                            onOpenChange={setIsControllerWizardOpen}
+                            hideTrigger={false} // We want the trigger here? No, we want OUR button.
+                        // ControllerWizard renders its own trigger if hideTrigger is false.
+                        // But we want to style it or place it specifically?
+                        // The current ControllerWizard renders a <DialogTrigger><Button>...
+                        // That fits our pattern perfectly.
+                        />
+                    )}
                 </div>
             </div>
 
@@ -180,10 +213,18 @@ const Hardware: React.FC = () => {
                         onWizardClose={() => setPendingControllerData(null)}
                         refreshTrigger={controllerRefreshTrigger}
                     />
-
                 )}
 
-                {activeTab === "relays" && <RelayManager />}
+                {activeTab === "relays" && (
+                    <>
+                        <RelayManager key={refreshTrigger} />
+                        <RelayWizard
+                            open={isRelayWizardOpen}
+                            onOpenChange={setIsRelayWizardOpen}
+                            onSuccess={handleRelayWizardSuccess}
+                        />
+                    </>
+                )}
 
                 {activeTab === "devices" && (
                     <Card>
@@ -216,7 +257,7 @@ const Hardware: React.FC = () => {
                 onOpenChange={setIsScanPromptOpen}
                 onConfirm={handleRefreshStatus}
             />
-        </div>
+        </div >
     );
 };
 

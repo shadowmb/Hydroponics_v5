@@ -10,6 +10,8 @@ export interface SystemEvents {
     'device:disconnected': { deviceId: string };
     'sensor:data': { deviceId: string; value: number; timestamp: Date };
     'error:critical': { source: string; message: string; error?: any };
+    'controller:update': { id: string; status: any };
+    'device:update': { id: string; status: any };
 
     // Automation Events
     'automation:block_start': { blockId: string; type: string; sessionId?: string | null };

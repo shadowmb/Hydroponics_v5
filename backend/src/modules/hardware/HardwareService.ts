@@ -324,10 +324,20 @@ export class HardwareService {
 
         logger.info({ name: controller.name, oldStatus: controller.status, newStatus }, '📊 [HardwareService] Status Update');
 
+        // Always update last check timestamp
+        controller.lastConnectionCheck = new Date();
+        let statusChanged = false;
+
         if (controller.status !== newStatus) {
             controller.status = newStatus;
-            await controller.save();
-            events.emit('controller:update', { id: controller._id, status: newStatus });
+            statusChanged = true;
+        }
+
+        // Always save to persist lastConnectionCheck
+        await controller.save();
+
+        if (statusChanged) {
+            events.emit('controller:update', { id: controller._id.toString(), status: newStatus });
         }
 
         // --- Cascade Status to Devices ---
@@ -387,7 +397,7 @@ export class HardwareService {
                 await device.save();
 
                 if (statusChanged) {
-                    events.emit('device:update', { id: device._id, status: newDeviceStatus });
+                    events.emit('device:update', { id: device._id.toString(), status: newDeviceStatus });
                 }
             }
         } catch (cascadeError) {

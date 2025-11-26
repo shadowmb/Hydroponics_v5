@@ -36,6 +36,7 @@ export interface IController {
     description?: string;
     macAddress?: string;
     status: 'online' | 'offline' | 'error';
+    lastConnectionCheck?: string | Date;
     connection: {
         type: 'serial' | 'network';
         ip?: string;
@@ -143,5 +144,9 @@ export const hardwareService = {
 
     refreshDevice: async (id: string): Promise<void> => {
         await axios.post(`${API_URL}/hardware/devices/${id}/refresh`);
+    },
+
+    refreshController: async (id: string): Promise<void> => {
+        await axios.post(`${API_URL}/hardware/controllers/${id}/refresh`);
     }
 };
