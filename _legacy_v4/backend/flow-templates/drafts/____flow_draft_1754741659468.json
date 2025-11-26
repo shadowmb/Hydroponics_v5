@@ -1,0 +1,692 @@
+{
+  "metadata": {
+    "name": "Нов Flow",
+    "description": "",
+    "version": "1.0.0",
+    "isValidated": false,
+    "validationStatus": "invalid",
+    "validationErrors": [
+      {
+        "code": "MISSING_EXECUTOR_FIELDS",
+        "message": "Flow липсват име и описание за ActionTemplate",
+        "severity": "error"
+      }
+    ],
+    "validationWarnings": [],
+    "lastValidationCheck": "2025-08-09T12:14:19.468Z",
+    "canUseInActionTemplate": false,
+    "createdAt": "2025-08-09T12:14:19.468Z",
+    "filePath": "____flow_draft_1754741659468.json",
+    "directory": "drafts"
+  },
+  "flowData": {
+    "version": "1.0",
+    "meta": {
+      "createdAt": "2025-08-09T12:13:56.857Z",
+      "modifiedAt": "2025-08-09T12:14:19.358Z",
+      "name": "Нов Flow",
+      "description": ""
+    },
+    "blocks": [
+      {
+        "id": "block_1754487474372_e9e6ie6i4",
+        "definitionId": "system.start",
+        "position": {
+          "x": 100,
+          "y": 200
+        },
+        "parameters": {},
+        "connections": {
+          "inputs": {},
+          "outputs": {
+            "flowOut": [
+              "connection_1754487491100_teasprt62"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": [],
+          "system": true
+        }
+      },
+      {
+        "id": "block_1754487481260_m9cj0jbc5",
+        "definitionId": "actuator",
+        "position": {
+          "x": 120,
+          "y": 300
+        },
+        "parameters": {
+          "deviceType": "pump_mix",
+          "action": "on",
+          "duration": 60
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487491100_teasprt62"
+            ],
+            "setVarDataIn": [],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOut": [
+              "connection_1754487496229_fzgzbjqz2"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487493549_wmff3uy1k",
+        "definitionId": "sensor",
+        "position": {
+          "x": 420,
+          "y": 520
+        },
+        "parameters": {
+          "sensorType": "ec",
+          "readingInterval": 5
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487496229_fzgzbjqz2"
+            ],
+            "setVarNameIn": [
+              "connection_1754487504181_3j5hnopki"
+            ],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOut": [
+              "connection_1754487539896_k9b7j08ha"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487534267_20tj7314f",
+        "definitionId": "loop",
+        "position": {
+          "x": 420,
+          "y": 720
+        },
+        "parameters": {
+          "loopType": "while",
+          "maxIterations": 10,
+          "delay": 1,
+          "condition": "custom",
+          "connectedVariableName": "",
+          "manualConditionValue": 0,
+          "conditionOperator": "not_equals",
+          "simpleConditionValue": 10,
+          "conditionValue": 2.5
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487539896_k9b7j08ha"
+            ],
+            "setVarDataIn": [
+              "connection_1754487546582_1miak1vu6"
+            ],
+            "setVarDataIn2": [],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOut": [
+              "connection_1754487767093_75v84fyyt"
+            ],
+            "loopOut": [
+              "connection_1754487632208_3bbqv8s1d"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487627859_tn9d9vfdw",
+        "definitionId": "if",
+        "position": {
+          "x": 700,
+          "y": 820
+        },
+        "parameters": {
+          "conditions": [
+            {
+              "condition": "greater_than",
+              "value": 2.5,
+              "dataType": "number"
+            }
+          ],
+          "logicOperator": "OR",
+          "conditionOptions": [
+            {
+              "label": "По-голямо от",
+              "value": "greater_than"
+            },
+            {
+              "label": "По-малко от",
+              "value": "less_than"
+            },
+            {
+              "label": "Равно на",
+              "value": "equals"
+            },
+            {
+              "label": "Не е равно на",
+              "value": "not_equals"
+            },
+            {
+              "label": "По-голямо или равно",
+              "value": "greater_equal"
+            },
+            {
+              "label": "По-малко или равно",
+              "value": "less_equal"
+            }
+          ],
+          "dataTypeOptions": [
+            {
+              "label": "Число",
+              "value": "number"
+            },
+            {
+              "label": "Текст",
+              "value": "string"
+            },
+            {
+              "label": "Булева стойност",
+              "value": "boolean"
+            }
+          ],
+          "comparisonValue": 50,
+          "connectedComparisonVariable": "",
+          "manualComparisonValue": 100
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487632208_3bbqv8s1d"
+            ],
+            "flowIn2": [],
+            "setVarDataIn": [],
+            "setVarDataIn3": [
+              "connection_1754487648817_sefquvlsx"
+            ],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOutTrue": [
+              "connection_1754487677289_qwluso04r"
+            ],
+            "flowOutFalse": [
+              "connection_1754487707005_3oyf4rcw9"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487674177_30fn8o4xg",
+        "definitionId": "actuator",
+        "position": {
+          "x": 580,
+          "y": 1100
+        },
+        "parameters": {
+          "deviceType": "pump_nutrientsA",
+          "action": "on",
+          "duration": 0,
+          "dose": "1"
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487677289_qwluso04r"
+            ],
+            "setVarDataIn": [],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOut": [
+              "connection_1754487693308_kmyj9z32t"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487690643_otmtql840",
+        "definitionId": "actuator",
+        "position": {
+          "x": 600,
+          "y": 1280
+        },
+        "parameters": {
+          "deviceType": "pump_nutrientsB",
+          "action": "on",
+          "duration": 0,
+          "dose": "1"
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487693308_kmyj9z32t"
+            ],
+            "setVarDataIn": [],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOut": [
+              "connection_1754487717142_dsqx40rgp"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487713409_4d6rv0ehg",
+        "definitionId": "merge",
+        "position": {
+          "x": 760,
+          "y": 1460
+        },
+        "parameters": {
+          "mergeMode": "wait_all",
+          "timeout": 30,
+          "onTimeout": "continue",
+          "priority": "equal"
+        },
+        "connections": {
+          "inputs": {
+            "flowIn1": [
+              "connection_1754487717142_dsqx40rgp"
+            ],
+            "flowIn2": [
+              "connection_1754487718804_52iwgzanm"
+            ],
+            "flowIn3": [],
+            "flowIn4": []
+          },
+          "outputs": {
+            "flowOut": [
+              "connection_1754487725729_3r2kwf3h9"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487722899_0sflg7ddy",
+        "definitionId": "actuator",
+        "position": {
+          "x": 680,
+          "y": 1580
+        },
+        "parameters": {
+          "deviceType": "pump_mix",
+          "action": "on",
+          "duration": 60
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487725729_3r2kwf3h9"
+            ],
+            "setVarDataIn": [],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOut": [
+              "connection_1754487734662_6mqzxhplz"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487731596_vy8tg4wjl",
+        "definitionId": "sensor",
+        "position": {
+          "x": 700,
+          "y": 1800
+        },
+        "parameters": {
+          "sensorType": "ec",
+          "readingInterval": 5
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487734662_6mqzxhplz"
+            ],
+            "setVarNameIn": [
+              "connection_1754487741149_j69lfjain"
+            ],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOut": []
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487704268_z8zut2a4r",
+        "definitionId": "actuator",
+        "position": {
+          "x": 940,
+          "y": 1100
+        },
+        "parameters": {
+          "deviceType": "pump_water",
+          "action": "on",
+          "duration": 60
+        },
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487707005_3oyf4rcw9"
+            ],
+            "setVarDataIn": [],
+            "onErrorIn": []
+          },
+          "outputs": {
+            "flowOut": [
+              "connection_1754487718804_52iwgzanm"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487474380_9udpdgtrl",
+        "definitionId": "system.end",
+        "position": {
+          "x": 100,
+          "y": 1060
+        },
+        "parameters": {},
+        "connections": {
+          "inputs": {
+            "flowIn": [
+              "connection_1754487767093_75v84fyyt"
+            ]
+          },
+          "outputs": {}
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": [],
+          "system": true
+        }
+      },
+      {
+        "id": "block_1754487501502_f5vifpfah",
+        "definitionId": "setVarName",
+        "position": {
+          "x": 40,
+          "y": 520
+        },
+        "parameters": {
+          "internalVar": "var1",
+          "displayName": "Текущо ЕС",
+          "dataType": "auto"
+        },
+        "connections": {
+          "inputs": {},
+          "outputs": {
+            "setVarNameOut": [
+              "connection_1754487504181_3j5hnopki"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487542971_yiomlqzku",
+        "definitionId": "setVarData",
+        "position": {
+          "x": 80,
+          "y": 680
+        },
+        "parameters": {
+          "sourceVariable": "var1",
+          "customName": "Текущо ЕС"
+        },
+        "connections": {
+          "inputs": {},
+          "outputs": {
+            "setVarDataOut": [
+              "connection_1754487546582_1miak1vu6"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487645875_o7uo89p9k",
+        "definitionId": "setVarData",
+        "position": {
+          "x": 400,
+          "y": 1000
+        },
+        "parameters": {
+          "sourceVariable": "var1",
+          "customName": "Текущо ЕС"
+        },
+        "connections": {
+          "inputs": {},
+          "outputs": {
+            "setVarDataOut": [
+              "connection_1754487648817_sefquvlsx"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      },
+      {
+        "id": "block_1754487737387_b08fi7ibx",
+        "definitionId": "setVarName",
+        "position": {
+          "x": 380,
+          "y": 1820
+        },
+        "parameters": {
+          "internalVar": "var1",
+          "displayName": "Текущо ЕС",
+          "dataType": "auto"
+        },
+        "connections": {
+          "inputs": {},
+          "outputs": {
+            "setVarNameOut": [
+              "connection_1754487741149_j69lfjain"
+            ]
+          }
+        },
+        "meta": {
+          "status": "valid",
+          "errors": [],
+          "warnings": []
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "connection_1754487491100_teasprt62",
+        "sourceBlockId": "block_1754487474372_e9e6ie6i4",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487481260_m9cj0jbc5",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487496229_fzgzbjqz2",
+        "sourceBlockId": "block_1754487481260_m9cj0jbc5",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487493549_wmff3uy1k",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487504181_3j5hnopki",
+        "sourceBlockId": "block_1754487501502_f5vifpfah",
+        "sourcePortId": "setVarNameOut",
+        "targetBlockId": "block_1754487493549_wmff3uy1k",
+        "targetPortId": "setVarNameIn"
+      },
+      {
+        "id": "connection_1754487539896_k9b7j08ha",
+        "sourceBlockId": "block_1754487493549_wmff3uy1k",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487534267_20tj7314f",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487546582_1miak1vu6",
+        "sourceBlockId": "block_1754487542971_yiomlqzku",
+        "sourcePortId": "setVarDataOut",
+        "targetBlockId": "block_1754487534267_20tj7314f",
+        "targetPortId": "setVarDataIn"
+      },
+      {
+        "id": "connection_1754487632208_3bbqv8s1d",
+        "sourceBlockId": "block_1754487534267_20tj7314f",
+        "sourcePortId": "loopOut",
+        "targetBlockId": "block_1754487627859_tn9d9vfdw",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487648817_sefquvlsx",
+        "sourceBlockId": "block_1754487645875_o7uo89p9k",
+        "sourcePortId": "setVarDataOut",
+        "targetBlockId": "block_1754487627859_tn9d9vfdw",
+        "targetPortId": "setVarDataIn3"
+      },
+      {
+        "id": "connection_1754487677289_qwluso04r",
+        "sourceBlockId": "block_1754487627859_tn9d9vfdw",
+        "sourcePortId": "flowOutTrue",
+        "targetBlockId": "block_1754487674177_30fn8o4xg",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487693308_kmyj9z32t",
+        "sourceBlockId": "block_1754487674177_30fn8o4xg",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487690643_otmtql840",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487707005_3oyf4rcw9",
+        "sourceBlockId": "block_1754487627859_tn9d9vfdw",
+        "sourcePortId": "flowOutFalse",
+        "targetBlockId": "block_1754487704268_z8zut2a4r",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487717142_dsqx40rgp",
+        "sourceBlockId": "block_1754487690643_otmtql840",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487713409_4d6rv0ehg",
+        "targetPortId": "flowIn1"
+      },
+      {
+        "id": "connection_1754487718804_52iwgzanm",
+        "sourceBlockId": "block_1754487704268_z8zut2a4r",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487713409_4d6rv0ehg",
+        "targetPortId": "flowIn2"
+      },
+      {
+        "id": "connection_1754487725729_3r2kwf3h9",
+        "sourceBlockId": "block_1754487713409_4d6rv0ehg",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487722899_0sflg7ddy",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487734662_6mqzxhplz",
+        "sourceBlockId": "block_1754487722899_0sflg7ddy",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487731596_vy8tg4wjl",
+        "targetPortId": "flowIn"
+      },
+      {
+        "id": "connection_1754487741149_j69lfjain",
+        "sourceBlockId": "block_1754487737387_b08fi7ibx",
+        "sourcePortId": "setVarNameOut",
+        "targetBlockId": "block_1754487731596_vy8tg4wjl",
+        "targetPortId": "setVarNameIn"
+      },
+      {
+        "id": "connection_1754487767093_75v84fyyt",
+        "sourceBlockId": "block_1754487534267_20tj7314f",
+        "sourcePortId": "flowOut",
+        "targetBlockId": "block_1754487474380_9udpdgtrl",
+        "targetPortId": "flowIn"
+      }
+    ],
+    "canvas": {
+      "zoom": 1,
+      "pan": {}
+    }
+  }
+}

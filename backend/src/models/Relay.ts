@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { softDeletePlugin, SoftDeleteDocument } from '../core/softDeletePlugin';
 
 export interface IRelayChannel {
     channelIndex: number; // 1-based index (1, 2, 3, 4...)
@@ -13,7 +14,7 @@ export interface IRelayChannel {
     };
 }
 
-export interface IRelay extends Document {
+export interface IRelay extends SoftDeleteDocument {
     name: string;
     controllerId: mongoose.Types.ObjectId; // The controller this relay board is connected to
     type: '1-channel' | '2-channel' | '4-channel' | '8-channel' | '16-channel';
@@ -43,5 +44,7 @@ const RelaySchema = new Schema({
 }, {
     timestamps: true
 });
+
+RelaySchema.plugin(softDeletePlugin);
 
 export const Relay = mongoose.model<IRelay>('Relay', RelaySchema);

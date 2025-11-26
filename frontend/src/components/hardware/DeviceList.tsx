@@ -165,8 +165,25 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
                                             <div className="text-sm">
                                                 {device.hardware?.parentId ? (
                                                     <>
-                                                        <span className="text-muted-foreground">Port: </span>
-                                                        <Badge variant="secondary" className="font-mono">{device.hardware.port}</Badge>
+                                                        {device.hardware.port ? (
+                                                            <>
+                                                                <span className="text-muted-foreground">Port: </span>
+                                                                <Badge variant="secondary" className="font-mono">{device.hardware.port}</Badge>
+                                                            </>
+                                                        ) : device.hardware.pins && Object.keys(device.hardware.pins).length > 0 ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                {Object.entries(device.hardware.pins).map(([key, value]) => (
+                                                                    <div key={key} className="flex items-center gap-1">
+                                                                        <span className="text-muted-foreground text-xs">{key}:</span>
+                                                                        <Badge variant="secondary" className="font-mono text-xs">{value as string}</Badge>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-muted-foreground italic">
+                                                                -
+                                                            </span>
+                                                        )}
                                                     </>
                                                 ) : device.hardware?.relayId ? (
                                                     <>

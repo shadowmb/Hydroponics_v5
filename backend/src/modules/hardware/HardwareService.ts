@@ -93,12 +93,35 @@ export class HardwareService {
         }
     }
 
+    // --- Connection Management ---
+
+    public async disconnectController(controllerId: string): Promise<void> {
+        if (this.transports.has(controllerId)) {
+            const transport = this.transports.get(controllerId)!;
+            try {
+                logger.info({ controllerId }, '🔌 [HardwareService] Disconnecting Controller...');
+                await transport.disconnect();
+            } catch (err) {
+                logger.warn({ controllerId, err }, '⚠️ Error disconnecting transport');
+            }
+            this.transports.delete(controllerId);
+            this.activeCommands.delete(controllerId);
+            this.isProcessingQueue.delete(controllerId);
+            this.commandQueues.delete(controllerId);
+        }
+    }
+
     /**
      * Gets an existing transport or creates a new one based on controller config.
      */
     public async getOrConnectTransport(controllerId: string): Promise<IHardwareTransport> {
         const controller = await Controller.findById(controllerId);
         if (!controller) throw new Error(`Controller ${controllerId} not found`);
+
+        // Check if controller is active
+        if (controller.isActive === false) {
+            throw new Error(`Controller ${controller.name} is deactivated`);
+        }
 
         // Check if we have an existing transport
         if (this.transports.has(controllerId)) {
@@ -172,7 +195,7 @@ export class HardwareService {
         driverId: string,
         command: string,
         params: Record<string, any> = {},
-        context: { pin?: number | string; address?: string } = {}
+        context: { pin?: number | string; pins?: Map<string, string> | Record<string, string>; address?: string } = {}
     ): Promise<any> {
         // 1. Find which controller owns this device
         const { DeviceModel } = await import('../../models/Device');
@@ -214,14 +237,19 @@ export class HardwareService {
             device.config.driverId,
             'READ',
             {},
-            { pin: device.hardware?.port || device.hardware?.pin }
+            {
+                pin: device.hardware?.port || device.hardware?.pin,
+                pins: device.hardware?.pins // Pass multi-pin map
+            }
         );
 
         let raw = 0;
         if (typeof rawResponse === 'number') {
             raw = rawResponse;
         } else if (typeof rawResponse === 'object') {
-            if ('val' in rawResponse) raw = Number(rawResponse.val);
+            if (Array.isArray(rawResponse) && rawResponse.length > 0) {
+                raw = Number(rawResponse[0]);
+            } else if ('val' in rawResponse) raw = Number(rawResponse.val);
             else if ('value' in rawResponse) raw = Number(rawResponse.value);
             else if ('raw' in rawResponse) raw = Number(rawResponse.raw);
             else raw = Number(rawResponse); // Try casting the whole object? Unlikely.
@@ -372,7 +400,15 @@ export class HardwareService {
         const { DeviceModel } = await import('../../models/Device');
         const { Relay } = await import('../../models/Relay');
 
-        const isOnline = await this.checkHealth(controllerId);
+        let isOnline = false;
+
+        // If inactive, force offline
+        if (controller.isActive === false) {
+            isOnline = false;
+        } else {
+            isOnline = await this.checkHealth(controllerId);
+        }
+
         const newStatus = isOnline ? 'online' : 'offline';
 
         logger.info({ name: controller.name, oldStatus: controller.status, newStatus }, '📊 [HardwareService] Status Update');
@@ -391,6 +427,30 @@ export class HardwareService {
 
         if (statusChanged) {
             events.emit('controller:update', { id: controller._id.toString(), status: newStatus });
+        }
+
+        // --- Fetch Capabilities if Online ---
+        if (newStatus === 'online') {
+            try {
+                // We use INFO command to get capabilities (same as Discovery)
+                // Some firmwares might reply to STATUS with capabilities too, but INFO is safer standard
+                const infoResponse = await this.sendSystemCommand(controllerId, 'INFO');
+
+                if (infoResponse && Array.isArray(infoResponse.capabilities)) {
+                    // Compare with existing to avoid unnecessary writes? 
+                    // Mongoose handles this well, but let's be explicit.
+                    const newCaps = infoResponse.capabilities.sort();
+                    const oldCaps = (controller.capabilities || []).sort();
+
+                    if (JSON.stringify(newCaps) !== JSON.stringify(oldCaps)) {
+                        controller.capabilities = infoResponse.capabilities;
+                        await controller.save();
+                        logger.info({ controllerId, capabilities: controller.capabilities }, '✨ [HardwareService] Capabilities Updated');
+                    }
+                }
+            } catch (capError) {
+                logger.warn({ controllerId, err: capError }, '⚠️ Failed to fetch capabilities');
+            }
         }
 
         // --- Cascade Status to Devices ---

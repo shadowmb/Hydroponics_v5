@@ -17,6 +17,7 @@ import { NetworkScanPrompt } from '../components/hardware/NetworkScanPrompt';
 import { hardwareService } from '../services/hardwareService';
 import { RelayWizard } from '../components/hardware/RelayWizard';
 import { ControllerWizard } from '../components/hardware/ControllerWizard';
+import { RecycleBinDialog } from '../components/common/RecycleBinDialog';
 
 const Hardware: React.FC = () => {
     const [activeTab, setActiveTab] = useState("devices");
@@ -182,26 +183,31 @@ const Hardware: React.FC = () => {
                         Generate Firmware
                     </Button>
                     {activeTab === "devices" && (
-                        <Button onClick={() => { setSelectedDevice(null); setIsDeviceWizardOpen(true); }} size="sm">
-                            <Plus className="mr-2 h-4 w-4" /> Add Device
-                        </Button>
+                        <>
+                            <RecycleBinDialog type="devices" onRestore={() => setRefreshTrigger(prev => prev + 1)} />
+                            <Button onClick={() => { setSelectedDevice(null); setIsDeviceWizardOpen(true); }} size="sm">
+                                <Plus className="mr-2 h-4 w-4" /> Add Device
+                            </Button>
+                        </>
                     )}
                     {activeTab === "relays" && (
-                        <Button onClick={() => setIsRelayWizardOpen(true)} size="sm">
-                            <Plus className="mr-2 h-4 w-4" /> Add Relay
-                        </Button>
+                        <>
+                            <RecycleBinDialog type="relays" onRestore={() => setRefreshTrigger(prev => prev + 1)} />
+                            <Button onClick={() => setIsRelayWizardOpen(true)} size="sm">
+                                <Plus className="mr-2 h-4 w-4" /> Add Relay
+                            </Button>
+                        </>
                     )}
                     {activeTab === "controllers" && (
-                        <ControllerWizard
-                            onControllerCreated={handleControllerCreated}
-                            open={isControllerWizardOpen}
-                            onOpenChange={setIsControllerWizardOpen}
-                            hideTrigger={false} // We want the trigger here? No, we want OUR button.
-                        // ControllerWizard renders its own trigger if hideTrigger is false.
-                        // But we want to style it or place it specifically?
-                        // The current ControllerWizard renders a <DialogTrigger><Button>...
-                        // That fits our pattern perfectly.
-                        />
+                        <>
+                            <RecycleBinDialog type="controllers" onRestore={() => setControllerRefreshTrigger(prev => prev + 1)} />
+                            <ControllerWizard
+                                onControllerCreated={handleControllerCreated}
+                                open={isControllerWizardOpen}
+                                onOpenChange={setIsControllerWizardOpen}
+                                hideTrigger={false}
+                            />
+                        </>
                     )}
                 </div>
             </div>

@@ -1,0 +1,609 @@
+{
+  "_controllers_info": {
+    "description": "Дефиниции на поддържани Arduino контролери за firmware генератор",
+    "fields": {
+      "id": "Уникален идентификатор (използва се за име на base template файл: {id}_{communicationType}_base.ino)",
+      "displayName": "Показвано име в UI dropdown",
+      "chipset": "Тип микроконтролер (показва се като caption под displayName в UI)",
+      "communicationTypes": "Масив с поддържани комуникации: ['serial', 'wifi'] - определя кои base templates трябва да съществуват",
+      "isActive": "Дали контролерът да се показва в генератора (false = скрит от UI)",
+      "incompatibleCommands": "Масив с имена на команди, които НЕ работят с този контролер (показват се disabled в UI със warning)"
+    },
+    "used_by": "ArduinoGeneratorService.ts, generatorRoutes.ts, ArduinoGeneratorDialog.vue"
+  },
+  "controllers": [
+    {
+      "id": "arduino_uno",
+      "displayName": "Arduino Uno R3/R4",
+      "communicationTypes": ["serial"],
+      "chipset": "ATmega328P/ATmega4809",
+      "isActive": true,
+      "incompatibleCommands": ["PULSE_COUNT"]
+    },
+    {
+      "id": "arduino_mega",
+      "displayName": "Arduino Mega",
+      "communicationTypes": ["serial"],
+      "chipset": "ATmega2560",
+      "isActive": false,
+      "incompatibleCommands": ["PULSE_COUNT"]
+    },
+    {
+      "id": "wemos_d1",
+      "displayName": "WeMos D1 R2",
+      "communicationTypes": ["wifi"],
+      "chipset": "ESP8266",
+      "isActive": true,
+      "incompatibleCommands": []
+    },
+    {
+      "id": "nodemcu_amica_v2",
+      "displayName": "NodeMCU Amica V2",
+      "communicationTypes": ["wifi", "serial"],
+      "chipset": "ESP8266",
+      "isActive": true,
+      "incompatibleCommands": []
+    },
+    {
+      "id": "esp32",
+      "displayName": "ESP32",
+      "communicationTypes": ["wifi"],
+      "chipset": "ESP32",
+      "isActive": false,
+      "incompatibleCommands": []
+    },
+    {
+      "id": "arduino_nano",
+      "displayName": "Arduino Nano V3",
+      "communicationTypes": ["serial"],
+      "chipset": "ATmega328P",
+      "isActive": true,
+      "incompatibleCommands": ["PULSE_COUNT"]
+    },
+    {
+      "id": "firebeetle_esp32_e",
+      "displayName": "FireBeetle 2 ESP32-E",
+      "communicationTypes": ["wifi", "serial"],
+      "chipset": "ESP32-WROOM-32E",
+      "isActive": true,
+      "incompatibleCommands": []
+    },
+    {
+      "id": "arduino_uno_r4_wifi",
+      "displayName": "Arduino Uno R4 WiFi",
+      "communicationTypes": ["wifi", "serial"],
+      "chipset": "Renesas RA4M1 + ESP32-S3",
+      "isActive": true,
+      "incompatibleCommands": ["PULSE_COUNT", "MODBUS_RTU_READ", "UART_STREAM_READ"]
+    }
+  ],
+  "_deviceTemplates_info": {
+    "description": "Справочни дефиниции на device templates - показват на потребителя какви команди изискват различните типове устройства",
+    "fields": {
+      "id": "Уникален идентификатор на device template",
+      "displayName": "Показвано име в UI dropdown за справка",
+      "technicalType": "Технически тип на устройството (показва се като caption)",
+      "requiredCommand": "Име на командата, която това устройство изисква (показва се в info card)",
+      "description": "Описание на устройството и неговата функция"
+    },
+    "note": "Това е САМО справочна информация за потребителя, НЕ се използва директно в генерацията на firmware",
+    "used_by": "generatorRoutes.ts (връща в /preview endpoint), ArduinoGeneratorDialog.vue (показва в Step 2)"
+  },
+  "deviceTemplates": [
+    {
+      "id": "ph_sensor",
+      "displayName": "pH Сензор",
+      "technicalType": "Analog_pH_Sensor",
+      "requiredCommand": "ANALOG",
+      "description": "Аналогов pH сензор (0-14 pH)"
+    },
+    {
+      "id": "ec_sensor",
+      "displayName": "EC Сензор (Електропроводимост)",
+      "technicalType": "Analog_EC_Sensor",
+      "requiredCommand": "ANALOG",
+      "description": "Измерва електропроводимост на разтвор"
+    },
+    {
+      "id": "moisture_sensor",
+      "displayName": "Сензор за влажност на почва",
+      "technicalType": "Soil_Moisture_Sensor",
+      "requiredCommand": "ANALOG",
+      "description": "Капацитивен/резистивен сензор за влажност"
+    },
+    {
+      "id": "hcsr04",
+      "displayName": "Ултразвуков сензор HC-SR04",
+      "technicalType": "Ultrasonic_Distance",
+      "requiredCommand": "PULSE_MEASURE",
+      "description": "Измерва разстояние 2-400cm"
+    },
+    {
+      "id": "dht22",
+      "displayName": "DHT22 (Температура/Влажност)",
+      "technicalType": "DHT_Sensor",
+      "requiredCommand": "SINGLE_WIRE_PULSE",
+      "description": "Цифров сензор за температура и влажност"
+    },
+    {
+      "id": "ds18b20",
+      "displayName": "DS18B20 (Температура)",
+      "technicalType": "DS18B20_Temperature",
+      "requiredCommand": "SINGLE_WIRE_ONEWIRE",
+      "description": "Цифров температурен сензор OneWire"
+    },
+    {
+      "id": "relay",
+      "displayName": "Стандартно реле",
+      "technicalType": "Standard_Relay",
+      "requiredCommand": "SET_PIN",
+      "description": "Едноканално реле за управление на високомощни устройства"
+    },
+    {
+      "id": "water_pump",
+      "displayName": "Водна помпа",
+      "technicalType": "Water_Pump",
+      "requiredCommand": "SET_PIN",
+      "description": "Водна помпа контролирана чрез реле"
+    },
+    {
+      "id": "solenoid_valve",
+      "displayName": "Соленоиден вентил",
+      "technicalType": "Solenoid_Valve",
+      "requiredCommand": "SET_PIN",
+      "description": "Електрически контролиран вентил за регулиране на водния поток"
+    },
+    {
+      "id": "flow_sensor",
+      "displayName": "Flow сензор",
+      "technicalType": "Flow_Sensor",
+      "requiredCommand": "PULSE_COUNT",
+      "description": "Сензор за измерване на водния поток чрез броене на импулси"
+    },
+    {
+      "id": "par_sensor",
+      "displayName": "PAR сензор (RS485)",
+      "technicalType": "PAR_Light_Sensor",
+      "requiredCommand": "MODBUS_RTU_READ",
+      "description": "Photosynthetically Active Radiation сензор с RS485/Modbus комуникация"
+    }
+  ],
+  "_commands_info": {
+    "description": "Справочни дефиниции на налични Arduino команди - показват метаданни за команди, които могат да се включат във firmware",
+    "fields": {
+      "name": "Име на командата (UPPERCASE) - съответства на .ino файл в Arduino/templates/commands/{communicationType}/{name.toLowerCase()}.ino",
+      "displayName": "Показвано име в UI",
+      "description": "Описание на функционалността на командата",
+      "category": "Категория: 'sensors', 'actuators', или 'communication'",
+      "memoryFootprint": "Приблизителен memory footprint в байтове (0 = минимален)",
+      "requiredByDevices": "Масив от displayName-ове на device templates, които изискват тази команда",
+      "parameters": "Масив от parameter дефиниции (schema за валидация, не се използва в генератора)",
+      "isActive": "Дали командата е активна и може да се избира в генератора"
+    },
+    "note": "Командите се зареждат от MongoDB (Command model) в runtime. Този JSON е само справочна информация за структурата",
+    "used_by": "generatorRoutes.ts (връща в /preview endpoint), ArduinoGeneratorDialog.vue (показва в Step 2)"
+  },
+  "commands": [
+    {
+      "name": "ANALOG",
+      "displayName": "Аналогово четене",
+      "description": "Чете аналогова стойност от посочен аналогов пин (A0-A5)",
+      "category": "sensors",
+      "memoryFootprint": 0,
+      "requiredByDevices": [
+        "pH Сензор",
+        "EC Сензор (Електропроводимост)",
+        "Сензор за влажност на почва"
+      ],
+      "parameters": [
+        {
+          "name": "pin",
+          "type": "string",
+          "required": true,
+          "description": "Аналогов пин (A0-A5)",
+          "validation": "^A[0-5]$"
+        }
+      ],
+      "isActive": true
+    },
+    {
+      "name": "ANALOG_ALL",
+      "displayName": "Четене на всички аналогови пинове",
+      "description": "Чете аналогови стойности от всички аналогови пинове едновременно",
+      "category": "sensors",
+      "memoryFootprint": 0,
+      "requiredByDevices": [],
+      "parameters": [],
+      "isActive": true
+    },
+    {
+      "name": "PULSE_MEASURE",
+      "displayName": "Измерване на импулс",
+      "description": "Измерва продължителността на импулс за ултразвукови сензори и подобни устройства",
+      "category": "sensors",
+      "memoryFootprint": 0,
+      "requiredByDevices": [
+        "Ултразвуков сензор HC-SR04"
+      ],
+      "parameters": [
+        {
+          "name": "triggerPin",
+          "type": "number",
+          "required": true,
+          "description": "Trigger пин (2-13)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "echoPin",
+          "type": "number",
+          "required": true,
+          "description": "Echo пин (2-13)",
+          "min": 2,
+          "max": 13
+        }
+      ],
+      "isActive": true
+    },
+    {
+      "name": "SET_PIN",
+      "displayName": "Задаване на цифров пин",
+      "description": "Задава цифров пин в състояние HIGH или LOW (BUILT-IN: включена в base templates)",
+      "category": "actuators",
+      "memoryFootprint": 0,
+      "requiredByDevices": [
+        "Стандартно реле",
+        "Водна помпа",
+        "Соленоиден вентил"
+      ],
+      "parameters": [
+        {
+          "name": "pin",
+          "type": "number",
+          "required": true,
+          "description": "Цифров пин (2-13)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "state",
+          "type": "number",
+          "required": true,
+          "description": "Състояние (0=LOW, 1=HIGH)",
+          "min": 0,
+          "max": 1
+        }
+      ],
+      "isActive": false
+    },
+    {
+      "name": "READ",
+      "displayName": "Четене на цифров пин",
+      "description": "Чете текущото състояние на цифров пин (BUILT-IN: включена в base templates)",
+      "category": "sensors",
+      "memoryFootprint": 0,
+      "requiredByDevices": [],
+      "parameters": [
+        {
+          "name": "pin",
+          "type": "number",
+          "required": true,
+          "description": "Цифров пин (2-13)",
+          "min": 2,
+          "max": 13
+        }
+      ],
+      "isActive": false
+    },
+    {
+      "name": "SINGLE_WIRE_PULSE",
+      "displayName": "Едножичен импулсен протокол",
+      "description": "Едножичен импулсен комуникационен протокол за сензори като DHT22",
+      "category": "communication",
+      "memoryFootprint": 0,
+      "requiredByDevices": [
+        "DHT22 (Температура/Влажност)"
+      ],
+      "parameters": [
+        {
+          "name": "dataPin",
+          "type": "number",
+          "required": true,
+          "description": "Data пин (2-13)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "startLowDuration",
+          "type": "number",
+          "required": false,
+          "description": "Start LOW продължителност в μs (по подразбиране 18000)",
+          "default": 18000
+        },
+        {
+          "name": "startHighDuration",
+          "type": "number",
+          "required": false,
+          "description": "Start HIGH продължителност в μs (по подразбиране 40)",
+          "default": 40
+        },
+        {
+          "name": "bitThreshold",
+          "type": "number",
+          "required": false,
+          "description": "Bit threshold в μs (по подразбиране 40)",
+          "default": 40
+        },
+        {
+          "name": "numBits",
+          "type": "number",
+          "required": false,
+          "description": "Брой битове (по подразбиране 40)",
+          "default": 40,
+          "min": 1,
+          "max": 320
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "required": false,
+          "description": "Timeout в ms (по подразбиране 5000)",
+          "default": 5000
+        }
+      ],
+      "isActive": true
+    },
+    {
+      "name": "SINGLE_WIRE_ONEWIRE",
+      "displayName": "Едножичен OneWire протокол",
+      "description": "OneWire протокол за устройства като DS18B20 температурен сензор",
+      "category": "communication",
+      "memoryFootprint": 0,
+      "requiredByDevices": [
+        "DS18B20 (Температура)"
+      ],
+      "parameters": [
+        {
+          "name": "dataPin",
+          "type": "number",
+          "required": true,
+          "description": "Data пин (2-13)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "required": false,
+          "description": "Timeout в ms (по подразбиране 5000)",
+          "default": 5000
+        }
+      ],
+      "isActive": true
+    },
+    {
+      "name": "PULSE_COUNT",
+      "displayName": "Броене на импулси",
+      "description": "Брои импулси за измерване на flow rate и подобни величини",
+      "category": "sensors",
+      "memoryFootprint": 0,
+      "requiredByDevices": [
+        "Flow сензор"
+      ],
+      "parameters": [
+        {
+          "name": "pin",
+          "type": "number",
+          "required": true,
+          "description": "Пин за броене (2-13)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "measurementTime",
+          "type": "number",
+          "required": false,
+          "description": "Време за измерване в ms (по подразбиране 5000)",
+          "default": 5000
+        },
+        {
+          "name": "pullupEnabled",
+          "type": "boolean",
+          "required": false,
+          "description": "Включен internal pullup (по подразбиране true)",
+          "default": true
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "required": false,
+          "description": "Timeout в ms (по подразбиране 10000)",
+          "default": 10000
+        }
+      ],
+      "isActive": true
+    },
+    {
+      "name": "MODBUS_RTU_READ",
+      "displayName": "Modbus RTU четене",
+      "description": "Чете Modbus регистър през UART (SoftwareSerial) с CRC16 валидация",
+      "category": "communication",
+      "memoryFootprint": 1024,
+      "requiredByDevices": [
+        "PAR сензор (RS485)"
+      ],
+      "parameters": [
+        {
+          "name": "rxPin",
+          "type": "number",
+          "required": true,
+          "description": "RX пин за UART (2-13)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "txPin",
+          "type": "number",
+          "required": true,
+          "description": "TX пин за UART (2-13)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "baudRate",
+          "type": "number",
+          "required": false,
+          "description": "Baud rate (напр. 4800, 9600) - по подразбиране 4800 в Arduino",
+          "min": 300,
+          "max": 115200
+        },
+        {
+          "name": "deviceAddress",
+          "type": "number",
+          "required": false,
+          "description": "Modbus device address (обикновено 0x01) - по подразбиране 1 в Arduino",
+          "min": 1,
+          "max": 247
+        },
+        {
+          "name": "functionCode",
+          "type": "number",
+          "required": false,
+          "description": "Modbus function code (0x03 = Read Holding Register) - по подразбиране 3 в Arduino",
+          "min": 1,
+          "max": 127
+        },
+        {
+          "name": "registerAddress",
+          "type": "number",
+          "required": false,
+          "description": "Starting register address (hex or decimal) - по подразбиране 0 в Arduino",
+          "min": 0,
+          "max": 65535
+        },
+        {
+          "name": "registerCount",
+          "type": "number",
+          "required": false,
+          "description": "Number of registers to read - по подразбиране 1 в Arduino",
+          "min": 1,
+          "max": 125
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "required": false,
+          "description": "Timeout в ms - по подразбиране 500 в Arduino",
+          "min": 100,
+          "max": 5000
+        }
+      ],
+      "isActive": true
+    },
+    {
+      "name": "UART_STREAM_READ",
+      "displayName": "UART stream четене",
+      "description": "Чете continuous stream data през UART (SoftwareSerial) с checksum валидация",
+      "category": "communication",
+      "memoryFootprint": 512,
+      "requiredByDevices": [
+        "Ултразвуков сензор (UART)"
+      ],
+      "parameters": [
+        {
+          "name": "rxPin",
+          "type": "number",
+          "required": true,
+          "description": "RX пин за UART (2-13)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "txPin",
+          "type": "number",
+          "required": false,
+          "description": "TX пин за UART (2-13, optional за stream)",
+          "min": 2,
+          "max": 13
+        },
+        {
+          "name": "baudRate",
+          "type": "number",
+          "required": false,
+          "description": "Baud rate (напр. 9600, 115200) - по подразбиране 9600 в Arduino",
+          "min": 300,
+          "max": 115200
+        },
+        {
+          "name": "frameLength",
+          "type": "number",
+          "required": true,
+          "description": "Дължина на frame в байтове",
+          "min": 1,
+          "max": 64
+        },
+        {
+          "name": "headerByte",
+          "type": "number",
+          "required": false,
+          "description": "Header byte (напр. 0xFF), optional",
+          "min": 0,
+          "max": 255
+        },
+        {
+          "name": "checksumType",
+          "type": "string",
+          "required": false,
+          "description": "Тип checksum (none, sum, xor) - по подразбиране 'none' в Arduino"
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "required": false,
+          "description": "Timeout в ms (по подразбиране 1000)",
+          "min": 100,
+          "max": 10000
+        }
+      ],
+      "isActive": true
+    }
+  ],
+  "_wifiFeatures_info": {
+    "description": "Опционални WiFi функционалности, които могат да се добавят към WiFi контролери",
+    "fields": {
+      "id": "Уникален идентификатор (съответства на .ino файл в Arduino/templates/wifi-features/{id}.ino)",
+      "displayName": "Показвано име в UI dropdown",
+      "description": "Описание на функционалността",
+      "memoryFootprint": "Приблизителен memory footprint в байтове",
+      "isActive": "Дали feature-ът е активен и може да се избира",
+      "compatibleChipsets": "Масив от chipsets, с които е съвместим (ESP8266, ESP32, Renesas RA4M1)"
+    },
+    "used_by": "generatorRoutes.ts, ArduinoGeneratorDialog.vue"
+  },
+  "wifiFeatures": [
+    {
+      "id": "multi_network",
+      "displayName": "Multi-Network Fallback",
+      "description": "Автоматично fallback към втора WiFi мрежа ако основната не е достъпна (само при boot)",
+      "memoryFootprint": 150,
+      "isActive": true,
+      "compatibleChipsets": ["ESP8266", "ESP32", "Renesas RA4M1"]
+    },
+    {
+      "id": "ota_update",
+      "displayName": "OTA Update",
+      "description": "Over-The-Air firmware update през Arduino IDE WiFi (минимална версия)",
+      "memoryFootprint": 2560,
+      "isActive": true,
+      "compatibleChipsets": ["ESP8266", "ESP32"]
+    },
+    {
+      "id": "auto_reconnect",
+      "displayName": "Auto-Reconnect",
+      "description": "Автоматично reconnect при загуба на WiFi връзка с smart retry logic (проверка на всеки 30s)",
+      "memoryFootprint": 100,
+      "isActive": true,
+      "compatibleChipsets": ["ESP8266", "ESP32", "Renesas RA4M1"]
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+# Add New Device Type - Procedure
+
+This guide describes how to add a new device type (Sensor or Actuator) to the Hydroponics v5 system.
+
+## 4 Required Steps
+
+### STEP 1: Create Device Template (Execution Config)
+
+**File:** `backend/config/devices/<device_id>.json`
+
+Create a new JSON file. This defines how the backend communicates with the hardware.
+
+**Naming Convention:** `<device_id>` should be `lowercase_underscores` (e.g., `dfrobot_ph_pro`).
+
+```json
+{
+    "id": "dfrobot_ec_k1",              // Must match filename (without .json)
+    "name": "DFRobot EC Sensor (K=1.0)",
+    "category": "SENSOR",               // "SENSOR" or "ACTUATOR"
+    "conversionStrategy": "ec-dfr-analog", // Optional: Default strategy ID
+    "capabilities": [
+        "READ"                          // "READ" for sensors, "WRITE" for actuators
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "ANALOG"     // Maps abstract READ to firmware command
+        }
+    },
+    "pins": [
+        {
+            "name": "Signal",
+            "type": "ANALOG_IN"         // "ANALOG_IN", "DIGITAL_OUT", etc.
+        }
+    ],
+    "initialState": {
+        "value": 0
+    }
+}
+```
+
+**Key Fields:**
+*   `commands`: Maps high-level actions (`READ`, `TOGGLE`) to low-level firmware commands (`ANALOG`, `RELAY_SET`).
+*   `conversionStrategy`: The default strategy to use (see Step 3).
+
+---
+
+### STEP 2: Database Seed (UI Listing)
+
+**File:** `backend/src/utils/seedDeviceTemplates.ts`
+
+Add an entry to the `templates` array. This makes the device appear in the "Add Device" dropdown in the Frontend.
+
+```typescript
+{
+    _id: 'dfrobot_ec_k1',               // MUST match JSON "id" from Step 1
+    name: 'DFRobot EC Sensor (K=1.0)',
+    description: 'Analog Electrical Conductivity sensor',
+    physicalType: 'ec',                 // 'ph', 'temp', 'relay', etc.
+    requiredCommand: 'ANALOG',          // Primary command type
+    defaultUnits: ['mS/cm'],
+    portRequirements: [{ type: 'analog', count: 1, description: 'Analog Pin (A0-A5)' }],
+    executionConfig: {
+        commandType: 'ANALOG',
+        responseMapping: { conversionMethod: 'ec_dfrobot_k1' } // Legacy field, kept for reference
+    },
+    uiConfig: { category: 'Sensors', icon: 'activity' }
+}
+```
+
+**Action:** Run `npm run seed` (or restart backend if auto-seed is enabled) to apply changes.
+
+---
+
+### STEP 3: Conversion Strategy (Backend Logic)
+
+If the device requires a custom formula (not just Linear Interpolation), create a strategy.
+
+**1. Create Strategy Class**
+**File:** `backend/src/services/conversion/strategies/<StrategyName>.ts`
+
+```typescript
+import { IConversionStrategy } from './IConversionStrategy';
+import { IDevice } from '../../../models/Device';
+
+export class MyCustomStrategy implements IConversionStrategy {
+    convert(raw: number, device: IDevice): number {
+        // Implement formula
+        // Access config via: device.config.calibration.multiplier
+        return raw * 2; 
+    }
+}
+```
+
+**2. Register Strategy**
+**File:** `backend/src/services/conversion/ConversionService.ts`
+
+```typescript
+import { MyCustomStrategy } from './strategies/MyCustomStrategy';
+
+// Inside constructor:
+this.registerStrategy('my-custom-strategy', new MyCustomStrategy());
+```
+
+**3. Auto-Detect (Optional)**
+Update `convert` method in `ConversionService.ts` to set this strategy as default for your `driverId` if needed.
+
+---
+
+### STEP 4: Frontend Calibration (UI)
+
+**File:** `frontend/src/components/devices/test/calibration/ECCalibration.tsx`
+
+*Note: Ideally, this should be refactored to a generic `CalibrationSettings.tsx`, but for now we modify `ECCalibration` or create a new component.*
+
+1.  **Add Strategy to Dropdown:**
+    ```tsx
+    <SelectItem value="my-custom-strategy">My Custom Strategy</SelectItem>
+    ```
+
+2.  **Add Configuration UI:**
+    Render specific inputs (like K-Value, Offset) when your strategy is selected.
+
+3.  **State & Persistence:**
+    Ensure new fields (like `multiplier`) are saved to `device.config.calibration`.
+
+---
+
+### STEP 5: Firmware & Transport (Advanced)
+
+**Only required if the device uses a new protocol (e.g., Modbus, I2C, Custom Serial).**
+
+#### 1. Firmware Command (`.ino`)
+**File:** `firmware/templates/commands/<command_name>.ino`
+*   Create a new `.ino` file implementing the protocol.
+*   **Protocol Contract:** Define clearly what the firmware expects (e.g., `CMD|PIN|ARG`).
+*   **Example:** `MODBUS_RTU_READ|D2|D3|{"addr":1...}`
+
+#### 2. Transport Logic (`SerialTransport.ts`)
+**File:** `backend/src/modules/hardware/transports/SerialTransport.ts`
+*   If the command requires special formatting (e.g., extracting multiple pins, inserting delimiters), update the `send()` method.
+*   **Critical:** Ensure pin names (e.g., "RX", "TX") are correctly extracted from `packet.pins` and formatted (e.g., prefixed with 'D').
+
+#### 3. Response Parsing (`HardwareService.ts`)
+**File:** `backend/src/modules/hardware/HardwareService.ts`
+*   Update `readSensorValue()` if the sensor returns complex data (e.g., Arrays, Buffers).
+*   **Example:** Modbus often returns `[value]`. Ensure logic exists to handle `Array.isArray(response)`.
+
+---
+
+## Verification Checklist
+
+1.  [ ] **JSON Created**: File exists in `backend/config/devices/`.
+2.  [ ] **DB Seeded**: Device appears in "Add Device" list.
+3.  [ ] **Strategy Registered**: Backend does not throw "Strategy not found".
+4.  [ ] **Calibration UI**: Can select strategy and save settings.
+5.  [ ] **Firmware/Transport**: (If Advanced) Command is formatted correctly and response is parsed.
+
+## Troubleshooting
+
+*   **ERR_INVALID_FORMAT**: Check `SerialTransport.ts`. Is the command string constructed exactly as the `.ino` file expects (delimiters, pin prefixes)?
+*   **500 Error (Read Once)**: Check `HardwareService.ts`. Is the raw response being parsed correctly? (Log the `rawResponse` type).
+*   **Strategy Not Found**: Check `ConversionService.ts`. Is the strategy registered in the constructor?
+
+
+---
+
+## Reference: Available Commands
+
+For a complete list of supported commands, parameters, and usage examples, please refer to:
+
+👉 **[Firmware Command Reference](../Reference/firmware-commands.md)**
+
+Common commands include: `ANALOG`, `DIGITAL_READ`, `SET_PIN` (Relay), `DHT_READ`, and `ONEWIRE_READ_TEMP`.
+

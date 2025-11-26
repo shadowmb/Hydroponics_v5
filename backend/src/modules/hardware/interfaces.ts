@@ -7,6 +7,7 @@ import { SystemEvents } from '../../core/EventBusService';
 export interface HardwarePacket {
     id: string;
     cmd: string;
+    pins?: Record<string, string> | Map<string, string>;
     [key: string]: any;
 }
 
@@ -57,7 +58,7 @@ export interface IDeviceDriver {
     createPacket(
         commandName: string,
         params: Record<string, any>,
-        context: { pin?: number | string; address?: string }
+        context: { pin?: number | string; pins?: Map<string, string> | Record<string, string>; address?: string }
     ): Omit<HardwarePacket, 'id'>; // ID is injected by the Service
 
     validateParams(commandName: string, params: Record<string, any>): boolean;

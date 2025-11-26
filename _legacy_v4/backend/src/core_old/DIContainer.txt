@@ -1,0 +1,323 @@
+// Dependency Injection Container for Modular System
+// Supports singleton, transient, and factory registrations with circular dependency detection
+
+import { Result, DIContainerError } from './types'
+
+export type ServiceToken<T = any> = symbol | string | (new (...args: any[]) => T)
+
+export interface ServiceFactory<T = any> {
+  (): T | Promise<T>
+}
+
+export interface ServiceDefinition<T = any> {
+  token: ServiceToken<T>
+  factory: ServiceFactory<T>
+  lifetime: ServiceLifetime
+  dependencies: ServiceToken[]
+}
+
+export enum ServiceLifetime {
+  SINGLETON = 'singleton',
+  TRANSIENT = 'transient',
+  SCOPED = 'scoped'
+}
+
+export interface RegistrationOptions {
+  lifetime?: ServiceLifetime
+  dependencies?: ServiceToken[]
+}
+
+export interface ContainerScope {
+  id: string
+  services: Map<ServiceToken, any>
+  parent?: ContainerScope
+}
+
+// Service tokens for our modules
+export const SERVICE_TOKENS = {
+  FLOW_CONTROL_LOGIC: Symbol('IFlowControlLogic'),
+  LOGGING_SERVICE: Symbol('ILoggingService'),
+  CONFIGURATION_MANAGER: Symbol('IConfigurationManager'),
+  WEBSOCKET_BROADCASTER: Symbol('IWebSocketBroadcaster')
+} as const
+
+export class DIContainer {
+  private readonly services = new Map<ServiceToken, ServiceDefinition>()
+  private readonly singletonInstances = new Map<ServiceToken, any>()
+  private readonly resolutionStack: ServiceToken[] = []
+  private currentScope?: ContainerScope
+
+  /**
+   * Registers a service with the container
+   * @param token - Service token (Symbol, string, or constructor)
+   * @param factory - Factory function to create service instance
+   * @param options - Registration options (lifetime, dependencies)
+   * @returns Result indicating success or failure
+   */
+  register<T>(
+    token: ServiceToken<T>,
+    factory: ServiceFactory<T>,
+    options: RegistrationOptions = {}
+  ): Result<void, DIContainerError> {
+    try {
+      const definition: ServiceDefinition<T> = {
+        token,
+        factory,
+        lifetime: options.lifetime || ServiceLifetime.SINGLETON,
+        dependencies: options.dependencies || []
+      }
+
+      // Validate that dependencies don't create circular references
+      const circularCheck = this.detectCircularDependency(token, definition.dependencies)
+      if (!circularCheck.success) {
+        return circularCheck
+      }
+
+      this.services.set(token, definition)
+      return Result.ok(undefined)
+    } catch (error) {
+      return Result.err(new DIContainerError(
+        'REGISTRATION_FAILED',
+        `Failed to register service: ${this.tokenToString(token)}`,
+        { token: this.tokenToString(token) },
+        error as Error
+      ))
+    }
+  }
+
+  /**
+   * Resolves a service from the container
+   * @param token - Service token to resolve
+   * @returns Result containing service instance or error
+   */
+  async resolve<T>(token: ServiceToken<T>): Promise<Result<T, DIContainerError>> {
+    try {
+      // Check for circular dependencies
+      if (this.resolutionStack.includes(token)) {
+        return Result.err(new DIContainerError(
+          'CIRCULAR_DEPENDENCY',
+          `Circular dependency detected: ${this.resolutionStack.map(t => this.tokenToString(t)).join(' -> ')} -> ${this.tokenToString(token)}`,
+          { 
+            resolutionStack: this.resolutionStack.map(t => this.tokenToString(t)),
+            currentToken: this.tokenToString(token)
+          }
+        ))
+      }
+
+      const definition = this.services.get(token)
+      if (!definition) {
+        return Result.err(new DIContainerError(
+          'SERVICE_NOT_REGISTERED',
+          `Service not registered: ${this.tokenToString(token)}`,
+          { token: this.tokenToString(token) }
+        ))
+      }
+
+      // Check for singleton instance
+      if (definition.lifetime === ServiceLifetime.SINGLETON) {
+        const existingInstance = this.singletonInstances.get(token)
+        if (existingInstance) {
+          return Result.ok(existingInstance)
+        }
+      }
+
+      // Add to resolution stack for circular dependency detection
+      this.resolutionStack.push(token)
+
+      try {
+        // Resolve dependencies first
+        const dependencies = await this.resolveDependencies(definition.dependencies)
+        if (!dependencies.success) {
+          return Result.err(dependencies.error as DIContainerError)
+        }
+
+        // Create instance
+        const instance = await definition.factory()
+        
+        // Store singleton instances
+        if (definition.lifetime === ServiceLifetime.SINGLETON) {
+          this.singletonInstances.set(token, instance)
+        }
+
+        return Result.ok(instance as T)
+      } finally {
+        // Remove from resolution stack
+        this.resolutionStack.pop()
+      }
+    } catch (error) {
+      return Result.err(new DIContainerError(
+        'RESOLUTION_FAILED',
+        `Failed to resolve service: ${this.tokenToString(token)}`,
+        { token: this.tokenToString(token) },
+        error as Error
+      ))
+    }
+  }
+
+  /**
+   * Creates a new container scope for scoped services
+   * @returns New container scope
+   */
+  createScope(): ContainerScope {
+    const scope: ContainerScope = {
+      id: `scope_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      services: new Map(),
+      parent: this.currentScope
+    }
+    
+    this.currentScope = scope
+    return scope
+  }
+
+  /**
+   * Disposes a container scope and cleans up scoped services
+   * @param scope - Scope to dispose
+   */
+  disposeScope(scope: ContainerScope): void {
+    // Clean up scoped services  
+    scope.services.forEach((service) => {
+      if (service && typeof service.dispose === 'function') {
+        try {
+          service.dispose()
+        } catch (error) {
+          // Log disposal errors but don't throw
+          console.warn(`Error disposing service in scope ${scope.id}:`, error)
+        }
+      }
+    }
+
+    scope.services.clear()
+    
+    // Reset current scope to parent
+    if (this.currentScope === scope) {
+      this.currentScope = scope.parent
+    }
+  }
+
+  /**
+   * Checks if a service is registered
+   * @param token - Service token to check
+   * @returns True if service is registered
+   */
+  isRegistered<T>(token: ServiceToken<T>): boolean {
+    return this.services.has(token)
+  }
+
+  /**
+   * Gets all registered service tokens
+   * @returns Array of registered service tokens
+   */
+  getRegisteredTokens(): ServiceToken[] {
+    return Array.from(this.services.keys())
+  }
+
+  /**
+   * Validates container configuration and dependencies
+   * @returns Result with validation errors if any
+   */
+  validateConfiguration(): Result<void, DIContainerError[]> {
+    const errors: DIContainerError[] = []
+
+    for (const [token, definition] of this.services.entries()) {
+      // Check that all dependencies are registered
+      for (const dependency of definition.dependencies) {
+        if (!this.services.has(dependency)) {
+          errors.push(new DIContainerError(
+            'SERVICE_NOT_REGISTERED',
+            `Dependency not registered: ${this.tokenToString(dependency)} (required by ${this.tokenToString(token)})`,
+            { 
+              token: this.tokenToString(token),
+              dependency: this.tokenToString(dependency)
+            }
+          ))
+        }
+      }
+
+      // Check for circular dependencies
+      const circularCheck = this.detectCircularDependency(token, definition.dependencies)
+      if (!circularCheck.success) {
+        errors.push(circularCheck.error as DIContainerError)
+      }
+    }
+
+    return errors.length > 0 ? Result.err(errors) : Result.ok(undefined)
+  }
+
+  /**
+   * Clears all registrations and instances (for testing)
+   */
+  clear(): void {
+    this.services.clear()
+    this.singletonInstances.clear()
+    this.resolutionStack.length = 0
+    this.currentScope = undefined
+  }
+
+  private async resolveDependencies(dependencies: ServiceToken[]): Promise<Result<any[], DIContainerError>> {
+    const resolved: any[] = []
+    
+    for (const dependency of dependencies) {
+      const result = await this.resolve(dependency)
+      if (!result.success) {
+        return Result.err(result.error as DIContainerError)
+      }
+      resolved.push(result.data)
+    }
+    
+    return Result.ok(resolved)
+  }
+
+  private detectCircularDependency(
+    token: ServiceToken,
+    dependencies: ServiceToken[],
+    visited: Set<ServiceToken> = new Set(),
+    path: ServiceToken[] = []
+  ): Result<void, DIContainerError> {
+    if (visited.has(token)) {
+      const cyclePath = [...path, token]
+      return Result.err(new DIContainerError(
+        'CIRCULAR_DEPENDENCY',
+        `Circular dependency detected: ${cyclePath.map(t => this.tokenToString(t)).join(' -> ')}`,
+        { cyclePath: cyclePath.map(t => this.tokenToString(t)) }
+      ))
+    }
+
+    visited.add(token)
+    path.push(token)
+
+    for (const dependency of dependencies) {
+      const definition = this.services.get(dependency)
+      if (definition) {
+        const result = this.detectCircularDependency(dependency, definition.dependencies, new Set(visited), [...path])
+        if (!result.success) {
+          return result
+        }
+      }
+    }
+
+    visited.delete(token)
+    path.pop()
+    return Result.ok(undefined)
+  }
+
+  private tokenToString(token: ServiceToken): string {
+    if (typeof token === 'symbol') {
+      return token.description || token.toString()
+    }
+    if (typeof token === 'string') {
+      return token
+    }
+    if (typeof token === 'function') {
+      return token.name
+    }
+    return String(token)
+  }
+}
+
+// Global container instance
+export const container = new DIContainer()
+
+// Helper functions for common operations
+export const registerService = container.register.bind(container)
+export const resolveService = container.resolve.bind(container)
+export const isServiceRegistered = container.isRegistered.bind(container)

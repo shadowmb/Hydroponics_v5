@@ -1,0 +1,135 @@
+{
+  "id": "flow_1759858369540",
+  "meta": {
+    "version": "1.0",
+    "name": "MoiseMonitor",
+    "description": "",
+    "createdAt": "2025-10-07T17:32:49.540Z",
+    "modifiedAt": "2025-10-07T17:33:06.381Z",
+    "exportType": "main",
+    "exportedAt": "2025-10-07T17:33:06.381Z",
+    "exportedBy": "FlowEditor v3 Canvas",
+    "flowEditorVersion": "3.0.0",
+    "formatVersion": "3.0.0",
+    "isMonitoringFlow": false
+  },
+  "blocks": [
+    {
+      "id": "block_1759858369541_7gajtvt7i",
+      "definitionId": "system.start",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "parameters": {},
+      "connections": {
+        "inputs": {},
+        "outputs": {
+          "flowOut": [
+            "connection_1759858375695_l2268a6po"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": [],
+        "system": true
+      }
+    },
+    {
+      "id": "block_1759858369765_ndwva2lah",
+      "definitionId": "system.end",
+      "position": {
+        "x": 600,
+        "y": 200
+      },
+      "parameters": {},
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759858377175_7nu9mkay0"
+          ]
+        },
+        "outputs": {}
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": [],
+        "system": true
+      }
+    },
+    {
+      "id": "block_1759858374203_qv8i0wx37",
+      "definitionId": "sensor",
+      "position": {
+        "x": 440.8319053336663,
+        "y": 340.8319053336663
+      },
+      "parameters": {
+        "deviceId": "68e43877322778311857c464",
+        "monitoringTagId": "68e53b7d3227783118584988"
+      },
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759858375695_l2268a6po"
+          ],
+          "setVarNameIn": [],
+          "onErrorIn": []
+        },
+        "outputs": {
+          "flowOut": [
+            "connection_1759858377175_7nu9mkay0"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "connection_1759858375695_l2268a6po",
+      "sourceBlockId": "block_1759858369541_7gajtvt7i",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1759858374203_qv8i0wx37",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1759858377175_7nu9mkay0",
+      "sourceBlockId": "block_1759858374203_qv8i0wx37",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1759858369765_ndwva2lah",
+      "targetPortId": "flowIn"
+    }
+  ],
+  "canvas": {
+    "zoom": 1,
+    "pan": {
+      "x": 0,
+      "y": 0
+    },
+    "grid": {
+      "enabled": true,
+      "size": 20
+    }
+  },
+  "exportStats": {
+    "totalBlocks": 3,
+    "totalConnections": 2,
+    "blockTypes": {},
+    "categories": {}
+  },
+  "validationSummary": {
+    "isValid": true,
+    "lastValidatedAt": "2025-10-07T17:33:06.382Z",
+    "criticalErrors": 0,
+    "warnings": 2,
+    "canExecute": true
+  }
+}

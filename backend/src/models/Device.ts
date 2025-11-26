@@ -14,6 +14,7 @@ export interface IDevice extends SoftDeleteDocument {
         boardType?: string;
         port?: string;
         pin?: number;
+        pins?: Map<string, string> | Record<string, string>; // New: Multi-pin support
         parentId?: string; // Controller ID
         relayId?: string;  // Relay ID
         channel?: number;
@@ -52,8 +53,9 @@ const DeviceSchema = new Schema<IDevice>(
 
         hardware: {
             boardType: String,
-            port: String,
+            port: String, // Legacy/Single-pin support
             pin: Number,
+            pins: { type: Map, of: String }, // New: Multi-pin support (e.g. { RX: "D2", TX: "D3" })
             parentId: { type: String, ref: 'Device' }, // Controller ID
             relayId: { type: String, ref: 'Relay' },   // Relay ID (if connected via relay)
             channel: Number,                           // Relay Channel Index (if connected via relay)

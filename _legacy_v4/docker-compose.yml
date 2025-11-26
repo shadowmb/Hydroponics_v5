@@ -1,0 +1,36 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: hydro-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: hydro-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - mongo
+    volumes:
+      - ./Arduino:/app/Arduino  # изисква се от Dockerfile-а за backend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: hydro-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongo_data:

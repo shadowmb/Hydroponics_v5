@@ -105,7 +105,7 @@ export class DeviceTemplateManager {
             name: template.name,
             capabilities: template.capabilities,
 
-            createPacket: (cmdName, params, context) => {
+            createPacket: (cmdName, params, context: any) => {
                 const cmdDef = template.commands[cmdName];
                 if (!cmdDef) {
                     throw new Error(`Command '${cmdName}' not defined in template '${template.id}'`);
@@ -118,6 +118,10 @@ export class DeviceTemplateManager {
                 // Inject Pin if available in context
                 if (context.pin !== undefined) {
                     finalParams.pin = context.pin;
+                }
+                // Inject Pins Map if available in context
+                if (context.pins !== undefined) {
+                    finalParams.pins = context.pins;
                 }
 
                 return {

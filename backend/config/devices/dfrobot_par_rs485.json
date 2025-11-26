@@ -1,0 +1,33 @@
+{
+    "id": "dfrobot_par_rs485",
+    "name": "DFRobot PAR Sensor (RS485)",
+    "category": "SENSOR",
+    "conversionStrategy": "linear",
+    "capabilities": [
+        "READ"
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "MODBUS_RTU_READ",
+            "params": {
+                "addr": 1,
+                "func": 3,
+                "reg": 0,
+                "count": 1
+            }
+        }
+    },
+    "pins": [
+        {
+            "name": "RX",
+            "type": "DIGITAL_IN"
+        },
+        {
+            "name": "TX",
+            "type": "DIGITAL_OUT"
+        }
+    ],
+    "initialState": {
+        "value": 0
+    }
+}

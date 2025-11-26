@@ -1,10 +1,46 @@
-[2025-11-25 23:03:00.677 +0200] INFO: ЁЯТУ [HardwareService] Checking Health...
+[2025-11-26 11:53:59.794 +0200] INFO: ЁЯУВ Loading Device Templates 
+from...
     env: "development"
-    controllerId: "6924b1bed90e4c22a6b7d1a5"
-[2025-11-25 23:03:00.677 +0200] INFO: ЁЯТУ [HardwareService] Checking Health...
+    dir: "C:\Project\Hydroponics_v4-main\backend\config\devices"    
+    files: [
+      "dfrobot_ec_k1.json",
+      "dht11.json",
+      "relay_active_low.json"
+    ]
+[2025-11-26 11:53:59.801 +0200] INFO: ЁЯУВ Device Templates Loaded  
     env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-[2025-11-25 23:03:00.681 +0200] INFO (Arduino Uno R3): ЁЯФН [HardwareService] Resolving Transport
+    count: 3
+    ids: [
+      "dfrobot_ec_k1",
+      "dht11",
+      "relay_active_low"
+    ]
+[2025-11-26 11:53:59.807 +0200] INFO: ЁЯУж Loaded devices from DB   
+    env: "development"
+    count: 2
+[2025-11-26 11:53:59.833 +0200] INFO: ЁЯЪА Socket.io Initialized    
+    env: "development"
+[2025-11-26 11:53:59.846 +0200] INFO: ЁЯЪА Server running on port 3000
+    env: "development"
+[2025-11-26 11:54:02.078 +0200] INFO: ЁЯФМ Client Connected to WebSocket
+    env: "development"
+    socketId: "jjjyFJ__zsn-VjV3AAAB"
+[2025-11-26 11:54:31.423 +0200] INFO: ЁЯФМ Client Disconnected
+    env: "development"
+    socketId: "jjjyFJ__zsn-VjV3AAAB"
+[2025-11-26 11:54:32.492 +0200] INFO: ЁЯФМ Client Connected to WebSocket
+    env: "development"
+    socketId: "cSZ879KF0BUkNbsGAAAE"
+[2025-11-26 11:54:43.727 +0200] INFO: ЁЯФН [HardwareService] Reading Sensor Value - Debug Info
+    env: "development"
+    deviceId: "6924a5300f1fabcaf9ffd436"
+    port: "A0"
+    hardware: {
+      "port": "A0",
+      "parentId": "6924b1bed90e4c22a6b7d1a5"
+    }
+    driverId: "dfrobot_ec_k1"
+[2025-11-26 11:54:43.740 +0200] INFO (Arduino Uno R3): ЁЯФН [HardwareService] Resolving Transport
     env: "development"
     controllerId: "6924b1bed90e4c22a6b7d1a5"
     connection: {
@@ -12,112 +48,78 @@
       "serialPort": "COM5",
       "baudRate": 9600
     }
-[2025-11-25 23:03:00.682 +0200] WARN: ЁЯТФ [HardwareService] Health Check Failed
+[2025-11-26 11:54:43.741 +0200] INFO: ЁЯФМ [SerialTransport] Connecting...
     env: "development"
-    controllerId: "6924b1bed90e4c22a6b7d1a5"
-    err: "Cannot read properties of undefined (reading 'onMessage')"
-[2025-11-25 23:03:00.682 +0200] INFO (Arduino Uno R3): ЁЯУК [HardwareService] Status Update
+    path: "COM5"
+    baudRate: 9600
+[2025-11-26 11:54:43.825 +0200] INFO: тЬЕ [SerialTransport] Port Opened
     env: "development"
-    oldStatus: "offline"
-    newStatus: "offline"
-[2025-11-25 23:03:00.683 +0200] INFO (Arduino Uno R4 WiFi): ЁЯФН [HardwareService] Resolving Transport
+    path: "COM5"
+[2025-11-26 11:54:45.412 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-    connection: {
-      "type": "network",
-      "ip": "10.1.10.253",
-      "port": 8887
+    chunk: "{\"o"
+[2025-11-26 11:54:45.416 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: "k\":1"
+[2025-11-26 11:54:45.421 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: ",\"ms"
+[2025-11-26 11:54:45.424 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: "g\":\""
+[2025-11-26 11:54:45.428 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: "Ardu"
+[2025-11-26 11:54:45.432 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: "ino "
+[2025-11-26 11:54:45.436 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: "Uno "
+[2025-11-26 11:54:45.440 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: "Read"
+[2025-11-26 11:54:45.444 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: "y\"}\r"
+[2025-11-26 11:54:45.449 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
+    env: "development"
+    chunk: "\n"
+[2025-11-26 11:54:45.835 +0200] INFO: ЁЯУд [SerialTransport] Sending Raw String (DEBUG)
+    env: "development"
+    packet: {
+      "id": "7cf0264a-39c2-4582-8a29-98740cc64b68",
+      "cmd": "ANALOG",
+      "pin": "A0"
     }
-[2025-11-25 23:03:00.683 +0200] WARN: ЁЯТФ [HardwareService] Health Check Failed
+    serialized: "ANALOG|A0"
+[2025-11-26 11:54:45.849 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-    err: "Cannot read properties of undefined (reading 'onMessage')"
-[2025-11-25 23:03:00.683 +0200] INFO (Arduino Uno R4 WiFi): ЁЯУК [HardwareService] Status Update
+    chunk: "{\""
+[2025-11-26 11:54:45.854 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-    oldStatus: "offline"
-    newStatus: "offline"
-Schema _id type: String
-[2025-11-25 23:03:17.281 +0200] INFO: ЁЯФД Syncing hardware status...
+    chunk: "ok\":"
+[2025-11-26 11:54:45.858 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-[2025-11-25 23:03:17.281 +0200] INFO: ЁЯФД [HardwareService] Starting Status Sync...
+    chunk: "1,\"p"
+[2025-11-26 11:54:45.862 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-[2025-11-25 23:03:17.296 +0200] INFO: ЁЯТУ [HardwareService] Checking Health...
+    chunk: "in\""
+[2025-11-26 11:54:45.866 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-    controllerId: "6924b1bed90e4c22a6b7d1a5"
-[2025-11-25 23:03:17.296 +0200] INFO: ЁЯТУ [HardwareService] Checking Health...
+    chunk: ":\"A0"
+[2025-11-26 11:54:45.871 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-[2025-11-25 23:03:17.300 +0200] INFO (Arduino Uno R4 WiFi): ЁЯФН [HardwareService] Resolving Transport
+    chunk: "\",\"v"
+[ConversionService] Converting for EC (Driver: dfrobot_ec_k1)       
+[2025-11-26 11:54:45.874 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-    connection: {
-      "type": "network",
-      "ip": "10.1.10.253",
-      "port": 8888
-    }
-[2025-11-25 23:03:17.301 +0200] WARN: ЁЯТФ [HardwareService] Health Check Failed
+    chunk: "alue"
+[2025-11-26 11:54:45.878 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-    err: "Cannot read properties of undefined (reading 'onMessage')"
-[2025-11-25 23:03:17.301 +0200] INFO (Arduino Uno R4 WiFi): ЁЯУК [HardwareService] Status Update
+    chunk: "\":93"
+[ConversionService] Selected Strategy: ec-dfr-analog
+[ConversionService] Raw: 93 -> Converted: 0.45
+[2025-11-26 11:54:45.883 +0200] INFO: ЁЯФМ [SerialTransport] RAW CHUNK RECEIVED
     env: "development"
-    oldStatus: "offline"
-    newStatus: "offline"
-[2025-11-25 23:03:17.302 +0200] INFO (Arduino Uno R3): ЁЯФН [HardwareService] Resolving Transport
-    env: "development"
-    controllerId: "6924b1bed90e4c22a6b7d1a5"
-    connection: {
-      "type": "serial",
-      "serialPort": "COM5",
-      "baudRate": 9600
-    }
-[2025-11-25 23:03:17.302 +0200] WARN: ЁЯТФ [HardwareService] Health Check Failed
-    env: "development"
-    controllerId: "6924b1bed90e4c22a6b7d1a5"
-    err: "Cannot read properties of undefined (reading 'onMessage')"
-[2025-11-25 23:03:17.302 +0200] INFO (Arduino Uno R3): ЁЯУК [HardwareService] Status Update
-    env: "development"
-    oldStatus: "offline"
-    newStatus: "offline"
-[2025-11-25 23:03:42.743 +0200] INFO: ЁЯФД Syncing hardware status...
-    env: "development"
-[2025-11-25 23:03:42.743 +0200] INFO: ЁЯФД [HardwareService] Starting Status Sync...
-    env: "development"
-[2025-11-25 23:03:42.748 +0200] INFO: ЁЯТУ [HardwareService] Checking Health...
-    env: "development"
-    controllerId: "6924b1bed90e4c22a6b7d1a5"
-[2025-11-25 23:03:42.748 +0200] INFO: ЁЯТУ [HardwareService] Checking Health...
-    env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-[2025-11-25 23:03:42.753 +0200] INFO (Arduino Uno R3): ЁЯФН [HardwareService] Resolving Transport
-    env: "development"
-    controllerId: "6924b1bed90e4c22a6b7d1a5"
-    connection: {
-      "type": "serial",
-      "serialPort": "COM5",
-      "baudRate": 9600
-    }
-[2025-11-25 23:03:42.753 +0200] WARN: ЁЯТФ [HardwareService] Health Check Failed
-    env: "development"
-    controllerId: "6924b1bed90e4c22a6b7d1a5"
-    err: "Cannot read properties of undefined (reading 'onMessage')"
-[2025-11-25 23:03:42.753 +0200] INFO (Arduino Uno R3): ЁЯУК [HardwareService] Status Update
-    env: "development"
-    oldStatus: "offline"
-    newStatus: "offline"
-[2025-11-25 23:03:42.754 +0200] INFO (Arduino Uno R4 WiFi): ЁЯФН [HardwareService] Resolving Transport
-    env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-    connection: {
-      "type": "network",
-      "ip": "10.1.10.253",
-      "port": 8888
-    }
-[2025-11-25 23:03:42.754 +0200] WARN: ЁЯТФ [HardwareService] Health Check Failed
-    env: "development"
-    controllerId: "6926198161346dc01f570ae9"
-    err: "Cannot read properties of undefined (reading 'onMessage')"
-[2025-11-25 23:03:42.754 +0200] INFO (Arduino Uno R4 WiFi): ЁЯУК [HardwareService] Status Update
-    env: "development"
-    oldStatus: "offline"
-    newStatus: "offline"
+    chunk: "}\r\n"

@@ -1,0 +1,1267 @@
+<template>
+  <q-card style="min-width: 500px; max-width: 600px">
+    <q-card-section class="row items-center">
+      <div class="text-h6">
+        {{ device ? 'Редактиране на устройство' : 'Добавяне на устройство' }}
+      </div>
+      <q-space />
+      <q-btn icon="close" flat round dense @click="$emit('cancel')" />
+    </q-card-section>
+
+    <q-separator />
+
+    <q-card-section class="q-pt-md">
+      <q-form @submit="handleSave" class="q-gutter-md">
+        <!-- Icon, Device Name and Unit -->
+        <div class="row q-gutter-sm">
+          <div style="width: 80px;">
+            <q-select
+              v-model="formData.icon"
+              :options="iconOptions"
+              label=""
+              outlined
+              emit-value
+              map-options
+            >
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon :name="scope.opt.value" />
+                  </q-item-section>
+                  <q-item-section>
+                    {{ scope.opt.label }}
+                  </q-item-section>
+                </q-item>
+              </template>
+              <template #selected>
+                <div class="row items-center justify-center">
+                  <q-icon :name="formData.icon || 'device_hub'" size="sm" />
+                </div>
+              </template>
+            </q-select>
+          </div>
+          <div class="col">
+            <q-input
+              v-model="formData.name"
+              label="Име на устройството *"
+              :rules="[(val) => (val && val.length > 0) || 'Името е задължително']"
+              outlined
+            />
+          </div>
+          <div style="width: 150px;">
+            <q-select
+              v-model="formData.unit"
+              :options="unitOptionsWithEmpty"
+              label="Мерна единица *"
+              :rules="[(val) => (val !== null && val !== '' && val !== undefined) || 'Мерната единица е задължителна']"
+              outlined
+              emit-value
+              map-options
+            >
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section>
+                    {{ scope.opt.label }}
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+          </div>
+        </div>
+
+        <!-- Physical Type -->
+        <q-select
+          v-model="formData.physicalType"
+          :options="physicalTypeOptions"
+          label="Тип *"
+          :rules="[(val) => !!val || 'Типът е задължителен']"
+          outlined
+          emit-value
+          map-options
+          @update:model-value="onPhysicalTypeChange"
+        />
+
+        <!-- Device Type -->
+        <q-select
+          v-model="formData.type"
+          :options="deviceTypeOptions"
+          label="Модел *"
+          :rules="[(val) => !!val || 'Типът е задължителен']"
+          :loading="loadingTemplates"
+          outlined
+          emit-value
+          map-options
+          @update:model-value="onDeviceTypeChange"
+        />
+
+        <!-- Controller -->
+        <q-select
+          v-model="formData.controllerId"
+          :options="controllerOptions"
+          label="Свързан контролер *"
+          :rules="[(val) => !!val || 'Контролерът е задължителен']"
+          outlined
+          emit-value
+          map-options
+          option-disable="disable"
+          @update:model-value="onControllerChange"
+        >
+          <!-- Custom template за да покажем tooltip -->
+          <template v-slot:option="{ itemProps, opt }">
+            <q-item v-bind="itemProps" :disable="opt.disable">
+              <q-item-section>
+                <q-item-label :class="{ 'disabled-controller': opt.disable }">
+                  {{ opt.label }}
+                </q-item-label>
+              </q-item-section>
+              <q-tooltip v-if="opt.disable">
+                Този контролер няма подходяща команда
+              </q-tooltip>
+            </q-item>
+          </template>
+        </q-select>
+
+        <!-- Connection Method -->
+        <q-select
+          v-model="formData.connectionMethod"
+          :options="connectionMethodOptions"
+          label="Метод на свързване *"
+          :rules="[(val) => !!val || 'Методът на свързване е задължителен']"
+          outlined
+          emit-value
+          map-options
+          @update:model-value="onConnectionMethodChange"
+        />
+
+        <!-- Relay Selection (shown when Relay method is selected) -->
+        <q-select
+          v-if="formData.connectionMethod === 'relay'"
+          v-model="formData.relayId"
+          :options="relayOptions"
+          label="Избери реле *"
+          :rules="[(val) => !!val || 'Релето е задължително']"
+          outlined
+          emit-value
+          map-options
+          :loading="loadingRelays"
+          @update:model-value="onRelayChange"
+        />
+
+        <!-- Relay Port Selection (shown when relay is selected) -->
+        <q-select
+          v-if="formData.connectionMethod === 'relay' && formData.relayId"
+          v-model="formData.relayPort"
+          :options="relayPortOptions"
+          label="Избери порт на релето"
+          :rules="[]"
+          outlined
+          emit-value
+          map-options
+          option-disable="disable"
+        >
+          <template v-slot:append v-if="formData.relayPort !== null">
+            <q-icon name="clear" @click="clearRelayPort" class="cursor-pointer" />
+          </template>
+          <!-- Custom option template with chips - same as direct ports -->
+          <template v-slot:option="{ itemProps, opt }">
+            <q-item v-bind="itemProps" :disable="opt.disable">
+              <q-item-section>
+                <div class="row items-center q-gutter-xs">
+                  <q-chip :color="opt.portType === 'empty' ? 'grey-5' : 'blue-6'" text-color="white" size="sm" dense>
+                    {{ opt.portKey }}
+                  </q-chip>
+                  <q-chip v-if="opt.portType !== 'empty'" color="green-6" text-color="white" size="sm" dense>
+                    {{ opt.portType }}
+                  </q-chip>
+                  <q-chip v-if="opt.currentState" :color="opt.stateColor" text-color="white" size="sm" dense>
+                    {{ opt.currentState }}
+                  </q-chip>
+                  <q-chip v-if="opt.disable" color="grey" text-color="white" size="sm" dense>
+                    Occupied
+                  </q-chip>
+                  <span class="text-caption text-grey-6">{{ opt.description }}</span>
+                </div>
+              </q-item-section>
+            </q-item>
+          </template>
+          
+          <!-- Custom selected value template - same as direct ports -->
+          <template v-slot:selected-item="{ opt }">
+            <div class="row items-center q-gutter-xs">
+              <q-chip :color="opt.portType === 'empty' ? 'grey-5' : 'blue-6'" text-color="white" size="sm" dense>
+                {{ opt.portKey }}
+              </q-chip>
+              <q-chip v-if="opt.portType !== 'empty'" color="green-6" text-color="white" size="sm" dense>
+                {{ opt.portType }}
+              </q-chip>
+              <q-chip v-if="opt.currentState" :color="opt.stateColor" text-color="white" size="sm" dense>
+                {{ opt.currentState }}
+              </q-chip>
+            </div>
+          </template>
+        </q-select>
+
+        <!-- Template Port Requirements - Hidden when using relay connection -->
+        <div v-if="selectedTemplate && formData.connectionMethod === 'direct'" class="q-mt-md">
+          <q-separator />
+          <div class="text-subtitle2 q-mt-md q-mb-sm">
+            Портове за {{ selectedTemplate.displayName }}
+          </div>
+          
+          <div v-for="portReq in selectedTemplate.portRequirements" :key="portReq.role" class="q-mb-md">
+            <q-select
+              v-model="formData.ports[getPortIndex(portReq.role)]"
+              :options="getPortOptionsForType(portReq.type)"
+              :label="`${portReq.role} порт (${portReq.type}) ${portReq.required ? '*' : ''}`"
+              :rules="[]"
+              outlined
+              emit-value
+              map-options
+              option-disable="disable"
+            >
+              <template v-slot:append v-if="formData.ports[getPortIndex(portReq.role)]">
+                <q-icon name="clear" @click="clearTemplatePort(portReq.role)" class="cursor-pointer" />
+              </template>
+              <template v-slot:hint>
+                {{ portReq.description }}
+              </template>
+              
+              <!-- Custom option template with chips -->
+              <template v-slot:option="{ itemProps, opt }">
+                <q-item v-bind="itemProps" :disable="opt.disable">
+                  <q-item-section>
+                    <div class="row items-center q-gutter-xs">
+                      <q-chip :color="opt.portType === 'empty' ? 'grey-5' : 'blue-6'" text-color="white" size="sm" dense>
+                        {{ opt.portKey }}
+                      </q-chip>
+                      <q-chip v-if="opt.portType !== 'empty'" color="green-6" text-color="white" size="sm" dense>
+                        {{ opt.portType }}
+                      </q-chip>
+                      <q-chip v-if="opt.currentState" :color="opt.stateColor" text-color="white" size="sm" dense>
+                        {{ opt.currentState }}
+                      </q-chip>
+                      <span class="text-caption text-grey-6">{{ opt.description }}</span>
+                    </div>
+                  </q-item-section>
+                </q-item>
+              </template>
+              
+              <!-- Custom selected value template -->
+              <template v-slot:selected-item="{ opt }">
+                <div class="row items-center q-gutter-xs">
+                  <q-chip :color="opt.portType === 'empty' ? 'grey-5' : 'blue-6'" text-color="white" size="sm" dense>
+                    {{ opt.portKey }}
+                  </q-chip>
+                  <q-chip v-if="opt.portType !== 'empty'" color="green-6" text-color="white" size="sm" dense>
+                    {{ opt.portType }}
+                  </q-chip>
+                  <q-chip v-if="opt.currentState" :color="opt.stateColor" text-color="white" size="sm" dense>
+                    {{ opt.currentState }}
+                  </q-chip>
+                </div>
+              </template>
+            </q-select>
+          </div>
+        </div>
+
+        <!-- Fallback Ports Section - DEPRECATED: Legacy port management, replaced by template-based port requirements -->
+        <!-- 
+        <DevicePortsTable
+          v-if="!selectedTemplate"
+          v-model="formData.ports"
+          :controller-id="formData.controllerId"
+          :controllers="controllers"
+          @port-toggle="handlePortToggle"
+        />
+        -->
+
+
+        <!-- Info: Device testing is now handled directly in the ports table -->
+
+
+        <!-- Description -->
+        <q-input
+          v-model="formData.description"
+          label="Описание / Коментар"
+          type="textarea"
+          rows="3"
+          outlined
+        />
+
+        <!-- Sensor Validation Configuration -->
+        <div v-if="formData.category === 'sensor'" class="q-mt-md">
+          <q-expansion-item
+            icon="health_and_safety"
+            label="Конфигурация за валидация на сензора"
+            :default-opened="formData.healthCheckEnabled"
+            header-class="text-h6"
+          >
+            <div class="q-pa-md bg-grey-1 rounded-borders">
+              <div class="column q-gutter-md">
+                <!-- Enable Validation -->
+                <q-toggle
+                  v-model="formData.healthCheckEnabled"
+                  label="Включи автоматична валидация на сензора"
+                  color="positive"
+                />
+
+                <div v-if="formData.healthCheckEnabled" class="column q-gutter-md">
+                  <!-- Expected Range -->
+                  <div class="text-subtitle2 q-mb-sm">Очакван диапазон на стойностите</div>
+                  <div class="row q-gutter-md">
+                    <q-input
+                      v-model.number="formData.validationConfig.expectedMin"
+                      label="Минимум *"
+                      type="number"
+                      outlined
+                      dense
+                      style="max-width: 120px"
+                      :rules="[(val) => val !== null && val !== undefined || 'Задължително поле']"
+                    />
+                    <q-input
+                      v-model.number="formData.validationConfig.expectedMax"
+                      label="Максимум *"
+                      type="number"
+                      outlined
+                      dense
+                      style="max-width: 120px"
+                      :rules="[(val) => val !== null && val !== undefined || 'Задължително поле']"
+                    />
+                  </div>
+
+                  <!-- Physical Range -->
+                  <div class="text-subtitle2 q-mb-sm">Физически диапазон (хардуерни лимити)</div>
+                  <div class="row q-gutter-md">
+                    <q-input
+                      v-model.number="formData.validationConfig.physicalMin"
+                      label="Физ. минимум *"
+                      type="number"
+                      outlined
+                      dense
+                      style="max-width: 120px"
+                      :rules="[(val) => val !== null && val !== undefined || 'Задължително поле']"
+                    />
+                    <q-input
+                      v-model.number="formData.validationConfig.physicalMax"
+                      label="Физ. максимум *"
+                      type="number"
+                      outlined
+                      dense
+                      style="max-width: 120px"
+                      :rules="[(val) => val !== null && val !== undefined || 'Задължително поле']"
+                    />
+                  </div>
+
+                  <!-- Advanced Settings -->
+                  <div class="text-subtitle2 q-mb-sm">Допълнителни настройки</div>
+                  <div class="column q-gutter-md">
+                    <q-input
+                      v-model.number="formData.validationConfig.maxChangeRate"
+                      label="Макс. промяна в минута"
+                      type="number"
+                      outlined
+                      dense
+                      style="max-width: 180px"
+                      hint="Максимална допустима промяна на стойността за минута"
+                    />
+                    <q-input
+                      v-model.number="formData.validationConfig.historyWindow"
+                      label="Часове за анализ"
+                      type="number"
+                      outlined
+                      dense
+                      style="max-width: 180px"
+                      hint="Колко часа назад да анализира данните"
+                    />
+                    <q-input
+                      v-model.number="formData.validationConfig.stuckValueThreshold"
+                      label="Лимит за блокирана стойност (мин)"
+                      type="number"
+                      outlined
+                      dense
+                      style="max-width: 180px"
+                      hint="След колко минути да се счита стойността за блокирана"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </q-expansion-item>
+        </div>
+
+        <!-- Status and Priority -->
+        <div class="column q-gutter-sm">
+          <div class="row items-center q-gutter-md">
+            <q-toggle
+              v-model="formData.isActive"
+              label="Активно устройство"
+              color="positive"
+              :disable="!hasConfiguredPorts"
+            />
+            <q-select
+              v-model="formData.priority"
+              :options="priorityOptions"
+              label="Ниво на важност"
+              style="min-width: 180px"
+              outlined
+              dense
+              emit-value
+              map-options
+            />
+          </div>
+          <div v-if="!hasConfiguredPorts" class="text-caption text-orange q-ml-md">
+            <q-icon name="warning" class="q-mr-xs" />
+            Устройството няма конфигурирани портове и ще бъде деактивирано автоматично
+          </div>
+        </div>
+      </q-form>
+    </q-card-section>
+
+    <q-separator />
+
+    <q-card-actions align="right" class="q-pa-md">
+      <q-btn
+        flat
+        label="Отказ"
+        color="grey"
+        @click="$emit('cancel')"
+      />
+      <q-btn
+        label="💾 Запази"
+        color="primary"
+        @click="handleSave"
+        :loading="saving"
+      />
+    </q-card-actions>
+  </q-card>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
+import { controllerApi, api } from '../services/api'
+import deviceTemplateApi from '../services/device-template-api'
+import controllerTemplates from '../pages/assets/data/controller-templates.json'
+// import DevicePortsTable from './DevicePortsTable.vue' // DEPRECATED: Legacy port management component
+
+// Type definitions for better TypeScript support
+interface RelayPort {
+  portNumber: number
+  controlPin: string
+  isOccupied: boolean
+  [key: string]: any
+}
+
+interface PortRequirement {
+  name: string
+  type: string
+  required: boolean
+  [key: string]: any
+}
+
+// Props
+interface Props {
+  device?: any
+  controllers: any[]
+  deviceTypes: any[]
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  device: null,
+  controllers: () => [],
+  deviceTypes: () => []
+})
+
+// Emits
+const emit = defineEmits(['save', 'cancel'])
+
+const $q = useQuasar()
+
+// Data
+const saving = ref(false)
+const loadingTemplates = ref(false)
+const loadingRelays = ref(false)
+const deviceTemplates = ref<any[]>([])
+const selectedTemplate = ref<any>(null)
+const relays = ref<any[]>([])
+const selectedRelay = ref<any>(null)
+
+const formData = ref({
+  name: '',
+  type: '',
+  physicalType: '',
+  category: '',
+  controllerId: '',
+  connectionMethod: 'direct',
+  relayId: '',
+  relayPort: null,
+  ports: [] as string[],
+  description: '',
+  isActive: true,
+  priority: 'normal',
+  healthCheckEnabled: false,
+  icon: 'device_hub',
+  unit: null,
+  validationConfig: {
+    enabled: false,
+    expectedMin: 0,
+    expectedMax: 100,
+    physicalMin: 0,
+    physicalMax: 1023,
+    maxChangeRate: 10,
+    historyWindow: 24,
+    stuckValueThreshold: 30
+  }
+})
+
+// Test functionality moved to DevicePortsTable
+
+// Computed
+const physicalTypeOptions = computed(() => {
+  // Get unique physicalType values from deviceTemplates
+  const uniquePhysicalTypes = [...new Set(deviceTemplates.value.map(template => template.physicalType))]
+  
+  // Add "Всички" option at the beginning
+  const options = [{
+    label: 'Всички типове',
+    value: 'all'
+  }]
+  
+  // Add actual physical types
+  options.push(...uniquePhysicalTypes.map(physicalType => ({
+    label: getPhysicalTypeDisplayName(physicalType),
+    value: physicalType
+  })))
+  
+  return options
+})
+
+const deviceTypeOptions = computed(() => {
+  // If no physicalType selected or "all" selected, show all templates
+  if (!formData.value.physicalType || formData.value.physicalType === 'all') {
+    return deviceTemplates.value.map(template => ({
+      label: template.displayName,
+      value: template.type,
+      template: template
+    }))
+  }
+  
+  // Filter templates by selected physicalType
+  return deviceTemplates.value
+    .filter(template => template.physicalType === formData.value.physicalType)
+    .map(template => ({
+      label: template.displayName,
+      value: template.type,
+      template: template
+    }))
+})
+
+const controllerOptions = computed(() =>
+  props.controllers.map(controller => ({
+    label: controller.name,
+    value: controller._id,
+    controller: controller
+  }))
+)
+
+const priorityOptions = computed(() => [
+  { label: 'Критично', value: 'critical', color: 'red' },
+  { label: 'Високо', value: 'high', color: 'orange' },
+  { label: 'Нормално', value: 'normal', color: 'blue' },
+  { label: 'Слабо', value: 'low', color: 'grey' }
+])
+
+const connectionMethodOptions = computed(() => [
+  { label: 'Директно към контролер', value: 'direct' },
+  { label: 'Чрез реле', value: 'relay' }
+])
+
+const iconOptions = computed(() => [
+  { label: 'Термометър', value: 'thermostat' },
+  { label: 'Наука', value: 'science' },
+  { label: 'Електричество', value: 'electrical_services' },
+  { label: 'Капка вода', value: 'water_drop' },
+  { label: 'Разстояние', value: 'straighten' },
+  { label: 'Енергия', value: 'power' },
+  { label: 'Устройство', value: 'device_hub' },
+  { label: 'Датчик', value: 'sensors' },
+  { label: 'Включен', value: 'power_on' },
+  { label: 'Изключен', value: 'power_off' },
+  { label: 'Батерия', value: 'battery_full' },
+  { label: 'WiFi', value: 'wifi' },
+  { label: 'Bluetooth', value: 'bluetooth' },
+  { label: 'USB', value: 'usb' },
+  { label: 'Настройки', value: 'settings' },
+  { label: 'Инструменти', value: 'build' },
+  { label: 'Контрол', value: 'tune' },
+  { label: 'Мониторинг', value: 'monitor' },
+  { label: 'Цифрово', value: 'memory' },
+  { label: 'Аналогово', value: 'show_chart' },
+  { label: 'Агроном', value: 'agriculture' },
+  { label: 'Растение', value: 'local_florist' },
+  { label: 'Слънце', value: 'wb_sunny' },
+  { label: 'Светлина', value: 'lightbulb' },
+  { label: 'Вентилатор', value: 'air' },
+  { label: 'Помпа', value: 'water_pump' },
+  { label: 'Филтър', value: 'filter_alt' },
+  { label: 'Клапан', value: 'valve' },
+  { label: 'Хранене', value: 'restaurant' },
+  { label: 'Резервоар', value: 'propane_tank' }
+])
+
+const baseUnitOptions = [
+  { label: '%', value: '%' },
+  { label: 'pH', value: 'pH' },
+  { label: 'mS/cm', value: 'mS' },
+  { label: 'µS/cm', value: 'µS' },
+  { label: '°C', value: '°C' },
+  { label: 'сек', value: 'сек' },
+  { label: 'мин', value: 'мин' },
+  { label: 'ч', value: 'ч' },
+  { label: 'л', value: 'л' },
+  { label: 'мл', value: 'мл' },
+  { label: 'см', value: 'см' },
+  { label: 'м', value: 'м' }
+]
+
+const unitOptionsWithEmpty = computed(() => [
+  { label: '', value: '' },
+  ...baseUnitOptions
+])
+
+const relayOptions = computed(() =>
+  relays.value
+    .filter(relay => relay.controllerId === formData.value.controllerId && relay.isActive)
+    .map(relay => ({
+      label: `${relay.name} (${relay.relayType})`,
+      value: relay._id,
+      relay: relay
+    }))
+)
+
+const relayPortOptions = computed(() => {
+  if (!selectedRelay.value || !selectedRelay.value.ports) return []
+  
+  // Start with "Празен" option
+  const options = [{
+    label: 'Празен',
+    value: null,
+    portKey: 'Празен',
+    portType: 'empty',
+    currentState: '',
+    stateColor: 'grey-5',
+    description: 'Неконфигуриран порт',
+    disable: false
+  }]
+  
+  // Add relay ports
+  const relayPorts = selectedRelay.value.ports
+    .map((port: RelayPort) => {
+      // Port is disabled if occupied OR has no controlPin (not configured)
+      const hasControlPin = port.controlPin && port.controlPin.trim() !== ''
+      const isDisabled = port.isOccupied || !hasControlPin
+      
+      // Determine state color based on HIGH/LOW - same logic as direct ports
+      let stateColor = 'orange-6'
+      if (!hasControlPin) {
+        stateColor = 'grey-5' // Grey for ports without controlPin
+      } else if (port.currentState === 'HIGH') {
+        stateColor = 'red-6'
+      } else if (port.currentState === 'LOW') {
+        stateColor = 'grey-7'
+      }
+      
+      return {
+        label: `Порт ${port.portNumber} (${port.controlPin || 'Няма пин'})`,
+        value: port.portNumber,
+        portKey: `Порт ${port.portNumber}`,
+        portType: 'digital',
+        currentState: hasControlPin ? port.currentState : 'N/A',
+        stateColor: stateColor,
+        description: port.controlPin || 'Няма конфигуриран пин',
+        disable: isDisabled,
+        port: port
+      }
+    })
+    
+  return [...options, ...relayPorts]
+})
+
+// Check if this is a new device (no device prop or no _id)
+const isNewDevice = computed(() => {
+  return !props.device || !props.device._id
+})
+
+// Check if this is a relay device (relay, pumps, solenoid_valve)
+const isRelayDevice = computed(() => {
+  const deviceType = formData.value.type
+  return deviceType === 'relay' || deviceType === 'pumps' ||deviceType === 'solenoid_valve'
+})
+
+// Check if device has configured ports
+const hasConfiguredPorts = computed(() => {
+  if (formData.value.connectionMethod === 'relay') {
+    return formData.value.relayPort !== null
+  } else {
+    const cleanedPorts = formData.value.ports.filter(port => port && port.trim() !== '')
+    return cleanedPorts.length > 0
+  }
+})
+
+
+
+// Test functionality moved to DevicePortsTable component
+
+// Removed old port management functions - handled by DevicePortsTable now
+
+async function handleSave() {
+  saving.value = true
+  const wasNewDevice = isNewDevice.value
+  
+  try {
+    // Validate required fields
+    if (!formData.value.name || !formData.value.type || !formData.value.physicalType || !formData.value.controllerId || !formData.value.connectionMethod) {
+      $q.notify({
+        type: 'negative',
+        message: 'Моля попълнете всички задължителни полета'
+      })
+      saving.value = false
+      return
+    }
+
+    // Validate unit is selected
+    if (!formData.value.unit || formData.value.unit === '') {
+      $q.notify({
+        type: 'negative',
+        message: 'Моля изберете мерна единица'
+      })
+      saving.value = false
+      return
+    }
+
+    // Validate controller has required command
+    if (selectedTemplate.value?.executionConfig?.commandType) {
+      const requiredCommand = selectedTemplate.value.executionConfig.commandType
+      const selectedController = props.controllers.find(c => c._id === formData.value.controllerId)
+
+      if (selectedController && !selectedController.capabilities?.includes(requiredCommand)) {
+        $q.notify({
+          type: 'negative',
+          message: `Избраният контролер "${selectedController.name}" няма нужната команда "${requiredCommand}" за този тип устройство. Моля изберете друг контролер.`
+        })
+        saving.value = false
+        return
+      }
+    }
+
+    // Validate physicalType is not "all"
+    if (formData.value.physicalType === 'all') {
+      $q.notify({
+        type: 'negative',
+        message: 'Моля изберете конкретен физически тип, а не "Всички типове"'
+      })
+      return
+    }
+
+    // Validate relay connection fields
+    if (formData.value.connectionMethod === 'relay') {
+      if (!formData.value.relayId) {
+        $q.notify({
+          type: 'negative',
+          message: 'Моля изберете реле за релейно свързване'
+        })
+        return
+      }
+      
+      if (formData.value.relayPort === null) {
+        // Show confirmation dialog for relay devices without port
+        const confirmed = await new Promise((resolve) => {
+          $q.dialog({
+            title: 'Предупреждение',
+            message: 'Не е избран порт на релето. Искате ли да продължите?',
+            cancel: true,
+            persistent: true
+          }).onOk(() => resolve(true))
+           .onCancel(() => resolve(false))
+        })
+        
+        if (!confirmed) {
+          return // User canceled, stay in edit mode
+        }
+      }
+    }
+
+    // Port validation - different logic for relay vs direct connection
+    if (formData.value.connectionMethod === 'relay') {
+      // For relay connection, use relay port as device port
+      if (formData.value.relayPort !== null && selectedRelay.value) {
+        const relayPort = selectedRelay.value?.ports.find((p: RelayPort) => p.portNumber === formData.value.relayPort)
+        if (relayPort) {
+          formData.value.ports = [relayPort.controlPin]
+        }
+      }
+    } else {
+      // Template-based port validation for direct connection with confirmation
+      if (selectedTemplate.value) {
+        const requiredPorts = selectedTemplate.value.portRequirements.filter((req: any) => req.required)
+        const missingPorts = requiredPorts.filter((req: any) => {
+          const index = getPortIndex(req.role)
+          return !formData.value.ports[index] || formData.value.ports[index]?.trim() === ''
+        })
+        
+        if (missingPorts.length > 0) {
+          // Show confirmation dialog for missing required ports
+          const portsList = missingPorts.map((p: any) => p.role).join(', ')
+          const confirmed = await new Promise((resolve) => {
+            $q.dialog({
+              title: 'Предупреждение',
+              message: `Не са избрани задължителни портове: ${portsList}. Искате ли да продължите?`,
+              cancel: true,
+              persistent: true
+            }).onOk(() => resolve(true))
+             .onCancel(() => resolve(false))
+          })
+          
+          if (!confirmed) {
+            return // User canceled, stay in edit mode
+          }
+        }
+      }
+    }
+
+    // Final port validation - allow empty ports after confirmation dialogs
+    const cleanedPorts = formData.value.ports.filter(port => port && port.trim() !== '')
+    
+    // Note: Empty ports are now allowed after confirmation dialogs above
+
+    const deviceData = {
+      ...formData.value,
+      ports: cleanedPorts
+    }
+
+    // Debug: Log the data being sent
+    console.log('[DeviceForm] Saving device data:', JSON.stringify(deviceData, null, 2))
+
+    emit('save', deviceData)
+  } catch (error) {
+    console.error('[DeviceForm] Error in handleSave:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Грешка при запазване'
+    })
+  } finally {
+    saving.value = false
+  }
+}
+
+// Load device templates on mount
+async function loadDeviceTemplates() {
+  loadingTemplates.value = true
+  try {
+    deviceTemplates.value = await deviceTemplateApi.getAll()
+  } catch (error) {
+    console.error('[DeviceForm] Error loading device templates:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Грешка при зареждане на типовете устройства'
+    })
+  } finally {
+    loadingTemplates.value = false
+  }
+}
+
+// Load relays for a specific controller
+async function loadRelaysForController(controllerId: string) {
+  if (!controllerId) return
+  
+  loadingRelays.value = true
+  try {
+    const response = await api.getClient().get(`/relays?controllerId=${controllerId}&isActive=true`)
+    relays.value = response.data.data || []
+    console.log(`[DeviceForm] Loaded ${relays.value.length} relays for controller ${controllerId}`)
+  } catch (error) {
+    console.error('[DeviceForm] Error loading relays:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Грешка при зареждане на релетата'
+    })
+  } finally {
+    loadingRelays.value = false
+  }
+}
+
+// Handle physical type change
+function onPhysicalTypeChange(newPhysicalType: string) {
+  console.log(`[DeviceForm] Physical type changed to: ${newPhysicalType}`)
+  
+  // Reset device type when physical type changes
+  formData.value.type = ''
+  selectedTemplate.value = null
+  formData.value.ports = []
+}
+
+// Handle device type change
+function onDeviceTypeChange(newType: string) {
+  const template = deviceTemplates.value.find(t => t.type === newType)
+  selectedTemplate.value = template
+  
+  // Auto-set physicalType if "Всички" is selected and model is chosen
+  if (formData.value.physicalType === 'all' && template) {
+    console.log(`[DeviceForm] Auto-setting physicalType to: ${template.physicalType}`)
+    formData.value.physicalType = template.physicalType
+  }
+  
+  // Auto-set category based on device type
+  if (template) {
+    // Determine category based on device type
+    const relayTypes = ['relay', 'pumps', 'solenoid_valve']
+    formData.value.category = relayTypes.includes(template.type) ? 'actuator' : 'sensor'
+    console.log(`[DeviceForm] Auto-setting category to: ${formData.value.category}`)
+  }
+  
+  // Reset ports when changing device type
+  if (template) {
+    formData.value.ports = new Array(template.portRequirements.length).fill('')
+  } else {
+    formData.value.ports = []
+  }
+}
+
+// Handle controller change
+function onControllerChange(controllerId: string) {
+  // Reset relay-related fields when controller changes
+  formData.value.relayId = ''
+  formData.value.relayPort = null
+  selectedRelay.value = null
+  
+  // Load relays for the new controller
+  if (controllerId) {
+    loadRelaysForController(controllerId)
+  }
+}
+
+// Clear port methods
+function clearRelayPort() {
+  // When relay port is cleared, switch to direct connection and clear relay data
+  formData.value.relayPort = null
+  formData.value.connectionMethod = 'direct'
+  formData.value.relayId = ''
+  selectedRelay.value = null
+  console.log('[DeviceForm] Relay port cleared - switched to direct connection')
+}
+
+function clearTemplatePort(role: string) {
+  const index = getPortIndex(role)
+  formData.value.ports[index] = ''
+}
+
+// Handle connection method change
+function onConnectionMethodChange(method: string) {
+  if (method === 'direct') {
+    // Reset relay fields when switching to direct connection
+    formData.value.relayId = ''
+    formData.value.relayPort = null
+    selectedRelay.value = null
+  }
+}
+
+// Handle relay change
+function onRelayChange(relayId: string) {
+  const relay = relays.value.find(r => r._id === relayId)
+  selectedRelay.value = relay
+  formData.value.relayPort = null // Reset port selection
+}
+
+// Get display name for physical type
+function getPhysicalTypeDisplayName(physicalType: string): string {
+  const displayNames: Record<string, string> = {
+    'ph': 'pH Сензори',
+    'ec': 'EC Сензори',
+    'moisture': 'Влажностни Сензори',
+    'ultrasonic': 'Ултразвукови Сензори',
+    'relay': 'Релета / Помпи / Клапани',
+    'temperature': 'Температурни Сензори',
+    'temperature_humidity': 'Температура + Влажност',
+    'flow': 'Дебитомери',
+    'level': 'Сензори за Ниво',
+    'light': 'Светлинни Сензори'
+  }
+  return displayNames[physicalType] || physicalType.toUpperCase()
+}
+
+// Get icon label by value
+function getIconLabel(iconValue: string): string {
+  if (!iconValue) return 'Устройство'
+  const option = iconOptions.value.find(opt => opt.value === iconValue)
+  return option ? option.label : iconValue
+}
+
+// Create custom unit value (max 4 characters)
+function createUnitValue(val: string, done: (item?: any, mode?: string) => void) {
+  const trimmedVal = val.trim()
+  if (trimmedVal.length > 0 && trimmedVal.length <= 4) {
+    done({ label: trimmedVal, value: trimmedVal }, 'add-unique')
+  }
+}
+
+// Get port index by role
+function getPortIndex(role: string): number {
+  if (!selectedTemplate.value) return 0
+  return selectedTemplate.value.portRequirements.findIndex((req: any) => req.role === role)
+}
+
+// Get port options with separate chips for key, type, and state
+function getPortOptionsForType(portType: string) {
+  const selectedController = props.controllers.find(c => c._id === formData.value.controllerId)
+  if (!selectedController) return []
+  
+  // Debug: log what we're working with
+  console.log(`[DeviceForm] Looking for portType: ${portType}`)
+  console.log('[DeviceForm] Available ports:', selectedController.availablePorts)
+  
+  // Start with "Празен" option
+  const options = [{
+    label: 'Празен',
+    value: '',
+    portKey: 'Празен',
+    portType: 'empty',
+    currentState: '',
+    stateColor: 'grey-5',
+    description: 'Неконфигуриран порт',
+    disable: false
+  }]
+  
+  // Add controller ports
+  const controllerPorts = selectedController.availablePorts
+    .filter((port: any) => port.type === portType)
+    .map((port: any) => {
+      const isDisabled = !port.isActive || port.isOccupied
+      
+      // Determine state color based on HIGH/LOW
+      let stateColor = 'orange-6'
+      if (port.currentState === 'HIGH') {
+        stateColor = 'red-6'
+      } else if (port.currentState === 'LOW') {
+        stateColor = 'grey-7'
+      }
+      
+      return {
+        label: port.key,
+        value: port.key,
+        portKey: port.key,
+        portType: port.type,
+        currentState: port.currentState,
+        stateColor: stateColor,
+        description: port.label || port.description || '',
+        disable: isDisabled
+      }
+    })
+    
+  return [...options, ...controllerPorts]
+}
+
+/**
+ * Handles port toggle events from DevicePortsTable
+ * DEPRECATED: Legacy function for old port management system
+ */
+// function handlePortToggle(event: { port: string, newState: string }) {
+//   console.log(`[DeviceForm] Port toggle handled: ${event.port} -> ${event.newState}`)
+// }
+
+// Initialize templates on mount
+onMounted(() => {
+  loadDeviceTemplates()
+})
+
+// Watch for relay port changes - handle "Празен" selection
+watch(() => formData.value.relayPort, (newRelayPort, oldRelayPort) => {
+  // If relay port becomes null and we're in relay mode, switch to direct
+  if (newRelayPort === null && formData.value.connectionMethod === 'relay' && oldRelayPort !== null) {
+    formData.value.connectionMethod = 'direct'
+    formData.value.relayId = ''
+    selectedRelay.value = null
+    console.log('[DeviceForm] Relay port set to null - switched to direct connection')
+  }
+})
+
+// Watch for connection method changes - clear relay data when switching to direct
+watch(() => formData.value.connectionMethod, (newMethod, oldMethod) => {
+  if (newMethod === 'direct' && oldMethod === 'relay') {
+    formData.value.relayId = ''
+    formData.value.relayPort = null
+    selectedRelay.value = null
+    console.log('[DeviceForm] Switched to direct connection - cleared relay data')
+  }
+})
+
+// Watch for device changes
+watch(() => props.device, async (newDevice) => {
+  if (newDevice) {
+    console.log('[DeviceForm] Loading device for edit:', newDevice)
+    const controllerId = newDevice.controllerId?._id || newDevice.controllerId || ''
+    
+    formData.value = {
+      name: newDevice.name || '',
+      type: newDevice.type || '',
+      physicalType: newDevice.physicalType || '',
+      category: newDevice.category || '',
+      controllerId: controllerId,
+      connectionMethod: newDevice.connectionMethod || 'direct',
+      relayId: newDevice.relayId || '',
+      relayPort: newDevice.relayPort || null,
+      ports: newDevice.ports || (newDevice.port ? [newDevice.port] : []), // Support legacy single port
+      description: newDevice.description || '',
+      isActive: newDevice.isActive !== undefined ? newDevice.isActive : true,
+      priority: newDevice.priority || 'normal',
+      healthCheckEnabled: newDevice.healthCheckEnabled ?? false,
+      icon: newDevice.icon || 'device_hub',
+      unit: newDevice.unit || null,
+      validationConfig: newDevice.validationConfig ? {
+        enabled: newDevice.validationConfig.enabled ?? false,
+        expectedMin: newDevice.validationConfig.expectedMin ?? 0,
+        expectedMax: newDevice.validationConfig.expectedMax ?? 100,
+        physicalMin: newDevice.validationConfig.physicalMin ?? 0,
+        physicalMax: newDevice.validationConfig.physicalMax ?? 1023,
+        maxChangeRate: newDevice.validationConfig.maxChangeRate ?? 10,
+        historyWindow: newDevice.validationConfig.historyWindow ?? 24,
+        stuckValueThreshold: newDevice.validationConfig.stuckValueThreshold ?? 30
+      } : {
+        enabled: false,
+        expectedMin: 0,
+        expectedMax: 100,
+        physicalMin: 0,
+        physicalMax: 1023,
+        maxChangeRate: 10,
+        historyWindow: 24,
+        stuckValueThreshold: 30
+      }
+    }
+    
+    console.log('[DeviceForm] Populated formData:', formData.value)
+    
+    // Set selected template if device has a type
+    if (newDevice.type) {
+      console.log(`[DeviceForm] Looking for template with type: ${newDevice.type}`)
+      console.log(`[DeviceForm] Available templates:`, deviceTemplates.value.map(t => t.type))
+      const template = deviceTemplates.value.find(t => t.type === newDevice.type)
+      console.log(`[DeviceForm] Found template:`, template ? template.displayName : 'NOT FOUND')
+      selectedTemplate.value = template
+      
+      // If template not found and we have a device type, reload templates
+      if (!template && deviceTemplates.value.length === 0) {
+        console.log('[DeviceForm] Templates not loaded, reloading...')
+        await loadDeviceTemplates()
+        const retryTemplate = deviceTemplates.value.find(t => t.type === newDevice.type)
+        selectedTemplate.value = retryTemplate
+        console.log(`[DeviceForm] Retry found template:`, retryTemplate ? retryTemplate.displayName : 'STILL NOT FOUND')
+      }
+    }
+    
+    // Load relays if device has a controller and uses relay connection
+    if (controllerId) {
+      await loadRelaysForController(controllerId)
+      
+      // Set selected relay if device uses relay connection
+      if (newDevice.connectionMethod === 'relay' && newDevice.relayId) {
+        const relay = relays.value.find(r => r._id === newDevice.relayId)
+        if (relay) {
+          selectedRelay.value = relay
+          console.log(`[DeviceForm] Selected relay for edit:`, relay.name, `Port: ${newDevice.relayPort}`)
+        } else {
+          console.warn(`[DeviceForm] Could not find relay with ID: ${newDevice.relayId}`)
+        }
+      }
+    }
+  } else {
+    // Reset form for new device
+    formData.value = {
+      name: '',
+      type: '',
+      physicalType: '',
+      category: '',
+      controllerId: '',
+      connectionMethod: 'direct',
+      relayId: '',
+      relayPort: null,
+      ports: [],
+      description: '',
+      isActive: true,
+      priority: 'normal',
+      healthCheckEnabled: false,
+      icon: 'device_hub',
+      unit: null,
+      validationConfig: {
+        enabled: false,
+        expectedMin: 0,
+        expectedMax: 100,
+        physicalMin: 0,
+        physicalMax: 1023,
+        maxChangeRate: 10,
+        historyWindow: 24,
+        stuckValueThreshold: 30
+      }
+    }
+    selectedTemplate.value = null
+  }
+}, { immediate: true })
+
+// DEBUG: Watch for healthCheckEnabled changes to track when toggle is used
+watch(() => formData.value.healthCheckEnabled, (newEnabled, oldEnabled) => {
+  console.log(`[DeviceForm] 🔍 Health check toggle changed: ${oldEnabled} -> ${newEnabled}`)
+  console.log('[DeviceForm] 🔍 Current healthCheckEnabled:', formData.value.healthCheckEnabled)
+})
+
+// DevicePortsTable handles all port-related logic now
+
+
+
+</script>
+
+<style scoped>
+.port-details {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.parameter-table {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.test-section {
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+
+.test-device-btn {
+  font-weight: 500;
+}
+
+.test-result {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.disabled-controller {
+  opacity: 0.5;
+}
+</style>
+
+<style scoped>
+.parameter-table {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.parameter-table :deep(.q-table__container) {
+  border-radius: 4px;
+}
+</style>

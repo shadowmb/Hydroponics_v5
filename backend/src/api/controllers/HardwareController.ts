@@ -100,7 +100,15 @@ export class HardwareController {
 
     static async getControllers(req: FastifyRequest, reply: FastifyReply) {
         try {
-            const controllers = await Controller.find().sort({ createdAt: -1 });
+            const { deleted } = req.query as { deleted?: string };
+
+            let query = Controller.find();
+            if (deleted === 'true') {
+                // @ts-ignore
+                query = Controller.find({ deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            }
+
+            const controllers = await query.sort({ createdAt: -1 });
             return reply.send({ success: true, data: controllers });
         } catch (error) {
             req.log.error(error);
@@ -136,6 +144,13 @@ export class HardwareController {
             if (!controller) {
                 return reply.status(404).send({ success: false, error: 'Controller not found' });
             }
+
+            // If deactivated, force disconnect
+            if (body.isActive === false) {
+                await hardware.disconnectController(id);
+                await hardware.refreshControllerStatus(id); // This will cascade 'offline' status
+            }
+
             return reply.send({ success: true, data: controller });
         } catch (error) {
             req.log.error(error);
@@ -175,6 +190,49 @@ export class HardwareController {
             console.error('Error deleting controller:', error);
             req.log.error(error);
             return reply.status(500).send({ success: false, error: 'Failed to delete controller' });
+        }
+    }
+
+    static async restoreController(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { name } = req.body as { name?: string };
+            // @ts-ignore
+            const controller = await Controller.findOne({ _id: id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            if (!controller) {
+                return reply.status(404).send({ success: false, error: 'Controller not found in recycle bin' });
+            }
+
+            if (name) {
+                const existing = await Controller.findOne({ name, _id: { $ne: id } });
+                if (existing) {
+                    return reply.status(400).send({ success: false, error: 'Controller name already exists' });
+                }
+                controller.name = name;
+            }
+
+            await controller.restore();
+            return reply.send({ success: true, message: 'Controller restored' });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to restore controller' });
+        }
+    }
+
+    static async hardDeleteController(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            // @ts-ignore
+            const controller = await Controller.findOne({ _id: id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            if (!controller) {
+                return reply.status(404).send({ success: false, error: 'Controller not found in recycle bin' });
+            }
+            // @ts-ignore
+            await Controller.deleteOne({ _id: id }, { hardDelete: true });
+            return reply.send({ success: true, message: 'Controller permanently deleted' });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to permanently delete controller' });
         }
     }
 
@@ -261,11 +319,18 @@ export class HardwareController {
             return reply.status(500).send({ success: false, error: error.message || 'Failed to create relay' });
         }
     }
-
     static async getRelays(req: FastifyRequest, reply: FastifyReply) {
         try {
             const { Relay } = await import('../../models/Relay');
-            const relays = await Relay.find().populate('controllerId', 'name');
+            const { deleted } = req.query as { deleted?: string };
+
+            let query = Relay.find();
+            if (deleted === 'true') {
+                // @ts-ignore
+                query = Relay.find({ deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            }
+
+            const relays = await query.populate('controllerId', 'name');
             return reply.send({ success: true, data: relays });
         } catch (error) {
             req.log.error(error);
@@ -403,13 +468,63 @@ export class HardwareController {
                 await controller.save();
             }
 
-            // 3. Delete Relay
-            await Relay.findByIdAndDelete(id);
+            // 3. Delete Relay (Soft Delete)
+            // @ts-ignore
+            const relayToDelete = await Relay.findById(id);
+            if (relayToDelete) {
+                // @ts-ignore
+                await relayToDelete.softDelete();
+            }
 
             return reply.send({ success: true, message: 'Relay deleted' });
         } catch (error) {
             req.log.error(error);
             return reply.status(500).send({ success: false, error: 'Failed to delete relay' });
+        }
+    }
+
+    static async restoreRelay(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { name } = req.body as { name?: string };
+            const { Relay } = await import('../../models/Relay');
+            // @ts-ignore
+            const relay = await Relay.findOne({ _id: id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            if (!relay) {
+                return reply.status(404).send({ success: false, error: 'Relay not found in recycle bin' });
+            }
+
+            if (name) {
+                const existing = await Relay.findOne({ name, _id: { $ne: id } });
+                if (existing) {
+                    return reply.status(400).send({ success: false, error: 'Relay name already exists' });
+                }
+                relay.name = name;
+            }
+
+            await relay.restore();
+            return reply.send({ success: true, message: 'Relay restored' });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to restore relay' });
+        }
+    }
+
+    static async hardDeleteRelay(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { Relay } = await import('../../models/Relay');
+            // @ts-ignore
+            const relay = await Relay.findOne({ _id: id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            if (!relay) {
+                return reply.status(404).send({ success: false, error: 'Relay not found in recycle bin' });
+            }
+            // @ts-ignore
+            await Relay.deleteOne({ _id: id }, { hardDelete: true });
+            return reply.send({ success: true, message: 'Relay permanently deleted' });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to permanently delete relay' });
         }
     }
 
@@ -567,7 +682,15 @@ export class HardwareController {
     static async getDevices(req: FastifyRequest, reply: FastifyReply) {
         try {
             const { DeviceModel } = await import('../../models/Device');
-            const devices = await DeviceModel.find().populate('config.driverId'); // Populate template
+            const { deleted } = req.query as { deleted?: string };
+
+            let query = DeviceModel.find();
+            if (deleted === 'true') {
+                // @ts-ignore
+                query = DeviceModel.find({ deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            }
+
+            const devices = await query.populate('config.driverId'); // Populate template
             return reply.send({ success: true, data: devices });
         } catch (error) {
             req.log.error(error);
@@ -725,6 +848,52 @@ export class HardwareController {
                 details: error.message,
                 stack: error.stack
             });
+        }
+    }
+
+    static async restoreDevice(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { name } = req.body as { name?: string };
+            const { DeviceModel } = await import('../../models/Device');
+            // @ts-ignore
+            const device = await DeviceModel.findOne({ _id: id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            if (!device) {
+                return reply.status(404).send({ success: false, error: 'Device not found in recycle bin' });
+            }
+
+            if (name) {
+                // Check for name collision
+                const existing = await DeviceModel.findOne({ name, _id: { $ne: id } });
+                if (existing) {
+                    return reply.status(400).send({ success: false, error: 'Device name already exists' });
+                }
+                device.name = name;
+            }
+
+            await device.restore();
+            return reply.send({ success: true, message: 'Device restored' });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to restore device' });
+        }
+    }
+
+    static async hardDeleteDevice(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { DeviceModel } = await import('../../models/Device');
+            // @ts-ignore
+            const device = await DeviceModel.findOne({ _id: id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            if (!device) {
+                return reply.status(404).send({ success: false, error: 'Device not found in recycle bin' });
+            }
+            // @ts-ignore
+            await DeviceModel.deleteOne({ _id: id }, { hardDelete: true });
+            return reply.send({ success: true, message: 'Device permanently deleted' });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to permanently delete device' });
         }
     }
 

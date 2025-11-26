@@ -19,11 +19,11 @@ export class ConversionService {
     convert(device: IDevice, rawValue: number): number {
         let strategyName = device.config.conversionStrategy;
 
-        // Auto-detect strategy if not explicitly set OR if it's the default 'linear' but we know better
-        if (!strategyName || strategyName === 'linear') {
+        // Auto-detect strategy if not explicitly set
+        if (!strategyName) {
             if (device.config.driverId === 'dfrobot_ec_k1') {
                 strategyName = 'ec-dfr-analog';
-            } else if (!strategyName) {
+            } else {
                 strategyName = 'linear';
             }
         }

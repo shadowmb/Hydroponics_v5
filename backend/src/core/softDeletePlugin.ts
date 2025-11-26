@@ -20,18 +20,42 @@ export const softDeletePlugin = (schema: Schema) => {
     });
 
     // 1. Helper Methods
-    schema.methods.softDelete = function () {
+    schema.methods.softDelete = async function () {
         this.deletedAt = new Date();
+        // Rename to free up the original name: "MySensor" -> "MySensor_del_1716..."
+        if (this.name) {
+            this.name = `${this.name}_del_${Date.now()}`;
+        }
         return this.save();
     };
 
-    schema.methods.restore = function () {
+    schema.methods.restore = async function () {
         this.deletedAt = null;
+        // Attempt to restore original name: "MySensor_del_1716..." -> "MySensor"
+        if (this.name && this.name.includes('_del_')) {
+            const originalName = this.name.split('_del_')[0];
+            // Check if original name is taken
+            const Model = this.constructor as any;
+            const exists = await Model.findOne({ name: originalName, deletedAt: null });
+            if (!exists) {
+                this.name = originalName;
+            } else {
+                // Keep suffix or maybe just remove the timestamp part but keep _restored?
+                // For now, let's keep it simple: if taken, fail or keep suffix?
+                // Let's try to append _restored if taken
+                this.name = `${originalName}_restored_${Date.now()}`;
+            }
+        }
         return this.save();
     };
 
-    // 2. Block Hard Deletes
+    // 2. Block Hard Deletes (unless explicit)
     schema.pre(['deleteOne', 'deleteMany'], function (next) {
+        // @ts-ignore
+        const options = this.getOptions();
+        if (options.hardDelete) {
+            return next();
+        }
         next(new Error('HARD_DELETE_FORBIDDEN: Use softDelete() instead.'));
     });
 
@@ -57,7 +81,6 @@ export const softDeletePlugin = (schema: Schema) => {
             }
 
             // Apply Filter: { deletedAt: null }
-            // We merge with existing query to avoid overwriting
             this.where({ deletedAt: null });
             next();
         });

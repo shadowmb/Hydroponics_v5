@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "name": "test",
+    "description": "test",
+    "version": "1.0.0",
+    "isValidated": false,
+    "validationStatus": "invalid",
+    "validationErrors": [
+      {
+        "code": "NO_BLOCKS",
+        "message": "Flow-то не съдържа блокове",
+        "severity": "error"
+      },
+      {
+        "code": "MISSING_EXECUTOR_FIELDS",
+        "message": "Flow липсват име и описание за ActionTemplate",
+        "severity": "error"
+      },
+      {
+        "code": "EMPTY_FLOW",
+        "message": "Flow не може да се използва в ActionTemplate без блокове",
+        "severity": "error"
+      }
+    ],
+    "validationWarnings": [],
+    "lastValidationCheck": "2025-08-09T12:15:02.639Z",
+    "canUseInActionTemplate": false,
+    "createdAt": "2025-08-09T12:15:02.639Z",
+    "filePath": "test_draft_1754741702639.json",
+    "directory": "drafts"
+  },
+  "flowData": {
+    "blocks": [],
+    "connections": [],
+    "meta": {
+      "name": "test"
+    }
+  }
+}

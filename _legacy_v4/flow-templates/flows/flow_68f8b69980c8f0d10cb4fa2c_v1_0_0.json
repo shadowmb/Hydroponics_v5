@@ -1,0 +1,135 @@
+{
+  "id": "flow_1761130104379",
+  "meta": {
+    "version": "1.0",
+    "name": "GR test",
+    "description": "",
+    "createdAt": "2025-10-22T10:48:24.379Z",
+    "modifiedAt": "2025-10-22T10:48:57.794Z",
+    "exportType": "main",
+    "exportedAt": "2025-10-22T10:48:57.794Z",
+    "exportedBy": "FlowEditor v3 Canvas",
+    "flowEditorVersion": "3.0.0",
+    "formatVersion": "3.0.0",
+    "isMonitoringFlow": false
+  },
+  "blocks": [
+    {
+      "id": "block_1761130108357_eiqxwwlvq",
+      "definitionId": "system.start",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "parameters": {},
+      "connections": {
+        "inputs": {},
+        "outputs": {
+          "flowOut": [
+            "connection_1761130117204_8pne2b62v"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": [],
+        "system": true
+      }
+    },
+    {
+      "id": "block_1761130108357_hj26nv074",
+      "definitionId": "system.end",
+      "position": {
+        "x": 600,
+        "y": 200
+      },
+      "parameters": {},
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1761130128569_oxyagbyoy"
+          ]
+        },
+        "outputs": {}
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": [],
+        "system": true
+      }
+    },
+    {
+      "id": "block_1761130115225_yzonz8i9u",
+      "definitionId": "sensor",
+      "position": {
+        "x": 377.47105796411273,
+        "y": 277.47105796411273
+      },
+      "parameters": {
+        "deviceId": "68c0a6eabcc0a447e5346574",
+        "monitoringTagId": ""
+      },
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1761130117204_8pne2b62v"
+          ],
+          "setVarNameIn": [],
+          "onErrorIn": []
+        },
+        "outputs": {
+          "flowOut": [
+            "connection_1761130128569_oxyagbyoy"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "connection_1761130117204_8pne2b62v",
+      "sourceBlockId": "block_1761130108357_eiqxwwlvq",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1761130115225_yzonz8i9u",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1761130128569_oxyagbyoy",
+      "sourceBlockId": "block_1761130115225_yzonz8i9u",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1761130108357_hj26nv074",
+      "targetPortId": "flowIn"
+    }
+  ],
+  "canvas": {
+    "zoom": 1,
+    "pan": {
+      "x": 0,
+      "y": 0
+    },
+    "grid": {
+      "enabled": true,
+      "size": 20
+    }
+  },
+  "exportStats": {
+    "totalBlocks": 3,
+    "totalConnections": 2,
+    "blockTypes": {},
+    "categories": {}
+  },
+  "validationSummary": {
+    "isValid": true,
+    "lastValidatedAt": "2025-10-22T10:48:57.794Z",
+    "criticalErrors": 0,
+    "warnings": 3,
+    "canExecute": true
+  }
+}

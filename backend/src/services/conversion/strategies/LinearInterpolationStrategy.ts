@@ -18,14 +18,21 @@ export class LinearInterpolationStrategy implements IConversionStrategy {
 
         // Case A: Raw is below the first point -> Extrapolate or Clamp? 
         // For now, we extrapolate using the first two points (or just the first slope).
+        // Case A: Raw is below the first point
         if (raw <= points[0].raw) {
-            if (points.length === 1) return points[0].value; // Can't extrapolate with 1 point
+            // If only 1 point, assume origin (0,0) and interpolate
+            if (points.length === 1) {
+                return this.interpolate(raw, { raw: 0, value: 0 }, points[0]);
+            }
             return this.interpolate(raw, points[0], points[1]);
         }
 
         // Case B: Raw is above the last point
         if (raw >= points[points.length - 1].raw) {
-            if (points.length === 1) return points[0].value;
+            // If only 1 point, assume origin (0,0) and extrapolate
+            if (points.length === 1) {
+                return this.interpolate(raw, { raw: 0, value: 0 }, points[0]);
+            }
             return this.interpolate(raw, points[points.length - 2], points[points.length - 1]);
         }
 

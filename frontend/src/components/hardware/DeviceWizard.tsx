@@ -33,7 +33,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         name: '',
         description: '',
         controllerId: '',
-        port: '',
+        port: '', // Legacy single port
+        pins: {} as Record<string, string>, // New multi-pin map
         relayId: '',
         channel: '',
         isEnabled: true
@@ -52,6 +53,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     description: initialData.metadata?.description || '',
                     controllerId: initialData.hardware?.parentId || '',
                     port: initialData.hardware?.port || '',
+                    pins: initialData.hardware?.pins || {},
                     relayId: initialData.hardware?.relayId || '',
                     channel: initialData.hardware?.channel !== undefined ? String(initialData.hardware.channel) : '',
                     isEnabled: initialData.isEnabled !== undefined ? initialData.isEnabled : true
@@ -63,14 +65,13 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     setConnectionType('direct');
                 }
                 // We need to set the template to display correct info
-                // Ideally we fetch it, but for now we might rely on the one in initialData if populated
                 if (initialData.config?.driverId) {
                     setSelectedTemplate(initialData.config.driverId);
                 }
             } else {
                 // Reset for New Device
                 setStep(1);
-                setFormData({ name: '', description: '', controllerId: '', port: '', relayId: '', channel: '', isEnabled: true });
+                setFormData({ name: '', description: '', controllerId: '', port: '', pins: {}, relayId: '', channel: '', isEnabled: true });
                 setSelectedTemplate(null);
                 setConnectionType('direct');
             }
@@ -120,7 +121,9 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             if (connectionType === 'direct') {
                 payload.hardware = {
                     parentId: formData.controllerId,
-                    port: formData.port
+                    // If template has pins definition, use pins map, otherwise fallback to legacy port
+                    pins: selectedTemplate?.pins?.length > 0 ? formData.pins : undefined,
+                    port: selectedTemplate?.pins?.length > 0 ? undefined : formData.port
                 };
             } else {
                 payload.hardware = {
@@ -156,22 +159,26 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         }
     };
 
-    const getAvailablePorts = () => {
+    const getAvailablePorts = (pinType: string) => {
         if (!formData.controllerId) return [];
         const controller = controllers.find(c => c._id === formData.controllerId);
         if (!controller) return [];
 
-        const req = selectedTemplate?.portRequirements[0];
-        if (!req) return [];
-
         return Object.entries(controller.ports)
             .filter(([id, state]) => {
                 // If editing and this is the current port, allow it
-                if (isEditMode && initialData?.hardware?.parentId === formData.controllerId && initialData?.hardware?.port === id) return true;
+                // Check both legacy port and new pins map
+                const isCurrentLegacy = isEditMode && initialData?.hardware?.parentId === formData.controllerId && initialData?.hardware?.port === id;
+                const isCurrentPin = isEditMode && initialData?.hardware?.parentId === formData.controllerId && Object.values(initialData?.hardware?.pins || {}).includes(id);
+
+                if (isCurrentLegacy || isCurrentPin) return true;
 
                 if (state.isOccupied) return false;
-                if (req.type === 'analog' && !id.startsWith('A')) return false;
-                if (req.type === 'digital' && !id.startsWith('D')) return false;
+
+                // Filter by type
+                if (pinType === 'ANALOG_IN' && !id.startsWith('A')) return false;
+                if ((pinType === 'DIGITAL_IN' || pinType === 'DIGITAL_OUT') && !id.startsWith('D')) return false;
+
                 return true;
             })
             .map(([id]) => id)
@@ -194,6 +201,23 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                 value: String(c.channelIndex),
                 label: `Channel ${c.channelIndex} ${c.name ? `(${c.name})` : ''}`
             }));
+    };
+
+    // Helper to check if form is valid
+    const isFormValid = () => {
+        if (connectionType === 'relay') {
+            return formData.relayId && formData.channel;
+        }
+
+        if (!formData.controllerId) return false;
+
+        // If template has specific pins defined, check if all are selected
+        if (selectedTemplate?.pins?.length > 0) {
+            return selectedTemplate.pins.every((pin: any) => formData.pins[pin.name]);
+        }
+
+        // Legacy fallback
+        return !!formData.port;
     };
 
     return (
@@ -290,7 +314,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                         <Label>Select Controller</Label>
                                         <Select
                                             value={formData.controllerId}
-                                            onValueChange={v => setFormData({ ...formData, controllerId: v, port: '' })}
+                                            onValueChange={v => setFormData({ ...formData, controllerId: v, port: '', pins: {} })}
                                         >
                                             <SelectTrigger><SelectValue placeholder="Select Controller" /></SelectTrigger>
                                             <SelectContent>
@@ -302,22 +326,48 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                     </div>
 
                                     {formData.controllerId && (
-                                        <div className="space-y-2">
-                                            <Label>Select Port ({selectedTemplate?.portRequirements[0]?.type})</Label>
-                                            <Select
-                                                value={formData.port}
-                                                onValueChange={v => setFormData({ ...formData, port: v })}
-                                            >
-                                                <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
-                                                <SelectContent>
-                                                    {getAvailablePorts().map(p => (
-                                                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                                                    ))}
-                                                    {getAvailablePorts().length === 0 && (
-                                                        <SelectItem value="none" disabled>No available ports</SelectItem>
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
+                                        <div className="space-y-4">
+                                            {/* Dynamic Pin Selection Loop */}
+                                            {selectedTemplate?.pins?.length > 0 ? (
+                                                selectedTemplate.pins.map((pin: any) => (
+                                                    <div key={pin.name} className="space-y-2">
+                                                        <Label>Select {pin.name} ({pin.type})</Label>
+                                                        <Select
+                                                            value={formData.pins[pin.name] || ''}
+                                                            onValueChange={v => setFormData({
+                                                                ...formData,
+                                                                pins: { ...formData.pins, [pin.name]: v }
+                                                            })}
+                                                        >
+                                                            <SelectTrigger><SelectValue placeholder={`Select ${pin.name} Pin`} /></SelectTrigger>
+                                                            <SelectContent>
+                                                                {getAvailablePorts(pin.type).map(p => (
+                                                                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                ))}
+                                                                {getAvailablePorts(pin.type).length === 0 && (
+                                                                    <SelectItem value="none" disabled>No available ports</SelectItem>
+                                                                )}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                // Legacy Single Port Fallback
+                                                <div className="space-y-2">
+                                                    <Label>Select Port ({selectedTemplate?.portRequirements?.[0]?.type || 'Generic'})</Label>
+                                                    <Select
+                                                        value={formData.port}
+                                                        onValueChange={v => setFormData({ ...formData, port: v })}
+                                                    >
+                                                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {getAvailablePorts(selectedTemplate?.portRequirements?.[0]?.type === 'analog' ? 'ANALOG_IN' : 'DIGITAL_IN').map(p => (
+                                                                <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -379,11 +429,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     ) : (
                         <Button
                             onClick={handleSubmit}
-                            disabled={
-                                (connectionType === 'direct' && (!formData.controllerId || !formData.port)) ||
-                                (connectionType === 'relay' && (!formData.relayId || !formData.channel)) ||
-                                loading
-                            }
+                            disabled={!isFormValid() || loading}
                         >
                             {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Device' : 'Create Device')}
                         </Button>
