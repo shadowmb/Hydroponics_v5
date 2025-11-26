@@ -33,6 +33,17 @@ export class HardwareController {
         }
     }
 
+    static async refreshController(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            await hardware.refreshControllerStatus(id);
+            return reply.send({ success: true });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to refresh controller' });
+        }
+    }
+
     // --- Templates ---
 
     static async getTemplates(req: FastifyRequest, reply: FastifyReply) {

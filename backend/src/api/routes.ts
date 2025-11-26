@@ -27,18 +27,13 @@ export async function apiRoutes(app: FastifyInstance) {
     app.put('/api/hardware/controllers/:id', HardwareController.updateController);
     app.delete('/api/hardware/controllers/:id', HardwareController.deleteController);
     app.post('/api/hardware/sync-status', HardwareController.syncStatus);
+    app.post('/api/hardware/controllers/:id/refresh', HardwareController.refreshController);
 
 
     // Discovery Routes
     app.post('/api/discovery/scan', require('./controllers/discovery-controller').scanNetwork);
 
     // Firmware Generator Routes
-    app.get('/api/firmware/controllers', FirmwareGeneratorController.getControllers);
-    app.get('/api/firmware/commands', FirmwareGeneratorController.getCommands);
-    app.post('/api/firmware/validate', FirmwareGeneratorController.validate);
-    app.post('/api/firmware/generate', FirmwareGeneratorController.generate);
-
-    // Relay Management
     app.get('/api/hardware/relays', HardwareController.getRelays);
     app.post('/api/hardware/relays', HardwareController.createRelay);
     app.put('/api/hardware/relays/:id', HardwareController.updateRelay);

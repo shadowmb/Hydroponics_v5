@@ -19,6 +19,7 @@ export interface IController extends SoftDeleteDocument {
     macAddress?: string; // Required for network controllers
     status: 'online' | 'offline' | 'error';
     lastSeen?: Date;
+    lastConnectionCheck?: Date;
     connection: {
         type: 'serial' | 'network';
         ip?: string;
@@ -48,6 +49,7 @@ const ControllerSchema = new Schema({
     macAddress: { type: String, sparse: true }, // sparse allows null/undefined to not conflict
     status: { type: String, enum: ['online', 'offline', 'error'], default: 'offline' },
     lastSeen: { type: Date },
+    lastConnectionCheck: { type: Date },
     connection: {
         type: { type: String, enum: ['serial', 'network'], required: true },
         ip: { type: String },

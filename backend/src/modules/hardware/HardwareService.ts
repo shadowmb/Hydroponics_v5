@@ -324,9 +324,19 @@ export class HardwareService {
 
         logger.info({ name: controller.name, oldStatus: controller.status, newStatus }, '📊 [HardwareService] Status Update');
 
+        // Always update last check timestamp
+        controller.lastConnectionCheck = new Date();
+        let statusChanged = false;
+
         if (controller.status !== newStatus) {
             controller.status = newStatus;
-            await controller.save();
+            statusChanged = true;
+        }
+
+        // Always save to persist lastConnectionCheck
+        await controller.save();
+
+        if (statusChanged) {
             events.emit('controller:update', { id: controller._id, status: newStatus });
         }
 
