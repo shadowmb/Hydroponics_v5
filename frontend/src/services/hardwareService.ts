@@ -45,6 +45,7 @@ export interface IController {
         baudRate?: number;
     };
     ports: Record<string, IPortState>;
+    capabilities?: string[];
     isActive: boolean;
 }
 

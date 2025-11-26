@@ -14,6 +14,11 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         description?: string;
     }[];
 
+    pins?: {
+        name: string;
+        type: 'DIGITAL_IN' | 'DIGITAL_OUT' | 'ANALOG_IN' | 'PWM_OUT';
+    }[];
+
     executionConfig: {
         commandType: string;
         parameters?: Record<string, any>;
@@ -45,6 +50,11 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
         type: { type: String, enum: ['analog', 'digital', 'i2c', 'uart'], required: true },
         count: { type: Number, default: 1 },
         description: String
+    }],
+
+    pins: [{
+        name: { type: String, required: true },
+        type: { type: String, enum: ['DIGITAL_IN', 'DIGITAL_OUT', 'ANALOG_IN', 'PWM_OUT'], required: true }
     }],
 
     executionConfig: {

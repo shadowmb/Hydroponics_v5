@@ -1,11 +1,48 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Badge } from "@/components/ui/badge";
+import {
+    ChevronDown,
+    ChevronRight,
+    RefreshCw,
+    Wifi,
+    Usb,
+    Code,
+    Trash2,
+    Plus,
+    Pencil
+} from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronDown, ChevronRight, Pencil, RefreshCw, Trash2, Usb, Wifi } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import { toast } from 'sonner';
+
 import { ControllerWizard } from '../components/hardware/ControllerWizard';
 import { PortManager } from '../components/hardware/PortManager';
 import { hardwareService, type IController } from '../services/hardwareService';
@@ -73,7 +110,15 @@ const ExpandedControllerRow: React.FC<{ controllerId: string }> = ({ controllerI
                             <div key={device._id} className="flex items-center gap-2 text-sm border p-2 rounded bg-background">
                                 <Badge variant="outline">Device</Badge>
                                 <span className="font-medium">{device.name}</span>
-                                <span className="text-muted-foreground text-xs">Port: {device.hardware?.port}</span>
+                                <span className="text-muted-foreground text-xs">
+                                    {device.hardware?.port ? (
+                                        `Port: ${device.hardware.port}`
+                                    ) : device.hardware?.pins && Object.keys(device.hardware.pins).length > 0 ? (
+                                        `Pins: ${Object.entries(device.hardware.pins).map(([k, v]) => `${k}:${v}`).join(', ')}`
+                                    ) : (
+                                        'No Port'
+                                    )}
+                                </span>
                             </div>
                         ))}
                     </div>
@@ -134,10 +179,12 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
     const [controllerToEdit, setControllerToEdit] = useState<IController | undefined>(undefined);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [controllerToDelete, setControllerToDelete] = useState<string | null>(null);
-    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set()); // Changed from expandedControllerId
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [isScanPromptOpen, setIsScanPromptOpen] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
 
-    const toggleRow = (id: string) => { // Changed from toggleExpand
+    const toggleRow = (id: string) => {
         setExpandedRows(prev => {
             const newSet = new Set(prev);
             if (newSet.has(id)) {
@@ -149,7 +196,22 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
         });
     };
 
-    const [isSyncing, setIsSyncing] = useState(false);
+    const fetchControllers = React.useCallback(async () => {
+        try {
+            const data = await hardwareService.getControllers();
+            setControllers(data);
+
+            // Update selected controller if it exists (to keep PortManager in sync)
+            if (selectedController) {
+                const updated = data.find(c => c._id === selectedController._id);
+                if (updated) {
+                    setSelectedController(updated);
+                }
+            }
+        } catch {
+            toast.error('Failed to fetch controllers');
+        }
+    }, [selectedController]);
 
     const handleRefresh = async () => {
         try {
@@ -175,29 +237,66 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
         }
     };
 
-    const fetchControllers = async () => {
-        try {
-            // setLoading(true);
-            const data = await hardwareService.getControllers();
-            setControllers(data);
+    const handleRefreshController = async (controller: IController, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (controller.isActive === false) return;
 
-            // Update selected controller if it exists (to keep PortManager in sync)
-            if (selectedController) {
-                const updated = data.find(c => c._id === selectedController._id);
-                if (updated) {
-                    setSelectedController(updated);
+        setRefreshingIds(prev => new Set(prev).add(controller._id));
+        try {
+            await hardwareService.refreshController(controller._id);
+            toast.success('Controller status refreshed');
+            fetchControllers();
+        } catch (error) {
+            console.error('Failed to refresh controller:', error);
+            toast.error('Failed to refresh controller');
+        } finally {
+            setRefreshingIds(prev => {
+                const next = new Set(prev);
+                next.delete(controller._id);
+                return next;
+            });
+        }
+    };
+
+    const handleToggleActive = async (controller: IController, isActive: boolean) => {
+        try {
+            await hardwareService.updateController(controller._id, { isActive });
+            toast.success(`Controller ${isActive ? 'activated' : 'deactivated'}`);
+
+            if (isActive) {
+                // Trigger refresh immediately to check connection
+                setRefreshingIds(prev => new Set(prev).add(controller._id));
+                try {
+                    await hardwareService.refreshController(controller._id);
+                } catch {
+                    // Ignore error, fetchControllers will update status
+                } finally {
+                    setRefreshingIds(prev => {
+                        const next = new Set(prev);
+                        next.delete(controller._id);
+                        return next;
+                    });
                 }
             }
+
+            fetchControllers();
         } catch (error) {
-            toast.error('Failed to fetch controllers');
-        } finally {
-            // setLoading(false);
+            console.error('Failed to update controller:', error);
+            toast.error('Failed to update controller status');
         }
     };
 
     useEffect(() => {
         fetchControllers();
-    }, [refreshTrigger]);
+    }, [refreshTrigger, fetchControllers]);
+
+    useEffect(() => {
+        if (initialWizardData) {
+            setEditWizardOpen(true);
+            // We don't set controllerToEdit because we are creating a new one
+            setControllerToEdit(undefined);
+        }
+    }, [initialWizardData]);
 
     const formatLastCheck = (dateInput?: string | Date) => {
         if (!dateInput) return '-';
@@ -213,34 +312,6 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
         return `${Math.floor(diffHours / 24)} d`;
     };
 
-    const handleRefreshController = async (controller: any, e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent row expansion
-        try {
-            setIsSyncing(true);
-            // Allow React to render the overlay
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            toast.info(`Refreshing ${controller.name}...`);
-            await hardwareService.refreshController(controller._id);
-
-            toast.success('Controller status refreshed');
-            fetchControllers();
-        } catch (error) {
-            console.error('Controller refresh failed', error);
-            toast.error('Failed to refresh controller status');
-        } finally {
-            setIsSyncing(false);
-        }
-    };
-
-    useEffect(() => {
-        if (initialWizardData) {
-            setEditWizardOpen(true);
-            // We don't set controllerToEdit because we are creating a new one
-            setControllerToEdit(undefined);
-        }
-    }, [initialWizardData]);
-
     const handleDeleteClick = (id: string) => {
         setControllerToDelete(id);
         setDeleteDialogOpen(true);
@@ -252,7 +323,7 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
             await hardwareService.deleteController(controllerToDelete);
             toast.success('Controller deleted');
             fetchControllers();
-        } catch (error) {
+        } catch {
             toast.error('Failed to delete controller');
         } finally {
             setDeleteDialogOpen(false);
@@ -289,7 +360,16 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                         <h1 className="text-3xl font-bold tracking-tight">Controllers</h1>
                         <p className="text-muted-foreground">Manage your hardware controllers and gateways.</p>
                     </div>
-
+                    <div className="flex gap-2">
+                        <Button onClick={handleRefresh} variant="outline" disabled={isSyncing}>
+                            <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                            Sync Status
+                        </Button>
+                        <Button onClick={() => { setControllerToEdit(undefined); setEditWizardOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Controller
+                        </Button>
+                    </div>
                 </div>
 
                 <Card>
@@ -304,6 +384,7 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                                     <TableHead>Name</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Connection</TableHead>
+                                    <TableHead>Commands</TableHead>
                                     <TableHead>Last Check</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -311,7 +392,7 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                             <TableBody>
                                 {controllers.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                                             No controllers found. Add one to get started.
                                         </TableCell>
                                     </TableRow>
@@ -339,12 +420,24 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                                                         <div className="text-xs text-muted-foreground">{controller.description}</div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Badge
-                                                            variant={controller.status === 'online' ? 'default' : controller.status === 'error' ? 'destructive' : 'secondary'}
-                                                            className={controller.status === 'error' ? 'bg-orange-500 hover:bg-orange-600' : ''}
-                                                        >
-                                                            {controller.status === 'online' ? 'Online' : controller.status === 'error' ? 'Error' : 'Offline'}
-                                                        </Badge>
+                                                        <div className="flex items-center gap-2">
+                                                            <Badge
+                                                                variant={controller.status === 'online' ? 'default' : controller.status === 'error' ? 'destructive' : 'secondary'}
+                                                                className={controller.status === 'error' ? 'bg-orange-500 hover:bg-orange-600' : ''}
+                                                            >
+                                                                {controller.status === 'online' ? 'Online' : controller.status === 'error' ? 'Error' : 'Offline'}
+                                                            </Badge>
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-6 w-6"
+                                                                onClick={(e) => handleRefreshController(controller, e)}
+                                                                disabled={controller.isActive === false || refreshingIds.has(controller._id)}
+                                                                title={controller.isActive === false ? "Controller inactive" : "Refresh Status & Commands"}
+                                                            >
+                                                                <RefreshCw className={`h-3 w-3 ${refreshingIds.has(controller._id) ? "animate-spin" : ""}`} />
+                                                            </Button>
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex flex-col text-sm">
@@ -363,42 +456,81 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm text-muted-foreground min-w-[60px]">
-                                                                {formatLastCheck(controller.lastConnectionCheck)}
-                                                            </span>
+                                                        {controller.capabilities && controller.capabilities.length > 0 ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <TooltipProvider>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <div className="flex items-center gap-1 cursor-help w-fit">
+                                                                                <Code className="h-4 w-4 text-muted-foreground" />
+                                                                                <span className="text-xs text-muted-foreground">
+                                                                                    {controller.capabilities.length}
+                                                                                </span>
+                                                                            </div>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            <div className="flex flex-col gap-1">
+                                                                                <p className="font-semibold text-xs mb-1">Supported Commands:</p>
+                                                                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                                                                    {controller.capabilities.map((cap, idx) => (
+                                                                                        <span key={idx} className="text-xs font-mono">
+                                                                                            {cap}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
+                                                            </div>
+                                                        ) : (
                                                             <Button
-                                                                size="icon"
-                                                                variant="ghost"
-                                                                className="h-6 w-6"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-7 gap-1 text-xs"
                                                                 onClick={(e) => handleRefreshController(controller, e)}
-                                                                title="Refresh Status"
                                                             >
                                                                 <RefreshCw className="h-3 w-3" />
+                                                                Fetch
                                                             </Button>
-                                                        </div>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {formatLastCheck(controller.lastConnectionCheck)}
                                                     </TableCell>
                                                     <TableCell className="text-right">
-                                                        <div className="flex justify-end gap-2">
+                                                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                                            <div className="flex items-center gap-2 mr-2">
+                                                                <Switch
+                                                                    checked={controller.isActive !== false}
+                                                                    onCheckedChange={(checked) => handleToggleActive(controller, checked)}
+                                                                />
+                                                                <span className="text-xs text-muted-foreground w-12 text-left">
+                                                                    {controller.isActive !== false ? 'Active' : 'Inactive'}
+                                                                </span>
+                                                            </div>
                                                             <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={(e) => { e.stopPropagation(); openPortManager(controller); }}
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => openPortManager(controller)}
+                                                                title="Manage Ports"
                                                             >
-                                                                Manage Ports
+                                                                <Usb className="h-4 w-4" />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={(e) => { e.stopPropagation(); openEditWizard(controller); }}
+                                                                onClick={() => openEditWizard(controller)}
+                                                                title="Edit Controller"
                                                             >
                                                                 <Pencil className="h-4 w-4" />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(controller._id); }}
+                                                                className="text-destructive hover:text-destructive"
+                                                                onClick={() => handleDeleteClick(controller._id)}
+                                                                title="Delete Controller"
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
@@ -407,7 +539,7 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                                                 </TableRow>
                                                 {expandedRows.has(controller._id) && (
                                                     <TableRow>
-                                                        <TableCell colSpan={6} className="p-0">
+                                                        <TableCell colSpan={7} className="p-0">
                                                             <ExpandedControllerRow controllerId={controller._id} />
                                                         </TableCell>
                                                     </TableRow>

@@ -28,6 +28,7 @@ export interface IController extends SoftDeleteDocument {
         baudRate?: number;
     };
     ports: Map<string, IPortState>; // Key is Port ID (e.g., "D13")
+    capabilities?: string[];
     isActive: boolean;
 }
 
@@ -62,6 +63,7 @@ const ControllerSchema = new Schema({
         of: PortStateSchema,
         default: {}
     },
+    capabilities: { type: [String], default: [] },
     isActive: { type: Boolean, default: true }
 }, {
     timestamps: true

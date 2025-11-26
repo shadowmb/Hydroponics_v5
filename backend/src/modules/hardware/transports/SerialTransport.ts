@@ -116,6 +116,36 @@ export class SerialTransport implements IHardwareTransport {
                 if (packet.pin !== undefined) message += `|${packet.pin}`;
                 if (packet.angle !== undefined) message += `|${packet.angle}`;
             }
+            // MODBUS RTU (Hybrid Format: CMD|RX|TX|JSON)
+            else if (packet.cmd === 'MODBUS_RTU_READ') {
+                // Extract pins from the 'pins' map injected by DeviceTemplateManager
+                const pins = packet.pins as any;
+                let rx = (pins?.get ? pins.get('RX') : pins?.RX) || packet.rx;
+                let tx = (pins?.get ? pins.get('TX') : pins?.TX) || packet.tx;
+
+                if (rx === undefined || tx === undefined) {
+                    throw new Error('MODBUS_RTU_READ requires RX and TX pins');
+                }
+
+                // Ensure 'D' prefix for digital pins if missing (and not Analog 'A')
+                if (typeof rx === 'number' || (typeof rx === 'string' && !/^[DA]/.test(rx))) {
+                    rx = `D${rx}`;
+                }
+                if (typeof tx === 'number' || (typeof tx === 'string' && !/^[DA]/.test(tx))) {
+                    tx = `D${tx}`;
+                }
+
+                message += `|${rx}|${tx}`;
+
+                // Add JSON params
+                const jsonParams = {
+                    addr: packet.addr,
+                    func: packet.func,
+                    reg: packet.reg,
+                    count: packet.count
+                };
+                message += `|${JSON.stringify(jsonParams)}`;
+            }
         }
 
         // Add newline delimiter

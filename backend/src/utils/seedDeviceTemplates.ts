@@ -70,6 +70,30 @@ const templates = [
             commandType: 'SET_PIN'
         },
         uiConfig: { category: 'Actuators', icon: 'power' }
+    },
+    {
+        _id: 'dfrobot_par_rs485',
+        name: 'DFRobot PAR Sensor (RS485)',
+        description: 'Photosynthetically Active Radiation Sensor (Modbus RTU)',
+        physicalType: 'par',
+        requiredCommand: 'MODBUS_RTU_READ',
+        defaultUnits: ['µmol/m²/s'],
+        portRequirements: [{ type: 'digital', count: 2, description: 'RX/TX Pins (SoftwareSerial)' }],
+        pins: [
+            { name: 'RX', type: 'DIGITAL_IN' },
+            { name: 'TX', type: 'DIGITAL_OUT' }
+        ],
+        executionConfig: {
+            commandType: 'MODBUS_RTU_READ',
+            parameters: {
+                addr: 1,
+                func: 3,
+                reg: 0,
+                count: 1
+            },
+            responseMapping: { conversionMethod: 'linear' }
+        },
+        uiConfig: { category: 'Sensors', icon: 'sun' }
     }
 ];
 

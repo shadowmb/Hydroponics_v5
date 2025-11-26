@@ -16,6 +16,8 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/hardware/devices', HardwareController.createDevice);
     app.put('/api/hardware/devices/:id', HardwareController.updateDevice);
     app.delete('/api/hardware/devices/:id', HardwareController.deleteDevice);
+    app.post('/api/hardware/devices/:id/restore', HardwareController.restoreDevice);
+    app.delete('/api/hardware/devices/:id/hard', HardwareController.hardDeleteDevice);
     app.post('/api/hardware/devices/:id/test', HardwareController.testDevice);
     app.post('/api/hardware/devices/:id/refresh', HardwareController.refreshDevice);
 
@@ -26,6 +28,8 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/hardware/controllers/:id', HardwareController.getController);
     app.put('/api/hardware/controllers/:id', HardwareController.updateController);
     app.delete('/api/hardware/controllers/:id', HardwareController.deleteController);
+    app.post('/api/hardware/controllers/:id/restore', HardwareController.restoreController);
+    app.delete('/api/hardware/controllers/:id/hard', HardwareController.hardDeleteController);
     app.post('/api/hardware/sync-status', HardwareController.syncStatus);
     app.post('/api/hardware/controllers/:id/refresh', HardwareController.refreshController);
 
@@ -41,6 +45,8 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/hardware/relays', HardwareController.createRelay);
     app.put('/api/hardware/relays/:id', HardwareController.updateRelay);
     app.delete('/api/hardware/relays/:id', HardwareController.deleteRelay);
+    app.post('/api/hardware/relays/:id/restore', HardwareController.restoreRelay);
+    app.delete('/api/hardware/relays/:id/hard', HardwareController.hardDeleteRelay);
 
     // Automation Routes
     app.post('/api/automation/start', AutomationController.start);

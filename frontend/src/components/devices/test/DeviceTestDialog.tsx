@@ -56,7 +56,17 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                 addLog(`Read OK: ${result.value} (Raw: ${result.raw})`, 'success');
             }
         } catch (error: any) {
-            addLog(`Error: ${error.message}`, 'error');
+            const backendError = error.response?.data?.error;
+            const details = error.response?.data?.details;
+
+            if (backendError) {
+                addLog(`Error: ${backendError}`, 'error');
+                if (details) {
+                    addLog(`Details: ${typeof details === 'object' ? JSON.stringify(details) : details}`, 'error');
+                }
+            } else {
+                addLog(`Error: ${error.message}`, 'error');
+            }
             toast.error('Failed to read device');
         }
     };
