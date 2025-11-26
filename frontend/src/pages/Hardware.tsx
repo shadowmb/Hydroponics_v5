@@ -14,6 +14,7 @@ import { Plus } from 'lucide-react';
 import { NetworkScanner } from '../components/hardware/NetworkScanner';
 import { FirmwareGeneratorDialog } from '../components/hardware/FirmwareGeneratorDialog';
 import { NetworkScanPrompt } from '../components/hardware/NetworkScanPrompt';
+import { hardwareService } from '../services/hardwareService';
 
 const Hardware: React.FC = () => {
     const [activeTab, setActiveTab] = useState("devices");
@@ -46,6 +47,25 @@ const Hardware: React.FC = () => {
         } catch (error) {
             console.error('Sync failed', error);
             toast.error('Failed to sync status');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleRefreshDevice = async (device: any) => {
+        try {
+            setIsSyncing(true);
+            // Allow React to render the overlay
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            toast.info(`Refreshing ${device.name}...`);
+            await hardwareService.refreshDevice(device._id);
+
+            toast.success('Device status refreshed');
+            setRefreshTrigger(prev => prev + 1);
+        } catch (error) {
+            console.error('Device refresh failed', error);
+            toast.error('Failed to refresh device status');
         } finally {
             setIsSyncing(false);
         }
@@ -174,7 +194,7 @@ const Hardware: React.FC = () => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <DeviceList key={refreshTrigger} onEdit={handleEditDevice} />
+                            <DeviceList key={refreshTrigger} onEdit={handleEditDevice} onRefreshDevice={handleRefreshDevice} />
                         </CardContent>
                     </Card>
                 )}

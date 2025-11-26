@@ -139,5 +139,9 @@ export const hardwareService = {
     testDevice: async (id: string): Promise<any> => {
         const response = await axios.post(`${API_URL}/hardware/devices/${id}/test`);
         return response.data.data;
+    },
+
+    refreshDevice: async (id: string): Promise<void> => {
+        await axios.post(`${API_URL}/hardware/devices/${id}/refresh`);
     }
 };

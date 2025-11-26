@@ -3,15 +3,16 @@ import { hardwareService } from '../../services/hardwareService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu } from 'lucide-react';
+import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 interface DeviceListProps {
     onEdit?: (device: any) => void;
+    onRefreshDevice?: (device: any) => void;
 }
 
-export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
+export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice }) => {
     const [devices, setDevices] = useState<any[]>([]);
     const [controllers, setControllers] = useState<any[]>([]);
     const [relays, setRelays] = useState<any[]>([]);
@@ -120,6 +121,19 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
         // Backend now handles the logic of updating device status based on controller
         return device.status || 'offline';
     };
+    const formatLastCheck = (dateString?: string) => {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) return '< 1 min';
+        if (diffMins < 60) return `${diffMins} min`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours} h`;
+        return `${Math.floor(diffHours / 24)} d`;
+    };
 
     return (
         <div className="space-y-4">
@@ -132,6 +146,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                             <TableHead>Controller</TableHead>
                             <TableHead>Connection</TableHead>
                             <TableHead>Health</TableHead>
+                            <TableHead>Last Check</TableHead>
                             <TableHead>Config</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -139,7 +154,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                     <TableBody>
                         {devices.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                                <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
                                     No devices found. Add one to get started.
                                 </TableCell>
                             </TableRow>
@@ -184,6 +199,22 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit }) => {
                                             >
                                                 {health === 'online' ? 'Online' : health === 'error' ? 'Error' : 'Offline'}
                                             </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-muted-foreground min-w-[60px]">
+                                                    {formatLastCheck(device.lastConnectionCheck)}
+                                                </span>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-6 w-6"
+                                                    onClick={() => onRefreshDevice && onRefreshDevice(device)}
+                                                    title="Refresh Status"
+                                                >
+                                                    <RefreshCw className="h-3 w-3" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant={device.isEnabled ? 'outline' : 'secondary'} className={device.isEnabled ? "border-green-500 text-green-600" : ""}>

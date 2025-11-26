@@ -8,6 +8,7 @@ export interface IDevice extends SoftDeleteDocument {
     type: 'CONTROLLER' | 'SENSOR' | 'ACTUATOR';
     isEnabled: boolean;
     status: 'online' | 'offline' | 'error';
+    lastConnectionCheck?: Date;
 
     hardware: {
         boardType?: string;
@@ -40,6 +41,7 @@ const DeviceSchema = new Schema<IDevice>(
         type: { type: String, enum: ['CONTROLLER', 'SENSOR', 'ACTUATOR'], required: true },
         isEnabled: { type: Boolean, default: true },
         status: { type: String, enum: ['online', 'offline', 'error'], default: 'offline' },
+        lastConnectionCheck: Date,
 
         hardware: {
             boardType: String,

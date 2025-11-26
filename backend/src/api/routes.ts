@@ -17,6 +17,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.put('/api/hardware/devices/:id', HardwareController.updateDevice);
     app.delete('/api/hardware/devices/:id', HardwareController.deleteDevice);
     app.post('/api/hardware/devices/:id/test', HardwareController.testDevice);
+    app.post('/api/hardware/devices/:id/refresh', HardwareController.refreshDevice);
 
     // Controller Management
     app.get('/api/hardware/templates', HardwareController.getTemplates);

@@ -304,77 +304,122 @@ export class HardwareService {
 
         const results: Record<string, string> = {};
 
-        // Run checks in parallel
         await Promise.all(controllers.map(async (controller) => {
-            const isOnline = await this.checkHealth(controller._id.toString());
-            const newStatus = isOnline ? 'online' : 'offline';
-
-            logger.info({ name: controller.name, oldStatus: controller.status, newStatus }, '📊 [HardwareService] Status Update');
-
-            if (controller.status !== newStatus) {
-                controller.status = newStatus;
-                await controller.save();
-                events.emit('controller:update', { id: controller._id, status: newStatus });
-            }
-
-            results[controller.name] = newStatus;
-
-            // --- Cascade Status to Devices ---
-            try {
-                // 1. Find Relays attached to this controller
-                const controllerRelays = await Relay.find({ controllerId: controller._id });
-                const relayIds = controllerRelays.map(r => r._id);
-
-                // 2. Find Devices (Directly attached OR attached via Relays)
-                const devices = await DeviceModel.find({
-                    $or: [
-                        { 'hardware.parentId': controller._id },
-                        { 'hardware.relayId': { $in: relayIds } }
-                    ]
-                });
-
-                // 3. Update Device Status
-                for (const device of devices) {
-                    // Skip if device is disabled
-                    if (device.isEnabled === false) continue;
-
-                    let newDeviceStatus: 'online' | 'offline' | 'error' = 'offline';
-
-                    if (newStatus === 'offline') {
-                        // Parent Controller is Offline -> Device is Offline
-                        newDeviceStatus = 'offline';
-                    } else {
-                        // Parent Controller is Online
-                        // If device is already in 'error', keep it (Higher Priority)
-                        if (device.status === 'error') {
-                            newDeviceStatus = 'error';
-                        } else {
-                            // Otherwise, it's Online
-                            newDeviceStatus = 'online';
-                        }
-                    }
-
-                    // Only save if changed
-                    if (device.status !== newDeviceStatus) {
-                        logger.info({
-                            deviceId: device._id,
-                            name: device.name,
-                            old: device.status,
-                            new: newDeviceStatus,
-                            reason: `Controller ${newStatus}`
-                        }, '📱 [HardwareService] Device Status Cascade');
-
-                        device.status = newDeviceStatus;
-                        await device.save();
-                        events.emit('device:update', { id: device._id, status: newDeviceStatus });
-                    }
-                }
-            } catch (cascadeError) {
-                logger.error({ err: cascadeError, controllerId: controller._id }, '❌ Failed to cascade status to devices');
-            }
+            const status = await this.refreshControllerStatus(controller._id.toString());
+            results[controller.name] = status;
         }));
 
         return results;
+    }
+
+    public async refreshControllerStatus(controllerId: string): Promise<'online' | 'offline'> {
+        const controller = await Controller.findById(controllerId);
+        if (!controller) throw new Error('Controller not found');
+
+        const { DeviceModel } = await import('../../models/Device');
+        const { Relay } = await import('../../models/Relay');
+
+        const isOnline = await this.checkHealth(controllerId);
+        const newStatus = isOnline ? 'online' : 'offline';
+
+        logger.info({ name: controller.name, oldStatus: controller.status, newStatus }, '📊 [HardwareService] Status Update');
+
+        if (controller.status !== newStatus) {
+            controller.status = newStatus;
+            await controller.save();
+            events.emit('controller:update', { id: controller._id, status: newStatus });
+        }
+
+        // --- Cascade Status to Devices ---
+        try {
+            // 1. Find Relays attached to this controller
+            const controllerRelays = await Relay.find({ controllerId: controller._id });
+            const relayIds = controllerRelays.map(r => r._id);
+
+            // 2. Find Devices (Directly attached OR attached via Relays)
+            const devices = await DeviceModel.find({
+                $or: [
+                    { 'hardware.parentId': controller._id },
+                    { 'hardware.relayId': { $in: relayIds } }
+                ]
+            });
+
+            // 3. Update Device Status
+            for (const device of devices) {
+                // Skip if device is disabled
+                if (device.isEnabled === false) continue;
+
+                let newDeviceStatus: 'online' | 'offline' | 'error' = 'offline';
+
+                if (newStatus === 'offline') {
+                    // Parent Controller is Offline -> Device is Offline
+                    newDeviceStatus = 'offline';
+                } else {
+                    // Parent Controller is Online
+                    // If device is already in 'error', keep it (Higher Priority)
+                    if (device.status === 'error') {
+                        newDeviceStatus = 'error';
+                    } else {
+                        // Otherwise, it's Online
+                        newDeviceStatus = 'online';
+                    }
+                }
+
+                // Always update last check timestamp
+                device.lastConnectionCheck = new Date();
+                let statusChanged = false;
+
+                // Only log and emit if status changed
+                if (device.status !== newDeviceStatus) {
+                    logger.info({
+                        deviceId: device._id,
+                        name: device.name,
+                        old: device.status,
+                        new: newDeviceStatus,
+                        reason: `Controller ${newStatus}`
+                    }, '📱 [HardwareService] Device Status Cascade');
+
+                    device.status = newDeviceStatus;
+                    statusChanged = true;
+                }
+
+                // Always save to persist lastConnectionCheck
+                await device.save();
+
+                if (statusChanged) {
+                    events.emit('device:update', { id: device._id, status: newDeviceStatus });
+                }
+            }
+        } catch (cascadeError) {
+            logger.error({ err: cascadeError, controllerId: controller._id }, '❌ Failed to cascade status to devices');
+        }
+
+        return newStatus;
+    }
+
+    public async refreshDeviceStatus(deviceId: string): Promise<void> {
+        const { DeviceModel } = await import('../../models/Device');
+        const { Relay } = await import('../../models/Relay');
+
+        const device = await DeviceModel.findById(deviceId);
+        if (!device) throw new Error('Device not found');
+
+        let controllerId: string | undefined;
+
+        if (device.hardware?.parentId) {
+            controllerId = device.hardware.parentId;
+        } else if (device.hardware?.relayId) {
+            const relay = await Relay.findById(device.hardware.relayId);
+            if (relay && relay.controllerId) {
+                controllerId = relay.controllerId.toString();
+            }
+        }
+
+        if (!controllerId) {
+            throw new Error('Device is not connected to any controller');
+        }
+
+        await this.refreshControllerStatus(controllerId);
     }
 
     // --- Event Handlers ---
