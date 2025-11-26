@@ -19,6 +19,7 @@ const DeviceTemplateSchema = z.object({
     id: z.string(),
     name: z.string(),
     category: z.enum(['CONTROLLER', 'SENSOR', 'ACTUATOR']),
+    conversionStrategy: z.string().optional(),
     capabilities: z.array(z.string()),
     commands: z.record(CommandSchema),
     pins: z.array(PinSchema),
@@ -56,11 +57,13 @@ export class DeviceTemplateManager {
             const files = await fs.readdir(this.templatesDir);
             const jsonFiles = files.filter(f => f.endsWith('.json'));
 
+            logger.info({ dir: this.templatesDir, files: jsonFiles }, '📂 Loading Device Templates from...');
+
             for (const file of jsonFiles) {
                 await this.loadTemplateFile(path.join(this.templatesDir, file));
             }
 
-            logger.info({ count: this.templates.size }, '📂 Device Templates Loaded');
+            logger.info({ count: this.templates.size, ids: Array.from(this.templates.keys()) }, '📂 Device Templates Loaded');
         } catch (error) {
             logger.error({ error }, '❌ Failed to load device templates');
             throw error;
@@ -77,8 +80,8 @@ export class DeviceTemplateManager {
 
             this.templates.set(template.id, template);
             logger.debug({ id: template.id }, 'Loaded Template');
-        } catch (error) {
-            logger.warn({ file: path.basename(filePath), error }, '⚠️ Invalid Device Template');
+        } catch (error: any) {
+            logger.warn({ file: path.basename(filePath), error: error.issues || error.message }, '⚠️ Invalid Device Template');
             // We do NOT throw here, just skip the bad file (Resilience)
         }
     }

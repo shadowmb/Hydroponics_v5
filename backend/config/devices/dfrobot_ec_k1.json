@@ -1,0 +1,23 @@
+{
+    "id": "dfrobot_ec_k1",
+    "name": "DFRobot EC Sensor (K=1.0)",
+    "category": "SENSOR",
+    "conversionStrategy": "ec-dfr-analog",
+    "capabilities": [
+        "READ"
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "ANALOG"
+        }
+    },
+    "pins": [
+        {
+            "name": "Signal",
+            "type": "ANALOG_IN"
+        }
+    ],
+    "initialState": {
+        "value": 0
+    }
+}

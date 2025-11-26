@@ -57,7 +57,7 @@ export interface IDeviceDriver {
     createPacket(
         commandName: string,
         params: Record<string, any>,
-        context: { pin?: number; address?: string }
+        context: { pin?: number | string; address?: string }
     ): Omit<HardwarePacket, 'id'>; // ID is injected by the Service
 
     validateParams(commandName: string, params: Record<string, any>): boolean;

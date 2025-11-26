@@ -1,0 +1,27 @@
+import { IDevice } from '../../../models/Device';
+import { IConversionStrategy } from './IConversionStrategy';
+
+export class EcDfrStrategy implements IConversionStrategy {
+    convert(raw: number, device: IDevice): number {
+        // 1. Convert ADC (0-1023) to Voltage (mV)
+        // Assuming 5V reference and 10-bit ADC. 
+        // TODO: Make reference voltage configurable
+        const voltage = (raw / 1024.0) * 5000;
+
+        // 2. Convert Voltage to EC
+        // DFRobot EC Formula (Simplified for K=1.0)
+        // EC = Voltage / 1000.0 * K (approximate)
+        // Real formula requires temperature compensation.
+
+        // For now, return a value that looks like EC (mS/cm)
+        // If raw=93 -> voltage=454mV -> EC=0.45 mS/cm
+
+        let ec = voltage / 1000.0;
+
+        // Apply K factor if present in calibration
+        const k = device.config.calibration?.multiplier || 1.0;
+        ec = ec * k;
+
+        return parseFloat(ec.toFixed(2));
+    }
+}

@@ -22,6 +22,7 @@ export interface IDevice extends SoftDeleteDocument {
     config: {
         driverId: string;
         pollInterval?: number;
+        conversionStrategy?: string;
         calibration?: {
             multiplier: number;
             offset: number;
@@ -31,6 +32,12 @@ export interface IDevice extends SoftDeleteDocument {
 
     metadata?: {
         description?: string;
+    };
+
+    lastReading?: {
+        value: number;
+        raw: number;
+        timestamp: Date;
     };
 }
 
@@ -55,6 +62,7 @@ const DeviceSchema = new Schema<IDevice>(
         config: {
             driverId: { type: String, required: true, ref: 'DeviceTemplate' },
             pollInterval: Number,
+            conversionStrategy: { type: String, default: 'linear' },
             calibration: {
                 multiplier: { type: Number, default: 1 },
                 offset: { type: Number, default: 0 },
@@ -68,6 +76,12 @@ const DeviceSchema = new Schema<IDevice>(
         metadata: {
             description: String,
         },
+
+        lastReading: {
+            value: Number,
+            raw: Number,
+            timestamp: Date
+        }
     },
     {
         timestamps: true,
