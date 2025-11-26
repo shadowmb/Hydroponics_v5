@@ -1,0 +1,5592 @@
+{
+  "components": [
+    {
+      "path": "App.vue",
+      "name": "App",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 301,
+      "lastModified": "2025-07-16T05:09:26.814Z"
+    },
+    {
+      "path": "components/flow-editor/FlowRunnerUI.vue",
+      "name": "FlowRunnerUI",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "nextTick",
+            "onMounted",
+            "onUnmounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "useFlowStore"
+          ],
+          "from": "../../modules/flowEditorV2/store/useFlowStore"
+        },
+        {
+          "items": [
+            "FlowBlock",
+            "BlockType"
+          ],
+          "from": "../../modules/flowEditorV2/types/FlowBlock"
+        },
+        {
+          "items": [
+            "ExecutionLogEntry"
+          ],
+          "from": "../../modules/flowEditorV2/utils/FlowRunner"
+        },
+        {
+          "items": [
+            "getBlockTypeDisplayName"
+          ],
+          "from": "../../modules/flowEditorV2/utils/format"
+        }
+      ],
+      "composables": [
+        "useFlowStore"
+      ],
+      "reactiveVars": [
+        "isVisible",
+        "isCollapsed",
+        "logHeight",
+        "logScrollArea",
+        "currentExecutingBlock",
+        "currentBlockParams",
+        "currentBlockResult",
+        "displayedLogEntries"
+      ],
+      "functions": [
+        "expandPanel",
+        "collapsePanel",
+        "getStartButtonIcon",
+        "getStartButtonLabel",
+        "getExecutionStatus",
+        "handleStartResume",
+        "skipCurrentBlock",
+        "restartSimulation",
+        "clearExecutionLog",
+        "getCurrentBlockStatus",
+        "getStatusClass",
+        "formatBlockParams",
+        "formatBlockResult",
+        "formatLogTime",
+        "formatLogData",
+        "getLogStatusIcon",
+        "getBlockDisplayName",
+        "getProgressStats",
+        "getProgressPercentage"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 22527,
+      "lastModified": "2025-07-19T19:55:56.021Z"
+    },
+    {
+      "path": "components/programs/tabs/ActiveProgramTab.vue",
+      "name": "ActiveProgramTab",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 832,
+      "lastModified": "2025-07-16T07:03:13.226Z"
+    },
+    {
+      "path": "components/programs/tabs/ProgramSettingsTab.vue",
+      "name": "ProgramSettingsTab",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 855,
+      "lastModified": "2025-07-16T07:03:41.665Z"
+    },
+    {
+      "path": "components/programs/tabs/ProgramsTab.vue",
+      "name": "ProgramsTab",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRouter"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        }
+      ],
+      "composables": [
+        "useRouter"
+      ],
+      "reactiveVars": [
+        "expandedRows",
+        "mockPrograms"
+      ],
+      "functions": [
+        "getStatusColor",
+        "toggleExpanded",
+        "isExpanded",
+        "editProgram",
+        "activateProgram",
+        "duplicateProgram",
+        "deleteProgram"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 16266,
+      "lastModified": "2025-07-16T10:28:54.719Z"
+    },
+    {
+      "path": "components/programs/tabs/TasksTab.vue",
+      "name": "TasksTab",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 786,
+      "lastModified": "2025-07-16T07:03:32.134Z"
+    },
+    {
+      "path": "components/scratch-editor/BaseBlock.vue",
+      "name": "BaseBlock",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "nextTick"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "getBlockColor",
+            "getConnectorColor"
+          ],
+          "from": "../../types/scratch/BlockDefinition"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "collapsed",
+        "blockClasses",
+        "blockStyles",
+        "headerStyles"
+      ],
+      "functions": [
+        "initializeParameterValues",
+        "getConnectorClasses",
+        "getConnectorStyles",
+        "onBlockClick",
+        "onContextMenu",
+        "onConnectorMouseDown",
+        "onConnectorHover",
+        "onParameterChange",
+        "toggleCollapsed",
+        "getConnectorCoords"
+      ],
+      "emits": [
+        "block-click",
+        "block-context-menu",
+        "connector-drag-start",
+        "connector-hover",
+        "update:modelValue",
+        "update:collapsed"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 18275,
+      "lastModified": "2025-07-18T21:54:28.804Z"
+    },
+    {
+      "path": "components/scratch-editor/BlockPalette.vue",
+      "name": "BlockPalette",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "onMounted"
+          ],
+          "from": "vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "activeCategory"
+      ],
+      "functions": [],
+      "emits": [
+        "block-selected",
+        "block-drag-start"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 6552,
+      "lastModified": "2025-07-18T17:08:12.416Z"
+    },
+    {
+      "path": "components/scratch-editor/ExpressionBuilder.vue",
+      "name": "ExpressionBuilder",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "nextTick"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "ALL_OPERATOR_GROUPS",
+            "getOperatorInfo",
+            "getOperatorGroup",
+            "isSimpleExpression",
+            "isComplexExpression",
+            "validateTypeCompatibility",
+            "getResultType",
+            "inferVariableType",
+            "VARIABLE_TYPE_LABELS",
+            "VARIABLE_TYPE_ICONS",
+            "VARIABLE_TYPE_COLORS"
+          ],
+          "from": "src/types/scratch/VariableTypes"
+        },
+        {
+          "items": [],
+          "from": "./utils/ExpressionValidator"
+        },
+        {
+          "items": [],
+          "from": "./utils/ExpressionEvaluator"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "splitterModel",
+        "showAdvanced",
+        "constantInputs",
+        "validator",
+        "evaluator",
+        "availableVariables",
+        "operatorGroups",
+        "isBuilding",
+        "canCompleteExpression"
+      ],
+      "functions": [
+        "addOperand",
+        "addOperator",
+        "addConstant",
+        "completeSimpleExpression",
+        "clearExpression",
+        "undoLastAction",
+        "validateExpression",
+        "updatePreview",
+        "getVariableDataType",
+        "validateOperatorForType",
+        "canAddOperator",
+        "isVariableAvailable",
+        "calculateExpressionComplexity",
+        "generateExpressionId",
+        "recordAction",
+        "formatExpression",
+        "formatOperand",
+        "formatPreviewValue",
+        "getResultTypeColor",
+        "getResultTypeLabel",
+        "getVariableTypeColor",
+        "getVariableTypeIcon",
+        "getVariableTypeLabel",
+        "formatVariableValue",
+        "getOperatorGroupIcon",
+        "getOperatorGroupColor"
+      ],
+      "emits": [
+        "update:modelValue",
+        "expression-changed",
+        "update:modelValue",
+        "expression-changed",
+        "validation-changed",
+        "validation-changed",
+        "validation-changed"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 26703,
+      "lastModified": "2025-07-17T11:25:19.087Z"
+    },
+    {
+      "path": "components/scratch-editor/PropertiesPanel.vue",
+      "name": "PropertiesPanel",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch"
+          ],
+          "from": "vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "localPosition",
+        "sensorDevices",
+        "deviceOptions",
+        "actionOptions",
+        "logicOperators",
+        "availableBlocks",
+        "needsValue",
+        "needsDuration",
+        "needsComparisonValue"
+      ],
+      "functions": [
+        "updatePosition",
+        "deleteBlock"
+      ],
+      "emits": [
+        "property-changed",
+        "property-changed",
+        "block-deleted"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 14318,
+      "lastModified": "2025-07-18T04:42:53.890Z"
+    },
+    {
+      "path": "components/scratch-editor/ScratchEditor.vue",
+      "name": "ScratchEditor",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "onMounted",
+            "onUnmounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "./WorkspaceArea.vue"
+        },
+        {
+          "items": [],
+          "from": "./TaskJsonPreview.vue"
+        },
+        {
+          "items": [],
+          "from": "./helpers/HelpOverlay.vue"
+        },
+        {
+          "items": [],
+          "from": "./TutorialMode.vue"
+        },
+        {
+          "items": [],
+          "from": "./VariableManager.vue"
+        },
+        {
+          "items": [],
+          "from": "./BlockPalette.vue"
+        },
+        {
+          "items": [],
+          "from": "./PropertiesPanel.vue"
+        },
+        {
+          "items": [
+            "TaskConverter"
+          ],
+          "from": "./utils/TaskConverter"
+        },
+        {
+          "items": [
+            "TaskCompiler"
+          ],
+          "from": "./utils/TaskCompiler"
+        },
+        {
+          "items": [
+            "BlockValidator"
+          ],
+          "from": "./utils/BlockValidator"
+        },
+        {
+          "items": [
+            "createBlockInstance"
+          ],
+          "from": "../../types/scratch/BlockDefinition"
+        },
+        {
+          "items": [
+            "useWorkspace"
+          ],
+          "from": "../../composables/useWorkspace"
+        }
+      ],
+      "composables": [
+        "useWorkspace"
+      ],
+      "reactiveVars": [
+        "showVariableManager",
+        "canSave",
+        "blockCategories",
+        "shouldStartTutorial",
+        "compiledTask"
+      ],
+      "functions": [
+        "const",
+        "onWorkspaceChanged",
+        "validateWorkspace",
+        "saveTask",
+        "startTutorial",
+        "onTutorialCompleted",
+        "clearWorkspace"
+      ],
+      "emits": [
+        "validation-error",
+        "task-saved",
+        "update:task",
+        "task-changed",
+        "task-changed",
+        "workspace-ready"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 19736,
+      "lastModified": "2025-07-19T05:18:13.651Z"
+    },
+    {
+      "path": "components/scratch-editor/TaskJsonPreview.vue",
+      "name": "TaskJsonPreview",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "onMounted",
+            "onUnmounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "TaskCompiler"
+          ],
+          "from": "./utils/TaskCompiler"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "isVisible",
+        "isGenerating",
+        "showCopySuccess",
+        "canCompile",
+        "displayedJson",
+        "jsonLines",
+        "blockCount",
+        "estimatedDuration",
+        "requiredDevices"
+      ],
+      "functions": [
+        "showPreview",
+        "hidePreview",
+        "generateJson",
+        "regenerateJson",
+        "copyToClipboard",
+        "downloadJson",
+        "sendToBackend",
+        "saveAsTask",
+        "shareJson",
+        "onBeforeShow",
+        "onHide"
+      ],
+      "emits": [
+        "json-generated",
+        "compilation-error",
+        "json-sent",
+        "task-saved"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 26480,
+      "lastModified": "2025-07-17T20:52:18.982Z"
+    },
+    {
+      "path": "components/scratch-editor/TutorialMode.vue",
+      "name": "TutorialMode",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "onMounted",
+            "onUnmounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "isActive",
+        "isVisible",
+        "currentStepIndex",
+        "showCompletion",
+        "currentStep",
+        "totalSteps",
+        "progressValue",
+        "isLastStep",
+        "canProceed",
+        "completedSteps",
+        "tutorialDuration",
+        "highlightStyle"
+      ],
+      "functions": [
+        "startTutorial",
+        "exitTutorial",
+        "nextStep",
+        "previousStep",
+        "skipCurrentStep",
+        "restartCurrentStep",
+        "completeTutorial",
+        "restartTutorial",
+        "showHelp",
+        "onDemoCompleted",
+        "onTutorialShow",
+        "onTutorialHide"
+      ],
+      "emits": [
+        "tutorial-started",
+        "tutorial-skipped",
+        "step-completed",
+        "step-skipped",
+        "tutorial-completed"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 33971,
+      "lastModified": "2025-07-17T12:00:53.968Z"
+    },
+    {
+      "path": "components/scratch-editor/VariableManager.vue",
+      "name": "VariableManager",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "VARIABLE_TYPE_LABELS",
+            "VARIABLE_TYPE_ICONS",
+            "VARIABLE_TYPE_COLORS",
+            "inferVariableType"
+          ],
+          "from": "src/types/scratch/VariableTypes"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "searchFilter",
+        "showAddVariableDialog",
+        "showDeleteConfirm",
+        "variableForm",
+        "filteredVariables",
+        "variableTypeOptions",
+        "isFormValid"
+      ],
+      "functions": [
+        "getVariableTypeLabel",
+        "getVariableTypeIcon",
+        "getVariableTypeColor",
+        "formatVariableValue",
+        "isValidVariableName",
+        "isVariableNameTaken",
+        "validateVariableValue",
+        "getValueLabel",
+        "getInputType",
+        "getValueHint",
+        "onTypeChange",
+        "editVariable",
+        "confirmDeleteVariable",
+        "cancelVariableDialog",
+        "saveVariable",
+        "deleteVariable"
+      ],
+      "emits": [
+        "variable-updated",
+        "variable-added",
+        "update:variables",
+        "variable-deleted",
+        "update:variables"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 17352,
+      "lastModified": "2025-07-17T11:25:03.171Z"
+    },
+    {
+      "path": "components/scratch-editor/WorkspaceArea.vue",
+      "name": "WorkspaceArea",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "reactive",
+            "watch",
+            "onMounted",
+            "onUnmounted",
+            "nextTick"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "./BaseBlock.vue"
+        },
+        {
+          "items": [
+            "useWorkspace"
+          ],
+          "from": "../../composables/useWorkspace"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "isDragOver",
+        "isSelecting",
+        "isPanning",
+        "isDragging",
+        "currentMousePos",
+        "selectionStart",
+        "selectionEnd",
+        "lastPanPosition",
+        "workspaceClasses",
+        "workspaceStyles",
+        "gridStyles",
+        "containerStyles",
+        "svgStylesInside",
+        "selectionRectangleStyles",
+        "dropZoneStyles"
+      ],
+      "functions": [
+        "getBlockStyles",
+        "getConnectionPath",
+        "getConnectionClasses",
+        "getConnectionStyles",
+        "getConnectionMidpoint",
+        "getProgressConnectionPath",
+        "onDrop",
+        "onDragOver",
+        "onDragLeave",
+        "onWorkspaceMouseDown",
+        "onWorkspaceMouseMove",
+        "onWorkspaceMouseUp",
+        "onWheel",
+        "is",
+        "onBlockMouseDown",
+        "onMouseMove",
+        "onMouseUp",
+        "onBlockDragStart",
+        "onConnectorDragStart",
+        "onConnectorHover",
+        "onConnectionClick",
+        "onConnectionContextMenu",
+        "onConnectionControlMouseDown",
+        "toggleGrid",
+        "toggleSnap",
+        "getDebugPointStyle",
+        "getDebugSVGPoint",
+        "getConnectionDebugFrom",
+        "getConnectionDebugTo",
+        "getVisualConnectorStyle",
+        "getVisualConnectorCoords",
+        "getRealConnectorPosition",
+        "getDebugConnectorDetailed"
+      ],
+      "emits": [
+        "block-added",
+        "update:modelValue",
+        "block-selected",
+        "connection-created",
+        "update:modelValue"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 48493,
+      "lastModified": "2025-07-18T22:05:06.414Z"
+    },
+    {
+      "path": "components/scratch-editor/blocks/ControlBlock.vue",
+      "name": "ControlBlock",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "../BaseBlock.vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "controlTypeOptions",
+        "currentControlConfig"
+      ],
+      "functions": [
+        "getFormattedTime",
+        "getValueLabel",
+        "getValuePlaceholder",
+        "getOperationSymbol",
+        "addTaskParameter",
+        "removeTaskParameter",
+        "updateTaskParameter",
+        "onControlTypeChange",
+        "onParameterChange",
+        "onParametersUpdate",
+        "initialize"
+      ],
+      "emits": [
+        "update:modelValue",
+        "update:modelValue",
+        "update:modelValue",
+        "update:modelValue",
+        "update:modelValue",
+        "update:modelValue"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 25382,
+      "lastModified": "2025-07-17T11:30:21.886Z"
+    },
+    {
+      "path": "components/scratch-editor/blocks/DeviceBlock.vue",
+      "name": "DeviceBlock",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "../BaseBlock.vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [
+        "getActionTypeInfo",
+        "getDurationLabel",
+        "getDurationSuffix",
+        "getValueLabel",
+        "getValueSuffix",
+        "getValueMax",
+        "onActionTypeChange",
+        "onParameterChange",
+        "onParametersUpdate",
+        "initialize"
+      ],
+      "emits": [
+        "update:modelValue",
+        "update:modelValue",
+        "update:modelValue"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 14379,
+      "lastModified": "2025-07-18T16:46:05.552Z"
+    },
+    {
+      "path": "components/scratch-editor/blocks/LogicBlock.vue",
+      "name": "LogicBlock",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "../BaseBlock.vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "logicTypeOptions",
+        "currentLogicConfig"
+      ],
+      "functions": [
+        "getContainerSlots",
+        "getOperatorDescription",
+        "onLogicTypeChange",
+        "onParameterChange",
+        "onParametersUpdate",
+        "onContainerDrop",
+        "initialize"
+      ],
+      "emits": [
+        "update:modelValue",
+        "update:modelValue",
+        "update:modelValue",
+        "container-drop"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 22908,
+      "lastModified": "2025-07-17T11:30:10.052Z"
+    },
+    {
+      "path": "components/scratch-editor/blocks/SensorBlock.vue",
+      "name": "SensorBlock",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "../BaseBlock.vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "sensorTypeOptions",
+        "availableSensors",
+        "currentSensorConfig",
+        "selectedSensorInfo"
+      ],
+      "functions": [
+        "onSensorTypeChange",
+        "onParameterChange",
+        "onParametersUpdate",
+        "initialize"
+      ],
+      "emits": [
+        "update:modelValue",
+        "update:modelValue",
+        "update:modelValue"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 16879,
+      "lastModified": "2025-07-17T11:29:01.949Z"
+    },
+    {
+      "path": "components/scratch-editor/helpers/HelpOverlay.vue",
+      "name": "HelpOverlay",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onMounted",
+            "onUnmounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "isVisible",
+        "showWelcome",
+        "currentTab",
+        "dontShowAgain",
+        "showPulse",
+        "isFirstVisit"
+      ],
+      "functions": [
+        "loadSettings",
+        "saveSettings",
+        "showHelp",
+        "hideHelp",
+        "onBeforeShow",
+        "onHide",
+        "showWelcomeDialog",
+        "startTutorial",
+        "showHelpFromWelcome",
+        "skipWelcome",
+        "markWelcomeAsShown",
+        "watchTabChange",
+        "initializePulse"
+      ],
+      "emits": [
+        "close",
+        "close",
+        "start-tutorial",
+        "welcome-completed",
+        "section-change"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 28696,
+      "lastModified": "2025-07-17T11:54:43.524Z"
+    },
+    {
+      "path": "components/settings/SettingsTabAlerts.vue",
+      "name": "SettingsTabAlerts",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 880,
+      "lastModified": "2025-07-16T16:38:13.759Z"
+    },
+    {
+      "path": "components/settings/SettingsTabDevices.vue",
+      "name": "SettingsTabDevices",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 881,
+      "lastModified": "2025-07-16T16:38:05.882Z"
+    },
+    {
+      "path": "components/settings/SettingsTabGeneral.vue",
+      "name": "SettingsTabGeneral",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "reactive",
+            "computed",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useSettingsStore"
+          ],
+          "from": "../../stores/settings"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        }
+      ],
+      "composables": [
+        "useSettingsStore"
+      ],
+      "reactiveVars": [
+        "saving",
+        "formData",
+        "originalData",
+        "hasChanges"
+      ],
+      "functions": [
+        "loadSettings",
+        "onSubmit"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 6523,
+      "lastModified": "2025-07-16T18:02:54.658Z"
+    },
+    {
+      "path": "components/settings/SettingsTabPrograms.vue",
+      "name": "SettingsTabPrograms",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 915,
+      "lastModified": "2025-07-16T16:37:57.858Z"
+    },
+    {
+      "path": "components/task/BlockRenderer.example.vue",
+      "name": "BlockRenderer.example",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [],
+          "from": "./BlockRenderer.vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "sensorValues",
+        "actionValues",
+        "logicValues",
+        "controlValues",
+        "customValues",
+        "allValues"
+      ],
+      "functions": [
+        "onSensorUpdate",
+        "onActionUpdate",
+        "onLogicUpdate",
+        "onControlUpdate",
+        "onCustomUpdate"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 7875,
+      "lastModified": "2025-07-16T18:41:01.457Z"
+    },
+    {
+      "path": "components/task/BlockRenderer.vue",
+      "name": "BlockRenderer",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "computed",
+            "ref",
+            "watch"
+          ],
+          "from": "vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "iconComponent",
+        "iconClasses"
+      ],
+      "functions": [
+        "getBlockClasses",
+        "renderLabel",
+        "getParamValue",
+        "formatParamValue",
+        "onParamChange",
+        "onNestedUpdate",
+        "initializeDefaults"
+      ],
+      "emits": [
+        "update",
+        "update"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 10337,
+      "lastModified": "2025-07-16T18:39:14.859Z"
+    },
+    {
+      "path": "layouts/MainLayout.vue",
+      "name": "MainLayout",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRoute"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [
+            "useMainStore"
+          ],
+          "from": "../stores/main"
+        },
+        {
+          "items": [
+            "NavigationItem"
+          ],
+          "from": "../types"
+        }
+      ],
+      "composables": [
+        "useRoute",
+        "useMainStore"
+      ],
+      "reactiveVars": [
+        "notificationCount",
+        "lastUpdateTime",
+        "leftDrawerOpen",
+        "isLoading",
+        "loadingMessage",
+        "systemStatus"
+      ],
+      "functions": [
+        "toggleLeftDrawer",
+        "showNotifications"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 5000,
+      "lastModified": "2025-07-20T12:47:24.712Z"
+    },
+    {
+      "path": "modules/flowEditorV2/FlowEditor.vue",
+      "name": "FlowEditor",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "watch",
+            "onMounted",
+            "onUnmounted",
+            "nextTick"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "useFlowStore"
+          ],
+          "from": "./store/useFlowStore"
+        },
+        {
+          "items": [
+            "useSettingsStore"
+          ],
+          "from": "./store/useSettingsStore"
+        },
+        {
+          "items": [
+            "BlockDefinition",
+            "BlockType"
+          ],
+          "from": "./types/FlowBlock"
+        },
+        {
+          "items": [
+            "validateBlock"
+          ],
+          "from": "./utils/validation"
+        },
+        {
+          "items": [
+            "formatParamValue",
+            "getBlockTypeDisplayName",
+            "generateId"
+          ],
+          "from": "./utils/format"
+        },
+        {
+          "items": [
+            "calculateAutoPosition",
+            "LAYOUT_CONSTANTS"
+          ],
+          "from": "./utils/position"
+        },
+        {
+          "items": [
+            "validateConnection",
+            "getOutputLabels",
+            "calculateGhostLine",
+            "findClosestInputConnector",
+            "getConnectorPoint",
+            "calculateStraightConnection"
+          ],
+          "from": "./utils/connection"
+        },
+        {
+          "items": [],
+          "from": "./components/BlockConnector.vue"
+        },
+        {
+          "items": [],
+          "from": "./components/ConnectionLine.vue"
+        },
+        {
+          "items": [],
+          "from": "./components/ConnectionLayer.vue"
+        },
+        {
+          "items": [],
+          "from": "./components/BlockPalette.vue"
+        },
+        {
+          "items": [],
+          "from": "./components/ParamEditorPanel.vue"
+        },
+        {
+          "items": [],
+          "from": "../../components/flow-editor/FlowRunnerUI.vue"
+        },
+        {
+          "items": [
+            "loadDemoFlow as loadDemoFlowData"
+          ],
+          "from": "../../components/flow-editor/demo-flow"
+        },
+        {
+          "items": [],
+          "from": "../../../tools/debug/BlockInspector.vue"
+        },
+        {
+          "items": [
+            "useFlowEditorDebug"
+          ],
+          "from": "../../composables/useDebugIntegration"
+        }
+      ],
+      "composables": [
+        "useFlowStore",
+        "useSettingsStore",
+        "useFlowEditorDebug"
+      ],
+      "reactiveVars": [
+        "showJsonDialog",
+        "showValidationDialog",
+        "hasUnsavedChanges",
+        "connectionLayerRef",
+        "currentMousePos",
+        "showRunnerPanel",
+        "flowRunnerUIRef",
+        "blockCategories",
+        "canvasStyle",
+        "jsonOutput",
+        "isDevelopment",
+        "simulationButtonColor",
+        "simulationButtonIcon",
+        "simulationButtonLabel",
+        "simulationTooltip",
+        "visibleConnections",
+        "ghostLineValid",
+        "currentFlowDefinition",
+        "validationResults"
+      ],
+      "functions": [
+        "getBlockDisplayName",
+        "getBlockIcon",
+        "getDisplayParams",
+        "getParamDisplayName",
+        "getBlockValidation",
+        "getBlockStyle",
+        "isStartBlock",
+        "getBlockInputPorts",
+        "getBlockDefinition",
+        "hasIncomingConnectionToPort",
+        "isValidInputConnectionTarget",
+        "getBlockOutputs",
+        "getOutputPosition",
+        "hasOutgoingConnection",
+        "startDrag",
+        "onDragOver",
+        "onDrop",
+        "addBlockToCanvas",
+        "handleBlockMouseDown",
+        "handleDocumentMouseMove",
+        "handleDocumentMouseUp",
+        "cleanupDragListeners",
+        "onCanvasClick",
+        "handleOutputConnectorClick",
+        "handleInputConnectorClick",
+        "function",
+        "handleConnectorHover",
+        "handleConnectorLeave",
+        "onCanvasMouseMove",
+        "onRightClickCancel",
+        "updateGhostLine",
+        "cleanupConnectionListeners",
+        "selectConnection",
+        "deleteConnection",
+        "handleConnectionDelete",
+        "toggleSimulation",
+        "startSimulationWithValidation",
+        "closeValidationDialog",
+        "newFlow",
+        "loadFlow",
+        "loadDemoFlow",
+        "saveFlow",
+        "copyJsonToClipboard",
+        "isBlockCurrentlyExecuting",
+        "isBlockCompleted",
+        "isBlockError",
+        "getBlockSimulationStatus",
+        "getBlockSimulationData",
+        "getSimulationStatusClass",
+        "getSimulationStatusIcon",
+        "formatSimulationData"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 62427,
+      "lastModified": "2025-07-21T03:56:09.212Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/BlockConnector.vue",
+      "name": "BlockConnector",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "computed"
+          ],
+          "from": "vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "connectorClasses",
+        "dotClasses",
+        "labelClasses",
+        "connectorStyle",
+        "tooltipText"
+      ],
+      "functions": [
+        "handleConnectorClick",
+        "handleMouseEnter",
+        "handleMouseLeave"
+      ],
+      "emits": [
+        "click",
+        "mouseenter",
+        "mouseleave"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 20804,
+      "lastModified": "2025-07-20T20:49:04.762Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/BlockPalette.vue",
+      "name": "BlockPalette",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "defineEmits"
+          ],
+          "from": "vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "expandedCategories",
+        "totalBlocks"
+      ],
+      "functions": [
+        "toggleCategory",
+        "onDragStart",
+        "onBlockClick"
+      ],
+      "emits": [
+        "dragStart",
+        "blockClick"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 8498,
+      "lastModified": "2025-07-20T15:49:48.106Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/ConnectionLayer.vue",
+      "name": "ConnectionLayer",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "computed",
+            "ref",
+            "watch"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [],
+          "from": "./ConnectionLine.vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "showConnectionFeedback",
+        "feedbackMessage",
+        "feedbackClasses",
+        "feedbackIcon"
+      ],
+      "functions": [
+        "showHydroponicConnectionFeedback",
+        "onConnectionClick",
+        "onConnectionDelete",
+        "for"
+      ],
+      "emits": [
+        "connectionClick",
+        "connectionDelete"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 8035,
+      "lastModified": "2025-07-20T17:15:16.932Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/ConnectionLine.vue",
+      "name": "ConnectionLine",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "computed",
+            "ref"
+          ],
+          "from": "vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "showDeleteButton",
+        "deleteButtonHovered",
+        "lineClasses",
+        "arrowClasses"
+      ],
+      "functions": [
+        "getSegmentStyle",
+        "getHighlightStyle",
+        "handleClick",
+        "handleRightClick",
+        "handleMouseEnter",
+        "handleMouseLeave",
+        "handleDelete",
+        "getDeleteButtonStyle"
+      ],
+      "emits": [
+        "click",
+        "delete"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 11286,
+      "lastModified": "2025-07-20T20:09:47.744Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/ParamEditorPanel.vue",
+      "name": "ParamEditorPanel",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "defineComponent",
+            "computed",
+            "ref",
+            "watch",
+            "onMounted",
+            "onUnmounted",
+            "nextTick"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "useFlowStore"
+          ],
+          "from": "../store/useFlowStore"
+        },
+        {
+          "items": [
+            "FlowBlock"
+          ],
+          "from": "../types/FlowBlock"
+        },
+        {
+          "items": [
+            "getBlockParamSchema",
+            "ParamSchema",
+            "getBlockIcon",
+            "getBlockDisplayName"
+          ],
+          "from": "../utils/blockSchemas"
+        },
+        {
+          "items": [
+            "validateParam",
+            "validateParamsWithConditions",
+            "hasValidationErrors",
+            "hasValidationWarnings",
+            "createValidationSummary",
+            "ValidationResult"
+          ],
+          "from": "../utils/paramValidation"
+        },
+        {
+          "items": [
+            "resolveGlobalValue",
+            "hasGlobalFallback",
+            "getGlobalValueInfo",
+            "globalValuesStore"
+          ],
+          "from": "../utils/globalValues"
+        },
+        {
+          "items": [],
+          "from": "./fields/ParamField.vue"
+        },
+        {
+          "items": [],
+          "from": "./validation/ValidationMessage.vue"
+        }
+      ],
+      "composables": [
+        "useFlowStore"
+      ],
+      "reactiveVars": [
+        "isLoading",
+        "isDevelopment",
+        "selectedBlockId",
+        "blocksCount",
+        "enhancedSelectedBlock",
+        "blockMetaInfo",
+        "blockParamSchema",
+        "validationSummary",
+        "validationErrors",
+        "validationWarnings",
+        "hasValidationErrors",
+        "hasValidationWarnings",
+        "hasChanges",
+        "additionalParams",
+        "unifiedParamSchemas",
+        "fallbackParamSchemas",
+        "effectiveParamSchemas"
+      ],
+      "functions": [
+        "executing",
+        "detectParamType",
+        "closePanel",
+        "showValidationWarning",
+        "updateParam",
+        "updateParamValidation",
+        "getParamValidationErrors",
+        "getGlobalValue",
+        "hasGlobalValue",
+        "getGlobalValueInfo",
+        "saveChanges",
+        "revertChanges",
+        "initializeValidation",
+        "validateAllParams",
+        "attemptAutoFix",
+        "showValidationHelp",
+        "copyToClipboard",
+        "getStatusColor",
+        "getStatusLabel",
+        "formatParamValue",
+        "safeStringify"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 43582,
+      "lastModified": "2025-07-20T07:34:26.689Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/fields/BooleanField.vue",
+      "name": "BooleanField",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "defineComponent",
+            "computed",
+            "PropType"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "ParamSchema"
+          ],
+          "from": "../../utils/blockSchemas"
+        },
+        {
+          "items": [
+            "validateParam",
+            "ValidationResult"
+          ],
+          "from": "../../utils/paramValidation"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "booleanValue",
+        "hasErrors",
+        "toggleLabel",
+        "toggleColor"
+      ],
+      "functions": [
+        "handleValueChange"
+      ],
+      "emits": [
+        "update:value",
+        "validation-change"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 5192,
+      "lastModified": "2025-07-19T11:31:02.683Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/fields/EnumField.vue",
+      "name": "EnumField",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "defineComponent",
+            "computed",
+            "PropType"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "ParamSchema",
+            "EnumOption"
+          ],
+          "from": "../../utils/blockSchemas"
+        },
+        {
+          "items": [
+            "validateParam",
+            "ValidationResult"
+          ],
+          "from": "../../utils/paramValidation"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "selectOptions",
+        "hasErrors",
+        "errorMessage",
+        "validationRules"
+      ],
+      "functions": [
+        "handleValueChange",
+        "handleBlur"
+      ],
+      "emits": [
+        "update:value",
+        "validation-change",
+        "validation-change"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 4672,
+      "lastModified": "2025-07-19T11:31:25.708Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/fields/NumberField.vue",
+      "name": "NumberField",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "defineComponent",
+            "computed",
+            "PropType"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "ParamSchema"
+          ],
+          "from": "../../utils/blockSchemas"
+        },
+        {
+          "items": [
+            "validateParam",
+            "ValidationResult"
+          ],
+          "from": "../../utils/paramValidation"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "displayValue",
+        "hasErrors",
+        "errorMessage",
+        "fieldStatus",
+        "hintText",
+        "validationRules"
+      ],
+      "functions": [
+        "handleValueChange",
+        "handleBlur",
+        "performValidation"
+      ],
+      "emits": [
+        "update:value",
+        "validation-change"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 6444,
+      "lastModified": "2025-07-19T19:01:57.663Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/fields/ParamField.vue",
+      "name": "ParamField",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "defineComponent",
+            "computed",
+            "PropType"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "ParamSchema"
+          ],
+          "from": "../../utils/blockSchemas"
+        },
+        {
+          "items": [],
+          "from": "./StringField.vue"
+        },
+        {
+          "items": [],
+          "from": "./NumberField.vue"
+        },
+        {
+          "items": [],
+          "from": "./BooleanField.vue"
+        },
+        {
+          "items": [],
+          "from": "./EnumField.vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "fieldComponent",
+        "hasActiveGlobalFallback",
+        "validationStatus",
+        "fieldWrapperClasses",
+        "isVisible"
+      ],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 5834,
+      "lastModified": "2025-07-19T19:05:08.688Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/fields/StringField.vue",
+      "name": "StringField",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "defineComponent",
+            "computed",
+            "PropType"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "ParamSchema"
+          ],
+          "from": "../../utils/blockSchemas"
+        },
+        {
+          "items": [
+            "validateParam",
+            "ValidationResult"
+          ],
+          "from": "../../utils/paramValidation"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "hasErrors",
+        "errorMessage",
+        "fieldStatus",
+        "validationRules"
+      ],
+      "functions": [
+        "handleValueChange",
+        "handleBlur",
+        "performValidation"
+      ],
+      "emits": [
+        "update:value",
+        "validation-change"
+      ],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 4537,
+      "lastModified": "2025-07-19T19:01:33.629Z"
+    },
+    {
+      "path": "modules/flowEditorV2/components/validation/ValidationMessage.vue",
+      "name": "ValidationMessage",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "defineComponent",
+            "computed",
+            "PropType"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "ValidationResult"
+          ],
+          "from": "../../utils/paramValidation"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [
+        "maxSeverity",
+        "severityIcon",
+        "severityColor",
+        "messageTitle"
+      ],
+      "functions": [
+        "getErrorSeverity",
+        "getErrorIcon",
+        "getErrorMessage"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 7769,
+      "lastModified": "2025-07-19T19:01:12.291Z"
+    },
+    {
+      "path": "pages/ActiveProgramsPage.vue",
+      "name": "ActiveProgramsPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": false,
+      "size": 218,
+      "lastModified": "2025-07-16T05:20:34.050Z"
+    },
+    {
+      "path": "pages/AlertsPage.vue",
+      "name": "AlertsPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.116Z"
+    },
+    {
+      "path": "pages/CreateDevicePage.vue",
+      "name": "CreateDevicePage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.111Z"
+    },
+    {
+      "path": "pages/CreateProgramPage.vue",
+      "name": "CreateProgramPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": false,
+      "size": 184,
+      "lastModified": "2025-07-16T05:20:54.243Z"
+    },
+    {
+      "path": "pages/DashboardPage.vue",
+      "name": "DashboardPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": false,
+      "size": 824,
+      "lastModified": "2025-07-16T06:07:33.637Z"
+    },
+    {
+      "path": "pages/DeviceDetailPage.vue",
+      "name": "DeviceDetailPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.112Z"
+    },
+    {
+      "path": "pages/DevicesPage.vue",
+      "name": "DevicesPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.102Z"
+    },
+    {
+      "path": "pages/EditProgramPage.vue",
+      "name": "EditProgramPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.101Z"
+    },
+    {
+      "path": "pages/ErrorNotFound.vue",
+      "name": "ErrorNotFound",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "defineComponent"
+          ],
+          "from": "vue"
+        }
+      ],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": false,
+      "size": 576,
+      "lastModified": "2025-07-16T05:19:43.562Z"
+    },
+    {
+      "path": "pages/ErrorPage.vue",
+      "name": "ErrorPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.118Z"
+    },
+    {
+      "path": "pages/HistoryPage.vue",
+      "name": "HistoryPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.115Z"
+    },
+    {
+      "path": "pages/LiveMonitoringPage.vue",
+      "name": "LiveMonitoringPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.114Z"
+    },
+    {
+      "path": "pages/ProgramCreate.vue",
+      "name": "ProgramCreate",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "reactive"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRouter"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        }
+      ],
+      "composables": [
+        "useRouter"
+      ],
+      "reactiveVars": [
+        "programForm",
+        "mockCycles",
+        "cycleValidation"
+      ],
+      "functions": [
+        "addCycle",
+        "deleteCycle",
+        "validateCycles",
+        "cancelCreation",
+        "createProgram"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 16110,
+      "lastModified": "2025-07-16T10:53:48.358Z"
+    },
+    {
+      "path": "pages/ProgramDetailPage.vue",
+      "name": "ProgramDetailPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.100Z"
+    },
+    {
+      "path": "pages/ProgramsPage.vue",
+      "name": "ProgramsPage",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "onMounted",
+            "watch"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRoute",
+            "useRouter"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [],
+          "from": "components/programs/tabs/ActiveProgramTab.vue"
+        },
+        {
+          "items": [],
+          "from": "components/programs/tabs/ProgramsTab.vue"
+        },
+        {
+          "items": [],
+          "from": "components/programs/tabs/ProgramSettingsTab.vue"
+        }
+      ],
+      "composables": [
+        "useRoute",
+        "useRouter"
+      ],
+      "reactiveVars": [
+        "activeTab"
+      ],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 3153,
+      "lastModified": "2025-07-16T13:11:11.112Z"
+    },
+    {
+      "path": "pages/PumpsPage.vue",
+      "name": "PumpsPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.106Z"
+    },
+    {
+      "path": "pages/SensorsPage.vue",
+      "name": "SensorsPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": false,
+      "hasStyle": false,
+      "size": 0,
+      "lastModified": "2025-07-16T05:20:24.104Z"
+    },
+    {
+      "path": "pages/SettingsPage.vue",
+      "name": "SettingsPage",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "onMounted",
+            "watch"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRoute",
+            "useRouter"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [],
+          "from": "components/settings/SettingsTabGeneral.vue"
+        },
+        {
+          "items": [],
+          "from": "components/settings/SettingsTabPrograms.vue"
+        },
+        {
+          "items": [],
+          "from": "components/settings/SettingsTabDevices.vue"
+        },
+        {
+          "items": [],
+          "from": "components/settings/SettingsTabAlerts.vue"
+        }
+      ],
+      "composables": [
+        "useRoute",
+        "useRouter"
+      ],
+      "reactiveVars": [
+        "activeTab"
+      ],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 3275,
+      "lastModified": "2025-07-16T16:36:12.252Z"
+    },
+    {
+      "path": "pages/TaskForm - Copy.vue",
+      "name": "TaskForm - Copy",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRouter",
+            "useRoute"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "components/VisualTaskBuilder.vue"
+        }
+      ],
+      "composables": [
+        "useRouter",
+        "useRoute"
+      ],
+      "reactiveVars": [
+        "isEdit",
+        "saving",
+        "isFormValid"
+      ],
+      "functions": [
+        "goBack",
+        "saveTask"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 9824,
+      "lastModified": "2025-07-16T16:08:51.224Z"
+    },
+    {
+      "path": "pages/TaskForm.vue",
+      "name": "TaskForm",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onMounted",
+            "watch"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRouter",
+            "useRoute"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "../components/scratch-editor/ScratchEditor.vue"
+        },
+        {
+          "items": [
+            "TaskConverter"
+          ],
+          "from": "../components/scratch-editor/utils/TaskConverter"
+        }
+      ],
+      "composables": [
+        "useRouter",
+        "useRoute"
+      ],
+      "reactiveVars": [
+        "isEdit",
+        "readonly",
+        "saving",
+        "showCompatibilityWarning",
+        "isFormValid"
+      ],
+      "functions": [
+        "loadEditorPreference",
+        "syncVisualToClassic",
+        "syncClassicToVisual",
+        "onWorkspaceReady",
+        "switchToClassic",
+        "goBack",
+        "saveTask"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 16633,
+      "lastModified": "2025-07-17T20:51:03.233Z"
+    },
+    {
+      "path": "pages/TaskForm_old.vue",
+      "name": "TaskForm_old",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRouter",
+            "useRoute"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "components/VisualTaskBuilder.vue"
+        }
+      ],
+      "composables": [
+        "useRouter",
+        "useRoute"
+      ],
+      "reactiveVars": [
+        "isEdit",
+        "saving",
+        "isFormValid"
+      ],
+      "functions": [
+        "goBack",
+        "saveTask"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 9824,
+      "lastModified": "2025-07-16T16:08:51.224Z"
+    },
+    {
+      "path": "pages/TaskForm_withScratchTest - Copy.vue",
+      "name": "TaskForm_withScratchTest - Copy",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [],
+          "from": "components/scratch-editor/ScratchEditor.vue"
+        },
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useRouter",
+            "useRoute"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [],
+          "from": "components/VisualTaskBuilder.vue"
+        }
+      ],
+      "composables": [
+        "useRouter",
+        "useRoute"
+      ],
+      "reactiveVars": [
+        "showScratch",
+        "scratchTask",
+        "isEdit",
+        "saving",
+        "isFormValid"
+      ],
+      "functions": [
+        "goBack",
+        "saveTask"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 13666,
+      "lastModified": "2025-07-17T08:02:44.158Z"
+    },
+    {
+      "path": "pages/TasksPage.vue",
+      "name": "TasksPage",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onMounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "useRouter"
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [
+            "Task"
+          ],
+          "from": "../types"
+        },
+        {
+          "items": [
+            "useTaskStore"
+          ],
+          "from": "src/stores/task"
+        }
+      ],
+      "composables": [
+        "useRouter",
+        "useTaskStore"
+      ],
+      "reactiveVars": [
+        "loading",
+        "showReplaceDialog",
+        "showDuplicateDialog",
+        "showTaskInfoDialog",
+        "duplicateTaskName",
+        "searchQuery",
+        "taskTypes",
+        "pagination",
+        "filteredTasks"
+      ],
+      "functions": [
+        "resetFilters",
+        "confirmActivation",
+        "cancelActivation",
+        "confirmDuplicate",
+        "cancelDuplicate"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 25976,
+      "lastModified": "2025-07-19T20:14:51.833Z"
+    },
+    {
+      "path": "pages/settings/DeviceSettingsPage.vue",
+      "name": "DeviceSettingsPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": false,
+      "size": 195,
+      "lastModified": "2025-07-16T05:21:04.347Z"
+    },
+    {
+      "path": "pages/settings/GeneralSettingsPage.vue",
+      "name": "GeneralSettingsPage",
+      "type": "vue-component",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onMounted",
+            "watch"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "useSettingsStore"
+          ],
+          "from": "stores/settings"
+        },
+        {
+          "items": [
+            "useMainStore"
+          ],
+          "from": "stores/main"
+        }
+      ],
+      "composables": [
+        "useSettingsStore",
+        "useMainStore"
+      ],
+      "reactiveVars": [
+        "localSettings",
+        "isLoading"
+      ],
+      "functions": [
+        "saveSettings",
+        "resetToDefaults",
+        "loadSettings"
+      ],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 5852,
+      "lastModified": "2025-07-16T06:07:17.514Z"
+    },
+    {
+      "path": "pages/settings/NotificationSettingsPage.vue",
+      "name": "NotificationSettingsPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 526,
+      "lastModified": "2025-07-16T09:06:16.326Z"
+    },
+    {
+      "path": "pages/settings/ThresholdSettingsPage.vue",
+      "name": "ThresholdSettingsPage",
+      "type": "vue-component",
+      "imports": [],
+      "composables": [],
+      "reactiveVars": [],
+      "functions": [],
+      "emits": [],
+      "props": [],
+      "hasTemplate": true,
+      "hasStyle": true,
+      "size": 515,
+      "lastModified": "2025-07-16T09:05:33.399Z"
+    }
+  ],
+  "composables": [
+    {
+      "path": "composables/useDebugIntegration.ts",
+      "name": "useDebugIntegration",
+      "type": "composable",
+      "imports": [
+        {
+          "items": [
+            "onMounted",
+            "onUnmounted",
+            "getCurrentInstance"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [],
+          "from": "../utils/debugSystem"
+        }
+      ],
+      "exports": [
+        "useDebugIntegration",
+        "useDeviceDebug",
+        "useProgramDebug",
+        "useFlowEditorDebug"
+      ],
+      "size": 3627,
+      "lastModified": "2025-07-20T12:48:51.210Z"
+    },
+    {
+      "path": "composables/useWorkspace.ts",
+      "name": "useWorkspace",
+      "type": "composable",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "reactive",
+            "nextTick",
+            "onMounted",
+            "onUnmounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "useQuasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "createBlockInstance",
+            "createConnection",
+            "DEFAULT_GRID_SIZE",
+            "DEFAULT_ZOOM",
+            "MIN_ZOOM",
+            "MAX_ZOOM"
+          ],
+          "from": "src/types/scratch/BlockDefinition"
+        }
+      ],
+      "exports": [
+        "UseWorkspaceOptions",
+        "useWorkspace"
+      ],
+      "size": 18299,
+      "lastModified": "2025-07-18T09:59:10.576Z"
+    },
+    {
+      "path": "modules/flowEditorV2/composables/useGlobalValues.ts",
+      "name": "useGlobalValues",
+      "type": "composable",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "onUnmounted"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "globalValuesStore",
+            "resolveGlobalValue",
+            "hasGlobalFallback",
+            "getGlobalValueInfo",
+            "getSuggestedGlobalValues",
+            "type GlobalValue"
+          ],
+          "from": "../utils/globalValues"
+        }
+      ],
+      "exports": [
+        "useGlobalValues",
+        "useParameterGlobalValues"
+      ],
+      "size": 4468,
+      "lastModified": "2025-07-19T19:05:30.263Z"
+    }
+  ],
+  "stores": [
+    {
+      "path": "stores/device.ts",
+      "name": "device",
+      "type": "store",
+      "imports": [
+        {
+          "items": [
+            "defineStore"
+          ],
+          "from": "pinia"
+        },
+        {
+          "items": [
+            "ref",
+            "computed"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "Device"
+          ],
+          "from": "../types"
+        },
+        {
+          "items": [
+            "deviceApi"
+          ],
+          "from": "../services/api"
+        },
+        {
+          "items": [
+            "useMainStore"
+          ],
+          "from": "./main"
+        },
+        {
+          "items": [],
+          "from": "../utils/debugSystem"
+        }
+      ],
+      "exports": [
+        "useDeviceStore"
+      ],
+      "size": 5233,
+      "lastModified": "2025-07-20T12:49:15.915Z"
+    },
+    {
+      "path": "stores/index.ts",
+      "name": "index",
+      "type": "store",
+      "imports": [
+        {
+          "items": [
+            "store"
+          ],
+          "from": "quasar/wrappers"
+        },
+        {
+          "items": [
+            "createPinia"
+          ],
+          "from": "pinia"
+        }
+      ],
+      "exports": [],
+      "size": 436,
+      "lastModified": "2025-07-16T05:10:47.586Z"
+    },
+    {
+      "path": "stores/main.ts",
+      "name": "main",
+      "type": "store",
+      "imports": [
+        {
+          "items": [
+            "defineStore"
+          ],
+          "from": "pinia"
+        },
+        {
+          "items": [
+            "ref",
+            "computed"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "LoadingState",
+            "ErrorState"
+          ],
+          "from": "../types"
+        }
+      ],
+      "exports": [
+        "useMainStore"
+      ],
+      "size": 1766,
+      "lastModified": "2025-07-17T20:22:23.657Z"
+    },
+    {
+      "path": "stores/program.ts",
+      "name": "program",
+      "type": "store",
+      "imports": [
+        {
+          "items": [
+            "defineStore"
+          ],
+          "from": "pinia"
+        },
+        {
+          "items": [
+            "ref",
+            "computed"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "Program",
+            "ActiveProgram"
+          ],
+          "from": "../types"
+        },
+        {
+          "items": [
+            "programApi"
+          ],
+          "from": "../services/api"
+        },
+        {
+          "items": [
+            "useMainStore"
+          ],
+          "from": "./main"
+        }
+      ],
+      "exports": [
+        "useProgramStore"
+      ],
+      "size": 6021,
+      "lastModified": "2025-07-17T20:22:30.979Z"
+    },
+    {
+      "path": "stores/settings.ts",
+      "name": "settings",
+      "type": "store",
+      "imports": [
+        {
+          "items": [
+            "defineStore"
+          ],
+          "from": "pinia"
+        },
+        {
+          "items": [
+            "ref",
+            "computed"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "Settings"
+          ],
+          "from": "../types"
+        },
+        {
+          "items": [
+            "settingsApi"
+          ],
+          "from": "../services/api"
+        },
+        {
+          "items": [
+            "useMainStore"
+          ],
+          "from": "./main"
+        }
+      ],
+      "exports": [
+        "useSettingsStore"
+      ],
+      "size": 6350,
+      "lastModified": "2025-07-17T20:22:34.280Z"
+    },
+    {
+      "path": "stores/store-flag.d.ts",
+      "name": "store-flag.d",
+      "type": "store",
+      "imports": [],
+      "exports": [],
+      "size": 277,
+      "lastModified": "2025-07-16T05:22:09.933Z"
+    }
+  ],
+  "modules": [
+    {
+      "path": "components/flow-editor/demo-flow.ts",
+      "name": "demo-flow",
+      "type": "typescript",
+      "imports": [
+        {
+          "items": [
+            "FlowBlock"
+          ],
+          "from": "../../modules/flowEditorV2/types/FlowBlock"
+        },
+        {
+          "items": [
+            "BlockConnection"
+          ],
+          "from": "../../modules/flowEditorV2/types/FlowDefinition"
+        }
+      ],
+      "exports": [
+        "demoFlowBlocks",
+        "demoFlowConnections",
+        "loadDemoFlow"
+      ],
+      "size": 2495,
+      "lastModified": "2025-07-20T12:41:17.026Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/BlockFactory.ts",
+      "name": "BlockFactory",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "createBlockInstance"
+          ],
+          "from": "../../../types/scratch/BlockDefinition"
+        }
+      ],
+      "exports": [
+        "ConnectionValidationResult",
+        "CreateBlockOptions",
+        "BlockFactoryStats",
+        "BlockFactory",
+        "blockFactory"
+      ],
+      "size": 15966,
+      "lastModified": "2025-07-17T20:22:15.692Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/BlockValidator.ts",
+      "name": "BlockValidator",
+      "type": "utility",
+      "imports": [],
+      "exports": [
+        "ValidationSeverity",
+        "ValidationIssue",
+        "ValidationResult",
+        "BlockValidator"
+      ],
+      "size": 22170,
+      "lastModified": "2025-07-17T11:26:54.161Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/ExpressionEvaluator.ts",
+      "name": "ExpressionEvaluator",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "isSimpleExpression",
+            "isComplexExpression",
+            "isArithmeticOperator",
+            "isComparisonOperator",
+            "isLogicalOperator",
+            "getOperatorInfo",
+            "inferVariableType"
+          ],
+          "from": "src/types/scratch/VariableTypes"
+        }
+      ],
+      "exports": [
+        "ExpressionEvaluator"
+      ],
+      "size": 16419,
+      "lastModified": "2025-07-17T11:25:48.184Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/ExpressionValidator.ts",
+      "name": "ExpressionValidator",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "isSimpleExpression",
+            "isComplexExpression",
+            "getOperatorInfo",
+            "validateTypeCompatibility",
+            "ARITHMETIC_OPERATORS",
+            "COMPARISON_OPERATORS",
+            "LOGICAL_OPERATORS"
+          ],
+          "from": "src/types/scratch/VariableTypes"
+        }
+      ],
+      "exports": [
+        "ExpressionValidator"
+      ],
+      "size": 17714,
+      "lastModified": "2025-07-17T11:25:37.200Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/TaskCompiler.ts",
+      "name": "TaskCompiler",
+      "type": "utility",
+      "imports": [],
+      "exports": [
+        "BlockWorkspace",
+        "TaskDefinition",
+        "TaskCompilationError",
+        "TaskCompiler"
+      ],
+      "size": 16772,
+      "lastModified": "2025-07-17T20:22:10.727Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/TaskConverter.ts",
+      "name": "TaskConverter",
+      "type": "utility",
+      "imports": [],
+      "exports": [
+        "ConversionResult",
+        "TaskConverter"
+      ],
+      "size": 24399,
+      "lastModified": "2025-07-17T20:22:05.826Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/TemplateManager.ts",
+      "name": "TemplateManager",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "TaskConverter"
+          ],
+          "from": "./TaskConverter"
+        },
+        {
+          "items": [],
+          "from": "./BlockValidator"
+        }
+      ],
+      "exports": [
+        "TemplateCategory",
+        "TemplateMetadata",
+        "TaskTemplate",
+        "TemplateOperationResult",
+        "TemplateImportResult",
+        "TemplateSearchOptions",
+        "TemplateManager",
+        "templateManager"
+      ],
+      "size": 20692,
+      "lastModified": "2025-07-17T11:43:02.048Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/TemplateStorage.ts",
+      "name": "TemplateStorage",
+      "type": "utility",
+      "imports": [],
+      "exports": [
+        "StorageOperationResult",
+        "StorageStats",
+        "StorageConfig",
+        "LocalStorageAdapter",
+        "IndexedDBAdapter",
+        "HybridStorage",
+        "StorageFactory",
+        "TemplateStorageManager"
+      ],
+      "size": 14304,
+      "lastModified": "2025-07-17T11:44:00.526Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/TemplateValidator.ts",
+      "name": "TemplateValidator",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [],
+          "from": "./BlockValidator"
+        }
+      ],
+      "exports": [
+        "ValidationSeverity",
+        "ValidationIssue",
+        "TemplateValidationResult",
+        "ValidationRules",
+        "TemplateValidator"
+      ],
+      "size": 23249,
+      "lastModified": "2025-07-17T11:45:36.848Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/ThumbnailGenerator.ts",
+      "name": "ThumbnailGenerator",
+      "type": "utility",
+      "imports": [],
+      "exports": [
+        "ThumbnailConfig",
+        "ThumbnailResult",
+        "ThumbnailGenerator"
+      ],
+      "size": 16220,
+      "lastModified": "2025-07-17T20:22:19.293Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/__tests__/BlockValidator.test.ts",
+      "name": "BlockValidator.test",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "describe",
+            "test",
+            "expect",
+            "beforeEach"
+          ],
+          "from": "vitest"
+        }
+      ],
+      "exports": [],
+      "size": 22474,
+      "lastModified": "2025-07-17T20:31:45.077Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/__tests__/ExpressionEvaluator.test.ts",
+      "name": "ExpressionEvaluator.test",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "describe",
+            "test",
+            "expect",
+            "beforeEach"
+          ],
+          "from": "vitest"
+        },
+        {
+          "items": [],
+          "from": "../ExpressionEvaluator"
+        }
+      ],
+      "exports": [],
+      "size": 15843,
+      "lastModified": "2025-07-17T20:42:53.394Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/__tests__/ExpressionValidator.test.ts",
+      "name": "ExpressionValidator.test",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "describe",
+            "test",
+            "expect",
+            "beforeEach"
+          ],
+          "from": "vitest"
+        },
+        {
+          "items": [],
+          "from": "../ExpressionValidator"
+        }
+      ],
+      "exports": [],
+      "size": 10461,
+      "lastModified": "2025-07-17T20:42:49.733Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/__tests__/TaskCompiler.test.ts",
+      "name": "TaskCompiler.test",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "describe",
+            "test",
+            "expect",
+            "beforeEach"
+          ],
+          "from": "vitest"
+        }
+      ],
+      "exports": [],
+      "size": 11637,
+      "lastModified": "2025-07-17T20:31:41.486Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/__tests__/TaskConverter.test.ts",
+      "name": "TaskConverter.test",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "describe",
+            "test",
+            "expect",
+            "beforeEach"
+          ],
+          "from": "vitest"
+        }
+      ],
+      "exports": [],
+      "size": 23006,
+      "lastModified": "2025-07-17T20:31:37.084Z"
+    },
+    {
+      "path": "components/scratch-editor/utils/__tests__/TemplateManager.test.ts",
+      "name": "TemplateManager.test",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "describe",
+            "test",
+            "expect",
+            "beforeEach",
+            "afterEach",
+            "vi"
+          ],
+          "from": "vitest"
+        },
+        {
+          "items": [
+            "TemplateManager",
+            "type TaskTemplate",
+            "type TemplateCategory"
+          ],
+          "from": "../TemplateManager"
+        }
+      ],
+      "exports": [],
+      "size": 21687,
+      "lastModified": "2025-07-17T20:31:48.691Z"
+    },
+    {
+      "path": "main.ts",
+      "name": "main",
+      "type": "typescript",
+      "imports": [
+        {
+          "items": [
+            "createApp"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "Quasar"
+          ],
+          "from": "quasar"
+        },
+        {
+          "items": [
+            "createPinia"
+          ],
+          "from": "pinia"
+        },
+        {
+          "items": [],
+          "from": "./App.vue"
+        },
+        {
+          "items": [],
+          "from": "./router"
+        },
+        {
+          "items": [],
+          "from": "./utils/debugSystem"
+        },
+        {
+          "items": [],
+          "from": "./utils/componentMapWatcher"
+        }
+      ],
+      "exports": [],
+      "size": 967,
+      "lastModified": "2025-07-20T14:37:49.915Z"
+    },
+    {
+      "path": "modules/flowEditorV2/store/useFlowStore.ts",
+      "name": "useFlowStore",
+      "type": "typescript",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed",
+            "reactive"
+          ],
+          "from": "vue"
+        },
+        {
+          "items": [
+            "FlowBlock",
+            "BlockDefinition"
+          ],
+          "from": "../types/FlowBlock"
+        },
+        {
+          "items": [
+            "FlowDefinition",
+            "BlockPosition",
+            "BlockConnection"
+          ],
+          "from": "../types/FlowDefinition"
+        },
+        {
+          "items": [
+            "generateId"
+          ],
+          "from": "../utils/format"
+        },
+        {
+          "items": [
+            "validateConnection",
+            "getValidOutputIds",
+            "getOutputLabels",
+            "addBranchToParallel",
+            "removeBranchFromParallel",
+            "ConnectionPoint"
+          ],
+          "from": "../utils/connection"
+        },
+        {
+          "items": [
+            "PortType",
+            "ValidationMode",
+            "ConnectionMode",
+            "CompositePortType",
+            "ConnectionRules",
+            "ConnectionRuleKey",
+            "ValidationModeConfigs",
+            "InputPortConfig",
+            "OutputPortConfig"
+          ],
+          "from": "../types/FlowBlock"
+        },
+        {
+          "items": [
+            "FlowRunner",
+            "createFlowRunner",
+            "ExecutionContext",
+            "ExecutionLogEntry",
+            "SimulationSettings"
+          ],
+          "from": "../utils/FlowRunner"
+        },
+        {
+          "items": [
+            "validateEnhancedConnection",
+            "detectCycles",
+            "checkPortCompatibility",
+            "type ConnectionValidationResult"
+          ],
+          "from": "../utils/advancedValidation"
+        }
+      ],
+      "exports": [
+        "ConnectionState",
+        "DragState",
+        "SimulationState",
+        "useFlowStore"
+      ],
+      "size": 48365,
+      "lastModified": "2025-07-20T22:44:34.604Z"
+    },
+    {
+      "path": "modules/flowEditorV2/store/useSettingsStore.ts",
+      "name": "useSettingsStore",
+      "type": "typescript",
+      "imports": [
+        {
+          "items": [
+            "ref",
+            "computed"
+          ],
+          "from": "vue"
+        }
+      ],
+      "exports": [
+        "EditorSettings",
+        "useSettingsStore"
+      ],
+      "size": 3142,
+      "lastModified": "2025-07-19T10:31:29.659Z"
+    },
+    {
+      "path": "modules/flowEditorV2/types/ActionSpec.ts",
+      "name": "ActionSpec",
+      "type": "types",
+      "imports": [],
+      "exports": [
+        "ActionSpec",
+        "CompilationResult",
+        "CompilationError",
+        "CompilationWarning"
+      ],
+      "size": 946,
+      "lastModified": "2025-07-19T10:30:33.281Z"
+    },
+    {
+      "path": "modules/flowEditorV2/types/FlowBlock.ts",
+      "name": "FlowBlock",
+      "type": "types",
+      "imports": [],
+      "exports": [
+        "BlockType",
+        "FlowBlock",
+        "MeasureParams",
+        "PumpParams",
+        "IfParams",
+        "LoopParams",
+        "WaitConditionParams",
+        "ParallelParams",
+        "ReactiveParallelParams",
+        "EventTriggerParams",
+        "OutputParams",
+        "BlockParams",
+        "PortType",
+        "ValidationMode",
+        "ConnectionMode",
+        "CompositePortType",
+        "ConnectionRule",
+        "InputPortConfig",
+        "OutputPortConfig",
+        "BlockDefinition",
+        "ConnectionRuleKey",
+        "ConnectionRules",
+        "ValidationModeConfig",
+        "ValidationModeConfigs"
+      ],
+      "size": 11628,
+      "lastModified": "2025-07-20T22:20:11.669Z"
+    },
+    {
+      "path": "modules/flowEditorV2/types/FlowDefinition.ts",
+      "name": "FlowDefinition",
+      "type": "types",
+      "imports": [
+        {
+          "items": [
+            "FlowBlock"
+          ],
+          "from": "./FlowBlock"
+        }
+      ],
+      "exports": [
+        "FlowDefinition",
+        "ValidationResult",
+        "ValidationError",
+        "ValidationWarning",
+        "BlockPosition",
+        "BlockConnection"
+      ],
+      "size": 1338,
+      "lastModified": "2025-07-19T10:30:24.615Z"
+    },
+    {
+      "path": "modules/flowEditorV2/types/GlobalReference.ts",
+      "name": "GlobalReference",
+      "type": "types",
+      "imports": [],
+      "exports": [
+        "GlobalVariable",
+        "GlobalConfig",
+        "GlobalReference"
+      ],
+      "size": 674,
+      "lastModified": "2025-07-19T10:30:40.297Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/FlowRunner.ts",
+      "name": "FlowRunner",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "FlowBlock",
+            "BlockType"
+          ],
+          "from": "../types/FlowBlock"
+        },
+        {
+          "items": [
+            "BlockConnection"
+          ],
+          "from": "../types/FlowDefinition"
+        }
+      ],
+      "exports": [
+        "ExecutionContext",
+        "ExecutionLogEntry",
+        "SimulationSettings",
+        "BlockExecutionResult",
+        "FlowRunner",
+        "createFlowRunner"
+      ],
+      "size": 40903,
+      "lastModified": "2025-07-20T05:56:27.359Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/advancedValidation.ts",
+      "name": "advancedValidation",
+      "type": "utility",
+      "imports": [],
+      "exports": [
+        "CycleDetectionResult",
+        "PortCompatibilityResult",
+        "ConnectionValidationResult",
+        "detectCycles",
+        "checkPortCompatibility",
+        "validateEnhancedConnection"
+      ],
+      "size": 9000,
+      "lastModified": "2025-07-20T17:39:51.013Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/blockSchemas.ts",
+      "name": "blockSchemas",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "BlockType"
+          ],
+          "from": "../types/FlowBlock"
+        }
+      ],
+      "exports": [
+        "ParamValidation",
+        "ParamValidationResult",
+        "EnumOption",
+        "ConditionalDisplay",
+        "ParamSchema",
+        "getBlockParamSchema",
+        "getBlockIcon",
+        "getBlockDisplayName",
+        "getParamSchema",
+        "getDefaultParams",
+        "validateAllParams"
+      ],
+      "size": 14684,
+      "lastModified": "2025-07-19T23:43:16.022Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/connection.ts",
+      "name": "connection",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "FlowBlock"
+          ],
+          "from": "../types/FlowBlock"
+        },
+        {
+          "items": [
+            "BlockPosition"
+          ],
+          "from": "../types/FlowDefinition"
+        }
+      ],
+      "exports": [
+        "ConnectionPoint",
+        "ConnectionCoordinates",
+        "LineSegment",
+        "ConnectionValidationResult",
+        "getConnectorPoint",
+        "calculateStraightConnection",
+        "validateConnection",
+        "getValidOutputIds",
+        "getOutputLabels",
+        "addBranchToParallel",
+        "removeBranchFromParallel",
+        "calculateGhostLine",
+        "findClosestInputConnector"
+      ],
+      "size": 9506,
+      "lastModified": "2025-07-19T23:22:59.977Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/format.ts",
+      "name": "format",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "BlockType"
+          ],
+          "from": "../types/FlowBlock"
+        }
+      ],
+      "exports": [
+        "generateId",
+        "formatDuration",
+        "formatVolume",
+        "formatParamValue",
+        "getSensorDisplayName",
+        "getPumpDisplayName",
+        "getModeDisplayName",
+        "getBlockTypeDisplayName",
+        "validateNumber",
+        "validateText",
+        "sanitizeValue"
+      ],
+      "size": 4218,
+      "lastModified": "2025-07-19T10:31:53.357Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/globalValues.ts",
+      "name": "globalValues",
+      "type": "utility",
+      "imports": [],
+      "exports": [
+        "GlobalValue",
+        "GlobalValuesConfig",
+        "DEFAULT_GLOBAL_VALUES",
+        "GlobalValuesStore",
+        "globalValuesStore",
+        "resolveGlobalValue",
+        "hasGlobalFallback",
+        "getGlobalValueInfo",
+        "PARAM_GLOBAL_MAPPINGS",
+        "getSuggestedGlobalValues"
+      ],
+      "size": 10903,
+      "lastModified": "2025-07-19T23:58:07.615Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/paramValidation.ts",
+      "name": "paramValidation",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "ParamSchema",
+            "ParamValidationResult"
+          ],
+          "from": "./blockSchemas"
+        }
+      ],
+      "exports": [
+        "validateParam",
+        "validateParams",
+        "hasValidationErrors",
+        "hasValidationWarnings",
+        "getValidationErrors",
+        "getValidationWarnings",
+        "validateParamsWithConditions",
+        "createValidationSummary"
+      ],
+      "size": 11352,
+      "lastModified": "2025-07-19T23:54:02.888Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/position.ts",
+      "name": "position",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "BlockPosition"
+          ],
+          "from": "../types/FlowDefinition"
+        }
+      ],
+      "exports": [
+        "Point",
+        "Rect",
+        "LAYOUT_CONSTANTS",
+        "snapToGrid",
+        "isPointInRect",
+        "distance",
+        "findClosestPosition",
+        "calculateAutoPosition",
+        "isPositionOccupied",
+        "rectsOverlap",
+        "getConnectorPoint",
+        "calculateConnectionPath",
+        "constrainToCanvas"
+      ],
+      "size": 5380,
+      "lastModified": "2025-07-20T00:05:27.671Z"
+    },
+    {
+      "path": "modules/flowEditorV2/utils/validation.ts",
+      "name": "validation",
+      "type": "utility",
+      "imports": [
+        {
+          "items": [
+            "FlowBlock",
+            "BlockType"
+          ],
+          "from": "../types/FlowBlock"
+        },
+        {
+          "items": [
+            "ValidationResult",
+            "ValidationError",
+            "ValidationWarning"
+          ],
+          "from": "../types/FlowDefinition"
+        }
+      ],
+      "exports": [
+        "validateBlock",
+        "validateFlow"
+      ],
+      "size": 13729,
+      "lastModified": "2025-07-19T10:33:19.067Z"
+    },
+    {
+      "path": "router/index.ts",
+      "name": "index",
+      "type": "typescript",
+      "imports": [
+        {
+          "items": [
+            "route"
+          ],
+          "from": "quasar/wrappers"
+        },
+        {
+          "items": [
+            "createMemoryHistory",
+            "createRouter",
+            "createWebHashHistory",
+            "createWebHistory",
+            ""
+          ],
+          "from": "vue-router"
+        },
+        {
+          "items": [],
+          "from": "./routes"
+        }
+      ],
+      "exports": [],
+      "size": 1162,
+      "lastModified": "2025-07-16T06:07:55.736Z"
+    },
+    {
+      "path": "router/routes.ts",
+      "name": "routes",
+      "type": "typescript",
+      "imports": [],
+      "exports": [],
+      "size": 3042,
+      "lastModified": "2025-07-20T00:15:41.317Z"
+    },
+    {
+      "path": "services/api.ts",
+      "name": "api",
+      "type": "typescript",
+      "imports": [
+        {
+          "items": [
+            "ApiResponse",
+            "ApiError"
+          ],
+          "from": "../types"
+        }
+      ],
+      "exports": [
+        "ApiService",
+        "api",
+        "deviceApi",
+        "taskApi",
+        "programApi",
+        "settingsApi",
+        "controllerApi"
+      ],
+      "size": 4703,
+      "lastModified": "2025-07-20T00:21:54.400Z"
+    },
+    {
+      "path": "shims-vue.d.ts",
+      "name": "shims-vue.d",
+      "type": "typescript",
+      "imports": [],
+      "exports": [],
+      "size": 167,
+      "lastModified": "2025-07-20T05:49:52.591Z"
+    },
+    {
+      "path": "types/index.ts",
+      "name": "index",
+      "type": "types",
+      "imports": [],
+      "exports": [
+        "ApiResponse",
+        "ApiError",
+        "Device",
+        "TaskAction",
+        "Task",
+        "Cycle",
+        "Program",
+        "SystemSettings",
+        "NotificationSettings",
+        "Thresholds",
+        "Settings",
+        "LogEntry",
+        "ExecutionState",
+        "Controller",
+        "ActiveCycle",
+        "ActiveProgram",
+        "NavigationItem",
+        "LoadingState",
+        "ErrorState"
+      ],
+      "size": 3895,
+      "lastModified": "2025-07-16T05:10:07.174Z"
+    },
+    {
+      "path": "types/scratch/BlockDefinition.ts",
+      "name": "BlockDefinition",
+      "type": "types",
+      "imports": [],
+      "exports": [
+        "BlockType",
+        "ConnectorDataType",
+        "ConnectorPosition",
+        "ParameterType",
+        "BlockParameter",
+        "ConnectorDefinition",
+        "InputConnector",
+        "OutputConnector",
+        "BlockDefinition",
+        "BlockInstance",
+        "BlockConnection",
+        "WorkspaceState",
+        "DragState",
+        "ValidationRule",
+        "BlockCategory",
+        "EditorSettings",
+        "EditorEvent",
+        "WorkspaceSnapshot",
+        "TaskExport",
+        "BlockId",
+        "ConnectionId",
+        "ConnectorId",
+        "ParameterName",
+        "CategoryId",
+        "isBlockDefinition",
+        "isBlockInstance",
+        "isBlockConnection",
+        "BLOCK_COLORS",
+        "CONNECTOR_COLORS",
+        "DEFAULT_GRID_SIZE",
+        "DEFAULT_ZOOM",
+        "MIN_ZOOM",
+        "MAX_ZOOM",
+        "createBlockInstance",
+        "createConnection",
+        "getBlockColor",
+        "getConnectorColor"
+      ],
+      "size": 7652,
+      "lastModified": "2025-07-17T03:01:13.759Z"
+    },
+    {
+      "path": "types/scratch/VariableTypes.ts",
+      "name": "VariableTypes",
+      "type": "types",
+      "imports": [],
+      "exports": [
+        "VariableDataType",
+        "ArithmeticOperator",
+        "ComparisonOperator",
+        "LogicalOperator",
+        "ExpressionOperator",
+        "ExpressionType",
+        "VariableDefinition",
+        "ExpressionOperand",
+        "SimpleExpression",
+        "ComplexExpression",
+        "Expression",
+        "ExpressionResult",
+        "EvaluationContext",
+        "ExpressionValidation",
+        "OperatorGroup",
+        "VariableManagerEvents",
+        "ExpressionBuilderEvents",
+        "ARITHMETIC_OPERATORS",
+        "COMPARISON_OPERATORS",
+        "LOGICAL_OPERATORS",
+        "ALL_OPERATOR_GROUPS",
+        "getOperatorInfo",
+        "getOperatorGroup",
+        "isArithmeticOperator",
+        "isComparisonOperator",
+        "isLogicalOperator",
+        "isSimpleExpression",
+        "isComplexExpression",
+        "inferVariableType",
+        "validateTypeCompatibility",
+        "getResultType",
+        "VARIABLE_TYPE_LABELS",
+        "VARIABLE_TYPE_ICONS",
+        "VARIABLE_TYPE_COLORS"
+      ],
+      "size": 8024,
+      "lastModified": "2025-07-17T07:13:39.486Z"
+    },
+    {
+      "path": "utils/componentMapWatcher.ts",
+      "name": "componentMapWatcher",
+      "type": "utility",
+      "imports": [],
+      "exports": [],
+      "size": 3835,
+      "lastModified": "2025-07-20T13:04:30.190Z"
+    },
+    {
+      "path": "utils/debugSystem.ts",
+      "name": "debugSystem",
+      "type": "utility",
+      "imports": [],
+      "exports": [],
+      "size": 5860,
+      "lastModified": "2025-07-20T12:48:03.737Z"
+    },
+    {
+      "path": "utils/productionDebug.ts",
+      "name": "productionDebug",
+      "type": "utility",
+      "imports": [],
+      "exports": [
+        "exportSystemState"
+      ],
+      "size": 410,
+      "lastModified": "2025-07-20T14:36:45.002Z"
+    }
+  ],
+  "flowEditor": {
+    "mainComponents": [
+      {
+        "name": "FlowRunnerUI",
+        "path": "components/flow-editor/FlowRunnerUI.vue",
+        "functions": [
+          "expandPanel",
+          "collapsePanel",
+          "getStartButtonIcon",
+          "getStartButtonLabel",
+          "getExecutionStatus",
+          "handleStartResume",
+          "skipCurrentBlock",
+          "restartSimulation",
+          "clearExecutionLog",
+          "getCurrentBlockStatus",
+          "getStatusClass",
+          "formatBlockParams",
+          "formatBlockResult",
+          "formatLogTime",
+          "formatLogData",
+          "getLogStatusIcon",
+          "getBlockDisplayName",
+          "getProgressStats",
+          "getProgressPercentage"
+        ],
+        "emits": [],
+        "props": []
+      },
+      {
+        "name": "FlowEditor",
+        "path": "modules/flowEditorV2/FlowEditor.vue",
+        "functions": [
+          "getBlockDisplayName",
+          "getBlockIcon",
+          "getDisplayParams",
+          "getParamDisplayName",
+          "getBlockValidation",
+          "getBlockStyle",
+          "isStartBlock",
+          "getBlockInputPorts",
+          "getBlockDefinition",
+          "hasIncomingConnectionToPort",
+          "isValidInputConnectionTarget",
+          "getBlockOutputs",
+          "getOutputPosition",
+          "hasOutgoingConnection",
+          "startDrag",
+          "onDragOver",
+          "onDrop",
+          "addBlockToCanvas",
+          "handleBlockMouseDown",
+          "handleDocumentMouseMove",
+          "handleDocumentMouseUp",
+          "cleanupDragListeners",
+          "onCanvasClick",
+          "handleOutputConnectorClick",
+          "handleInputConnectorClick",
+          "function",
+          "handleConnectorHover",
+          "handleConnectorLeave",
+          "onCanvasMouseMove",
+          "onRightClickCancel",
+          "updateGhostLine",
+          "cleanupConnectionListeners",
+          "selectConnection",
+          "deleteConnection",
+          "handleConnectionDelete",
+          "toggleSimulation",
+          "startSimulationWithValidation",
+          "closeValidationDialog",
+          "newFlow",
+          "loadFlow",
+          "loadDemoFlow",
+          "saveFlow",
+          "copyJsonToClipboard",
+          "isBlockCurrentlyExecuting",
+          "isBlockCompleted",
+          "isBlockError",
+          "getBlockSimulationStatus",
+          "getBlockSimulationData",
+          "getSimulationStatusClass",
+          "getSimulationStatusIcon",
+          "formatSimulationData"
+        ],
+        "emits": [],
+        "props": []
+      },
+      {
+        "name": "BlockConnector",
+        "path": "modules/flowEditorV2/components/BlockConnector.vue",
+        "functions": [
+          "handleConnectorClick",
+          "handleMouseEnter",
+          "handleMouseLeave"
+        ],
+        "emits": [
+          "click",
+          "mouseenter",
+          "mouseleave"
+        ],
+        "props": []
+      },
+      {
+        "name": "BlockPalette",
+        "path": "modules/flowEditorV2/components/BlockPalette.vue",
+        "functions": [
+          "toggleCategory",
+          "onDragStart",
+          "onBlockClick"
+        ],
+        "emits": [
+          "dragStart",
+          "blockClick"
+        ],
+        "props": []
+      },
+      {
+        "name": "ConnectionLayer",
+        "path": "modules/flowEditorV2/components/ConnectionLayer.vue",
+        "functions": [
+          "showHydroponicConnectionFeedback",
+          "onConnectionClick",
+          "onConnectionDelete",
+          "for"
+        ],
+        "emits": [
+          "connectionClick",
+          "connectionDelete"
+        ],
+        "props": []
+      },
+      {
+        "name": "ConnectionLine",
+        "path": "modules/flowEditorV2/components/ConnectionLine.vue",
+        "functions": [
+          "getSegmentStyle",
+          "getHighlightStyle",
+          "handleClick",
+          "handleRightClick",
+          "handleMouseEnter",
+          "handleMouseLeave",
+          "handleDelete",
+          "getDeleteButtonStyle"
+        ],
+        "emits": [
+          "click",
+          "delete"
+        ],
+        "props": []
+      },
+      {
+        "name": "ParamEditorPanel",
+        "path": "modules/flowEditorV2/components/ParamEditorPanel.vue",
+        "functions": [
+          "executing",
+          "detectParamType",
+          "closePanel",
+          "showValidationWarning",
+          "updateParam",
+          "updateParamValidation",
+          "getParamValidationErrors",
+          "getGlobalValue",
+          "hasGlobalValue",
+          "getGlobalValueInfo",
+          "saveChanges",
+          "revertChanges",
+          "initializeValidation",
+          "validateAllParams",
+          "attemptAutoFix",
+          "showValidationHelp",
+          "copyToClipboard",
+          "getStatusColor",
+          "getStatusLabel",
+          "formatParamValue",
+          "safeStringify"
+        ],
+        "emits": [],
+        "props": []
+      },
+      {
+        "name": "BooleanField",
+        "path": "modules/flowEditorV2/components/fields/BooleanField.vue",
+        "functions": [
+          "handleValueChange"
+        ],
+        "emits": [
+          "update:value",
+          "validation-change"
+        ],
+        "props": []
+      },
+      {
+        "name": "EnumField",
+        "path": "modules/flowEditorV2/components/fields/EnumField.vue",
+        "functions": [
+          "handleValueChange",
+          "handleBlur"
+        ],
+        "emits": [
+          "update:value",
+          "validation-change",
+          "validation-change"
+        ],
+        "props": []
+      },
+      {
+        "name": "NumberField",
+        "path": "modules/flowEditorV2/components/fields/NumberField.vue",
+        "functions": [
+          "handleValueChange",
+          "handleBlur",
+          "performValidation"
+        ],
+        "emits": [
+          "update:value",
+          "validation-change"
+        ],
+        "props": []
+      },
+      {
+        "name": "ParamField",
+        "path": "modules/flowEditorV2/components/fields/ParamField.vue",
+        "functions": [],
+        "emits": [],
+        "props": []
+      },
+      {
+        "name": "StringField",
+        "path": "modules/flowEditorV2/components/fields/StringField.vue",
+        "functions": [
+          "handleValueChange",
+          "handleBlur",
+          "performValidation"
+        ],
+        "emits": [
+          "update:value",
+          "validation-change"
+        ],
+        "props": []
+      },
+      {
+        "name": "ValidationMessage",
+        "path": "modules/flowEditorV2/components/validation/ValidationMessage.vue",
+        "functions": [
+          "getErrorSeverity",
+          "getErrorIcon",
+          "getErrorMessage"
+        ],
+        "emits": [],
+        "props": []
+      }
+    ],
+    "stores": [],
+    "utilities": [
+      {
+        "name": "FlowRunner",
+        "path": "modules/flowEditorV2/utils/FlowRunner.ts",
+        "exports": [
+          "ExecutionContext",
+          "ExecutionLogEntry",
+          "SimulationSettings",
+          "BlockExecutionResult",
+          "FlowRunner",
+          "createFlowRunner"
+        ]
+      },
+      {
+        "name": "advancedValidation",
+        "path": "modules/flowEditorV2/utils/advancedValidation.ts",
+        "exports": [
+          "CycleDetectionResult",
+          "PortCompatibilityResult",
+          "ConnectionValidationResult",
+          "detectCycles",
+          "checkPortCompatibility",
+          "validateEnhancedConnection"
+        ]
+      },
+      {
+        "name": "blockSchemas",
+        "path": "modules/flowEditorV2/utils/blockSchemas.ts",
+        "exports": [
+          "ParamValidation",
+          "ParamValidationResult",
+          "EnumOption",
+          "ConditionalDisplay",
+          "ParamSchema",
+          "getBlockParamSchema",
+          "getBlockIcon",
+          "getBlockDisplayName",
+          "getParamSchema",
+          "getDefaultParams",
+          "validateAllParams"
+        ]
+      },
+      {
+        "name": "connection",
+        "path": "modules/flowEditorV2/utils/connection.ts",
+        "exports": [
+          "ConnectionPoint",
+          "ConnectionCoordinates",
+          "LineSegment",
+          "ConnectionValidationResult",
+          "getConnectorPoint",
+          "calculateStraightConnection",
+          "validateConnection",
+          "getValidOutputIds",
+          "getOutputLabels",
+          "addBranchToParallel",
+          "removeBranchFromParallel",
+          "calculateGhostLine",
+          "findClosestInputConnector"
+        ]
+      },
+      {
+        "name": "format",
+        "path": "modules/flowEditorV2/utils/format.ts",
+        "exports": [
+          "generateId",
+          "formatDuration",
+          "formatVolume",
+          "formatParamValue",
+          "getSensorDisplayName",
+          "getPumpDisplayName",
+          "getModeDisplayName",
+          "getBlockTypeDisplayName",
+          "validateNumber",
+          "validateText",
+          "sanitizeValue"
+        ]
+      },
+      {
+        "name": "globalValues",
+        "path": "modules/flowEditorV2/utils/globalValues.ts",
+        "exports": [
+          "GlobalValue",
+          "GlobalValuesConfig",
+          "DEFAULT_GLOBAL_VALUES",
+          "GlobalValuesStore",
+          "globalValuesStore",
+          "resolveGlobalValue",
+          "hasGlobalFallback",
+          "getGlobalValueInfo",
+          "PARAM_GLOBAL_MAPPINGS",
+          "getSuggestedGlobalValues"
+        ]
+      },
+      {
+        "name": "paramValidation",
+        "path": "modules/flowEditorV2/utils/paramValidation.ts",
+        "exports": [
+          "validateParam",
+          "validateParams",
+          "hasValidationErrors",
+          "hasValidationWarnings",
+          "getValidationErrors",
+          "getValidationWarnings",
+          "validateParamsWithConditions",
+          "createValidationSummary"
+        ]
+      },
+      {
+        "name": "position",
+        "path": "modules/flowEditorV2/utils/position.ts",
+        "exports": [
+          "Point",
+          "Rect",
+          "LAYOUT_CONSTANTS",
+          "snapToGrid",
+          "isPointInRect",
+          "distance",
+          "findClosestPosition",
+          "calculateAutoPosition",
+          "isPositionOccupied",
+          "rectsOverlap",
+          "getConnectorPoint",
+          "calculateConnectionPath",
+          "constrainToCanvas"
+        ]
+      },
+      {
+        "name": "validation",
+        "path": "modules/flowEditorV2/utils/validation.ts",
+        "exports": [
+          "validateBlock",
+          "validateFlow"
+        ]
+      }
+    ],
+    "types": [
+      {
+        "name": "ActionSpec",
+        "path": "modules/flowEditorV2/types/ActionSpec.ts",
+        "exports": [
+          "ActionSpec",
+          "CompilationResult",
+          "CompilationError",
+          "CompilationWarning"
+        ]
+      },
+      {
+        "name": "FlowBlock",
+        "path": "modules/flowEditorV2/types/FlowBlock.ts",
+        "exports": [
+          "BlockType",
+          "FlowBlock",
+          "MeasureParams",
+          "PumpParams",
+          "IfParams",
+          "LoopParams",
+          "WaitConditionParams",
+          "ParallelParams",
+          "ReactiveParallelParams",
+          "EventTriggerParams",
+          "OutputParams",
+          "BlockParams",
+          "PortType",
+          "ValidationMode",
+          "ConnectionMode",
+          "CompositePortType",
+          "ConnectionRule",
+          "InputPortConfig",
+          "OutputPortConfig",
+          "BlockDefinition",
+          "ConnectionRuleKey",
+          "ConnectionRules",
+          "ValidationModeConfig",
+          "ValidationModeConfigs"
+        ]
+      },
+      {
+        "name": "FlowDefinition",
+        "path": "modules/flowEditorV2/types/FlowDefinition.ts",
+        "exports": [
+          "FlowDefinition",
+          "ValidationResult",
+          "ValidationError",
+          "ValidationWarning",
+          "BlockPosition",
+          "BlockConnection"
+        ]
+      },
+      {
+        "name": "GlobalReference",
+        "path": "modules/flowEditorV2/types/GlobalReference.ts",
+        "exports": [
+          "GlobalVariable",
+          "GlobalConfig",
+          "GlobalReference"
+        ]
+      }
+    ],
+    "connections": {},
+    "blockTypes": [],
+    "validationRules": []
+  },
+  "dependencies": {
+    "App.vue": {
+      "imports": [],
+      "dependents": [
+        "components/flow-editor/FlowRunnerUI.vue",
+        "components/programs/tabs/ProgramsTab.vue",
+        "components/scratch-editor/BaseBlock.vue",
+        "components/scratch-editor/BlockPalette.vue",
+        "components/scratch-editor/ExpressionBuilder.vue",
+        "components/scratch-editor/PropertiesPanel.vue",
+        "components/scratch-editor/ScratchEditor.vue",
+        "components/scratch-editor/TaskJsonPreview.vue",
+        "components/scratch-editor/TutorialMode.vue",
+        "components/scratch-editor/VariableManager.vue",
+        "components/scratch-editor/WorkspaceArea.vue",
+        "components/scratch-editor/blocks/ControlBlock.vue",
+        "components/scratch-editor/blocks/DeviceBlock.vue",
+        "components/scratch-editor/blocks/LogicBlock.vue",
+        "components/scratch-editor/blocks/SensorBlock.vue",
+        "components/scratch-editor/helpers/HelpOverlay.vue",
+        "components/settings/SettingsTabGeneral.vue",
+        "components/task/BlockRenderer.example.vue",
+        "components/task/BlockRenderer.vue",
+        "composables/useDebugIntegration.ts",
+        "composables/useWorkspace.ts",
+        "layouts/MainLayout.vue",
+        "main.ts",
+        "main.ts",
+        "modules/flowEditorV2/FlowEditor.vue",
+        "modules/flowEditorV2/components/BlockConnector.vue",
+        "modules/flowEditorV2/components/BlockPalette.vue",
+        "modules/flowEditorV2/components/ConnectionLayer.vue",
+        "modules/flowEditorV2/components/ConnectionLine.vue",
+        "modules/flowEditorV2/components/ParamEditorPanel.vue",
+        "modules/flowEditorV2/components/fields/BooleanField.vue",
+        "modules/flowEditorV2/components/fields/EnumField.vue",
+        "modules/flowEditorV2/components/fields/NumberField.vue",
+        "modules/flowEditorV2/components/fields/ParamField.vue",
+        "modules/flowEditorV2/components/fields/StringField.vue",
+        "modules/flowEditorV2/components/validation/ValidationMessage.vue",
+        "modules/flowEditorV2/composables/useGlobalValues.ts",
+        "modules/flowEditorV2/store/useFlowStore.ts",
+        "modules/flowEditorV2/store/useSettingsStore.ts",
+        "pages/ErrorNotFound.vue",
+        "pages/ProgramCreate.vue",
+        "pages/ProgramsPage.vue",
+        "pages/SettingsPage.vue",
+        "pages/TaskForm - Copy.vue",
+        "pages/TaskForm.vue",
+        "pages/TaskForm_old.vue",
+        "pages/TaskForm_withScratchTest - Copy.vue",
+        "pages/TasksPage.vue",
+        "pages/settings/GeneralSettingsPage.vue",
+        "stores/device.ts",
+        "stores/main.ts",
+        "stores/program.ts",
+        "stores/settings.ts"
+      ]
+    },
+    "components/flow-editor/FlowRunnerUI.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "../../modules/flowEditorV2/store/useFlowStore",
+        "../../modules/flowEditorV2/types/FlowBlock",
+        "../../modules/flowEditorV2/utils/FlowRunner",
+        "../../modules/flowEditorV2/utils/format"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/FlowEditor.vue"
+      ]
+    },
+    "components/flow-editor/demo-flow.ts": {
+      "imports": [
+        "../../modules/flowEditorV2/types/FlowBlock",
+        "../../modules/flowEditorV2/types/FlowDefinition"
+      ],
+      "dependents": []
+    },
+    "components/programs/tabs/ActiveProgramTab.vue": {
+      "imports": [],
+      "dependents": [
+        "pages/ProgramsPage.vue"
+      ]
+    },
+    "components/programs/tabs/ProgramSettingsTab.vue": {
+      "imports": [],
+      "dependents": [
+        "pages/ProgramsPage.vue"
+      ]
+    },
+    "components/programs/tabs/ProgramsTab.vue": {
+      "imports": [
+        "vue",
+        "vue-router",
+        "quasar"
+      ],
+      "dependents": [
+        "pages/ProgramsPage.vue"
+      ]
+    },
+    "components/programs/tabs/TasksTab.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "components/scratch-editor/BaseBlock.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "../../types/scratch/BlockDefinition"
+      ],
+      "dependents": [
+        "components/scratch-editor/WorkspaceArea.vue",
+        "components/scratch-editor/blocks/ControlBlock.vue",
+        "components/scratch-editor/blocks/DeviceBlock.vue",
+        "components/scratch-editor/blocks/LogicBlock.vue",
+        "components/scratch-editor/blocks/SensorBlock.vue"
+      ]
+    },
+    "components/scratch-editor/BlockPalette.vue": {
+      "imports": [
+        "vue"
+      ],
+      "dependents": [
+        "components/scratch-editor/ScratchEditor.vue"
+      ]
+    },
+    "components/scratch-editor/ExpressionBuilder.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "src/types/scratch/VariableTypes",
+        "./utils/ExpressionValidator",
+        "./utils/ExpressionEvaluator"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/PropertiesPanel.vue": {
+      "imports": [
+        "vue"
+      ],
+      "dependents": [
+        "components/scratch-editor/ScratchEditor.vue"
+      ]
+    },
+    "components/scratch-editor/ScratchEditor.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "./WorkspaceArea.vue",
+        "./TaskJsonPreview.vue",
+        "./helpers/HelpOverlay.vue",
+        "./TutorialMode.vue",
+        "./VariableManager.vue",
+        "./BlockPalette.vue",
+        "./PropertiesPanel.vue",
+        "./utils/TaskConverter",
+        "./utils/TaskCompiler",
+        "./utils/BlockValidator",
+        "../../types/scratch/BlockDefinition",
+        "../../composables/useWorkspace"
+      ],
+      "dependents": [
+        "pages/TaskForm.vue",
+        "pages/TaskForm_withScratchTest - Copy.vue"
+      ]
+    },
+    "components/scratch-editor/TaskJsonPreview.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "./utils/TaskCompiler"
+      ],
+      "dependents": [
+        "components/scratch-editor/ScratchEditor.vue"
+      ]
+    },
+    "components/scratch-editor/TutorialMode.vue": {
+      "imports": [
+        "vue",
+        "quasar"
+      ],
+      "dependents": [
+        "components/scratch-editor/ScratchEditor.vue"
+      ]
+    },
+    "components/scratch-editor/VariableManager.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "src/types/scratch/VariableTypes"
+      ],
+      "dependents": [
+        "components/scratch-editor/ScratchEditor.vue"
+      ]
+    },
+    "components/scratch-editor/WorkspaceArea.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "./BaseBlock.vue",
+        "../../composables/useWorkspace"
+      ],
+      "dependents": [
+        "components/scratch-editor/ScratchEditor.vue"
+      ]
+    },
+    "components/scratch-editor/blocks/ControlBlock.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "../BaseBlock.vue"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/blocks/DeviceBlock.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "../BaseBlock.vue"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/blocks/LogicBlock.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "../BaseBlock.vue"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/blocks/SensorBlock.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "../BaseBlock.vue"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/helpers/HelpOverlay.vue": {
+      "imports": [
+        "vue",
+        "quasar"
+      ],
+      "dependents": [
+        "components/scratch-editor/ScratchEditor.vue"
+      ]
+    },
+    "components/scratch-editor/utils/BlockFactory.ts": {
+      "imports": [
+        "../../../types/scratch/BlockDefinition"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/BlockValidator.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/ExpressionEvaluator.ts": {
+      "imports": [
+        "src/types/scratch/VariableTypes"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/ExpressionValidator.ts": {
+      "imports": [
+        "src/types/scratch/VariableTypes"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/TaskCompiler.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/TaskConverter.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/TemplateManager.ts": {
+      "imports": [
+        "./TaskConverter",
+        "./BlockValidator"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/TemplateStorage.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/TemplateValidator.ts": {
+      "imports": [
+        "./BlockValidator"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/ThumbnailGenerator.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/__tests__/BlockValidator.test.ts": {
+      "imports": [
+        "vitest"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/__tests__/ExpressionEvaluator.test.ts": {
+      "imports": [
+        "vitest",
+        "../ExpressionEvaluator"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/__tests__/ExpressionValidator.test.ts": {
+      "imports": [
+        "vitest",
+        "../ExpressionValidator"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/__tests__/TaskCompiler.test.ts": {
+      "imports": [
+        "vitest"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/__tests__/TaskConverter.test.ts": {
+      "imports": [
+        "vitest"
+      ],
+      "dependents": []
+    },
+    "components/scratch-editor/utils/__tests__/TemplateManager.test.ts": {
+      "imports": [
+        "vitest",
+        "../TemplateManager"
+      ],
+      "dependents": []
+    },
+    "components/settings/SettingsTabAlerts.vue": {
+      "imports": [],
+      "dependents": [
+        "pages/SettingsPage.vue"
+      ]
+    },
+    "components/settings/SettingsTabDevices.vue": {
+      "imports": [],
+      "dependents": [
+        "pages/SettingsPage.vue"
+      ]
+    },
+    "components/settings/SettingsTabGeneral.vue": {
+      "imports": [
+        "vue",
+        "../../stores/settings",
+        "quasar"
+      ],
+      "dependents": [
+        "pages/SettingsPage.vue"
+      ]
+    },
+    "components/settings/SettingsTabPrograms.vue": {
+      "imports": [],
+      "dependents": [
+        "pages/SettingsPage.vue"
+      ]
+    },
+    "components/task/BlockRenderer.example.vue": {
+      "imports": [
+        "vue",
+        "./BlockRenderer.vue"
+      ],
+      "dependents": []
+    },
+    "components/task/BlockRenderer.vue": {
+      "imports": [
+        "vue"
+      ],
+      "dependents": [
+        "components/task/BlockRenderer.example.vue"
+      ]
+    },
+    "composables/useDebugIntegration.ts": {
+      "imports": [
+        "vue",
+        "../utils/debugSystem"
+      ],
+      "dependents": []
+    },
+    "composables/useWorkspace.ts": {
+      "imports": [
+        "vue",
+        "quasar",
+        "src/types/scratch/BlockDefinition"
+      ],
+      "dependents": []
+    },
+    "layouts/MainLayout.vue": {
+      "imports": [
+        "vue",
+        "vue-router",
+        "../stores/main",
+        "../types"
+      ],
+      "dependents": []
+    },
+    "main.ts": {
+      "imports": [
+        "vue",
+        "quasar",
+        "pinia",
+        "./App.vue",
+        "./router",
+        "./utils/debugSystem",
+        "./utils/componentMapWatcher"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/FlowEditor.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "./store/useFlowStore",
+        "./store/useSettingsStore",
+        "./types/FlowBlock",
+        "./utils/validation",
+        "./utils/format",
+        "./utils/position",
+        "./utils/connection",
+        "./components/BlockConnector.vue",
+        "./components/ConnectionLine.vue",
+        "./components/ConnectionLayer.vue",
+        "./components/BlockPalette.vue",
+        "./components/ParamEditorPanel.vue",
+        "../../components/flow-editor/FlowRunnerUI.vue",
+        "../../components/flow-editor/demo-flow",
+        "../../../tools/debug/BlockInspector.vue",
+        "../../composables/useDebugIntegration"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/components/BlockConnector.vue": {
+      "imports": [
+        "vue"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/FlowEditor.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/BlockPalette.vue": {
+      "imports": [
+        "vue"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/FlowEditor.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/ConnectionLayer.vue": {
+      "imports": [
+        "vue",
+        "./ConnectionLine.vue"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/FlowEditor.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/ConnectionLine.vue": {
+      "imports": [
+        "vue"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/FlowEditor.vue",
+        "modules/flowEditorV2/components/ConnectionLayer.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/ParamEditorPanel.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "../store/useFlowStore",
+        "../types/FlowBlock",
+        "../utils/blockSchemas",
+        "../utils/paramValidation",
+        "../utils/globalValues",
+        "./fields/ParamField.vue",
+        "./validation/ValidationMessage.vue"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/FlowEditor.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/fields/BooleanField.vue": {
+      "imports": [
+        "vue",
+        "../../utils/blockSchemas",
+        "../../utils/paramValidation"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/components/fields/ParamField.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/fields/EnumField.vue": {
+      "imports": [
+        "vue",
+        "../../utils/blockSchemas",
+        "../../utils/paramValidation"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/components/fields/ParamField.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/fields/NumberField.vue": {
+      "imports": [
+        "vue",
+        "../../utils/blockSchemas",
+        "../../utils/paramValidation"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/components/fields/ParamField.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/fields/ParamField.vue": {
+      "imports": [
+        "vue",
+        "../../utils/blockSchemas",
+        "./StringField.vue",
+        "./NumberField.vue",
+        "./BooleanField.vue",
+        "./EnumField.vue"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/components/ParamEditorPanel.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/fields/StringField.vue": {
+      "imports": [
+        "vue",
+        "../../utils/blockSchemas",
+        "../../utils/paramValidation"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/components/fields/ParamField.vue"
+      ]
+    },
+    "modules/flowEditorV2/components/validation/ValidationMessage.vue": {
+      "imports": [
+        "vue",
+        "../../utils/paramValidation"
+      ],
+      "dependents": [
+        "modules/flowEditorV2/components/ParamEditorPanel.vue"
+      ]
+    },
+    "modules/flowEditorV2/composables/useGlobalValues.ts": {
+      "imports": [
+        "vue",
+        "../utils/globalValues"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/store/useFlowStore.ts": {
+      "imports": [
+        "vue",
+        "../types/FlowBlock",
+        "../types/FlowDefinition",
+        "../utils/format",
+        "../utils/connection",
+        "../types/FlowBlock",
+        "../utils/FlowRunner",
+        "../utils/advancedValidation"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/store/useSettingsStore.ts": {
+      "imports": [
+        "vue"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/types/ActionSpec.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "modules/flowEditorV2/types/FlowBlock.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "modules/flowEditorV2/types/FlowDefinition.ts": {
+      "imports": [
+        "./FlowBlock"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/types/GlobalReference.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/FlowRunner.ts": {
+      "imports": [
+        "../types/FlowBlock",
+        "../types/FlowDefinition"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/advancedValidation.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/blockSchemas.ts": {
+      "imports": [
+        "../types/FlowBlock"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/connection.ts": {
+      "imports": [
+        "../types/FlowBlock",
+        "../types/FlowDefinition"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/format.ts": {
+      "imports": [
+        "../types/FlowBlock"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/globalValues.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/paramValidation.ts": {
+      "imports": [
+        "./blockSchemas"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/position.ts": {
+      "imports": [
+        "../types/FlowDefinition"
+      ],
+      "dependents": []
+    },
+    "modules/flowEditorV2/utils/validation.ts": {
+      "imports": [
+        "../types/FlowBlock",
+        "../types/FlowDefinition"
+      ],
+      "dependents": []
+    },
+    "pages/ActiveProgramsPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/AlertsPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/CreateDevicePage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/CreateProgramPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/DashboardPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/DeviceDetailPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/DevicesPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/EditProgramPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/ErrorNotFound.vue": {
+      "imports": [
+        "vue"
+      ],
+      "dependents": []
+    },
+    "pages/ErrorPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/HistoryPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/LiveMonitoringPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/ProgramCreate.vue": {
+      "imports": [
+        "vue",
+        "vue-router",
+        "quasar"
+      ],
+      "dependents": []
+    },
+    "pages/ProgramDetailPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/ProgramsPage.vue": {
+      "imports": [
+        "vue",
+        "vue-router",
+        "components/programs/tabs/ActiveProgramTab.vue",
+        "components/programs/tabs/ProgramsTab.vue",
+        "components/programs/tabs/ProgramSettingsTab.vue"
+      ],
+      "dependents": []
+    },
+    "pages/PumpsPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/SensorsPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/SettingsPage.vue": {
+      "imports": [
+        "vue",
+        "vue-router",
+        "components/settings/SettingsTabGeneral.vue",
+        "components/settings/SettingsTabPrograms.vue",
+        "components/settings/SettingsTabDevices.vue",
+        "components/settings/SettingsTabAlerts.vue"
+      ],
+      "dependents": []
+    },
+    "pages/TaskForm - Copy.vue": {
+      "imports": [
+        "vue",
+        "vue-router",
+        "quasar",
+        "components/VisualTaskBuilder.vue"
+      ],
+      "dependents": []
+    },
+    "pages/TaskForm.vue": {
+      "imports": [
+        "vue",
+        "vue-router",
+        "quasar",
+        "../components/scratch-editor/ScratchEditor.vue",
+        "../components/scratch-editor/utils/TaskConverter"
+      ],
+      "dependents": []
+    },
+    "pages/TaskForm_old.vue": {
+      "imports": [
+        "vue",
+        "vue-router",
+        "quasar",
+        "components/VisualTaskBuilder.vue"
+      ],
+      "dependents": []
+    },
+    "pages/TaskForm_withScratchTest - Copy.vue": {
+      "imports": [
+        "components/scratch-editor/ScratchEditor.vue",
+        "vue",
+        "vue-router",
+        "quasar",
+        "components/VisualTaskBuilder.vue"
+      ],
+      "dependents": []
+    },
+    "pages/TasksPage.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "vue-router",
+        "../types",
+        "src/stores/task"
+      ],
+      "dependents": []
+    },
+    "pages/settings/DeviceSettingsPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/settings/GeneralSettingsPage.vue": {
+      "imports": [
+        "vue",
+        "quasar",
+        "stores/settings",
+        "stores/main"
+      ],
+      "dependents": []
+    },
+    "pages/settings/NotificationSettingsPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "pages/settings/ThresholdSettingsPage.vue": {
+      "imports": [],
+      "dependents": []
+    },
+    "router/index.ts": {
+      "imports": [
+        "quasar/wrappers",
+        "vue-router",
+        "./routes"
+      ],
+      "dependents": []
+    },
+    "router/routes.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "services/api.ts": {
+      "imports": [
+        "../types"
+      ],
+      "dependents": []
+    },
+    "shims-vue.d.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "stores/device.ts": {
+      "imports": [
+        "pinia",
+        "vue",
+        "../types",
+        "../services/api",
+        "./main",
+        "../utils/debugSystem"
+      ],
+      "dependents": []
+    },
+    "stores/index.ts": {
+      "imports": [
+        "quasar/wrappers",
+        "pinia"
+      ],
+      "dependents": []
+    },
+    "stores/main.ts": {
+      "imports": [
+        "pinia",
+        "vue",
+        "../types"
+      ],
+      "dependents": [
+        "pages/settings/GeneralSettingsPage.vue"
+      ]
+    },
+    "stores/program.ts": {
+      "imports": [
+        "pinia",
+        "vue",
+        "../types",
+        "../services/api",
+        "./main"
+      ],
+      "dependents": []
+    },
+    "stores/settings.ts": {
+      "imports": [
+        "pinia",
+        "vue",
+        "../types",
+        "../services/api",
+        "./main"
+      ],
+      "dependents": [
+        "pages/settings/GeneralSettingsPage.vue"
+      ]
+    },
+    "stores/store-flag.d.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "types/index.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "types/scratch/BlockDefinition.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "types/scratch/VariableTypes.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "utils/componentMapWatcher.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "utils/debugSystem.ts": {
+      "imports": [],
+      "dependents": []
+    },
+    "utils/productionDebug.ts": {
+      "imports": [],
+      "dependents": []
+    }
+  },
+  "statistics": {
+    "totalFiles": 118,
+    "vueComponents": 66,
+    "composables": 3,
+    "stores": 6,
+    "utilities": 28,
+    "types": 7,
+    "avgFileSize": 10661,
+    "lastAnalysis": "2025-07-21T04:03:26.022Z"
+  }
+}

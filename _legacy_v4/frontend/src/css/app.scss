@@ -1,0 +1,60 @@
+// app global css in SCSS form
+
+// Custom variables
+$primary: #1976d2;
+$secondary: #26a69a;
+$accent: #9c27b0;
+$positive: #21ba45;
+$negative: #c10015;
+$info: #31ccec;
+$warning: #f2c037;
+
+// Theme colors for hydroponics
+$hydro-green: #4caf50;
+$hydro-blue: #2196f3;
+$hydro-orange: #ff9800;
+
+// Global styles
+body {
+  font-family: 'Roboto', sans-serif;
+}
+
+.q-layout {
+  min-height: 100vh;
+}
+
+// Custom utility classes
+.text-hydro-green {
+  color: $hydro-green !important;
+}
+
+.text-hydro-blue {
+  color: $hydro-blue !important;
+}
+
+.text-hydro-orange {
+  color: $hydro-orange !important;
+}
+
+.bg-hydro-green {
+  background-color: $hydro-green !important;
+}
+
+.bg-hydro-blue {
+  background-color: $hydro-blue !important;
+}
+
+.bg-hydro-orange {
+  background-color: $hydro-orange !important;
+}
+
+// Loading and transition styles
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket ActionTemplate Event Test</title>
+</head>
+<body>
+    <h1>WebSocket ActionTemplate Event Test</h1>
+    <button onclick="sendActionTemplateStarted()">Send ActionTemplate Started</button>
+    <button onclick="sendActionTemplateCompleted()">Send ActionTemplate Completed</button>
+    <button onclick="connectWebSocket()">Connect WebSocket</button>
+    <button onclick="disconnectWebSocket()">Disconnect WebSocket</button>
+
+    <div id="log" style="margin-top: 20px; padding: 10px; background: #f0f0f0; height: 400px; overflow-y: scroll;">
+        <h3>Event Log:</h3>
+    </div>
+
+    <script>
+        let ws = null;
+        let logDiv = document.getElementById('log');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function connectWebSocket() {
+            if (ws) {
+                log('WebSocket already connected');
+                return;
+            }
+
+            try {
+                ws = new WebSocket('ws://localhost:5000/ws/flow');
+
+                ws.onopen = () => {
+                    log('✅ WebSocket connected to backend');
+                };
+
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    log(`📨 Received: ${JSON.stringify(message, null, 2)}`);
+                };
+
+                ws.onclose = () => {
+                    log('🔌 WebSocket disconnected');
+                    ws = null;
+                };
+
+                ws.onerror = (error) => {
+                    log(`🔴 WebSocket error: ${error}`);
+                };
+            } catch (error) {
+                log(`🔴 Failed to connect: ${error}`);
+            }
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                log('WebSocket disconnected manually');
+            }
+        }
+
+        function sendActionTemplateStarted() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('❌ WebSocket not connected');
+                return;
+            }
+
+            const testEvent = {
+                type: 'status_change',
+                timestamp: new Date().toISOString(),
+                data: {
+                    event: 'actionTemplateStarted',
+                    programId: '507f1f77bcf86cd799439011',
+                    programName: 'Test Hydroponic Program',
+                    cycleId: 'cycle-001',
+                    actionTemplateId: '507f1f77bcf86cd799439012',
+                    actionTemplateName: 'Watering Cycle',
+                    actionIndex: 1,
+                    totalActions: 3,
+                    status: 'started'
+                }
+            };
+
+            ws.send(JSON.stringify(testEvent));
+            log(`🚀 Sent ActionTemplate Started event`);
+        }
+
+        function sendActionTemplateCompleted() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('❌ WebSocket not connected');
+                return;
+            }
+
+            const testEvent = {
+                type: 'status_change',
+                timestamp: new Date().toISOString(),
+                data: {
+                    event: 'actionTemplateCompleted',
+                    programId: '507f1f77bcf86cd799439011',
+                    programName: 'Test Hydroponic Program',
+                    cycleId: 'cycle-001',
+                    actionTemplateId: '507f1f77bcf86cd799439012',
+                    actionTemplateName: 'Watering Cycle',
+                    actionIndex: 1,
+                    totalActions: 3,
+                    status: 'completed',
+                    result: { success: true, duration: 5000 }
+                }
+            };
+
+            ws.send(JSON.stringify(testEvent));
+            log(`✅ Sent ActionTemplate Completed event`);
+        }
+
+        // Auto-connect on page load
+        window.onload = () => {
+            log('🔄 Page loaded - ready to test ActionTemplate events');
+            log('💡 Note: Make sure the backend WebSocket server is running on localhost:5000');
+        };
+    </script>
+</body>
+</html>

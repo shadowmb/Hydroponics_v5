@@ -1,0 +1,1 @@
+<template><q-page class="q-pa-md"><div class="text-h4">Create Program</div><p>Program creation form will be here.</p></q-page></template><script setup lang="ts">// Placeholder</script>

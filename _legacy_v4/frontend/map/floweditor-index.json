@@ -1,0 +1,457 @@
+{
+  "mainComponents": [
+    {
+      "name": "FlowRunnerUI",
+      "path": "components/flow-editor/FlowRunnerUI.vue",
+      "functions": [
+        "expandPanel",
+        "collapsePanel",
+        "getStartButtonIcon",
+        "getStartButtonLabel",
+        "getExecutionStatus",
+        "handleStartResume",
+        "skipCurrentBlock",
+        "restartSimulation",
+        "clearExecutionLog",
+        "getCurrentBlockStatus",
+        "getStatusClass",
+        "formatBlockParams",
+        "formatBlockResult",
+        "formatLogTime",
+        "formatLogData",
+        "getLogStatusIcon",
+        "getBlockDisplayName",
+        "getProgressStats",
+        "getProgressPercentage"
+      ],
+      "emits": [],
+      "props": []
+    },
+    {
+      "name": "FlowEditor",
+      "path": "modules/flowEditorV2/FlowEditor.vue",
+      "functions": [
+        "getBlockDisplayName",
+        "getBlockIcon",
+        "getDisplayParams",
+        "getParamDisplayName",
+        "getBlockValidation",
+        "getBlockStyle",
+        "isStartBlock",
+        "getBlockInputPorts",
+        "getBlockDefinition",
+        "hasIncomingConnectionToPort",
+        "isValidInputConnectionTarget",
+        "getBlockOutputs",
+        "getOutputPosition",
+        "hasOutgoingConnection",
+        "startDrag",
+        "onDragOver",
+        "onDrop",
+        "addBlockToCanvas",
+        "handleBlockMouseDown",
+        "handleDocumentMouseMove",
+        "handleDocumentMouseUp",
+        "cleanupDragListeners",
+        "onCanvasClick",
+        "handleOutputConnectorClick",
+        "handleInputConnectorClick",
+        "function",
+        "handleConnectorHover",
+        "handleConnectorLeave",
+        "onCanvasMouseMove",
+        "onRightClickCancel",
+        "updateGhostLine",
+        "cleanupConnectionListeners",
+        "selectConnection",
+        "deleteConnection",
+        "handleConnectionDelete",
+        "toggleSimulation",
+        "startSimulationWithValidation",
+        "closeValidationDialog",
+        "newFlow",
+        "loadFlow",
+        "loadDemoFlow",
+        "saveFlow",
+        "copyJsonToClipboard",
+        "isBlockCurrentlyExecuting",
+        "isBlockCompleted",
+        "isBlockError",
+        "getBlockSimulationStatus",
+        "getBlockSimulationData",
+        "getSimulationStatusClass",
+        "getSimulationStatusIcon",
+        "formatSimulationData"
+      ],
+      "emits": [],
+      "props": []
+    },
+    {
+      "name": "BlockConnector",
+      "path": "modules/flowEditorV2/components/BlockConnector.vue",
+      "functions": [
+        "handleConnectorClick",
+        "handleMouseEnter",
+        "handleMouseLeave"
+      ],
+      "emits": [
+        "click",
+        "mouseenter",
+        "mouseleave"
+      ],
+      "props": []
+    },
+    {
+      "name": "BlockPalette",
+      "path": "modules/flowEditorV2/components/BlockPalette.vue",
+      "functions": [
+        "toggleCategory",
+        "onDragStart",
+        "onBlockClick"
+      ],
+      "emits": [
+        "dragStart",
+        "blockClick"
+      ],
+      "props": []
+    },
+    {
+      "name": "ConnectionLayer",
+      "path": "modules/flowEditorV2/components/ConnectionLayer.vue",
+      "functions": [
+        "showHydroponicConnectionFeedback",
+        "onConnectionClick",
+        "onConnectionDelete",
+        "for"
+      ],
+      "emits": [
+        "connectionClick",
+        "connectionDelete"
+      ],
+      "props": []
+    },
+    {
+      "name": "ConnectionLine",
+      "path": "modules/flowEditorV2/components/ConnectionLine.vue",
+      "functions": [
+        "getSegmentStyle",
+        "getHighlightStyle",
+        "handleClick",
+        "handleRightClick",
+        "handleMouseEnter",
+        "handleMouseLeave",
+        "handleDelete",
+        "getDeleteButtonStyle"
+      ],
+      "emits": [
+        "click",
+        "delete"
+      ],
+      "props": []
+    },
+    {
+      "name": "ParamEditorPanel",
+      "path": "modules/flowEditorV2/components/ParamEditorPanel.vue",
+      "functions": [
+        "executing",
+        "detectParamType",
+        "closePanel",
+        "showValidationWarning",
+        "updateParam",
+        "updateParamValidation",
+        "getParamValidationErrors",
+        "getGlobalValue",
+        "hasGlobalValue",
+        "getGlobalValueInfo",
+        "saveChanges",
+        "revertChanges",
+        "initializeValidation",
+        "validateAllParams",
+        "attemptAutoFix",
+        "showValidationHelp",
+        "copyToClipboard",
+        "getStatusColor",
+        "getStatusLabel",
+        "formatParamValue",
+        "safeStringify"
+      ],
+      "emits": [],
+      "props": []
+    },
+    {
+      "name": "BooleanField",
+      "path": "modules/flowEditorV2/components/fields/BooleanField.vue",
+      "functions": [
+        "handleValueChange"
+      ],
+      "emits": [
+        "update:value",
+        "validation-change"
+      ],
+      "props": []
+    },
+    {
+      "name": "EnumField",
+      "path": "modules/flowEditorV2/components/fields/EnumField.vue",
+      "functions": [
+        "handleValueChange",
+        "handleBlur"
+      ],
+      "emits": [
+        "update:value",
+        "validation-change",
+        "validation-change"
+      ],
+      "props": []
+    },
+    {
+      "name": "NumberField",
+      "path": "modules/flowEditorV2/components/fields/NumberField.vue",
+      "functions": [
+        "handleValueChange",
+        "handleBlur",
+        "performValidation"
+      ],
+      "emits": [
+        "update:value",
+        "validation-change"
+      ],
+      "props": []
+    },
+    {
+      "name": "ParamField",
+      "path": "modules/flowEditorV2/components/fields/ParamField.vue",
+      "functions": [],
+      "emits": [],
+      "props": []
+    },
+    {
+      "name": "StringField",
+      "path": "modules/flowEditorV2/components/fields/StringField.vue",
+      "functions": [
+        "handleValueChange",
+        "handleBlur",
+        "performValidation"
+      ],
+      "emits": [
+        "update:value",
+        "validation-change"
+      ],
+      "props": []
+    },
+    {
+      "name": "ValidationMessage",
+      "path": "modules/flowEditorV2/components/validation/ValidationMessage.vue",
+      "functions": [
+        "getErrorSeverity",
+        "getErrorIcon",
+        "getErrorMessage"
+      ],
+      "emits": [],
+      "props": []
+    }
+  ],
+  "stores": [],
+  "utilities": [
+    {
+      "name": "FlowRunner",
+      "path": "modules/flowEditorV2/utils/FlowRunner.ts",
+      "exports": [
+        "ExecutionContext",
+        "ExecutionLogEntry",
+        "SimulationSettings",
+        "BlockExecutionResult",
+        "FlowRunner",
+        "createFlowRunner"
+      ]
+    },
+    {
+      "name": "advancedValidation",
+      "path": "modules/flowEditorV2/utils/advancedValidation.ts",
+      "exports": [
+        "CycleDetectionResult",
+        "PortCompatibilityResult",
+        "ConnectionValidationResult",
+        "detectCycles",
+        "checkPortCompatibility",
+        "validateEnhancedConnection"
+      ]
+    },
+    {
+      "name": "blockSchemas",
+      "path": "modules/flowEditorV2/utils/blockSchemas.ts",
+      "exports": [
+        "ParamValidation",
+        "ParamValidationResult",
+        "EnumOption",
+        "ConditionalDisplay",
+        "ParamSchema",
+        "getBlockParamSchema",
+        "getBlockIcon",
+        "getBlockDisplayName",
+        "getParamSchema",
+        "getDefaultParams",
+        "validateAllParams"
+      ]
+    },
+    {
+      "name": "connection",
+      "path": "modules/flowEditorV2/utils/connection.ts",
+      "exports": [
+        "ConnectionPoint",
+        "ConnectionCoordinates",
+        "LineSegment",
+        "ConnectionValidationResult",
+        "getConnectorPoint",
+        "calculateStraightConnection",
+        "validateConnection",
+        "getValidOutputIds",
+        "getOutputLabels",
+        "addBranchToParallel",
+        "removeBranchFromParallel",
+        "calculateGhostLine",
+        "findClosestInputConnector"
+      ]
+    },
+    {
+      "name": "format",
+      "path": "modules/flowEditorV2/utils/format.ts",
+      "exports": [
+        "generateId",
+        "formatDuration",
+        "formatVolume",
+        "formatParamValue",
+        "getSensorDisplayName",
+        "getPumpDisplayName",
+        "getModeDisplayName",
+        "getBlockTypeDisplayName",
+        "validateNumber",
+        "validateText",
+        "sanitizeValue"
+      ]
+    },
+    {
+      "name": "globalValues",
+      "path": "modules/flowEditorV2/utils/globalValues.ts",
+      "exports": [
+        "GlobalValue",
+        "GlobalValuesConfig",
+        "DEFAULT_GLOBAL_VALUES",
+        "GlobalValuesStore",
+        "globalValuesStore",
+        "resolveGlobalValue",
+        "hasGlobalFallback",
+        "getGlobalValueInfo",
+        "PARAM_GLOBAL_MAPPINGS",
+        "getSuggestedGlobalValues"
+      ]
+    },
+    {
+      "name": "paramValidation",
+      "path": "modules/flowEditorV2/utils/paramValidation.ts",
+      "exports": [
+        "validateParam",
+        "validateParams",
+        "hasValidationErrors",
+        "hasValidationWarnings",
+        "getValidationErrors",
+        "getValidationWarnings",
+        "validateParamsWithConditions",
+        "createValidationSummary"
+      ]
+    },
+    {
+      "name": "position",
+      "path": "modules/flowEditorV2/utils/position.ts",
+      "exports": [
+        "Point",
+        "Rect",
+        "LAYOUT_CONSTANTS",
+        "snapToGrid",
+        "isPointInRect",
+        "distance",
+        "findClosestPosition",
+        "calculateAutoPosition",
+        "isPositionOccupied",
+        "rectsOverlap",
+        "getConnectorPoint",
+        "calculateConnectionPath",
+        "constrainToCanvas"
+      ]
+    },
+    {
+      "name": "validation",
+      "path": "modules/flowEditorV2/utils/validation.ts",
+      "exports": [
+        "validateBlock",
+        "validateFlow"
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "ActionSpec",
+      "path": "modules/flowEditorV2/types/ActionSpec.ts",
+      "exports": [
+        "ActionSpec",
+        "CompilationResult",
+        "CompilationError",
+        "CompilationWarning"
+      ]
+    },
+    {
+      "name": "FlowBlock",
+      "path": "modules/flowEditorV2/types/FlowBlock.ts",
+      "exports": [
+        "BlockType",
+        "FlowBlock",
+        "MeasureParams",
+        "PumpParams",
+        "IfParams",
+        "LoopParams",
+        "WaitConditionParams",
+        "ParallelParams",
+        "ReactiveParallelParams",
+        "EventTriggerParams",
+        "OutputParams",
+        "BlockParams",
+        "PortType",
+        "ValidationMode",
+        "ConnectionMode",
+        "CompositePortType",
+        "ConnectionRule",
+        "InputPortConfig",
+        "OutputPortConfig",
+        "BlockDefinition",
+        "ConnectionRuleKey",
+        "ConnectionRules",
+        "ValidationModeConfig",
+        "ValidationModeConfigs"
+      ]
+    },
+    {
+      "name": "FlowDefinition",
+      "path": "modules/flowEditorV2/types/FlowDefinition.ts",
+      "exports": [
+        "FlowDefinition",
+        "ValidationResult",
+        "ValidationError",
+        "ValidationWarning",
+        "BlockPosition",
+        "BlockConnection"
+      ]
+    },
+    {
+      "name": "GlobalReference",
+      "path": "modules/flowEditorV2/types/GlobalReference.ts",
+      "exports": [
+        "GlobalVariable",
+        "GlobalConfig",
+        "GlobalReference"
+      ]
+    }
+  ],
+  "connections": {},
+  "blockTypes": [],
+  "validationRules": []
+}

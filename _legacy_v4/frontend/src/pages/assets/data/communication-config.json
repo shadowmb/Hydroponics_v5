@@ -1,0 +1,276 @@
+{
+  "communication_by": {
+    "serial": {
+      "label": "Serial връзка",
+      "icon": "cable",
+      "description": "Директна USB/UART връзка към контролера",
+      "fields": [
+        {
+          "name": "port",
+          "label": "Serial порт",
+          "type": "select",
+          "required": true,
+          "options": ["COM1", "COM2", "COM3", "COM4", "/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyACM0"],
+          "default": "COM1",
+          "hint": "Избери serial порт за връзка"
+        },
+        {
+          "name": "baudRate",
+          "label": "Baud Rate",
+          "type": "select",
+          "required": true,
+          "options": [9600, 19200, 38400, 57600, 115200],
+          "default": 115200,
+          "hint": "Скорост на комуникация"
+        }
+      ]
+    },
+    "wifi": {
+      "label": "WiFi мрежа",
+      "icon": "wifi",
+      "description": "Безжична мрежова връзка",
+      "fields": [
+        {
+          "name": "ip_address",
+          "label": "IP адрес",
+          "type": "text",
+          "required": true,
+          "validation": "ip",
+          "placeholder": "192.168.1.100",
+          "hint": "IP адрес на контролера в мрежата"
+        },
+        {
+          "name": "port",
+          "label": "Порт",
+          "type": "number",
+          "required": false,
+          "default": 80,
+          "min": 1,
+          "max": 65535,
+          "hint": "Мрежов порт (по подразбиране 80)"
+        },
+        {
+          "name": "timeout",
+          "label": "Timeout (мс)",
+          "type": "number",
+          "required": false,
+          "default": 5000,
+          "min": 1000,
+          "max": 30000,
+          "hint": "Таймаут за връзка в милисекунди"
+        },
+        {
+          "name": "mac_address",
+          "label": "MAC адрес",
+          "type": "text",
+          "required": false,
+          "validation": "mac",
+          "placeholder": "00:11:22:33:44:55",
+          "hint": "MAC адрес на WiFi модула (за UDP Discovery идентификация)"
+        }
+      ]
+    },
+    "network": {
+      "label": "Мрежова връзка",
+      "icon": "lan",
+      "description": "Ethernet или WiFi мрежова връзка",
+      "fields": [
+        {
+          "name": "ip_address", 
+          "label": "IP адрес",
+          "type": "text",
+          "required": true,
+          "validation": "ip",
+          "placeholder": "192.168.1.100",
+          "hint": "IP адрес на контролера в мрежата"
+        },
+        {
+          "name": "port",
+          "label": "Порт", 
+          "type": "number",
+          "required": false,
+          "default": 80,
+          "min": 1,
+          "max": 65535,
+          "hint": "Мрежов порт (по подразбиране 80)"
+        },
+        {
+          "name": "mac_address",
+          "label": "MAC адрес",
+          "type": "text", 
+          "required": false,
+          "validation": "mac",
+          "placeholder": "00:11:22:33:44:55",
+          "hint": "MAC адрес на мрежовия интерфейс (за UDP Discovery)"
+        }
+      ]
+    },
+    "bluetooth": {
+      "label": "Bluetooth",
+      "icon": "bluetooth",
+      "description": "Bluetooth безжична връзка",
+      "fields": [
+        {
+          "name": "device_name",
+          "label": "Име на устройство",
+          "type": "text",
+          "required": true,
+          "placeholder": "HC-05",
+          "hint": "Bluetooth име на контролера"
+        },
+        {
+          "name": "mac_address",
+          "label": "MAC адрес",
+          "type": "text",
+          "required": false,
+          "validation": "mac",
+          "placeholder": "00:11:22:33:44:55",
+          "hint": "MAC адрес на Bluetooth модула (опционално)"
+        },
+        {
+          "name": "pin",
+          "label": "PIN код",
+          "type": "text",
+          "required": false,
+          "default": "1234",
+          "hint": "PIN за сдвояване (ако е нужен)"
+        }
+      ]
+    }
+  },
+  "communication_type": {
+    "raw_serial": {
+      "label": "Raw Serial",
+      "icon": "terminal",
+      "description": "Директни serial команди",
+      "compatible_by": ["serial"],
+      "fields": [
+        {
+          "name": "command_format",
+          "label": "Формат на команда",
+          "type": "select",
+          "required": true,
+          "options": [
+            {"label": "JSON", "value": "json"},
+            {"label": "Ключ=Стойност", "value": "key_value"},
+            {"label": "Персонализиран", "value": "custom"}
+          ],
+          "default": "json",
+          "hint": "Формат на изпращаните команди"
+        },
+        {
+          "name": "line_ending",
+          "label": "Край на ред",
+          "type": "select",
+          "required": true,
+          "options": [
+            {"label": "\\n", "value": "\\n"},
+            {"label": "\\r\\n", "value": "\\r\\n"},
+            {"label": "\\r", "value": "\\r"}
+          ],
+          "default": "\\n",
+          "hint": "Символи за край на команда"
+        }
+      ]
+    },
+    "http": {
+      "label": "HTTP REST",
+      "icon": "http",
+      "description": "HTTP REST API заявки",
+      "compatible_by": ["wifi"],
+      "fields": [
+        {
+          "name": "base_path",
+          "label": "Базов път",
+          "type": "text",
+          "required": false,
+          "default": "/api",
+          "placeholder": "/api",
+          "hint": "Базов път за API endpoints"
+        },
+        {
+          "name": "auth_type",
+          "label": "Оторизация",
+          "type": "select",
+          "required": false,
+          "options": [
+            {"label": "Без", "value": "none"},
+            {"label": "Basic Auth", "value": "basic"},
+            {"label": "API Key", "value": "api_key"}
+          ],
+          "default": "none",
+          "hint": "Тип оторизация"
+        },
+        {
+          "name": "api_key",
+          "label": "API ключ",
+          "type": "text",
+          "required": false,
+          "placeholder": "your-api-key",
+          "hint": "API ключ за оторизация"
+        }
+      ]
+    },
+    "mqtt": {
+      "label": "MQTT Pub/Sub",
+      "icon": "share",
+      "description": "MQTT публикуване и абониране",
+      "compatible_by": ["wifi", "bluetooth"],
+      "fields": [
+        {
+          "name": "broker_host",
+          "label": "MQTT Broker",
+          "type": "text",
+          "required": true,
+          "placeholder": "192.168.1.1",
+          "hint": "IP или hostname на MQTT broker"
+        },
+        {
+          "name": "broker_port",
+          "label": "Порт",
+          "type": "number",
+          "required": false,
+          "default": 1883,
+          "min": 1,
+          "max": 65535,
+          "hint": "MQTT порт (1883 за неencrypted, 8883 за SSL)"
+        },
+        {
+          "name": "topic_prefix",
+          "label": "Topic prefix",
+          "type": "text",
+          "required": true,
+          "placeholder": "hydro/controller1",
+          "hint": "Префикс за MQTT topics"
+        },
+        {
+          "name": "username",
+          "label": "Потребителско име",
+          "type": "text",
+          "required": false,
+          "hint": "MQTT потребител (ако е нужно)"
+        },
+        {
+          "name": "password",
+          "label": "Парола",
+          "type": "password",
+          "required": false,
+          "hint": "MQTT парола (ако е нужно)"
+        },
+        {
+          "name": "qos",
+          "label": "QoS ниво",
+          "type": "select",
+          "required": false,
+          "options": [
+            {"label": "0 - At most once", "value": 0},
+            {"label": "1 - At least once", "value": 1},
+            {"label": "2 - Exactly once", "value": 2}
+          ],
+          "default": 1,
+          "hint": "Quality of Service ниво"
+        }
+      ]
+    }
+  }
+}

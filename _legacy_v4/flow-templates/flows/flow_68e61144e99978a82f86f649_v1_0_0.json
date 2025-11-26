@@ -1,0 +1,543 @@
+{
+  "id": "flow_1759907997618",
+  "meta": {
+    "version": "1.0",
+    "name": "TEST Moise IF",
+    "description": "",
+    "createdAt": "2025-10-08T07:19:57.618Z",
+    "modifiedAt": "2025-10-09T19:42:29.405Z",
+    "exportType": "main",
+    "exportedAt": "2025-10-09T19:42:29.405Z",
+    "exportedBy": "FlowEditor v3 Canvas",
+    "flowEditorVersion": "3.0.0",
+    "formatVersion": "3.0.0",
+    "isMonitoringFlow": false
+  },
+  "blocks": [
+    {
+      "id": "block_1759908003552_bl8cf8ac1",
+      "definitionId": "system.start",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "parameters": {},
+      "connections": {
+        "inputs": {},
+        "outputs": {
+          "flowOut": [
+            "connection_1759908030686_ahm7ihr72"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": [],
+        "system": true
+      }
+    },
+    {
+      "id": "block_1759908003552_aaail3dsb",
+      "definitionId": "system.end",
+      "position": {
+        "x": 60,
+        "y": 1000
+      },
+      "parameters": {},
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759908133754_t5vf93vb1"
+          ]
+        },
+        "outputs": {}
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": [],
+        "system": true
+      }
+    },
+    {
+      "id": "block_1759908026771_sdsdwxmlw",
+      "definitionId": "sensor",
+      "position": {
+        "x": 360,
+        "y": 260
+      },
+      "parameters": {
+        "deviceId": "68e5881e1312ba8b0cf38111",
+        "monitoringTagId": "68e53b7d3227783118584988",
+        "customName": "Сензор Влага"
+      },
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759908030686_ahm7ihr72"
+          ],
+          "setVarNameIn": [
+            "connection_1759908079880_4n52tvhwk"
+          ],
+          "onErrorIn": []
+        },
+        "outputs": {
+          "flowOut": [
+            "connection_1759908069655_0wwsas85c"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759908064250_k8xcsocqi",
+      "definitionId": "if",
+      "position": {
+        "x": 380,
+        "y": 500
+      },
+      "parameters": {
+        "manualConditionValue": null,
+        "connectedComparisonVariable": "",
+        "useGlobalVariable": true,
+        "selectedGlobalVariable": "globalVar1",
+        "comparisonValue": null,
+        "toleranceTagId": "68e53b8c322778311858498d",
+        "conditions": [
+          {
+            "condition": "greater_than",
+            "dataType": "number"
+          }
+        ],
+        "conditionOperator": "less_equal"
+      },
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759908069655_0wwsas85c"
+          ],
+          "setVarDataIn": [
+            "connection_1759908095663_n3tpnety3"
+          ],
+          "setVarDataIn3": [],
+          "onErrorIn": []
+        },
+        "outputs": {
+          "flowOutTrue": [
+            "connection_1759908129508_mlnh11660"
+          ],
+          "flowOutFalse": [
+            "connection_1759914390658_027hgiwks"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759908075948_8u15tg3j9",
+      "definitionId": "setVarName",
+      "position": {
+        "x": 0,
+        "y": 300
+      },
+      "parameters": {
+        "internalVar": "var1",
+        "displayName": "",
+        "dataType": "auto"
+      },
+      "connections": {
+        "inputs": {},
+        "outputs": {
+          "setVarNameOut": [
+            "connection_1759908079880_4n52tvhwk"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759908092164_l9ynlb89v",
+      "definitionId": "setVarData",
+      "position": {
+        "x": 0,
+        "y": 460
+      },
+      "parameters": {
+        "sourceVariable": "var1",
+        "customName": "var1"
+      },
+      "connections": {
+        "inputs": {},
+        "outputs": {
+          "setVarDataOut": [
+            "connection_1759908095663_n3tpnety3"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759908107994_cxe8j8lpk",
+      "definitionId": "actuator",
+      "position": {
+        "x": 980,
+        "y": 580
+      },
+      "parameters": {
+        "deviceType": "relay",
+        "deviceId": "68e53bec3227783118584a07",
+        "actionType": "on_off_timed",
+        "duration": 0,
+        "powerLevel": 0,
+        "powerFrom": 0,
+        "powerTo": 0,
+        "useGlobalVariable": true,
+        "selectedGlobalVariable": "globalVar2",
+        "comment": "pompa",
+        "customName": "Помпа А"
+      },
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759914417705_cd0g8tcmo"
+          ],
+          "setVarDataIn": [],
+          "onErrorIn": []
+        },
+        "outputs": {
+          "flowOut": [
+            "connection_1759955375372_ksykudg0p"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759908126506_t3fkdntf2",
+      "definitionId": "merge",
+      "position": {
+        "x": 100,
+        "y": 780
+      },
+      "parameters": {},
+      "connections": {
+        "inputs": {
+          "flowIn1": [
+            "connection_1759908129508_mlnh11660"
+          ],
+          "flowIn2": [
+            "connection_1759914440401_iobt9rdxq"
+          ],
+          "flowIn3": [],
+          "flowIn4": []
+        },
+        "outputs": {
+          "flowOut": [
+            "connection_1759908133754_t5vf93vb1"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759914375730_g7g9two0e",
+      "definitionId": "loop",
+      "position": {
+        "x": 740,
+        "y": 360
+      },
+      "parameters": {
+        "maxIterations": 10,
+        "delay": 1,
+        "connectedVariableName": "",
+        "manualConditionValue": null,
+        "useGlobalVariable": true,
+        "selectedGlobalVariable": "globalVar1",
+        "comparisonValue": null,
+        "toleranceTagId": "68e53b8c322778311858498d",
+        "conditions": [
+          {
+            "condition": "greater_than",
+            "dataType": "number"
+          }
+        ],
+        "conditionOperator": "equals"
+      },
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759914390658_027hgiwks"
+          ],
+          "setVarDataIn": [
+            "connection_1759914411379_dhf66dvov"
+          ],
+          "setVarDataIn2": [],
+          "onErrorIn": []
+        },
+        "outputs": {
+          "flowOut": [
+            "connection_1759914440401_iobt9rdxq"
+          ],
+          "loopOut": [
+            "connection_1759914417705_cd0g8tcmo"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759914402731_r7gkctqnu",
+      "definitionId": "setVarData",
+      "position": {
+        "x": 580,
+        "y": 300
+      },
+      "parameters": {
+        "sourceVariable": "var1",
+        "customName": "var1"
+      },
+      "connections": {
+        "inputs": {},
+        "outputs": {
+          "setVarDataOut": [
+            "connection_1759914411379_dhf66dvov"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759914461158_wduld5elg",
+      "definitionId": "goto",
+      "position": {
+        "x": 560,
+        "y": 920
+      },
+      "parameters": {
+        "targetBlockId": "block_1759914375730_g7g9two0e"
+      },
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759955383133_xyuc9e52n"
+          ]
+        },
+        "outputs": {}
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759955372387_macon8apj",
+      "definitionId": "sensor",
+      "position": {
+        "x": 1080,
+        "y": 820
+      },
+      "parameters": {
+        "deviceId": "68e5881e1312ba8b0cf38111",
+        "monitoringTagId": "68e53b7d3227783118584988"
+      },
+      "connections": {
+        "inputs": {
+          "flowIn": [
+            "connection_1759955375372_ksykudg0p"
+          ],
+          "setVarNameIn": [
+            "connection_1759955391616_vn5lcce1x"
+          ],
+          "onErrorIn": []
+        },
+        "outputs": {
+          "flowOut": [
+            "connection_1759955383133_xyuc9e52n"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "block_1759955388568_9c2dgggyo",
+      "definitionId": "setVarName",
+      "position": {
+        "x": 660,
+        "y": 640
+      },
+      "parameters": {
+        "internalVar": "var1",
+        "displayName": "",
+        "dataType": "auto"
+      },
+      "connections": {
+        "inputs": {},
+        "outputs": {
+          "setVarNameOut": [
+            "connection_1759955391616_vn5lcce1x"
+          ]
+        }
+      },
+      "meta": {
+        "status": "valid",
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "connection_1759908030686_ahm7ihr72",
+      "sourceBlockId": "block_1759908003552_bl8cf8ac1",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1759908026771_sdsdwxmlw",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1759908069655_0wwsas85c",
+      "sourceBlockId": "block_1759908026771_sdsdwxmlw",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1759908064250_k8xcsocqi",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1759908079880_4n52tvhwk",
+      "sourceBlockId": "block_1759908075948_8u15tg3j9",
+      "sourcePortId": "setVarNameOut",
+      "targetBlockId": "block_1759908026771_sdsdwxmlw",
+      "targetPortId": "setVarNameIn"
+    },
+    {
+      "id": "connection_1759908095663_n3tpnety3",
+      "sourceBlockId": "block_1759908092164_l9ynlb89v",
+      "sourcePortId": "setVarDataOut",
+      "targetBlockId": "block_1759908064250_k8xcsocqi",
+      "targetPortId": "setVarDataIn"
+    },
+    {
+      "id": "connection_1759908129508_mlnh11660",
+      "sourceBlockId": "block_1759908064250_k8xcsocqi",
+      "sourcePortId": "flowOutTrue",
+      "targetBlockId": "block_1759908126506_t3fkdntf2",
+      "targetPortId": "flowIn1"
+    },
+    {
+      "id": "connection_1759908133754_t5vf93vb1",
+      "sourceBlockId": "block_1759908126506_t3fkdntf2",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1759908003552_aaail3dsb",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1759914390658_027hgiwks",
+      "sourceBlockId": "block_1759908064250_k8xcsocqi",
+      "sourcePortId": "flowOutFalse",
+      "targetBlockId": "block_1759914375730_g7g9two0e",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1759914411379_dhf66dvov",
+      "sourceBlockId": "block_1759914402731_r7gkctqnu",
+      "sourcePortId": "setVarDataOut",
+      "targetBlockId": "block_1759914375730_g7g9two0e",
+      "targetPortId": "setVarDataIn"
+    },
+    {
+      "id": "connection_1759914417705_cd0g8tcmo",
+      "sourceBlockId": "block_1759914375730_g7g9two0e",
+      "sourcePortId": "loopOut",
+      "targetBlockId": "block_1759908107994_cxe8j8lpk",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1759914440401_iobt9rdxq",
+      "sourceBlockId": "block_1759914375730_g7g9two0e",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1759908126506_t3fkdntf2",
+      "targetPortId": "flowIn2"
+    },
+    {
+      "id": "connection_1759955375372_ksykudg0p",
+      "sourceBlockId": "block_1759908107994_cxe8j8lpk",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1759955372387_macon8apj",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1759955383133_xyuc9e52n",
+      "sourceBlockId": "block_1759955372387_macon8apj",
+      "sourcePortId": "flowOut",
+      "targetBlockId": "block_1759914461158_wduld5elg",
+      "targetPortId": "flowIn"
+    },
+    {
+      "id": "connection_1759955391616_vn5lcce1x",
+      "sourceBlockId": "block_1759955388568_9c2dgggyo",
+      "sourcePortId": "setVarNameOut",
+      "targetBlockId": "block_1759955372387_macon8apj",
+      "targetPortId": "setVarNameIn"
+    }
+  ],
+  "canvas": {
+    "zoom": 1,
+    "pan": {
+      "x": 0,
+      "y": 0
+    },
+    "grid": {
+      "enabled": true,
+      "size": 20
+    }
+  },
+  "exportStats": {
+    "totalBlocks": 13,
+    "totalConnections": 13,
+    "blockTypes": {},
+    "categories": {}
+  },
+  "validationSummary": {
+    "isValid": true,
+    "lastValidatedAt": "2025-10-09T19:42:29.407Z",
+    "criticalErrors": 0,
+    "warnings": 14,
+    "canExecute": true
+  }
+}

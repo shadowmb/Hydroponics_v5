@@ -1,0 +1,492 @@
+import { Router, Request, Response } from 'express'
+// DEACTIVATED: Target Registry System - Phase 1C
+// import { TargetRegistryItem, type ITargetRegistryItem, type ITargetUsage } from '../models'
+import mongoose from 'mongoose'
+
+const router = Router()
+
+// Types for usage tracking requests
+interface TrackUsageRequest {
+  blockId: string
+  blockType: 'actuator' | 'if' | 'loop' | 'custom'
+  fieldName: string
+  flowId?: string
+  flowName?: string
+}
+
+interface UntrackUsageRequest {
+  blockId: string
+  fieldName: string
+}
+
+/**
+ * GET /api/v1/target-registry/test
+ * Test endpoint to verify routes are working
+ */
+router.get('/test', (req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: 'TargetRegistry routes are working',
+    timestamp: new Date().toISOString()
+  })
+})
+
+/**
+ * GET /api/v1/target-registry
+ * Get all target registry items
+ */
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected. ReadyState: ' + mongoose.connection.readyState)
+    }
+    
+    const { type, isActive } = req.query
+    
+    const filter: any = {}
+    if (type !== undefined) {
+      filter.type = type
+    }
+    if (isActive !== undefined) {
+      filter.isActive = isActive === 'true'
+    }
+
+    const targetItems = await TargetRegistryItem.find(filter)
+      .sort({ type: 1, visualName: 1 })
+      .lean()
+
+    res.status(200).json({
+      success: true,
+      data: targetItems,
+      count: targetItems.length
+    })
+  } catch (error) {
+    console.error('Error fetching target registry items:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch target registry items',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
+ * GET /api/v1/target-registry/:id
+ * Get target registry item by ID
+ */
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid target registry item ID format'
+      })
+    }
+
+    const targetItem = await TargetRegistryItem.findById(id).lean()
+
+    if (!targetItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Target registry item not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: targetItem
+    })
+  } catch (error) {
+    console.error('Error fetching target registry item:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch target registry item'
+    })
+  }
+})
+
+/**
+ * POST /api/v1/target-registry
+ * Create new target registry item
+ */
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { visualName, targetKey, description, type, deviceId, deviceName, deviceType } = req.body
+
+    if (!visualName || !targetKey || !type) {
+      return res.status(400).json({
+        success: false,
+        error: 'Visual name, target key, and type are required'
+      })
+    }
+
+    // Check if target key already exists
+    const existingItem = await TargetRegistryItem.findOne({ targetKey })
+    if (existingItem) {
+      return res.status(409).json({
+        success: false,
+        error: 'Target key already exists'
+      })
+    }
+
+    const targetItem = new TargetRegistryItem({
+      visualName,
+      targetKey,
+      description,
+      type,
+      deviceId,
+      deviceName,
+      deviceType
+    })
+
+    const savedItem = await targetItem.save()
+
+    res.status(201).json({
+      success: true,
+      data: savedItem,
+      message: 'Target registry item created successfully'
+    })
+  } catch (error: any) {
+    console.error('Error creating target registry item:', error)
+    
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        error: 'Target key already exists'
+      })
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      })
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create target registry item'
+    })
+  }
+})
+
+/**
+ * PUT /api/v1/target-registry/:id
+ * Update target registry item
+ */
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { visualName, targetKey, description, type, deviceId, deviceName, deviceType, isActive } = req.body
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid target registry item ID format'
+      })
+    }
+
+    // Check if target key already exists (excluding current item)
+    if (targetKey) {
+      const existingItem = await TargetRegistryItem.findOne({ 
+        targetKey, 
+        _id: { $ne: id } 
+      })
+      if (existingItem) {
+        return res.status(409).json({
+          success: false,
+          error: 'Target key already exists'
+        })
+      }
+    }
+
+    const updateData: any = {}
+    if (visualName !== undefined) updateData.visualName = visualName
+    if (targetKey !== undefined) updateData.targetKey = targetKey
+    if (description !== undefined) updateData.description = description
+    if (type !== undefined) updateData.type = type
+    if (deviceId !== undefined) updateData.deviceId = deviceId
+    if (deviceName !== undefined) updateData.deviceName = deviceName
+    if (deviceType !== undefined) updateData.deviceType = deviceType
+    if (isActive !== undefined) updateData.isActive = isActive
+
+    const updatedItem = await TargetRegistryItem.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    )
+
+    if (!updatedItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Target registry item not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedItem,
+      message: 'Target registry item updated successfully'
+    })
+  } catch (error: any) {
+    console.error('Error updating target registry item:', error)
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        error: 'Target key already exists'
+      })
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      })
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update target registry item'
+    })
+  }
+})
+
+/**
+ * DELETE /api/v1/target-registry/:id
+ * Delete target registry item
+ */
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid target registry item ID format'
+      })
+    }
+
+    const deletedItem = await TargetRegistryItem.findByIdAndDelete(id)
+
+    if (!deletedItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Target registry item not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Target registry item deleted successfully',
+      data: { id: deletedItem._id }
+    })
+  } catch (error) {
+    console.error('Error deleting target registry item:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete target registry item'
+    })
+  }
+})
+
+// =============================================================================
+// 🔥 RUNTIME USAGE TRACKING ENDPOINTS (FlowExecutor only)
+// =============================================================================
+
+/**
+ * PUT /api/v1/target-registry/:id/track-usage
+ * Track usage of a target registry item in a block
+ * ⚠️  IMPORTANT: Only called by FlowExecutor during runtime execution
+ * ❌ NOT used for design-time configuration tracking
+ */
+router.put('/:id/track-usage', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { blockId, blockType, fieldName, flowId, flowName }: TrackUsageRequest = req.body
+
+    // Validate input
+    if (!blockId || !blockType || !fieldName) {
+      return res.status(400).json({
+        success: false,
+        error: 'blockId, blockType, and fieldName are required'
+      })
+    }
+
+    if (!['actuator', 'if', 'loop', 'custom'].includes(blockType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'blockType must be one of: actuator, if, loop, custom'
+      })
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid target registry item ID format'
+      })
+    }
+
+    const targetItem = await TargetRegistryItem.findById(id)
+
+    if (!targetItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Target registry item not found'
+      })
+    }
+
+    // Use the model's addUsage method
+    await targetItem.addUsage({
+      blockId,
+      blockType,
+      fieldName,
+      flowId,
+      flowName
+    })
+
+    res.status(200).json({
+      success: true,
+      message: 'Usage tracked successfully',
+      data: {
+        targetKey: targetItem.targetKey,
+        isActive: targetItem.isActive,
+        usageCount: targetItem.usageCount,
+        usedInBlocks: targetItem.usedInBlocks
+      }
+    })
+  } catch (error) {
+    console.error('Error tracking usage:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to track usage'
+    })
+  }
+})
+
+/**
+ * DELETE /api/v1/target-registry/:id/track-usage/:blockId/:fieldName
+ * Remove usage tracking for a specific block and field
+ */
+router.delete('/:id/track-usage/:blockId/:fieldName', async (req: Request, res: Response) => {
+  try {
+    const { id, blockId, fieldName } = req.params
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid target registry item ID format'
+      })
+    }
+
+    const targetItem = await TargetRegistryItem.findById(id)
+
+    if (!targetItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Target registry item not found'
+      })
+    }
+
+    // Use the model's removeUsage method
+    await targetItem.removeUsage(blockId, fieldName)
+
+    res.status(200).json({
+      success: true,
+      message: 'Usage removed successfully',
+      data: {
+        targetKey: targetItem.targetKey,
+        isActive: targetItem.isActive,
+        usageCount: targetItem.usageCount,
+        usedInBlocks: targetItem.usedInBlocks
+      }
+    })
+  } catch (error) {
+    console.error('Error removing usage:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to remove usage'
+    })
+  }
+})
+
+/**
+ * GET /api/v1/target-registry/usage/by-block/:blockId
+ * Get all targets used by a specific block
+ */
+router.get('/usage/by-block/:blockId', async (req: Request, res: Response) => {
+  try {
+    const { blockId } = req.params
+
+    if (!blockId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Block ID is required'
+      })
+    }
+
+    const targetItems = await TargetRegistryItem.findByBlockUsage(blockId)
+
+    res.status(200).json({
+      success: true,
+      data: targetItems,
+      count: targetItems.length
+    })
+  } catch (error) {
+    console.error('Error fetching targets by block usage:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch targets by block usage'
+    })
+  }
+})
+
+/**
+ * GET /api/v1/target-registry/analytics
+ * Get usage analytics for target registry items
+ */
+router.get('/analytics', async (req: Request, res: Response) => {
+  try {
+    const { sortBy = 'usageCount', order = 'desc', limit = 50 } = req.query
+
+    const sortOptions: any = {}
+    sortOptions[sortBy as string] = order === 'desc' ? -1 : 1
+
+    const targetItems = await TargetRegistryItem.find()
+      .sort(sortOptions)
+      .limit(parseInt(limit as string))
+      .lean()
+
+    // Calculate analytics
+    const totalTargets = await TargetRegistryItem.countDocuments()
+    const activeTargets = await TargetRegistryItem.countDocuments({ isActive: true })
+    const unusedTargets = await TargetRegistryItem.countDocuments({ usageCount: 0 })
+
+    const analytics = {
+      totalTargets,
+      activeTargets,
+      unusedTargets,
+      usageRate: totalTargets > 0 ? ((activeTargets / totalTargets) * 100).toFixed(2) : '0.00'
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        analytics,
+        targets: targetItems
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching usage analytics:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch usage analytics'
+    })
+  }
+})
+
+// DEACTIVATED: Target Registry System - Phase 1C
+// export default router

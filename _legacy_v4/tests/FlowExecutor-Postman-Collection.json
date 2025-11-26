@@ -1,0 +1,231 @@
+{
+  "info": {
+    "name": "FlowExecutor API v1.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for testing FlowExecutor API - Generated on 2025-08-06T05:04:34.406016Z"
+  },
+  "item": [
+    {
+      "name": "Execute Flow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/execute",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"flowDefinition\": {\n    \"id\": \"flow_example_1\",\n    \"meta\": {\n      \"name\": \"Simple Flow\"\n    },\n    \"blocks\": [],\n    \"connections\": []\n  },\n  \"mockMode\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Pause Flow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pause",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pause"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Resume Flow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/resume",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "resume"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Stop Flow",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/stop",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"emergency\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Get Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Logs",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/logs?limit=50",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "logs?limit=50"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Variables",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/variables",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "variables"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Config",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/config",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "config"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mockMode\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1/flow"
+    }
+  ]
+}

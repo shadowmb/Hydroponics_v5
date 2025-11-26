@@ -112,4 +112,4 @@ playwright-report/
 .playwright/
 
 # Legacy Code
-_legacy_v4/
+# _legacy_v4/

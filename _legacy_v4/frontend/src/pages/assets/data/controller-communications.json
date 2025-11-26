@@ -1,0 +1,364 @@
+{
+  "serial": {
+    "label": "Serial (USB/UART)",
+    "fields": [
+      {
+        "name": "port",
+        "label": "Port",
+        "type": "dropdown",
+        "options": [
+          "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+          "COM9", "COM10", "COM11", "COM12",
+          "/dev/ttyACM0", "/dev/ttyACM1",
+          "/dev/ttyUSB0", "/dev/ttyUSB1",
+          "/dev/ttyS0", "/dev/ttyS1",
+          "/dev/cu.usbmodem*", "/dev/cu.usbserial*"
+        ]
+      },
+      {
+        "name": "baud_rate",
+        "label": "Baud Rate",
+        "type": "dropdown",
+        "options": [4800, 9600, 19200, 38400, 57600, 115200],
+        "default": 115200
+      },
+      {
+        "name": "test_enabled",
+        "value": true
+      }
+    ]
+  },
+  "spi": {
+  "label": "SPI",
+  "fields": [
+    {
+      "name": "configuration",
+      "label": "Configuration",
+      "type": "dropdown",
+      "options": [
+        { "id": "hardware_spi", "label": "Hardware SPI (default)" },
+        { "id": "software_spi", "label": "Software SPI (custom pins)" }
+      ],
+      "default": "hardware_spi"
+    },
+    {
+      "name": "ss_pin",
+      "label": "SS (Chip Select) Pin",
+      "type": "dropdown",
+      "condition": "configuration == 'hardware_spi'",
+      "options": ["D10", "D9", "D8", "D7"]
+    },
+    {
+      "name": "sck_pin",
+      "label": "SCK Pin",
+      "type": "dropdown",
+      "condition": "configuration == 'software_spi'",
+      "source": "digital_pins"
+    },
+    {
+      "name": "mosi_pin",
+      "label": "MOSI Pin",
+      "type": "dropdown",
+      "condition": "configuration == 'software_spi'",
+      "source": "digital_pins"
+    },
+    {
+      "name": "miso_pin",
+      "label": "MISO Pin",
+      "type": "dropdown",
+      "condition": "configuration == 'software_spi'",
+      "source": "digital_pins"
+    },
+    {
+      "name": "cs_pin",
+      "label": "CS Pin",
+      "type": "dropdown",
+      "condition": "configuration == 'software_spi'",
+      "source": "digital_pins"
+    }
+  ]
+},
+"i2c": {
+  "label": "I2C",
+  "fields": [
+    {
+      "name": "sda_pin",
+      "label": "SDA Pin",
+      "type": "static",
+      "source": "i2c_pins",
+      "role": "sda"
+    },
+    {
+      "name": "scl_pin",
+      "label": "SCL Pin",
+      "type": "static",
+      "source": "i2c_pins",
+      "role": "scl"
+    },
+    {
+      "name": "i2c_address",
+      "label": "Device Address (hex)",
+      "type": "text",
+      "placeholder": "e.g. 0x27",
+      "optional": true
+    },
+    {
+      "name": "bus_speed",
+      "label": "Bus Speed (Hz)",
+      "type": "dropdown",
+      "options": [100000, 400000],
+      "labels": ["100 kHz (Standard)", "400 kHz (Fast)"],
+      "default": 100000
+    }
+  ]
+},
+"wifi": {
+  "label": "WiFi",
+  "fields": [
+    {
+      "name": "connection_mode",
+      "label": "Mode",
+      "type": "dropdown",
+      "options": [
+        { "id": "station", "label": "Client (connect to WiFi)" },
+        { "id": "access_point", "label": "Access Point (create network)" },
+        { "id": "both", "label": "Both (Client + AP)" }
+      ],
+      "default": "station"
+    },
+    {
+      "name": "ssid",
+      "label": "WiFi Network Name (SSID)",
+      "type": "text",
+      "condition": "connection_mode == 'station' || connection_mode == 'both'",
+      "required": true
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "condition": "connection_mode == 'station' || connection_mode == 'both'",
+      "required": true
+    },
+    {
+      "name": "ap_ssid",
+      "label": "AP Network Name",
+      "type": "text",
+      "condition": "connection_mode == 'access_point' || connection_mode == 'both'",
+      "required": true
+    },
+    {
+      "name": "ap_password",
+      "label": "AP Password",
+      "type": "password",
+      "condition": "connection_mode == 'access_point' || connection_mode == 'both'",
+      "required": true
+    },
+    {
+      "name": "ip_mode",
+      "label": "IP Assignment",
+      "type": "dropdown",
+      "options": ["DHCP", "Static"],
+      "default": "DHCP"
+    },
+    {
+      "name": "ip_address",
+      "label": "IP Address",
+      "type": "text",
+      "placeholder": "192.168.1.100",
+      "condition": "ip_mode == 'Static'"
+    },
+    {
+      "name": "gateway",
+      "label": "Gateway",
+      "type": "text",
+      "placeholder": "192.168.1.1",
+      "condition": "ip_mode == 'Static'"
+    },
+    {
+      "name": "subnet",
+      "label": "Subnet Mask",
+      "type": "text",
+      "placeholder": "255.255.255.0",
+      "condition": "ip_mode == 'Static'"
+    }
+  ]
+},
+"bluetooth": {
+  "label": "Bluetooth",
+  "fields": [
+    {
+      "name": "bluetooth_mode",
+      "label": "Mode",
+      "type": "dropdown",
+      "options": [
+        { "id": "classic", "label": "Classic Bluetooth (SPP)" },
+        { "id": "ble", "label": "Bluetooth Low Energy (BLE)" }
+      ],
+      "default": "classic"
+    },
+    {
+      "name": "device_name",
+      "label": "Device Name",
+      "type": "text",
+      "condition": "bluetooth_mode == 'classic'",
+      "placeholder": "HC-05"
+    },
+    {
+      "name": "device_address",
+      "label": "MAC Address",
+      "type": "text",
+      "condition": "bluetooth_mode == 'classic'",
+      "placeholder": "00:14:03:06:XX:XX",
+      "required": true
+    },
+    {
+      "name": "ble_service_uuid",
+      "label": "Service UUID",
+      "type": "text",
+      "condition": "bluetooth_mode == 'ble'",
+      "placeholder": "0000ffe0-0000-1000-8000-00805f9b34fb",
+      "required": true
+    },
+    {
+      "name": "pin",
+      "label": "Pairing PIN",
+      "type": "text",
+      "placeholder": "1234",
+      "optional": true
+    }
+  ]
+},
+"ethernet": {
+  "label": "Ethernet",
+  "fields": [
+    {
+      "name": "ip_mode",
+      "label": "IP Assignment",
+      "type": "dropdown",
+      "options": ["DHCP", "Static"],
+      "default": "DHCP"
+    },
+    {
+      "name": "ip_address",
+      "label": "IP Address",
+      "type": "text",
+      "placeholder": "192.168.1.150",
+      "condition": "ip_mode == 'Static'"
+    },
+    {
+      "name": "gateway",
+      "label": "Gateway",
+      "type": "text",
+      "placeholder": "192.168.1.1",
+      "condition": "ip_mode == 'Static'"
+    },
+    {
+      "name": "subnet",
+      "label": "Subnet Mask",
+      "type": "text",
+      "placeholder": "255.255.255.0",
+      "condition": "ip_mode == 'Static'"
+    },
+    {
+      "name": "port",
+      "label": "TCP Port",
+      "type": "number",
+      "default": 8080,
+      "min": 1024,
+      "max": 65535
+    }
+  ]
+},
+"mqtt": {
+  "label": "MQTT",
+  "fields": [
+    {
+      "name": "broker_type",
+      "label": "Broker",
+      "type": "dropdown",
+      "options": [
+        { "id": "custom", "label": "Custom Broker" },
+        { "id": "local", "label": "Local (on device)" }
+      ],
+      "default": "custom"
+    },
+    {
+      "name": "broker_host",
+      "label": "Broker Address",
+      "type": "text",
+      "condition": "broker_type == 'custom'",
+      "placeholder": "mqtt.example.com or 192.168.1.50",
+      "required": true
+    },
+    {
+      "name": "broker_port",
+      "label": "Port",
+      "type": "number",
+      "default": 1883,
+      "min": 1,
+      "max": 65535
+    },
+    {
+      "name": "use_tls",
+      "label": "Use TLS",
+      "type": "checkbox",
+      "default": false
+    },
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text",
+      "optional": true
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "optional": true
+    },
+    {
+      "name": "client_id",
+      "label": "Client ID",
+      "type": "text",
+      "placeholder": "hydro_controller_01"
+    },
+    {
+      "name": "topic_prefix",
+      "label": "Topic Prefix",
+      "type": "text",
+      "default": "hydroponics/device"
+    }
+  ]
+},
+"http": {
+  "label": "HTTP",
+  "fields": [
+    {
+      "name": "http_mode",
+      "label": "Mode",
+      "type": "dropdown",
+      "options": [
+        { "id": "client", "label": "Client (sends data)" },
+        { "id": "server", "label": "Server (receives commands)" }
+      ],
+      "default": "client"
+    },
+    {
+      "name": "server_url",
+      "label": "Server URL",
+      "type": "text",
+      "condition": "http_mode == 'client'",
+      "placeholder": "http://192.168.1.100:8080/data",
+      "required": true
+    },
+    {
+      "name": "listen_port",
+      "label": "Listen Port",
+      "type": "number",
+      "default": 80,
+      "condition": "http_mode == 'server'"
+    }
+  ]
+}
+}
