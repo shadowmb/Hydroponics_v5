@@ -223,7 +223,7 @@ export class HardwareService {
     /**
      * Reads a sensor value, returning both RAW and Converted data.
      */
-    public async readSensorValue(deviceId: string): Promise<{ raw: number, value: number }> {
+    public async readSensorValue(deviceId: string): Promise<{ raw: number, value: number, details?: any }> {
         const { DeviceModel } = await import('../../models/Device');
         const device = await DeviceModel.findById(deviceId);
         if (!device) throw new Error('Device not found');
@@ -231,7 +231,6 @@ export class HardwareService {
 
 
         // Execute 'READ' command
-        // Note: We assume the driver implements 'READ' and returns a numeric value or object with 'val'/'value'
         const rawResponse = await this.sendCommand(
             deviceId,
             device.config.driverId,
@@ -244,15 +243,33 @@ export class HardwareService {
         );
 
         let raw = 0;
-        if (typeof rawResponse === 'number') {
-            raw = rawResponse;
-        } else if (typeof rawResponse === 'object') {
-            if (Array.isArray(rawResponse) && rawResponse.length > 0) {
-                raw = Number(rawResponse[0]);
-            } else if ('val' in rawResponse) raw = Number(rawResponse.val);
-            else if ('value' in rawResponse) raw = Number(rawResponse.value);
-            else if ('raw' in rawResponse) raw = Number(rawResponse.raw);
-            else raw = Number(rawResponse); // Try casting the whole object? Unlikely.
+
+        // Check if Driver has a specific value path configured
+        const driver = templates.getDriver(device.config.driverId);
+        const valuePath = driver.commands?.READ?.valuePath;
+
+        if (valuePath && typeof rawResponse === 'object') {
+            const extracted = this.getValueByPath(rawResponse, valuePath);
+            if (extracted !== undefined) {
+                raw = Number(extracted);
+            } else {
+                logger.warn({ deviceId, valuePath, rawResponse }, '⚠️ [HardwareService] Configured valuePath not found in response');
+            }
+        } else {
+            // Fallback: Auto-detect common formats
+            if (typeof rawResponse === 'number') {
+                raw = rawResponse;
+            } else if (typeof rawResponse === 'object') {
+                if (Array.isArray(rawResponse) && rawResponse.length > 0) {
+                    raw = Number(rawResponse[0]);
+                } else if ('registers' in rawResponse && Array.isArray(rawResponse.registers) && rawResponse.registers.length > 0) {
+                    // Handle Modbus response: { ok: 1, registers: [val1, val2] }
+                    raw = Number(rawResponse.registers[0]);
+                } else if ('val' in rawResponse) raw = Number(rawResponse.val);
+                else if ('value' in rawResponse) raw = Number(rawResponse.value);
+                else if ('raw' in rawResponse) raw = Number(rawResponse.raw);
+                else raw = Number(rawResponse); // Try casting the whole object? Unlikely.
+            }
         }
 
         if (isNaN(raw)) {
@@ -274,7 +291,7 @@ export class HardwareService {
             logger.warn({ deviceId, error }, '⚠️ Failed to save lastReading to DB');
         }
 
-        return { raw, value };
+        return { raw, value, details: rawResponse };
     }
 
     /**
@@ -543,6 +560,12 @@ export class HardwareService {
         }
 
         await this.refreshControllerStatus(controllerId);
+    }
+
+    // --- Helper Methods ---
+
+    private getValueByPath(obj: any, path: string): any {
+        return path.split('.').reduce((acc, part) => acc && acc[part], obj);
     }
 
     // --- Event Handlers ---

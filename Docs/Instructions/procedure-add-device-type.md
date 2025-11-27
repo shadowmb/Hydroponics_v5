@@ -2,13 +2,27 @@
 
 This guide describes how to add a new device type (Sensor or Actuator) to the Hydroponics v5 system.
 
-## 4 Required Steps
+## 5 Required Steps
 
-### STEP 1: Create Device Template (Execution Config)
+### STEP 0: Verify Firmware Command Availability (CRITICAL)
+
+Before adding a device, you must ensure the firmware knows how to talk to it.
+
+1.  **Check Reference:** Open [Firmware Command Reference](../Reference/firmware-commands.md).
+2.  **Verify:** Does a command exist for your sensor's protocol?
+    *   *Example:* If adding a pH sensor, `ANALOG` exists. Good.
+    *   *Example:* If adding a new I2C sensor, check if `I2C_READ` supports it or if a specific command is needed.
+3.  **Action:**
+    *   **If YES:** Proceed to Step 1.
+    *   **If NO:** STOP. You must first implement the firmware command. See [Add New Firmware Command Procedure](../Instructions/procedure-add-firmware-command.md).
+
+---
+
+### STEP 1: Create Device Driver (Template)
 
 **File:** `backend/config/devices/<device_id>.json`
 
-Create a new JSON file. This defines how the backend communicates with the hardware.
+This JSON file acts as the **Device Driver**. It tells the system how to map high-level actions to the firmware commands verified in Step 0.
 
 **Naming Convention:** `<device_id>` should be `lowercase_underscores` (e.g., `dfrobot_ph_pro`).
 
@@ -23,7 +37,8 @@ Create a new JSON file. This defines how the backend communicates with the hardw
     ],
     "commands": {
         "READ": {
-            "hardwareCmd": "ANALOG"     // Maps abstract READ to firmware command
+            "hardwareCmd": "ANALOG",     // Maps abstract READ to firmware command
+            "valuePath": "val"           // Optional: Path to value in response (e.g. "registers.0", "temp")
         }
     },
     "pins": [
@@ -39,7 +54,8 @@ Create a new JSON file. This defines how the backend communicates with the hardw
 ```
 
 **Key Fields:**
-*   `commands`: Maps high-level actions (`READ`, `TOGGLE`) to low-level firmware commands (`ANALOG`, `RELAY_SET`).
+*   `commands`: Maps high-level actions (`READ`, `TOGGLE`) to low-level firmware commands.
+*   `valuePath`: (New in v5) If the firmware returns a complex object (e.g., `{"ok":1, "registers":[250]}`), specify the path to the actual value (e.g., `"registers.0"`). This avoids needing custom backend code.
 *   `conversionStrategy`: The default strategy to use (see Step 3).
 
 ---
@@ -142,8 +158,9 @@ Update `convert` method in `ConversionService.ts` to set this strategy as defaul
 
 #### 3. Response Parsing (`HardwareService.ts`)
 **File:** `backend/src/modules/hardware/HardwareService.ts`
-*   Update `readSensorValue()` if the sensor returns complex data (e.g., Arrays, Buffers).
-*   **Example:** Modbus often returns `[value]`. Ensure logic exists to handle `Array.isArray(response)`.
+*   **New in v5:** You generally DO NOT need to modify this file anymore.
+*   Instead, use the `valuePath` property in your Device Driver (Step 1) to tell the backend how to extract the value from the response.
+*   Only modify this file if the response format is so unique that `valuePath` cannot handle it.
 
 ---
 
