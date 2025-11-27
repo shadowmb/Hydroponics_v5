@@ -8,16 +8,6 @@
 
 // === INCLUDES ===
 #include <SoftwareSerial.h>
-/*
- * MODBUS_RTU_READ Command Module (v5 Clean)
- * Reads Modbus RTU registers via Hardware Serial
- * Format: MODBUS_RTU_READ|D2|D3|{"addr":1,"func":3,"reg":0,"count":2}
- * Used for: Industrial sensors with Modbus RTU protocol
- * Note: Uses SoftwareSerial with dynamic RX/TX pins
- */
-
-// === INCLUDES ===
-#include <SoftwareSerial.h>
 
 // === GLOBALS ===
 SoftwareSerial* modbusSerial = nullptr;
@@ -25,9 +15,8 @@ int modbusRxPin = -1;
 int modbusTxPin = -1;
 
 // === DISPATCHER ===
-else if (strcmp(cmd, "MODBUS_RTU_READ") == 0) {
-  return handleModbusRtuRead(delimiter + 1);
-}
+// This snippet is intended to be pasted into the main dispatcher by the generator.
+// For the standalone file, we keep the function definition below.
 
 // === FUNCTIONS ===
 unsigned int calculateModbusCRC16(unsigned char *buf, int len) {
@@ -128,8 +117,8 @@ String handleModbusRtuRead(const char* params) {
   request[5] = registerCount & 0xFF;
   
   unsigned int crc = calculateModbusCRC16(request, 6);
-  request[6] = crc & 0xFF;
-  request[7] = (crc >> 8) & 0xFF;
+  request[6] = crc & 0xFF;        // Low Byte
+  request[7] = (crc >> 8) & 0xFF; // High Byte
 
   // Clear any old data
   while (modbusSerial->available()) {

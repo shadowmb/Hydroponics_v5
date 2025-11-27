@@ -14,7 +14,8 @@
                 "func": 3,
                 "reg": 0,
                 "count": 1
-            }
+            },
+            "valuePath": "registers.0"
         }
     },
     "pins": [

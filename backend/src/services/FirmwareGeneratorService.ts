@@ -217,7 +217,7 @@ export class FirmwareGeneratorService {
             const capabilitiesCode = `const char* CAPABILITIES[] = {${capabilitiesArray}};\nconst int CAPABILITIES_COUNT = ${commands.length};`;
 
             // Collect includes, globals, dispatcher, and functions from command templates
-            let includes = '';
+            const uniqueIncludes = new Set<string>();
             let globals = '';
             let dispatcher = '';
             let functions = '';
@@ -237,7 +237,13 @@ export class FirmwareGeneratorService {
                 const functionsMatch = templateContent.match(/\/\/ === FUNCTIONS ===\r?\n([\s\S]*?)$/);
 
                 if (includesMatch) {
-                    includes += includesMatch[1];
+                    const lines = includesMatch[1].split('\n');
+                    lines.forEach(line => {
+                        const trimmed = line.trim();
+                        if (trimmed) {
+                            uniqueIncludes.add(trimmed);
+                        }
+                    });
                 }
                 if (globalsMatch) {
                     globals += globalsMatch[1];
@@ -251,7 +257,8 @@ export class FirmwareGeneratorService {
             }
 
             // Replace placeholders
-            firmware = firmware.replace('// GENERATOR_INCLUDES_PLACEHOLDER', includes.trim());
+            const includesString = Array.from(uniqueIncludes).join('\n');
+            firmware = firmware.replace('// GENERATOR_INCLUDES_PLACEHOLDER', includesString);
             firmware = firmware.replace('// GENERATOR_GLOBALS_PLACEHOLDER', globals.trim());
             firmware = firmware.replace('// GENERATOR_CAPABILITIES_ARRAY_PLACEHOLDER', capabilitiesCode);
             firmware = firmware.replace('// GENERATOR_DISPATCHER_PLACEHOLDER', dispatcher.trim());

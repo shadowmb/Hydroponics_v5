@@ -53,7 +53,12 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
             if (result) {
                 setLiveValue(result.value);
                 setRawValue(result.raw);
-                addLog(`Read OK: ${result.value} (Raw: ${result.raw})`, 'success');
+
+                let logMsg = `Read OK: ${result.value} (Raw: ${result.raw})`;
+                if (result.details) {
+                    logMsg += ` [Full Response: ${JSON.stringify(result.details)}]`;
+                }
+                addLog(logMsg, 'success');
             }
         } catch (error: any) {
             const backendError = error.response?.data?.error;

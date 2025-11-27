@@ -10,7 +10,8 @@
             "hardwareCmd": "DHT_READ",
             "params": {
                 "type": 11
-            }
+            },
+            "valuePath": "temp"
         }
     },
     "pins": [
