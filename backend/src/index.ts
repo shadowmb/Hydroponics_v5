@@ -11,6 +11,7 @@ import { socketService } from './core/SocketService';
 import { seedControllerTemplates } from './utils/seedTemplates';
 import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
 import { hardware } from './modules/hardware/HardwareService';
+import { historyService } from './services/HistoryService';
 
 const app = Fastify({
     logger: false // We use our own Pino instance
@@ -62,6 +63,10 @@ async function bootstrap() {
         // 5. Initialize Hardware Service
         console.log('Initializing Hardware Service...');
         await hardware.initialize();
+
+        // 5.1 Initialize History Service
+        console.log('Initializing History Service...');
+        historyService.initialize();
 
         // 6. Start Server
         console.log('Starting Server...');

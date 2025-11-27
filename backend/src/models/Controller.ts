@@ -47,7 +47,7 @@ const ControllerSchema = new Schema({
     name: { type: String, required: true },
     type: { type: String, required: true }, // We store the key, not ObjectId, for flexibility
     description: { type: String },
-    macAddress: { type: String, sparse: true }, // sparse allows null/undefined to not conflict
+    macAddress: { type: String }, // sparse allows null/undefined to not conflict
     status: { type: String, enum: ['online', 'offline', 'error'], default: 'offline' },
     lastSeen: { type: Date },
     lastConnectionCheck: { type: Date },

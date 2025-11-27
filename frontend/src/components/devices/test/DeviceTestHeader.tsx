@@ -3,18 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Zap, Droplet, Thermometer, Cpu } from 'lucide-react';
 
 interface DeviceTestHeaderProps {
-    device: any; // Using any for now to match DeviceList, but ideally IDevice
-    liveValue: number | null;
-    rawValue: number | null;
-    unit?: string;
+    device: any;
     status: 'online' | 'offline' | 'error';
 }
 
 export const DeviceTestHeader: React.FC<DeviceTestHeaderProps> = ({
     device,
-    liveValue,
-    rawValue,
-    unit,
     status
 }) => {
 
@@ -48,21 +42,6 @@ export const DeviceTestHeader: React.FC<DeviceTestHeaderProps> = ({
             </div>
 
             <div className="flex items-center gap-6">
-                <div className="text-right">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Live Value</div>
-                    <div className="text-2xl font-bold font-mono text-primary">
-                        {liveValue !== null ? liveValue.toFixed(2) : '--.--'}
-                        <span className="text-sm text-muted-foreground ml-1">{unit || ''}</span>
-                    </div>
-                </div>
-
-                <div className="text-right hidden sm:block">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Raw</div>
-                    <div className="text-lg font-mono text-muted-foreground">
-                        {rawValue !== null ? rawValue : '---'}
-                    </div>
-                </div>
-
                 <div className="pl-4 border-l">
                     <Badge
                         variant={status === 'online' ? 'default' : 'destructive'}

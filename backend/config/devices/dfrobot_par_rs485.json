@@ -10,12 +10,19 @@
         "READ": {
             "hardwareCmd": "MODBUS_RTU_READ",
             "params": {
-                "addr": 1,
-                "func": 3,
-                "reg": 0,
-                "count": 1
+                "slaveId": 1,
+                "funcCode": 3,
+                "startAddr": 0,
+                "len": 1
             },
-            "valuePath": "registers.0"
+            "valuePath": "par",
+            "outputs": [
+                {
+                    "key": "par",
+                    "label": "PAR",
+                    "unit": "µmol/m²/s"
+                }
+            ]
         }
     },
     "pins": [

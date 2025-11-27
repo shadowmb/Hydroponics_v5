@@ -8,7 +8,15 @@
     ],
     "commands": {
         "READ": {
-            "hardwareCmd": "ANALOG"
+            "hardwareCmd": "ANALOG",
+            "valuePath": "ec",
+            "outputs": [
+                {
+                    "key": "ec",
+                    "label": "Conductivity",
+                    "unit": "mS/cm"
+                }
+            ]
         }
     },
     "pins": [

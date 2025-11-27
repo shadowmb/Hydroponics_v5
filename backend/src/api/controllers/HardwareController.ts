@@ -688,6 +688,8 @@ export class HardwareController {
                 }
             }
 
+            // Populate template for frontend
+            await device.populate('config.driverId');
             return reply.send({ success: true, data: device });
 
         } catch (error: any) {
@@ -833,6 +835,8 @@ export class HardwareController {
             Object.assign(device, body);
             await device.save();
 
+            // Populate template for frontend
+            await device.populate('config.driverId');
             return reply.send({ success: true, data: device });
         } catch (error) {
             req.log.error(error);
@@ -939,18 +943,39 @@ export class HardwareController {
         }
     }
 
+    static async getDeviceHistory(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { startDate, endDate, limit } = req.query as { startDate?: string, endDate?: string, limit?: string };
+            const { Reading } = await import('../../models/Reading');
+
+            const query: any = { 'metadata.deviceId': id };
+
+            if (startDate || endDate) {
+                query.timestamp = {};
+                if (startDate) query.timestamp.$gte = new Date(startDate);
+                if (endDate) query.timestamp.$lte = new Date(endDate);
+            }
+
+            const limitVal = limit ? parseInt(limit) : 100;
+
+            const readings = await Reading.find(query)
+                .sort({ timestamp: -1 })
+                .limit(limitVal);
+
+            // Return in chronological order for charts
+            return reply.send({ success: true, data: readings.reverse() });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to fetch device history' });
+        }
+    }
+
     static async testDevice(req: FastifyRequest, reply: FastifyReply) {
         try {
             const { id } = req.params as { id: string };
-
-            // Use the new readSensorValue method which handles reading + conversion
             const result = await hardware.readSensorValue(id);
-
-            return reply.send({
-                success: true,
-                data: result
-            });
-
+            return reply.send({ success: true, data: result });
         } catch (error: any) {
             req.log.error(error);
             return reply.status(500).send({ success: false, error: error.message || 'Test failed' });
