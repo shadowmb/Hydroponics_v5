@@ -20,13 +20,9 @@ else if (strcmp(cmd, "UART_READ_DISTANCE") == 0) {
 }
 
 // === FUNCTIONS ===
-int parseUARTPin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return (pin >= 2 && pin <= 13) ? pin : -1;
-}
+// === FUNCTIONS ===
+// parseUARTPin removed - using global parsePin
+
 
 String handleUARTReadDistance(const char* params) {
   // Parse params: "D10|D11" -> RX=D10, TX=D11
@@ -49,8 +45,8 @@ String handleUARTReadDistance(const char* params) {
   const char* txPinStr = pipePos + 1;
 
   // Parse pins
-  int rxPin = parseUARTPin(rxPinStr);
-  int txPin = parseUARTPin(txPinStr);
+  int rxPin = parsePin(String(rxPinStr));
+  int txPin = parsePin(String(txPinStr));
   
   if (rxPin == -1 || txPin == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";

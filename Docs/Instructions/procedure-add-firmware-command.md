@@ -13,6 +13,8 @@ Create a new `.ino` file. This file **MUST** follow a strict structure with spec
 
 **Structure:**
 
+> **IMPORTANT:** Always use the global `parsePin(String)` function to parse pin parameters. Do not use `atoi()` directly on pins, as the format is now `Label_GPIO` (e.g., `D2_2`).
+
 ```cpp
 /*
  * MY_COMMAND Command Module
@@ -38,8 +40,11 @@ else if (strcmp(cmd, "MY_COMMAND") == 0) {
 // === FUNCTIONS ===
 // Implement your logic here.
 String handleMyCommand(const char* params) {
-  // 1. Parse Parameters (if any)
-  // params string will be "PARAM1|PARAM2"
+  // 1. Parse Parameters
+  // params string will be "PARAM1|PARAM2" or "D2_2|..."
+  
+  // Use global parsePin() for any pin parameters!
+  // int pin = parsePin(paramString);
   
   // 2. Execute Logic
   int result = 42;

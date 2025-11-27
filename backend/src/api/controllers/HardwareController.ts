@@ -618,11 +618,31 @@ export class HardwareController {
 
             // 4. Create Device
             // 4. Create Device
+            // Resolve Pins
+            // Resolve Pins
+            let pins: { role: string; portId: string; gpio: number }[] = [];
+            if (body.hardware?.parentId) {
+                if (body.hardware?.port) {
+                    pins = await HardwareController.resolvePins(body.hardware.parentId, body.hardware.port);
+                } else if (body.hardware?.pins && typeof body.hardware.pins === 'object') {
+                    for (const [role, portId] of Object.entries(body.hardware.pins)) {
+                        const resolved = await HardwareController.resolvePins(body.hardware.parentId, portId as string);
+                        if (resolved.length > 0) {
+                            pins.push({
+                                role: role,
+                                portId: resolved[0].portId,
+                                gpio: resolved[0].gpio
+                            });
+                        }
+                    }
+                }
+            }
+
             const deviceData = {
                 name: body.name,
                 type: body.type,
                 isEnabled: body.isEnabled !== undefined ? body.isEnabled : true,
-                hardware: body.hardware,
+                hardware: { ...body.hardware, pins },
                 config: body.config,
                 metadata: body.metadata
             };
@@ -788,6 +808,28 @@ export class HardwareController {
                 }
             }
 
+            // Resolve Pins for update
+            // Resolve Pins for update
+            if (body.hardware?.parentId) {
+                if (body.hardware?.port) {
+                    const pins = await HardwareController.resolvePins(body.hardware.parentId, body.hardware.port);
+                    body.hardware.pins = pins;
+                } else if (body.hardware?.pins && typeof body.hardware.pins === 'object' && !Array.isArray(body.hardware.pins)) {
+                    const resolvedPins: any[] = [];
+                    for (const [role, portId] of Object.entries(body.hardware.pins)) {
+                        const resolved = await HardwareController.resolvePins(body.hardware.parentId, portId as string);
+                        if (resolved.length > 0) {
+                            resolvedPins.push({
+                                role: role,
+                                portId: resolved[0].portId,
+                                gpio: resolved[0].gpio
+                            });
+                        }
+                    }
+                    body.hardware.pins = resolvedPins;
+                }
+            }
+
             Object.assign(device, body);
             await device.save();
 
@@ -923,6 +965,22 @@ export class HardwareController {
             req.log.error(error);
             return reply.status(500).send({ success: false, error: error.message || 'Failed to sync status' });
         }
+    }
+    private static async resolvePins(controllerId: string, portId: string): Promise<{ role: string, portId: string, gpio: number }[]> {
+        const controller = await Controller.findById(controllerId);
+        if (!controller) return [];
+
+        const template = await ControllerTemplate.findOne({ key: controller.type });
+        if (!template) return [];
+
+        const port = template.ports.find(p => p.id === portId);
+        if (!port) return [];
+
+        return [{
+            role: 'default',
+            portId: port.id,
+            gpio: port.pin
+        }];
     }
 }
 

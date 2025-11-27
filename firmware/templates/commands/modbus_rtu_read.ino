@@ -16,7 +16,9 @@ int modbusTxPin = -1;
 
 // === DISPATCHER ===
 // This snippet is intended to be pasted into the main dispatcher by the generator.
-// For the standalone file, we keep the function definition below.
+else if (strcmp(cmd, "MODBUS_RTU_READ") == 0) {
+  return handleModbusRtuRead(delimiter + 1);
+}
 
 // === FUNCTIONS ===
 unsigned int calculateModbusCRC16(unsigned char *buf, int len) {
@@ -35,16 +37,10 @@ unsigned int calculateModbusCRC16(unsigned char *buf, int len) {
   return crc;
 }
 
-int parseModbusPin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return (pin >= 2 && pin <= 13) ? pin : -1;
-}
+// parseModbusPin removed - using global parsePin
 
 String handleModbusRtuRead(const char* params) {
-  // Parse params: "D2|D3|{...}" -> RX=D2, TX=D3, JSON params
+  // Parse params: "D2|D3|{...}" or "D2_2|D3_3|{...}" -> RX, TX, JSON params
   if (!params || strlen(params) < 10) {
     return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
@@ -70,9 +66,9 @@ String handleModbusRtuRead(const char* params) {
   const char* txPinStr = firstPipe + 1;
   const char* jsonParams = secondPipe + 1;
 
-  // Parse pins
-  int rxPin = parseModbusPin(rxPinStr);
-  int txPin = parseModbusPin(txPinStr);
+  // Parse pins using global parsePin (supports Label_GPIO format)
+  int rxPin = parsePin(String(rxPinStr));
+  int txPin = parsePin(String(txPinStr));
   
   if (rxPin == -1 || txPin == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";

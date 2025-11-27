@@ -17,13 +17,9 @@ else if (strcmp(cmd, "DIGITAL_READ") == 0) {
 }
 
 // === FUNCTIONS ===
-int parseDigitalPin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return (pin >= 2 && pin <= 13) ? pin : -1;
-}
+// === FUNCTIONS ===
+// parseDigitalPin removed - using global parsePin
+
 
 String handleDigitalRead(const char* params) {
   // Parse pin from params (e.g., "D3")
@@ -31,7 +27,7 @@ String handleDigitalRead(const char* params) {
     return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
-  int pin = parseDigitalPin(params);
+  int pin = parsePin(String(params));
   if (pin == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }

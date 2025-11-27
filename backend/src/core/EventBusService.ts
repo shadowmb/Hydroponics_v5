@@ -12,6 +12,7 @@ export interface SystemEvents {
     'error:critical': { source: string; message: string; error?: any };
     'controller:update': { id: string; status: any };
     'device:update': { id: string; status: any };
+    'command:sent': { deviceId: string; controllerId: string; packet: any };
 
     // Automation Events
     'automation:block_start': { blockId: string; type: string; sessionId?: string | null };

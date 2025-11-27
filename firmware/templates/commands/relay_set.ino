@@ -17,13 +17,9 @@ else if (strcmp(cmd, "RELAY_SET") == 0) {
 }
 
 // === FUNCTIONS ===
-int parseRelayPin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return (pin >= 2 && pin <= 13) ? pin : -1;
-}
+// === FUNCTIONS ===
+// parseRelayPin removed - using global parsePin
+
 
 String handleRelaySet(const char* params) {
   // Parse params: "D7|1" -> pin=D7, state=1
@@ -46,7 +42,7 @@ String handleRelaySet(const char* params) {
   const char* stateStr = delimiter + 1;
 
   // Parse pin
-  int pin = parseRelayPin(pinStr);
+  int pin = parsePin(String(pinStr));
   if (pin == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }

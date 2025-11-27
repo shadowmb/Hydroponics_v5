@@ -53,7 +53,9 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     description: initialData.metadata?.description || '',
                     controllerId: initialData.hardware?.parentId || '',
                     port: initialData.hardware?.port || '',
-                    pins: initialData.hardware?.pins || {},
+                    pins: Array.isArray(initialData.hardware?.pins)
+                        ? initialData.hardware.pins.reduce((acc: any, pin: any) => ({ ...acc, [pin.role]: pin.portId }), {})
+                        : initialData.hardware?.pins || {},
                     relayId: initialData.hardware?.relayId || '',
                     channel: initialData.hardware?.channel !== undefined ? String(initialData.hardware.channel) : '',
                     isEnabled: initialData.isEnabled !== undefined ? initialData.isEnabled : true

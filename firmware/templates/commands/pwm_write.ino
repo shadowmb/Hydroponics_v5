@@ -17,18 +17,14 @@ else if (strcmp(cmd, "PWM_WRITE") == 0) {
 }
 
 // === FUNCTIONS ===
+// === FUNCTIONS ===
 bool isPWMPin(int pin) {
   // Arduino Uno PWM pins: 3, 5, 6, 9, 10, 11
   return (pin == 3 || pin == 5 || pin == 6 || pin == 9 || pin == 10 || pin == 11);
 }
 
-int parsePWMPin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return isPWMPin(pin) ? pin : -1;
-}
+// parsePWMPin removed - using global parsePin
+
 
 String handlePWMWrite(const char* params) {
   // Parse params: "D9|128" -> pin=D9, value=128
@@ -42,23 +38,6 @@ String handlePWMWrite(const char* params) {
   paramsCopy[sizeof(paramsCopy) - 1] = '\0';
   
   char* delimiter = strchr(paramsCopy, '|');
-  if (!delimiter) {
-    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
-  }
-
-  *delimiter = '\0';
-  const char* pinStr = paramsCopy;
-  const char* valueStr = delimiter + 1;
-
-  // Parse pin
-  int pin = parsePWMPin(pinStr);
-  if (pin == -1) {
-    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
-  }
-
-  // Parse value (0-255)
-  int value = atoi(valueStr);
-  if (value < 0 || value > 255) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_VALUE\"}";
   }
 

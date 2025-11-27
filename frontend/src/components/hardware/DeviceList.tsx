@@ -170,7 +170,16 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
                                                                 <span className="text-muted-foreground">Port: </span>
                                                                 <Badge variant="secondary" className="font-mono">{device.hardware.port}</Badge>
                                                             </>
-                                                        ) : device.hardware.pins && Object.keys(device.hardware.pins).length > 0 ? (
+                                                        ) : (Array.isArray(device.hardware.pins) && device.hardware.pins.length > 0) ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                {device.hardware.pins.map((pin: any, index: number) => (
+                                                                    <div key={index} className="flex items-center gap-1">
+                                                                        <span className="text-muted-foreground text-xs">{pin.role}:</span>
+                                                                        <Badge variant="secondary" className="font-mono text-xs">{pin.portId}</Badge>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (device.hardware.pins && !Array.isArray(device.hardware.pins) && Object.keys(device.hardware.pins).length > 0) ? (
                                                             <div className="flex flex-col gap-1">
                                                                 {Object.entries(device.hardware.pins).map(([key, value]) => (
                                                                     <div key={key} className="flex items-center gap-1">

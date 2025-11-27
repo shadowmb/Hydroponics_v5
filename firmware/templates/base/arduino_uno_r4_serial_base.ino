@@ -69,6 +69,21 @@ void handleSerial() {
   }
 }
 
+// === PIN PARSER (v5 Label_GPIO Format) ===
+int parsePin(String pinStr) {
+  int underscoreIndex = pinStr.indexOf('_');
+  if (underscoreIndex != -1) {
+    // Format: Label_GPIO (e.g. D4_2)
+    String gpioStr = pinStr.substring(underscoreIndex + 1);
+    return gpioStr.toInt();
+  }
+  // Fallback: Try parsing as integer directly
+  if (isDigit(pinStr.charAt(0))) {
+      return pinStr.toInt();
+  }
+  return -1;
+}
+
 // === COMMAND PARSER (v5 Delimited Text Only) ===
 String processCommand(String input) {
   char cmdBuffer[64];

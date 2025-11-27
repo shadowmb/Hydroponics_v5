@@ -18,13 +18,9 @@ else if (strcmp(cmd, "ONEWIRE_READ_TEMP") == 0) {
 }
 
 // === FUNCTIONS ===
-int parseOneWirePin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return (pin >= 2 && pin <= 13) ? pin : -1;
-}
+// === FUNCTIONS ===
+// parseOneWirePin removed - using global parsePin
+
 
 String handleOneWireReadTemp(const char* params) {
   // Parse pin from params (e.g., "D5")
@@ -32,7 +28,7 @@ String handleOneWireReadTemp(const char* params) {
     return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
-  int pin = parseOneWirePin(params);
+  int pin = parsePin(String(params));
   if (pin == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
