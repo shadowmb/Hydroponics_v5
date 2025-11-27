@@ -17,27 +17,20 @@ else if (strcmp(cmd, "ANALOG") == 0) {
 }
 
 // === FUNCTIONS ===
-bool isValidAnalogPin(const char* pin) {
-  return (strlen(pin) == 2 && pin[0] == 'A' && pin[1] >= '0' && pin[1] <= '5');
-}
-
-int getAnalogPinNumber(const char* pin) {
-  return A0 + (pin[1] - '0');
-}
-
 String handleAnalog(const char* params) {
-  // Parse pin from params (e.g., "A0")
+  // Parse pin from params (e.g., "A0_14")
   if (!params || strlen(params) < 2) {
     return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
-  // Validate pin format
-  if (!isValidAnalogPin(params)) {
+  // Use global parsePin helper (handles Label_GPIO format)
+  int analogPin = parsePin(params);
+  
+  if (analogPin == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
-  // Convert pin string to pin number and read analog value (0-1023)
-  int analogPin = getAnalogPinNumber(params);
+  // Read analog value (0-1023)
   int value = analogRead(analogPin);
 
   // Build and return JSON response

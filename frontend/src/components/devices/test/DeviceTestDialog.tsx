@@ -8,6 +8,7 @@ import { hardwareService } from '../../../services/hardwareService';
 import { DeviceTestHeader } from './DeviceTestHeader';
 import { toast } from 'sonner';
 import { ECCalibration } from './calibration/ECCalibration';
+import { socketService } from '../../../core/SocketService';
 
 interface DeviceTestDialogProps {
     open: boolean;
@@ -23,21 +24,6 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
     const [isStreaming, setIsStreaming] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);
     const intervalRef = useRef<any>(null);
-
-    // Clear state when dialog opens/closes
-    useEffect(() => {
-        if (!open) {
-            stopStream();
-            setLogs([]);
-            setLiveValue(null);
-            setRawValue(null);
-        }
-    }, [open]);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => stopStream();
-    }, []);
 
     const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
         const time = new Date().toLocaleTimeString();
@@ -76,12 +62,13 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
         }
     };
 
-    const toggleStream = () => {
-        if (isStreaming) {
-            stopStream();
-        } else {
-            startStream();
+    const stopStream = () => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
         }
+        setIsStreaming(false);
+        addLog('Live stream stopped.', 'info');
     };
 
     const startStream = () => {
@@ -91,14 +78,48 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
         intervalRef.current = setInterval(readValue, 1000);
     };
 
-    const stopStream = () => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
+    const toggleStream = () => {
+        if (isStreaming) {
+            stopStream();
+        } else {
+            startStream();
         }
-        setIsStreaming(false);
-        addLog('Live stream stopped.', 'info');
     };
+
+    // Clear state when dialog opens/closes
+    useEffect(() => {
+        if (!open) {
+            stopStream();
+            setLogs([]);
+            setLiveValue(null);
+            setRawValue(null);
+        }
+    }, [open]);
+
+    // Cleanup on unmount & Socket listener
+    useEffect(() => {
+        const handleCommandSent = (data: any) => {
+            if (device && data.deviceId === device._id) {
+                // Format the command for display
+                // e.g. [SENT] ANALOG { pins: ["A0_14"] }
+                const { cmd, ...params } = data.packet;
+                // Remove ID as it's internal
+                delete params.id;
+
+                let paramStr = JSON.stringify(params);
+                if (paramStr === '{}') paramStr = '';
+
+                addLog(`[SENT] ${cmd} ${paramStr}`, 'info');
+            }
+        };
+
+        socketService.on('command:sent', handleCommandSent);
+
+        return () => {
+            stopStream();
+            socketService.off('command:sent', handleCommandSent);
+        };
+    }, [device?._id]);
 
     if (!device) return null;
 

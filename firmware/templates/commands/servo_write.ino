@@ -19,6 +19,7 @@ else if (strcmp(cmd, "SERVO_WRITE") == 0) {
 }
 
 // === FUNCTIONS ===
+// === FUNCTIONS ===
 int getServoIndex(int pin) {
   for (int i = 0; i < 6; i++) {
     if (servoPins[i] == pin) return i;
@@ -26,13 +27,8 @@ int getServoIndex(int pin) {
   return -1;
 }
 
-int parseServoPin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return (getServoIndex(pin) != -1) ? pin : -1;
-}
+// parseServoPin removed - using global parsePin
+
 
 String handleServoWrite(const char* params) {
   // Parse params: "D9|90" -> pin=D9, angle=90
@@ -55,8 +51,8 @@ String handleServoWrite(const char* params) {
   const char* angleStr = delimiter + 1;
 
   // Parse pin
-  int pin = parseServoPin(pinStr);
-  if (pin == -1) {
+  int pin = parsePin(String(pinStr));
+  if (pin == -1 || getServoIndex(pin) == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 

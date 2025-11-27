@@ -101,41 +101,52 @@ export class SerialTransport implements IHardwareTransport {
             // Serialize Parameters based on Command Type
             // SENSORS (Single Pin)
             if (['ANALOG', 'DIGITAL_READ', 'DHT_READ', 'ONEWIRE_READ_TEMP'].includes(packet.cmd)) {
-                if (packet.pin !== undefined) message += `|${packet.pin}`;
+                const pinStr = this.formatPin(packet);
+                if (pinStr) message += `|${pinStr}`;
             }
             // ACTUATORS (Pin + State/Value)
             else if (['RELAY_SET', 'DIGITAL_WRITE'].includes(packet.cmd)) {
-                if (packet.pin !== undefined) message += `|${packet.pin}`;
+                const pinStr = this.formatPin(packet);
+                if (pinStr) message += `|${pinStr}`;
                 if (packet.state !== undefined) message += `|${packet.state}`;
             }
             else if (packet.cmd === 'PWM_WRITE') {
-                if (packet.pin !== undefined) message += `|${packet.pin}`;
+                const pinStr = this.formatPin(packet);
+                if (pinStr) message += `|${pinStr}`;
                 if (packet.value !== undefined) message += `|${packet.value}`;
             }
             else if (packet.cmd === 'SERVO_WRITE') {
-                if (packet.pin !== undefined) message += `|${packet.pin}`;
+                const pinStr = this.formatPin(packet);
+                if (pinStr) message += `|${pinStr}`;
                 if (packet.angle !== undefined) message += `|${packet.angle}`;
             }
             // MODBUS RTU (Hybrid Format: CMD|RX|TX|JSON)
             else if (packet.cmd === 'MODBUS_RTU_READ') {
-                // Extract pins from the 'pins' map injected by DeviceTemplateManager
-                const pins = packet.pins as any;
-                let rx = (pins?.get ? pins.get('RX') : pins?.RX) || packet.rx;
-                let tx = (pins?.get ? pins.get('TX') : pins?.TX) || packet.tx;
+                let rxStr: string | undefined;
+                let txStr: string | undefined;
 
-                if (rx === undefined || tx === undefined) {
+                // 1. Try to get from 'pins' array (New Format)
+                if (packet.pins && Array.isArray(packet.pins)) {
+                    const rxPin = packet.pins.find((p: any) => p.role === 'RX');
+                    const txPin = packet.pins.find((p: any) => p.role === 'TX');
+                    if (rxPin) rxStr = `${rxPin.portId}_${rxPin.gpio}`;
+                    if (txPin) txStr = `${txPin.portId}_${txPin.gpio}`;
+                }
+
+                // 2. Fallback to packet properties (Legacy/Direct)
+                if (!rxStr && packet.rx !== undefined) rxStr = String(packet.rx);
+                if (!txStr && packet.tx !== undefined) txStr = String(packet.tx);
+
+                // 3. Ensure 'D' prefix for legacy digital pins if they are just numbers
+                // (Only if we didn't get a Label_GPIO string)
+                if (rxStr && !rxStr.includes('_') && /^\d+$/.test(rxStr)) rxStr = `D${rxStr}`;
+                if (txStr && !txStr.includes('_') && /^\d+$/.test(txStr)) txStr = `D${txStr}`;
+
+                if (!rxStr || !txStr) {
                     throw new Error('MODBUS_RTU_READ requires RX and TX pins');
                 }
 
-                // Ensure 'D' prefix for digital pins if missing (and not Analog 'A')
-                if (typeof rx === 'number' || (typeof rx === 'string' && !/^[DA]/.test(rx))) {
-                    rx = `D${rx}`;
-                }
-                if (typeof tx === 'number' || (typeof tx === 'string' && !/^[DA]/.test(tx))) {
-                    tx = `D${tx}`;
-                }
-
-                message += `|${rx}|${tx}`;
+                message += `|${rxStr}|${txStr}`;
 
                 // Add JSON params
                 const jsonParams = {
@@ -145,6 +156,16 @@ export class SerialTransport implements IHardwareTransport {
                     count: packet.count
                 };
                 message += `|${JSON.stringify(jsonParams)}`;
+            }
+            // I2C READ (Format: I2C_READ|ADDR|COUNT)
+            else if (packet.cmd === 'I2C_READ') {
+                const addr = packet.addr !== undefined ? packet.addr : packet.address;
+                const count = packet.count !== undefined ? packet.count : packet.bytes;
+
+                if (addr === undefined || count === undefined) {
+                    throw new Error('I2C_READ requires addr and count parameters');
+                }
+                message += `|${addr}|${count}`;
             }
         }
 
@@ -198,5 +219,16 @@ export class SerialTransport implements IHardwareTransport {
 
     isConnected(): boolean {
         return this._isConnected;
+    }
+
+    private formatPin(packet: HardwarePacket): string | undefined {
+        if (packet.pins && Array.isArray(packet.pins) && packet.pins.length > 0) {
+            const p = packet.pins.find((p: any) => p.role === 'default') || packet.pins[0];
+            return `${p.portId}_${p.gpio}`;
+        }
+        if (packet.pin !== undefined) {
+            return `${packet.pin}`;
+        }
+        return undefined;
     }
 }

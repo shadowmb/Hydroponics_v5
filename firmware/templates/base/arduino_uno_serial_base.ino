@@ -26,6 +26,21 @@ int freeMemory() {
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
 
+// === PIN PARSER (v5 Label_GPIO Format) ===
+int parsePin(String pinStr) {
+  int underscoreIndex = pinStr.indexOf('_');
+  if (underscoreIndex != -1) {
+    // Format: Label_GPIO (e.g. D4_2)
+    String gpioStr = pinStr.substring(underscoreIndex + 1);
+    return gpioStr.toInt();
+  }
+  // Fallback: Try parsing as integer directly
+  if (isDigit(pinStr.charAt(0))) {
+      return pinStr.toInt();
+  }
+  return -1;
+}
+
 // GENERATOR_FUNCTIONS_PLACEHOLDER
 
 // === SETUP ===
@@ -53,6 +68,8 @@ void loop() {
     }
   }
 }
+
+
 
 // === COMMAND PARSER (v5 Delimited Text Only) ===
 String processCommand(String input) {

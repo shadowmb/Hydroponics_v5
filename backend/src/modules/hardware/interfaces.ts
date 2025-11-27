@@ -7,7 +7,7 @@ import { SystemEvents } from '../../core/EventBusService';
 export interface HardwarePacket {
     id: string;
     cmd: string;
-    pins?: Record<string, string> | Map<string, string>;
+    pins?: Record<string, string> | Map<string, string> | any[];
     [key: string]: any;
 }
 
@@ -48,6 +48,8 @@ export interface IDeviceDriver {
     id: string;          // e.g., 'relay_active_low'
     name: string;
     capabilities: string[];
+    commands?: Record<string, any>;
+    initialState?: Record<string, any>;
 
     /**
      * Translates a high-level command to a hardware packet.
@@ -58,7 +60,7 @@ export interface IDeviceDriver {
     createPacket(
         commandName: string,
         params: Record<string, any>,
-        context: { pin?: number | string; pins?: Map<string, string> | Record<string, string>; address?: string }
+        context: { pin?: number | string; pins?: Map<string, string> | Record<string, string> | any[]; address?: string }
     ): Omit<HardwarePacket, 'id'>; // ID is injected by the Service
 
     validateParams(commandName: string, params: Record<string, any>): boolean;

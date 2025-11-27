@@ -16,6 +16,7 @@ export interface Device {
     type: string;
     driverId: string;
     pin?: number;
+    pins?: { role: string; portId: string; gpio: number }[];
     config: Record<string, any>;
     state: Record<string, any>;
     lastSeen: Date;
@@ -23,27 +24,16 @@ export interface Device {
 
 export class HardwareService {
     private static instance: HardwareService;
+    private devices: Map<string, Device> = new Map();
+    private commandQueues: Map<string, (() => Promise<void>)[]> = new Map();
+    private isProcessingQueue: Map<string, boolean> = new Map();
+    private activeCommands: Map<string, string> = new Map(); // controllerId -> requestId
+    private pendingRequests: Map<string, { resolve: Function, reject: Function, timeout: NodeJS.Timeout }> = new Map();
+    private transports: Map<string, IHardwareTransport> = new Map();
 
-    // Transports mapped by Controller ID
-    private transports = new Map<string, IHardwareTransport>();
-
-    // Command Queues mapped by Controller ID
-    private commandQueues = new Map<string, Array<() => Promise<void>>>();
-    private isProcessingQueue = new Map<string, boolean>();
-
-    // Track active command ID per controller (for ID-less response matching)
-    private activeCommands = new Map<string, string>();
-
-    // In-Memory State
-    public devices = new Map<string, Device>();
-
-    private pendingRequests = new Map<string, {
-        resolve: (val: any) => void;
-        reject: (err: Error) => void;
-        timeout: NodeJS.Timeout
-    }>();
-
-    private constructor() { }
+    private constructor() {
+        // Singleton
+    }
 
     public static getInstance(): HardwareService {
         if (!HardwareService.instance) {
@@ -53,23 +43,25 @@ export class HardwareService {
     }
 
     public async initialize(): Promise<void> {
-        logger.info('🔌 HardwareService Initialized');
+        logger.info('🚀 [HardwareService] Initializing...');
 
-        // 1. Load Templates
-        templates.loadTemplates();
-
-        // 2. Load Devices from DB
+        // Load all devices into memory
         try {
-            const devices = await deviceRepository.findAll();
-            logger.info({ count: devices.length }, '📦 Loaded devices from DB');
+            await templates.loadTemplates();
+
+            const { DeviceModel } = await import('../../models/Device');
+            const devices = await DeviceModel.find({ isEnabled: true });
 
             for (const devConfig of devices) {
                 try {
                     const driverId = devConfig.config?.driverId;
                     if (!driverId) continue;
 
-                    const template = templates.getTemplate(driverId);
-                    if (!template) continue;
+                    const template = templates.getDriver(driverId);
+                    if (!template) {
+                        logger.warn({ driverId, deviceId: devConfig.id }, '⚠️ Driver not found for device');
+                        continue;
+                    }
 
                     const device: Device = {
                         id: devConfig.id,
@@ -77,6 +69,7 @@ export class HardwareService {
                         type: devConfig.type,
                         driverId: driverId,
                         pin: devConfig.hardware?.pin,
+                        pins: devConfig.hardware?.pins,
                         config: devConfig.config,
                         state: { ...template.initialState },
                         lastSeen: new Date()
@@ -93,109 +86,14 @@ export class HardwareService {
         }
     }
 
-    // --- Connection Management ---
+    // ... (lines 96-197)
 
-    public async disconnectController(controllerId: string): Promise<void> {
-        if (this.transports.has(controllerId)) {
-            const transport = this.transports.get(controllerId)!;
-            try {
-                logger.info({ controllerId }, '🔌 [HardwareService] Disconnecting Controller...');
-                await transport.disconnect();
-            } catch (err) {
-                logger.warn({ controllerId, err }, '⚠️ Error disconnecting transport');
-            }
-            this.transports.delete(controllerId);
-            this.activeCommands.delete(controllerId);
-            this.isProcessingQueue.delete(controllerId);
-            this.commandQueues.delete(controllerId);
-        }
-    }
-
-    /**
-     * Gets an existing transport or creates a new one based on controller config.
-     */
-    public async getOrConnectTransport(controllerId: string): Promise<IHardwareTransport> {
-        const controller = await Controller.findById(controllerId);
-        if (!controller) throw new Error(`Controller ${controllerId} not found`);
-
-        // Check if controller is active
-        if (controller.isActive === false) {
-            throw new Error(`Controller ${controller.name} is deactivated`);
-        }
-
-        // Check if we have an existing transport
-        if (this.transports.has(controllerId)) {
-            const transport = this.transports.get(controllerId)!;
-
-            // We can't easily check internal path of SerialTransport without casting or public prop
-            // Let's assume if it's connected, it's connected to *something*.
-            // But if user changed COM port in DB, we need to switch.
-            // We should probably just ALWAYS recreate the transport if we suspect a change?
-            // Or better: Compare with a stored config cache.
-
-            const connectionKey = controller.connection.type === 'serial'
-                ? `serial:${controller.connection.serialPort}:${controller.connection.baudRate}`
-                : `network:${controller.connection.ip}:${controller.connection.port || 8888}`;
-
-            const lastConfig = (transport as any)._config;
-
-            if (transport.isConnected() && lastConfig === connectionKey) {
-                return transport;
-            }
-
-            // Config changed or not connected, close old one
-            logger.info({ controllerId, oldConfig: lastConfig, newConfig: connectionKey }, '♻️ [HardwareService] Config changed or disconnected, reconnecting...');
-            try {
-                // We don't have a close method on interface? We do.
-                // But wait, does close() throw?
-                // Let's assume it's safe.
-                // Actually, let's just overwrite it.
-            } catch (e) { }
-        }
-
-        logger.info({ controllerId, name: controller.name, connection: controller.connection }, '🔍 [HardwareService] Resolving Transport');
-
-        let transport: IHardwareTransport;
-        const connectionKey = controller.connection.type === 'serial'
-            ? `serial:${controller.connection.serialPort}:${controller.connection.baudRate}`
-            : `network:${controller.connection.ip}:${controller.connection.port || 8888}`;
-
-        // Determine Transport Type
-        if (controller.connection?.type === 'serial' && controller.connection.serialPort) {
-            transport = new SerialTransport();
-            await transport.connect(controller.connection.serialPort, { baudRate: controller.connection.baudRate });
-        } else if (controller.connection?.type === 'network' && controller.connection.ip) {
-            transport = new UdpTransport();
-            const port = controller.connection.port || 8888;
-            const url = `udp://${controller.connection.ip}:${port}`;
-            await transport.connect(url);
-        } else {
-            logger.error({ controllerId, connection: controller.connection }, '❌ Invalid communication config');
-            throw new Error(`Invalid communication config for ${controller.name}`);
-        }
-
-        // Save config key
-        (transport as any)._config = connectionKey;
-
-
-        // Setup Event Handlers
-        transport.onMessage((msg) => this.handleMessage(controllerId, msg));
-        transport.onError((err) => this.handleError(controllerId, err));
-        transport.onClose(() => this.handleClose(controllerId));
-
-        this.transports.set(controllerId, transport);
-        return transport;
-    }
-
-    /**
-     * Sends a command to a specific device.
-     */
     public async sendCommand(
         deviceId: string,
         driverId: string,
         command: string,
         params: Record<string, any> = {},
-        context: { pin?: number | string; pins?: Map<string, string> | Record<string, string>; address?: string } = {}
+        context: { pin?: number | string; pins?: any[]; address?: string } = {}
     ): Promise<any> {
         // 1. Find which controller owns this device
         const { DeviceModel } = await import('../../models/Device');
@@ -208,13 +106,27 @@ export class HardwareService {
 
         // 2. Get Driver & Create Packet
         const driver = templates.getDriver(driverId);
-        const packetData = driver.createPacket(command, params, context);
+
+        // Merge context with device pins
+        const finalContext = {
+            ...context,
+            pins: deviceDoc.hardware?.pins || context.pins
+        };
+
+        const packetData = driver.createPacket(command, params, finalContext);
 
         const packet: HardwarePacket = {
             id: uuidv4(),
             cmd: packetData.cmd,
             ...packetData
         };
+
+        // Emit 'command:sent' for debugging/logging
+        events.emit('command:sent', {
+            deviceId,
+            controllerId,
+            packet
+        });
 
         // 3. Enqueue
         return this.enqueueCommand(controllerId, packet);
@@ -237,8 +149,7 @@ export class HardwareService {
             'READ',
             {},
             {
-                pin: device.hardware?.port || device.hardware?.pin,
-                pins: device.hardware?.pins // Pass multi-pin map
+                pins: device.hardware?.pins
             }
         );
 
@@ -371,6 +282,66 @@ export class HardwareService {
                 reject(err);
             });
         });
+    }
+
+    // --- Transport Management ---
+
+    private async getOrConnectTransport(controllerId: string): Promise<IHardwareTransport> {
+        if (this.transports.has(controllerId)) {
+            const transport = this.transports.get(controllerId)!;
+            if (transport.isConnected()) {
+                return transport;
+            }
+        }
+
+        const controller = await Controller.findById(controllerId);
+        if (!controller) {
+            throw new Error(`Controller ${controllerId} not found`);
+        }
+
+        let transport: IHardwareTransport;
+
+        // Determine Transport Type
+        if (controller.connection?.type === 'network' || controller.connection?.ip) {
+            logger.info({ controllerId, ip: controller.connection.ip }, '🔌 [HardwareService] Creating UDP Transport');
+            transport = new UdpTransport();
+
+            // Bind Events
+            transport.onMessage((msg) => this.handleMessage(controllerId, msg));
+            transport.onError((err) => this.handleError(controllerId, err));
+            transport.onClose(() => this.handleClose(controllerId));
+
+            await transport.connect(controller.connection.ip || 'localhost', { port: controller.connection.port || 8888 });
+
+        } else if (controller.connection?.type === 'serial' || controller.connection?.serialPort) {
+            logger.info({ controllerId, port: controller.connection.serialPort }, '🔌 [HardwareService] Creating Serial Transport');
+            transport = new SerialTransport();
+
+            // Bind Events
+            transport.onMessage((msg) => this.handleMessage(controllerId, msg));
+            transport.onError((err) => this.handleError(controllerId, err));
+            transport.onClose(() => this.handleClose(controllerId));
+
+            await transport.connect(controller.connection.serialPort!, { baudRate: controller.connection.baudRate || 115200 });
+        } else {
+            throw new Error(`Invalid connection config for controller ${controller.name}`);
+        }
+
+        this.transports.set(controllerId, transport);
+
+        return transport;
+    }
+
+    public async disconnectController(controllerId: string): Promise<void> {
+        if (this.transports.has(controllerId)) {
+            const transport = this.transports.get(controllerId)!;
+            await transport.disconnect();
+            this.transports.delete(controllerId);
+            this.activeCommands.delete(controllerId);
+            this.commandQueues.delete(controllerId);
+            this.isProcessingQueue.delete(controllerId);
+            logger.info({ controllerId }, '🔌 [HardwareService] Controller Disconnected');
+        }
     }
 
     // --- Health Check Logic ---

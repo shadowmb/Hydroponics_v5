@@ -18,13 +18,9 @@ else if (strcmp(cmd, "DHT_READ") == 0) {
 }
 
 // === FUNCTIONS ===
-int parseDHTPin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return (pin >= 2 && pin <= 13) ? pin : -1;
-}
+// === FUNCTIONS ===
+// parseDHTPin removed - using global parsePin
+
 
 String handleDHTRead(const char* params) {
   // Parse pin from params (e.g., "D4")
@@ -32,7 +28,7 @@ String handleDHTRead(const char* params) {
     return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
   }
 
-  int dataPin = parseDHTPin(params);
+  int dataPin = parsePin(String(params));
   if (dataPin == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }

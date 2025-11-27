@@ -17,13 +17,9 @@ else if (strcmp(cmd, "DIGITAL_WRITE") == 0) {
 }
 
 // === FUNCTIONS ===
-int parseDigitalWritePin(const char* pinStr) {
-  if (strlen(pinStr) < 2 || pinStr[0] != 'D') {
-    return -1;
-  }
-  int pin = atoi(pinStr + 1);
-  return (pin >= 2 && pin <= 13) ? pin : -1;
-}
+// === FUNCTIONS ===
+// parseDigitalWritePin removed - using global parsePin
+
 
 String handleDigitalWrite(const char* params) {
   // Parse params: "D8|1" -> pin=D8, state=1
@@ -46,7 +42,7 @@ String handleDigitalWrite(const char* params) {
   const char* stateStr = delimiter + 1;
 
   // Parse pin
-  int pin = parseDigitalWritePin(pinStr);
+  int pin = parsePin(String(pinStr));
   if (pin == -1) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }

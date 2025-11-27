@@ -8,6 +8,7 @@ import { IDeviceDriver, HardwarePacket } from './interfaces';
 const CommandSchema = z.object({
     hardwareCmd: z.string(),
     params: z.record(z.any()).optional(),
+    valuePath: z.string().optional(),
 });
 
 const PinSchema = z.object({
@@ -104,6 +105,8 @@ export class DeviceTemplateManager {
             id: template.id,
             name: template.name,
             capabilities: template.capabilities,
+            commands: template.commands,
+            initialState: template.initialState,
 
             createPacket: (cmdName, params, context: any) => {
                 const cmdDef = template.commands[cmdName];

@@ -7,13 +7,21 @@ These commands map high-level device actions (like `READ` or `TOGGLE`) to the lo
 > **Want to add a new command?**
 > See the [Add New Firmware Command Procedure](../Instructions/procedure-add-firmware-command.md).
 
+## Pin Format (v5)
+All commands now use the `Label_GPIO` format for pins to support dynamic mapping across different boards (Uno, ESP32, etc.).
+*   **Format:** `Label_GPIO` (e.g., `D2_2`, `A0_14`, `D13_13`)
+*   **Label:** The physical label on the board (e.g., `D2`, `A0`).
+*   **GPIO:** The actual integer GPIO number used by the MCU.
+*   **Parsing:** The firmware uses a global `parsePin()` function to extract the GPIO number.
+*   **Legacy Support:** The parser also accepts simple integer strings (e.g., `2`) or legacy labels if they start with a digit, but `Label_GPIO` is the standard.
+
 ## Core Commands
 
 ### `ANALOG`
 Reads an analog value from an ADC pin.
 *   **Usage:** Sensors (pH, EC, Moisture, Light)
 *   **Returns:** Integer (0-1023 or 0-4095 depending on MCU)
-*   **Protocol Example:** `ANALOG|A0`
+*   **Protocol Example:** `ANALOG|A0_14` (Pin A0, GPIO 14)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -25,7 +33,7 @@ Reads an analog value from an ADC pin.
 Reads the state of a digital pin.
 *   **Usage:** Float Switches, Buttons, Motion Sensors
 *   **Returns:** `0` (LOW) or `1` (HIGH)
-*   **Protocol Example:** `DIGITAL_READ|D2`
+*   **Protocol Example:** `DIGITAL_READ|D2_2` (Pin D2, GPIO 2)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -37,7 +45,7 @@ Reads the state of a digital pin.
 Sets a digital pin to HIGH or LOW.
 *   **Usage:** LEDs, Solenoids, General Output
 *   **Parameters:** `state` (0 or 1)
-*   **Protocol Example:** `DIGITAL_WRITE|D2|1`
+*   **Protocol Example:** `DIGITAL_WRITE|D2_2|1` (Pin D2, GPIO 2, HIGH)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -49,7 +57,7 @@ Sets a digital pin to HIGH or LOW.
 Writes a PWM duty cycle to a pin.
 *   **Usage:** Dimmable Lights, Fan Speed
 *   **Parameters:** `value` (0-255)
-*   **Protocol Example:** `PWM_WRITE|D3|128`
+*   **Protocol Example:** `PWM_WRITE|D3_3|128` (Pin D3, GPIO 3, 50%)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -61,7 +69,7 @@ Writes a PWM duty cycle to a pin.
 Specialized version of DIGITAL_WRITE for relays (often Active LOW).
 *   **Usage:** Relay Modules
 *   **Parameters:** `state` (0 or 1)
-*   **Protocol Example:** `RELAY_SET|D4|1`
+*   **Protocol Example:** `RELAY_SET|D4_4|1` (Pin D4, GPIO 4, ON)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -73,7 +81,7 @@ Specialized version of DIGITAL_WRITE for relays (often Active LOW).
 Controls a servo motor angle.
 *   **Usage:** Servo Motors
 *   **Parameters:** `angle` (0-180)
-*   **Protocol Example:** `SERVO_WRITE|D9|90`
+*   **Protocol Example:** `SERVO_WRITE|D9_9|90` (Pin D9, GPIO 9, 90 degrees)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -89,7 +97,7 @@ Controls a servo motor angle.
 Reads Temperature and Humidity from DHT11/DHT22 sensors.
 *   **Usage:** DHT11, DHT22, AM2302
 *   **Returns:** Object `{ "temp": 24.5, "hum": 60.0 }`
-*   **Protocol Example:** `DHT_READ|D4|11` (Pin D4, Type DHT11)
+*   **Protocol Example:** `DHT_READ|D4_4|11` (Pin D4, GPIO 4, Type DHT11)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -101,7 +109,7 @@ Reads Temperature and Humidity from DHT11/DHT22 sensors.
 Reads temperature from a DS18B20 sensor via OneWire.
 *   **Usage:** DS18B20 Waterproof Probe
 *   **Returns:** Float (Temperature in Celsius)
-*   **Protocol Example:** `ONEWIRE_READ_TEMP|D5`
+*   **Protocol Example:** `ONEWIRE_READ_TEMP|D5_5` (Pin D5, GPIO 5)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -113,7 +121,7 @@ Reads temperature from a DS18B20 sensor via OneWire.
 Reads distance from a serial-based ultrasonic sensor.
 *   **Usage:** A02YYUW (Waterproof)
 *   **Returns:** Float (Distance in mm or cm)
-*   **Protocol Example:** `UART_READ_DISTANCE|D2|D3` (RX=D2, TX=D3)
+*   **Protocol Example:** `UART_READ_DISTANCE|D2_2|D3_3` (RX=D2/GPIO2, TX=D3/GPIO3)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -125,7 +133,7 @@ Reads distance from a serial-based ultrasonic sensor.
 Reads registers from an RS485 Modbus device.
 *   **Usage:** Industrial Sensors (Soil NPK, PAR, CO2)
 *   **Parameters:** RX Pin, TX Pin, JSON Params
-*   **Protocol Example:** `MODBUS_RTU_READ|D2|D3|{"addr":1,"func":3,"reg":0,"count":1}`
+*   **Protocol Example:** `MODBUS_RTU_READ|D2_2|D3_3|{"addr":1,"func":3,"reg":0,"count":1}`
 *   **JSON Example:**
     ```json
     "commands": {

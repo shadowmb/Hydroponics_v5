@@ -47,7 +47,8 @@ export class SocketService {
             'error:critical',
             'automation:block_start',
             'automation:block_end',
-            'automation:state_change'
+            'automation:state_change',
+            'command:sent'
         ];
 
         eventsToForward.forEach(eventName => {

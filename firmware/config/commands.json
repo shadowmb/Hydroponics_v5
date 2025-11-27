@@ -12,7 +12,7 @@
             "category": "sensors",
             "commandFormat": "delimited",
             "syntax": "ANALOG|{pin}",
-            "example": "ANALOG|A0",
+            "example": "ANALOG|A0_14",
             "response": {
                 "success": "{\"ok\":1,\"value\":512}",
                 "error": "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}"
@@ -49,7 +49,7 @@
             "category": "sensors",
             "commandFormat": "delimited",
             "syntax": "DHT_READ|{pin}",
-            "example": "DHT_READ|D4",
+            "example": "DHT_READ|D4_4",
             "response": {
                 "success": "{\"ok\":1,\"temp\":22.5,\"humidity\":65.3}",
                 "error": "{\"ok\":0,\"error\":\"ERR_SENSOR_READ_FAILED\"}"
@@ -86,7 +86,7 @@
             "category": "sensors",
             "commandFormat": "delimited",
             "syntax": "ONEWIRE_READ_TEMP|{pin}",
-            "example": "ONEWIRE_READ_TEMP|D5",
+            "example": "ONEWIRE_READ_TEMP|D5_5",
             "response": {
                 "success": "{\"ok\":1,\"temp\":18.75}",
                 "error": "{\"ok\":0,\"error\":\"ERR_SENSOR_NOT_FOUND\"}"
@@ -126,7 +126,7 @@
             "category": "actuators",
             "commandFormat": "delimited",
             "syntax": "RELAY_SET|{pin}|{state}",
-            "example": "RELAY_SET|D7|1",
+            "example": "RELAY_SET|D7_7|1",
             "response": {
                 "success": "{\"ok\":1,\"pin\":\"D7\",\"state\":1}",
                 "error": "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}"
@@ -171,7 +171,7 @@
             "category": "sensors",
             "commandFormat": "delimited",
             "syntax": "DIGITAL_READ|{pin}",
-            "example": "DIGITAL_READ|D3",
+            "example": "DIGITAL_READ|D3_3",
             "response": {
                 "success": "{\"ok\":1,\"pin\":\"D3\",\"state\":1}",
                 "error": "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}"
@@ -208,7 +208,7 @@
             "category": "actuators",
             "commandFormat": "delimited",
             "syntax": "DIGITAL_WRITE|{pin}|{state}",
-            "example": "DIGITAL_WRITE|D8|1",
+            "example": "DIGITAL_WRITE|D8_8|1",
             "response": {
                 "success": "{\"ok\":1,\"pin\":\"D8\",\"state\":1}",
                 "error": "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}"
@@ -253,7 +253,7 @@
             "category": "actuators",
             "commandFormat": "delimited",
             "syntax": "PWM_WRITE|{pin}|{value}",
-            "example": "PWM_WRITE|D9|128",
+            "example": "PWM_WRITE|D9_9|128",
             "response": {
                 "success": "{\"ok\":1,\"pin\":\"D9\",\"value\":128}",
                 "error": "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}"
@@ -298,7 +298,7 @@
             "category": "actuators",
             "commandFormat": "delimited",
             "syntax": "SERVO_WRITE|{pin}|{angle}",
-            "example": "SERVO_WRITE|D9|90",
+            "example": "SERVO_WRITE|D9_9|90",
             "response": {
                 "success": "{\"ok\":1,\"pin\":\"D9\",\"angle\":90}",
                 "error": "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}"
@@ -345,7 +345,7 @@
             "category": "sensors",
             "commandFormat": "hybrid",
             "syntax": "MODBUS_RTU_READ|{rx_pin}|{tx_pin}|{json_params}",
-            "example": "MODBUS_RTU_READ|D2|D3|{\"addr\":1,\"func\":3,\"reg\":0,\"count\":2}",
+            "example": "MODBUS_RTU_READ|D2_2|D3_3|{\"addr\":1,\"func\":3,\"reg\":0,\"count\":2}",
             "response": {
                 "success": "{\"ok\":1,\"registers\":[1234,5678]}",
                 "error": "{\"ok\":0,\"error\":\"ERR_MODBUS_TIMEOUT\"}"
@@ -455,7 +455,7 @@
             "category": "sensors",
             "commandFormat": "delimited",
             "syntax": "UART_READ_DISTANCE|{rx_pin}|{tx_pin}",
-            "example": "UART_READ_DISTANCE|D10|D11",
+            "example": "UART_READ_DISTANCE|D10_10|D11_11",
             "response": {
                 "success": "{\"ok\":1,\"distance\":245}",
                 "error": "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}"
