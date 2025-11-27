@@ -28,6 +28,8 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         };
     };
 
+    commands?: Record<string, any>; // v5: Flexible command structure
+
     uiConfig: {
         category: string;
         icon?: string;
@@ -65,6 +67,8 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
             conversionMethod: String
         }
     },
+
+    commands: { type: Schema.Types.Mixed }, // v5: Flexible command structure (matches JSON templates)
 
     uiConfig: {
         category: { type: String, required: true },

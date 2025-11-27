@@ -9,6 +9,8 @@ import { DeviceTestHeader } from './DeviceTestHeader';
 import { toast } from 'sonner';
 import { ECCalibration } from './calibration/ECCalibration';
 import { socketService } from '../../../core/SocketService';
+import { SensorValueCard } from './SensorValueCard';
+import { DeviceHistoryTab } from '../history/DeviceHistoryTab';
 
 interface DeviceTestDialogProps {
     open: boolean;
@@ -21,13 +23,14 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
     const [activeTab, setActiveTab] = useState('monitor');
     const [liveValue, setLiveValue] = useState<number | null>(null);
     const [rawValue, setRawValue] = useState<number | null>(null);
+    const [multiValues, setMultiValues] = useState<any>(null);
     const [isStreaming, setIsStreaming] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);
     const intervalRef = useRef<any>(null);
 
     const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
         const time = new Date().toLocaleTimeString();
-        setLogs(prev => [`[${time}] ${msg}`, ...prev].slice(0, 50));
+        setLogs(prev => [`[${time}] [${type.toUpperCase()}] ${msg}`, ...prev].slice(0, 50));
     };
 
     const readValue = async () => {
@@ -35,10 +38,12 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
             addLog('Reading value...', 'info');
             const result = await hardwareService.testDevice(device._id);
             // Result format: { raw: 123, value: 1.2 } (Unwrapped by service)
+            console.log('DeviceTestDialog Read Result:', result);
 
             if (result) {
                 setLiveValue(result.value);
                 setRawValue(result.raw);
+                setMultiValues(result.details); // Store full details for multi-value display
 
                 let logMsg = `Read OK: ${result.value} (Raw: ${result.raw})`;
                 if (result.details) {
@@ -93,6 +98,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
             setLogs([]);
             setLiveValue(null);
             setRawValue(null);
+            setMultiValues(null);
         }
     }, [open]);
 
@@ -123,6 +129,14 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
 
     if (!device) return null;
 
+    console.log('DeviceTestDialog Debug:', {
+        id: device._id,
+        driverId: device.config?.driverId,
+        commands: device.config?.driverId?.commands,
+        outputs: device.config?.driverId?.commands?.READ?.outputs,
+        multiValues
+    });
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden h-[80vh] flex flex-col">
@@ -134,9 +148,6 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                 {/* Header */}
                 <DeviceTestHeader
                     device={device}
-                    liveValue={liveValue}
-                    rawValue={rawValue}
-                    unit={device.config?.driverId?.defaultUnits?.[0]}
                     status={device.status || 'offline'}
                 />
 
@@ -146,6 +157,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                         <div className="border-b px-4 bg-muted/5">
                             <TabsList className="h-12">
                                 <TabsTrigger value="monitor" className="px-6">Monitor & Test</TabsTrigger>
+                                <TabsTrigger value="history" className="px-6">History</TabsTrigger>
                                 <TabsTrigger value="calibration" className="px-6">Calibration</TabsTrigger>
                                 <TabsTrigger value="settings" className="px-6">Settings</TabsTrigger>
                             </TabsList>
@@ -153,7 +165,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
 
                         <div className="flex-1 overflow-y-auto bg-background p-6 min-h-0">
 
-                            <TabsContent value="monitor" className="m-0 flex flex-col items-center justify-center space-y-8">
+                            <TabsContent value="monitor" className="m-0 flex flex-col items-center space-y-8">
                                 <div className="text-center space-y-2">
                                     <h2 className="text-2xl font-semibold tracking-tight">Live Monitor</h2>
                                     <p className="text-muted-foreground">
@@ -189,10 +201,47 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                     </Button>
                                 </div>
 
+                                {/* Data Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
+
+                                    {/* Scenario A: Multi-Value Sensor (e.g. DHT22) */}
+                                    {device.config?.driverId?.commands?.READ?.outputs ? (
+                                        device.config.driverId.commands.READ.outputs.map((output: any) => (
+                                            <SensorValueCard
+                                                key={output.key}
+                                                label={output.label}
+                                                value={multiValues ? multiValues[output.key] : null}
+                                                unit={output.unit}
+                                                subValue={multiValues ? multiValues[output.key] : null} // Showing same value as raw for now unless we have separate raw
+                                            />
+                                        ))
+                                    ) : (
+                                        /* Scenario B: Single-Value Sensor (e.g. pH) */
+                                        <>
+                                            <SensorValueCard
+                                                label={device.config?.driverId?.physicalType === 'ph' ? 'pH Value' : 'Calibrated Value'}
+                                                value={liveValue !== null ? liveValue.toFixed(2) : null}
+                                                unit={device.config?.driverId?.defaultUnits?.[0]}
+                                                variant="primary"
+                                            />
+                                            <SensorValueCard
+                                                label="Raw Input"
+                                                value={rawValue}
+                                                unit="ADC"
+                                                variant="raw"
+                                            />
+                                        </>
+                                    )}
+                                </div>
+
                                 {/* Placeholder for Chart */}
-                                <div className="w-full max-w-2xl h-48 border rounded-lg bg-muted/5 flex items-center justify-center text-muted-foreground border-dashed">
+                                <div className="w-full max-w-3xl h-48 border rounded-lg bg-muted/5 flex items-center justify-center text-muted-foreground border-dashed mt-8">
                                     Chart Visualization Coming Soon
                                 </div>
+                            </TabsContent>
+
+                            <TabsContent value="history" className="m-0 h-full">
+                                <DeviceHistoryTab deviceId={device._id} deviceType={device.type} />
                             </TabsContent>
 
                             <TabsContent value="calibration" className="m-0">

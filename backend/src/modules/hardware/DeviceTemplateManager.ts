@@ -9,6 +9,11 @@ const CommandSchema = z.object({
     hardwareCmd: z.string(),
     params: z.record(z.any()).optional(),
     valuePath: z.string().optional(),
+    outputs: z.array(z.object({
+        key: z.string(),
+        label: z.string(),
+        unit: z.string().optional()
+    })).optional(),
 });
 
 const PinSchema = z.object({
@@ -81,6 +86,29 @@ export class DeviceTemplateManager {
 
             this.templates.set(template.id, template);
             logger.debug({ id: template.id }, 'Loaded Template');
+
+            // Sync to DB (Source of Truth for API/Frontend)
+            try {
+                // Dynamic import to avoid circular dependencies if any, though models should be fine
+                const { DeviceTemplate: DeviceTemplateModel } = await import('../../models/DeviceTemplate');
+
+                // Map Zod object to Mongoose Document structure
+                // Note: _id in Mongoose is the id from JSON
+                const dbDoc = {
+                    ...template,
+                    _id: template.id
+                };
+
+                await DeviceTemplateModel.updateOne(
+                    { _id: template.id },
+                    { $set: dbDoc },
+                    { upsert: true }
+                );
+                logger.debug({ id: template.id }, 'Synced Template to DB');
+            } catch (dbError) {
+                logger.warn({ id: template.id, error: dbError }, '⚠️ Failed to sync template to DB');
+            }
+
         } catch (error: any) {
             logger.warn({ file: path.basename(filePath), error: error.issues || error.message }, '⚠️ Invalid Device Template');
             // We do NOT throw here, just skip the bad file (Resilience)

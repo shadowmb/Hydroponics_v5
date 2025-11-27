@@ -42,6 +42,17 @@ const templates = [
             parameters: { model: 'dht22' },
             responseMapping: { conversionMethod: 'dht22' }
         },
+        commands: {
+            READ: {
+                hardwareCmd: 'DHT_READ',
+                params: { type: 22 },
+                valuePath: 'temp',
+                outputs: [
+                    { key: 'temp', label: 'Temperature', unit: '°C' },
+                    { key: 'humidity', label: 'Humidity', unit: '%RH' }
+                ]
+            }
+        },
         uiConfig: { category: 'Sensors', icon: 'thermometer' }
     },
     {

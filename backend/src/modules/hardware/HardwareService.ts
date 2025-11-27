@@ -198,6 +198,18 @@ export class HardwareService {
                 timestamp: new Date()
             };
             await device.save();
+
+            // Emit data event for HistoryService
+            events.emit('device:data', {
+                deviceId: device.id,
+                deviceName: device.name,
+                driverId: device.config.driverId,
+                value,
+                raw,
+                details: rawResponse, // Pass raw response as details
+                timestamp: new Date()
+            });
+
         } catch (error) {
             logger.warn({ deviceId, error }, '⚠️ Failed to save lastReading to DB');
         }

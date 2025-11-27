@@ -9,6 +9,7 @@ import Controllers from './pages/Controllers'; // Default import
 import { Devices } from './pages/Devices';
 import { FlowEditor } from './pages/FlowEditor';
 import Hardware from './pages/Hardware'; // Default import
+import { History } from './pages/History';
 import { socketService } from './core/SocketService';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
             <Route path="/devices" element={<Devices />} />
             <Route path="/editor" element={<FlowEditor />} />
             <Route path="/hardware" element={<Hardware />} />
+            <Route path="/history" element={<History />} />
             <Route path="/settings" element={<div>Settings Page</div>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
