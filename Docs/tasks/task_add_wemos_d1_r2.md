@@ -10,3 +10,5 @@
 - User requested "base (Serial/WiFi)" for Wemos D1 R2.
 - Controller Template `WeMos_D1_R2` already exists in `backend/src/data/controller-templates.json`.
 - Need to ensure Backend knows how to generate firmware for this board (pin mappings, libraries).
+- [x] Finalize and Commit Changes
+

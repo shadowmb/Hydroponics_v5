@@ -81,3 +81,21 @@ Ensure a single source of truth for data models. Delete or archive legacy schema
 `Cannot find type definition file for 'node'`.
 ### Status
 Persistent but non-blocking. Ignored for now to focus on functionality.
+
+## 8. Hardware: GPIO Resolution
+### Problem
+Devices with multiple pins (like DHT22) were saving `gpio: 0` in the database, causing communication failures.
+### Cause
+The backend was not resolving the GPIO number from the `ControllerTemplate` when handling multi-pin configurations.
+### Solution
+Use a helper function (e.g., `resolvePins`) during device creation/update to look up the `ControllerTemplate` and map the `portId` to the actual `pin` number.
+
+## 9. UI/UX: Monitor & Test Display
+### Problem
+Sensor values were not appearing in the "Monitor & Test" dialog, even though the system console showed valid data.
+### Cause
+The frontend expected specific output keys (e.g., `ec`) in the raw response, but the firmware returned generic keys (e.g., `value`).
+### Solution
+**Robust Fallback Logic:**
+- **Frontend:** If the specific key is missing, fallback to the converted `liveValue` (if single output).
+- **Backend:** If the configured `valuePath` is not found, auto-detect common keys (`value`, `val`, `raw`).

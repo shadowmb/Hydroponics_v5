@@ -566,6 +566,25 @@ export class HardwareController {
         }
     }
 
+    static async getDevices(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { deleted } = req.query as { deleted?: string };
+            const { DeviceModel } = await import('../../models/Device');
+
+            let query = DeviceModel.find();
+            if (deleted === 'true') {
+                // @ts-ignore
+                query = DeviceModel.find({ deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+            }
+
+            const devices = await query.populate('config.driverId'); // Populate template
+            return reply.send({ success: true, data: devices });
+        } catch (error) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: 'Failed to fetch devices' });
+        }
+    }
+
     static async createDevice(req: FastifyRequest, reply: FastifyReply) {
         try {
             const body = req.body as any;
@@ -584,18 +603,48 @@ export class HardwareController {
             }
 
             // 3. Validate Connection (Controller OR Relay)
+            let controller: any = null;
             if (body.hardware?.parentId) {
                 // --- Controller Connection ---
-                const controller = await Controller.findById(body.hardware.parentId);
+                controller = await Controller.findById(body.hardware.parentId);
                 if (!controller) {
                     return reply.status(404).send({ success: false, error: 'Controller not found' });
                 }
 
+                // Check Single Port (Legacy)
                 if (body.hardware.port) {
                     const portState = controller.ports.get(body.hardware.port);
                     if (portState && portState.isOccupied) {
                         return reply.status(400).send({ success: false, error: `Port ${body.hardware.port} is already occupied` });
                     }
+                }
+
+                // Check Multi-Pins
+                if (body.hardware.pins && !Array.isArray(body.hardware.pins)) {
+                    // Transform map to array for validation and saving
+                    const pinsMap = body.hardware.pins;
+                    const pinsArray = [];
+
+                    for (const [role, portId] of Object.entries(pinsMap)) {
+                        // Resolve GPIO
+                        const resolved = await HardwareController.resolvePins(body.hardware.parentId, portId as string);
+                        pinsArray.push({
+                            role,
+                            portId: portId as string,
+                            gpio: resolved[0]?.gpio || 0
+                        });
+                    }
+
+                    // Validate each pin
+                    for (const pin of pinsArray) {
+                        const portState = controller.ports.get(pin.portId);
+                        if (portState && portState.isOccupied) {
+                            return reply.status(400).send({ success: false, error: `Port ${pin.portId} (for ${pin.role}) is already occupied` });
+                        }
+                    }
+
+                    // Update body to use array
+                    body.hardware.pins = pinsArray;
                 }
             } else if (body.hardware?.relayId) {
                 // --- Relay Connection ---
@@ -617,106 +666,69 @@ export class HardwareController {
             }
 
             // 4. Create Device
-            // 4. Create Device
-            // Resolve Pins
-            // Resolve Pins
-            let pins: { role: string; portId: string; gpio: number }[] = [];
-            if (body.hardware?.parentId) {
-                if (body.hardware?.port) {
-                    pins = await HardwareController.resolvePins(body.hardware.parentId, body.hardware.port);
-                } else if (body.hardware?.pins && typeof body.hardware.pins === 'object') {
-                    for (const [role, portId] of Object.entries(body.hardware.pins)) {
-                        const resolved = await HardwareController.resolvePins(body.hardware.parentId, portId as string);
-                        if (resolved.length > 0) {
-                            pins.push({
-                                role: role,
-                                portId: resolved[0].portId,
-                                gpio: resolved[0].gpio
-                            });
-                        }
-                    }
-                }
-            }
-
-            const deviceData = {
+            const device = new DeviceModel({
                 name: body.name,
                 type: body.type,
-                isEnabled: body.isEnabled !== undefined ? body.isEnabled : true,
-                hardware: { ...body.hardware, pins },
+                hardware: body.hardware,
                 config: body.config,
-                metadata: body.metadata
-            };
+                tags: body.tags || [] // Add tags support
+            });
 
-            console.log('Creating Device with Data:', JSON.stringify(deviceData, null, 2));
-            const device = new DeviceModel(deviceData);
             await device.save();
 
             // 5. Occupy Port/Channel
-            if (body.hardware?.parentId && body.hardware?.port) {
-                // Occupy Controller Port
-                const controller = await Controller.findById(body.hardware.parentId);
-                if (controller) {
-                    const portState = controller.ports.get(body.hardware.port);
-                    if (portState) {
-                        portState.isOccupied = true;
-                        portState.occupiedBy = {
+            if (body.hardware?.parentId) {
+                const updates: any = {};
+
+                // Occupy Single Port
+                if (body.hardware.port) {
+                    updates[`ports.${body.hardware.port}.isOccupied`] = true;
+                    updates[`ports.${body.hardware.port}.occupiedBy`] = {
+                        type: 'device',
+                        id: device._id,
+                        name: device.name
+                    };
+                }
+
+                // Occupy Multi-Pins
+                if (body.hardware.pins && Array.isArray(body.hardware.pins)) {
+                    body.hardware.pins.forEach((pin: any) => {
+                        updates[`ports.${pin.portId}.isOccupied`] = true;
+                        updates[`ports.${pin.portId}.occupiedBy`] = {
                             type: 'device',
-                            id: device._id.toString(),
+                            id: device._id,
                             name: device.name
                         };
-                        portState.isActive = true;
-                        controller.markModified('ports');
-                        await controller.save();
-                    }
+                    });
                 }
-            } else if (body.hardware?.relayId && body.hardware?.channel !== undefined) {
-                // Occupy Relay Channel
+
+                if (Object.keys(updates).length > 0) {
+                    await Controller.updateOne(
+                        { _id: body.hardware.parentId },
+                        { $set: updates }
+                    );
+                }
+            } else if (body.hardware?.relayId) {
                 const { Relay } = await import('../../models/Relay');
-                const relay = await Relay.findById(body.hardware.relayId);
-                if (relay) {
-                    const channel = relay.channels.find((c: any) => c.channelIndex === body.hardware.channel);
-                    if (channel) {
-                        channel.isOccupied = true;
-                        channel.occupiedBy = {
-                            type: 'device',
-                            id: device._id.toString(),
-                            name: device.name
-                        };
-                        relay.markModified('channels');
-                        await relay.save();
+                await Relay.updateOne(
+                    { _id: body.hardware.relayId, 'channels.channelIndex': body.hardware.channel },
+                    {
+                        $set: {
+                            'channels.$.isOccupied': true,
+                            'channels.$.occupiedBy': {
+                                type: 'device',
+                                id: device._id,
+                                name: device.name
+                            }
+                        }
                     }
-                }
+                );
             }
 
-            // Populate template for frontend
-            await device.populate('config.driverId');
             return reply.send({ success: true, data: device });
-
-        } catch (error: any) {
-            req.log.error(error);
-            if (error.code === 11000) {
-                return reply.status(400).send({ success: false, error: 'Device with this name already exists' });
-            }
-            return reply.status(500).send({ success: false, error: error.message || 'Failed to create device' });
-        }
-    }
-
-    static async getDevices(req: FastifyRequest, reply: FastifyReply) {
-        try {
-            const { DeviceModel } = await import('../../models/Device');
-            const { deleted } = req.query as { deleted?: string };
-
-            let query = DeviceModel.find();
-            if (deleted === 'true') {
-                // @ts-ignore
-                query = DeviceModel.find({ deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
-            }
-
-            const devices = await query.populate('config.driverId'); // Populate template
-            return reply.send({ success: true, data: devices });
         } catch (error) {
             req.log.error(error);
-            return reply.status(500).send({ success: false, error: 'Failed to fetch devices' });
+            return reply.status(500).send({ success: false, error: 'Failed to create device' });
         }
     }
 
@@ -731,6 +743,21 @@ export class HardwareController {
                 return reply.status(404).send({ success: false, error: 'Device not found' });
             }
 
+            // Transform Multi-Pins Map to Array (if present)
+            if (body.hardware?.pins && !Array.isArray(body.hardware.pins)) {
+                const pins = [];
+                for (const [role, portId] of Object.entries(body.hardware.pins)) {
+                    // Resolve GPIO
+                    const resolved = await HardwareController.resolvePins(body.hardware.parentId || device.hardware.parentId, portId as string);
+                    pins.push({
+                        role,
+                        portId: portId as string,
+                        gpio: resolved[0]?.gpio || 0
+                    });
+                }
+                body.hardware.pins = pins;
+            }
+
             // Handle Hardware Changes (Free old, Occupy new)
             const oldHardware = device.hardware;
             const newHardware = body.hardware;
@@ -740,107 +767,121 @@ export class HardwareController {
                 oldHardware?.parentId !== newHardware.parentId ||
                 oldHardware?.port !== newHardware.port ||
                 oldHardware?.relayId !== newHardware.relayId ||
-                oldHardware?.channel !== newHardware.channel
+                oldHardware?.channel !== newHardware.channel ||
+                JSON.stringify(oldHardware?.pins) !== JSON.stringify(newHardware.pins)
             )) {
                 // 1. Free Old Resources
-                if (oldHardware?.parentId && oldHardware?.port) {
+                if (oldHardware?.parentId) {
                     const oldController = await Controller.findById(oldHardware.parentId);
                     if (oldController) {
-                        const portState = oldController.ports.get(oldHardware.port);
-                        if (portState && portState.occupiedBy?.id === device._id.toString()) {
-                            portState.isOccupied = false;
-                            portState.occupiedBy = undefined;
-                            oldController.markModified('ports');
-                            await oldController.save();
+                        const updates: any = {};
+                        const unsets: any = {};
+
+                        // Free Single Port
+                        if (oldHardware.port) {
+                            const portState = oldController.ports.get(oldHardware.port);
+                            if (portState && portState.occupiedBy?.id === device._id.toString()) {
+                                updates[`ports.${oldHardware.port}.isOccupied`] = false;
+                                unsets[`ports.${oldHardware.port}.occupiedBy`] = 1;
+                            }
+                        }
+
+                        // Free Multi-Pins
+                        if (oldHardware.pins && Array.isArray(oldHardware.pins)) {
+                            oldHardware.pins.forEach((pin: any) => {
+                                const portState = oldController.ports.get(pin.portId);
+                                if (portState && portState.occupiedBy?.id === device._id.toString()) {
+                                    updates[`ports.${pin.portId}.isOccupied`] = false;
+                                    unsets[`ports.${pin.portId}.occupiedBy`] = 1;
+                                }
+                            });
+                        }
+
+                        if (Object.keys(updates).length > 0) {
+                            await Controller.updateOne(
+                                { _id: oldHardware.parentId },
+                                { $set: updates, $unset: unsets }
+                            );
                         }
                     }
                 } else if (oldHardware?.relayId && oldHardware?.channel !== undefined) {
                     const { Relay } = await import('../../models/Relay');
-                    const oldRelay = await Relay.findById(oldHardware.relayId);
-                    if (oldRelay) {
-                        const channel = oldRelay.channels.find((c: any) => c.channelIndex === oldHardware.channel);
+                    const relay = await Relay.findById(oldHardware.relayId);
+                    if (relay) {
+                        const channel = relay.channels.find((c: any) => c.channelIndex === oldHardware.channel);
                         if (channel && channel.occupiedBy?.id === device._id.toString()) {
-                            channel.isOccupied = false;
-                            channel.occupiedBy = undefined;
-                            oldRelay.markModified('channels');
-                            await oldRelay.save();
+                            await Relay.updateOne(
+                                { _id: oldHardware.relayId, 'channels.channelIndex': oldHardware.channel },
+                                {
+                                    $set: { 'channels.$.isOccupied': false },
+                                    $unset: { 'channels.$.occupiedBy': 1 }
+                                }
+                            );
                         }
                     }
                 }
 
                 // 2. Occupy New Resources
-                if (newHardware.parentId && newHardware.port) {
+                if (newHardware.parentId) {
                     const newController = await Controller.findById(newHardware.parentId);
                     if (newController) {
-                        const portState = newController.ports.get(newHardware.port);
-                        if (portState) {
-                            if (portState.isOccupied) {
-                                return reply.status(400).send({ success: false, error: `Port ${newHardware.port} is already occupied` });
-                            }
-                            portState.isOccupied = true;
-                            portState.occupiedBy = {
+                        const updates: any = {};
+
+                        // Occupy Single Port
+                        if (newHardware.port) {
+                            updates[`ports.${newHardware.port}.isOccupied`] = true;
+                            updates[`ports.${newHardware.port}.occupiedBy`] = {
                                 type: 'device',
-                                id: device._id.toString(),
+                                id: device._id,
                                 name: body.name || device.name
                             };
-                            portState.isActive = true;
-                            newController.markModified('ports');
-                            await newController.save();
+                        }
+
+                        // Occupy Multi-Pins
+                        if (newHardware.pins && Array.isArray(newHardware.pins)) {
+                            newHardware.pins.forEach((pin: any) => {
+                                updates[`ports.${pin.portId}.isOccupied`] = true;
+                                updates[`ports.${pin.portId}.occupiedBy`] = {
+                                    type: 'device',
+                                    id: device._id,
+                                    name: body.name || device.name
+                                };
+                            });
+                        }
+
+                        if (Object.keys(updates).length > 0) {
+                            await Controller.updateOne(
+                                { _id: newHardware.parentId },
+                                { $set: updates }
+                            );
                         }
                     }
                 } else if (newHardware.relayId && newHardware.channel !== undefined) {
                     const { Relay } = await import('../../models/Relay');
-                    const newRelay = await Relay.findById(newHardware.relayId);
-                    if (newRelay) {
-                        const channel = newRelay.channels.find((c: any) => c.channelIndex === newHardware.channel);
-                        if (channel) {
-                            if (channel.isOccupied) {
-                                return reply.status(400).send({ success: false, error: `Channel ${newHardware.channel} is already occupied` });
+                    await Relay.updateOne(
+                        { _id: newHardware.relayId, 'channels.channelIndex': newHardware.channel },
+                        {
+                            $set: {
+                                'channels.$.isOccupied': true,
+                                'channels.$.occupiedBy': {
+                                    type: 'device',
+                                    id: device._id,
+                                    name: body.name || device.name
+                                }
                             }
-                            channel.isOccupied = true;
-                            channel.occupiedBy = {
-                                type: 'device',
-                                id: device._id.toString(),
-                                name: body.name || device.name
-                            };
-                            newRelay.markModified('channels');
-                            await newRelay.save();
                         }
-                    }
+                    );
                 }
             }
 
-            // Resolve Pins for update
-            // Resolve Pins for update
-            if (body.hardware?.parentId) {
-                if (body.hardware?.port) {
-                    const pins = await HardwareController.resolvePins(body.hardware.parentId, body.hardware.port);
-                    body.hardware.pins = pins;
-                } else if (body.hardware?.pins && typeof body.hardware.pins === 'object' && !Array.isArray(body.hardware.pins)) {
-                    const resolvedPins: any[] = [];
-                    for (const [role, portId] of Object.entries(body.hardware.pins)) {
-                        const resolved = await HardwareController.resolvePins(body.hardware.parentId, portId as string);
-                        if (resolved.length > 0) {
-                            resolvedPins.push({
-                                role: role,
-                                portId: resolved[0].portId,
-                                gpio: resolved[0].gpio
-                            });
-                        }
-                    }
-                    body.hardware.pins = resolvedPins;
-                }
-            }
-
+            // Update device fields
             Object.assign(device, body);
             await device.save();
 
-            // Populate template for frontend
-            await device.populate('config.driverId');
             return reply.send({ success: true, data: device });
-        } catch (error) {
+        } catch (error: any) {
             req.log.error(error);
-            return reply.status(500).send({ success: false, error: 'Failed to update device' });
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to update device' });
         }
     }
 
@@ -848,23 +889,42 @@ export class HardwareController {
         try {
             const { id } = req.params as { id: string };
             const { DeviceModel } = await import('../../models/Device');
-
             const device = await DeviceModel.findById(id);
             if (!device) {
                 return reply.status(404).send({ success: false, error: 'Device not found' });
             }
 
-            // Free Resources (Controller OR Relay)
+            // Free resources
             try {
-                if (device.hardware?.parentId && device.hardware?.port) {
+                if (device.hardware?.parentId) {
                     const controller = await Controller.findById(device.hardware.parentId);
                     if (controller) {
-                        const portState = controller.ports.get(device.hardware.port);
-                        if (portState && portState.occupiedBy?.id === device._id.toString()) {
-                            portState.isOccupied = false;
-                            portState.occupiedBy = undefined;
-                            controller.markModified('ports');
-                            await controller.save();
+                        const updates: any = {};
+                        const unsets: any = {};
+
+                        if (device.hardware.port) {
+                            const portState = controller.ports.get(device.hardware.port);
+                            if (portState && portState.occupiedBy?.id === device._id.toString()) {
+                                updates[`ports.${device.hardware.port}.isOccupied`] = false;
+                                unsets[`ports.${device.hardware.port}.occupiedBy`] = 1;
+                            }
+                        }
+
+                        if (device.hardware.pins && Array.isArray(device.hardware.pins)) {
+                            device.hardware.pins.forEach((pin: any) => {
+                                const portState = controller.ports.get(pin.portId);
+                                if (portState && portState.occupiedBy?.id === device._id.toString()) {
+                                    updates[`ports.${pin.portId}.isOccupied`] = false;
+                                    unsets[`ports.${pin.portId}.occupiedBy`] = 1;
+                                }
+                            });
+                        }
+
+                        if (Object.keys(updates).length > 0) {
+                            await Controller.updateOne(
+                                { _id: device.hardware.parentId },
+                                { $set: updates, $unset: unsets }
+                            );
                         }
                     }
                 } else if (device.hardware?.relayId && device.hardware?.channel !== undefined) {
@@ -873,27 +933,25 @@ export class HardwareController {
                     if (relay) {
                         const channel = relay.channels.find((c: any) => c.channelIndex === device.hardware.channel);
                         if (channel && channel.occupiedBy?.id === device._id.toString()) {
-                            channel.isOccupied = false;
-                            channel.occupiedBy = undefined;
-                            relay.markModified('channels');
-                            await relay.save();
+                            await Relay.updateOne(
+                                { _id: device.hardware.relayId, 'channels.channelIndex': device.hardware.channel },
+                                {
+                                    $set: { 'channels.$.isOccupied': false },
+                                    $unset: { 'channels.$.occupiedBy': 1 }
+                                }
+                            );
                         }
                     }
                 }
             } catch (resourceError) {
                 req.log.warn({ err: resourceError, deviceId: device._id }, 'Failed to free resources during device deletion (ignoring)');
             }
-            await device.softDelete(); // Use soft delete plugin
-            return reply.send({ success: true, message: 'Device deleted' });
 
+            await device.softDelete();
+            return reply.send({ success: true, message: 'Device deleted' });
         } catch (error: any) {
             req.log.error(error);
-            return reply.status(500).send({
-                success: false,
-                error: 'Failed to delete device',
-                details: error.message,
-                stack: error.stack
-            });
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to delete device' });
         }
     }
 
@@ -981,6 +1039,7 @@ export class HardwareController {
             return reply.status(500).send({ success: false, error: error.message || 'Test failed' });
         }
     }
+
     static async syncStatus(req: FastifyRequest, reply: FastifyReply) {
         try {
             logger.info('🔄 Syncing hardware status...');
@@ -991,6 +1050,7 @@ export class HardwareController {
             return reply.status(500).send({ success: false, error: error.message || 'Failed to sync status' });
         }
     }
+
     private static async resolvePins(controllerId: string, portId: string): Promise<{ role: string, portId: string, gpio: number }[]> {
         const controller = await Controller.findById(controllerId);
         if (!controller) return [];

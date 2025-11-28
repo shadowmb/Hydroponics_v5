@@ -35,6 +35,8 @@ export interface IDevice extends SoftDeleteDocument {
         description?: string;
     };
 
+    tags: string[]; // New: Tags for grouping
+
     lastReading?: {
         value: number;
         raw: number;
@@ -82,6 +84,8 @@ const DeviceSchema = new Schema<IDevice>(
         metadata: {
             description: String,
         },
+
+        tags: { type: [String], default: [] }, // New: Tags for grouping
 
         lastReading: {
             value: Number,
