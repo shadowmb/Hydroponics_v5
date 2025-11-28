@@ -1,0 +1,11 @@
+{
+    "id": "digital_write",
+    "name": "Digital Write",
+    "description": "Sets digital pin state (HIGH/LOW)",
+    "code": {
+        "includes": [],
+        "globals": "",
+        "functions": "@file:commands/src/digital_write.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"DIGITAL_WRITE\") == 0) { return handleDigitalWrite(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

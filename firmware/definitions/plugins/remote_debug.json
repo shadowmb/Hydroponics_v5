@@ -1,0 +1,29 @@
+{
+    "id": "remote_debug",
+    "name": "Remote Debug (Telnet)",
+    "description": "Send debug logs via Telnet/UDP",
+    "category": "debugging",
+    "compatible_transports": [
+        "wifi",
+        "ethernet"
+    ],
+    "compatible_architectures": [
+        "*"
+    ],
+    "parameters": [],
+    "code": {
+        "globals": "WiFiServer telnetServer(23); WiFiClient telnetClient;",
+        "setup": "telnetServer.begin();",
+        "loop": [
+            "if (telnetServer.hasClient()) {",
+            "  if (!telnetClient || !telnetClient.connected()) {",
+            "    if (telnetClient) telnetClient.stop();",
+            "    telnetClient = telnetServer.available();",
+            "  } else {",
+            "    telnetServer.available().stop();",
+            "  }",
+            "}"
+        ],
+        "functions": "void debugPrint(String msg) { if (telnetClient && telnetClient.connected()) telnetClient.print(msg); Serial.print(msg); }"
+    }
+}

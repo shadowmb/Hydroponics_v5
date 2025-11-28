@@ -1,0 +1,11 @@
+{
+    "id": "system_commands",
+    "name": "System Commands",
+    "description": "Core system commands (PING, INFO, STATUS, RESET)",
+    "compatible_architectures": [
+        "*"
+    ],
+    "code": {
+        "functions": "@file:commands/src/system_commands.cpp"
+    }
+}

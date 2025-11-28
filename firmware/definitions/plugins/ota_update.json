@@ -1,0 +1,38 @@
+{
+    "id": "ota_update",
+    "name": "Over-The-Air Updates",
+    "description": "Enable wireless firmware updates",
+    "category": "system",
+    "compatible_transports": [
+        "wifi",
+        "ethernet"
+    ],
+    "compatible_architectures": [
+        "esp8266",
+        "esp32",
+        "renesas_uno"
+    ],
+    "parameters": [
+        {
+            "name": "hostname",
+            "type": "string",
+            "default": "hydro-device",
+            "label": "Device Hostname"
+        },
+        {
+            "name": "password",
+            "type": "password",
+            "default": "admin",
+            "label": "OTA Password"
+        }
+    ],
+    "code": {
+        "includes": "#include <ArduinoOTA.h>",
+        "setup": [
+            "ArduinoOTA.setHostname(\"{{hostname}}\");",
+            "ArduinoOTA.setPassword(\"{{password}}\");",
+            "ArduinoOTA.begin();"
+        ],
+        "loop": "ArduinoOTA.handle();"
+    }
+}

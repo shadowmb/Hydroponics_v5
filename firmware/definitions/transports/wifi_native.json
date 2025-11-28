@@ -1,0 +1,56 @@
+{
+    "id": "wifi_native",
+    "type": "wifi",
+    "name": "Native WiFi",
+    "description": "Uses the on-board WiFi module (ESP8266, ESP32, Uno R4)",
+    "compatible_architectures": [
+        "esp8266",
+        "esp32",
+        "renesas_uno"
+    ],
+    "parameters": [
+        {
+            "name": "ssid",
+            "type": "string",
+            "default": "",
+            "label": "WiFi SSID"
+        },
+        {
+            "name": "password",
+            "type": "password",
+            "default": "",
+            "label": "WiFi Password"
+        },
+        {
+            "name": "udp_port",
+            "type": "number",
+            "default": 8888,
+            "label": "UDP Port"
+        }
+    ],
+    "code": {
+        "includes": {
+            "esp8266": "#include <ESP8266WiFi.h>\n#include <WiFiUdp.h>",
+            "esp32": "#include <WiFi.h>\n#include <WiFiUdp.h>",
+            "renesas_uno": "#include <WiFiS3.h>\n#include <WiFiUdp.h>"
+        },
+        "globals": "WiFiUDP udp;\nchar packetBuffer[255];",
+        "setup": [
+            "// Connect to WiFi",
+            "WiFi.begin(\"{{ssid}}\", \"{{password}}\");",
+            "while (WiFi.status() != WL_CONNECTED) { delay(500); }",
+            "udp.begin({{udp_port}});"
+        ],
+        "loop": [
+            "int packetSize = udp.parsePacket();",
+            "if (packetSize) {",
+            "  int len = udp.read(packetBuffer, 255);",
+            "  if (len > 0) packetBuffer[len] = 0;",
+            "  String response = processCommand(String(packetBuffer));",
+            "  udp.beginPacket(udp.remoteIP(), udp.remotePort());",
+            "  udp.print(response);",
+            "  udp.endPacket();",
+            "}"
+        ]
+    }
+}

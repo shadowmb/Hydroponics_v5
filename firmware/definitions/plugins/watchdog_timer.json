@@ -1,0 +1,43 @@
+{
+    "id": "watchdog_timer",
+    "name": "Watchdog Timer",
+    "description": "Automatically resets the device if it freezes",
+    "category": "reliability",
+    "compatible_transports": [
+        "*"
+    ],
+    "compatible_architectures": [
+        "avr",
+        "renesas_uno",
+        "esp8266",
+        "esp32"
+    ],
+    "parameters": [
+        {
+            "name": "timeout_ms",
+            "type": "number",
+            "default": 8000,
+            "label": "Timeout (ms)"
+        }
+    ],
+    "code": {
+        "includes": {
+            "avr": "#include <avr/wdt.h>",
+            "renesas_uno": "#include <WDT.h>",
+            "esp8266": "",
+            "esp32": "#include <esp_task_wdt.h>"
+        },
+        "setup": {
+            "avr": "wdt_enable(WDTO_8S);",
+            "renesas_uno": "WDT.begin(2684); // ~8s",
+            "esp8266": "ESP.wdtEnable(8000);",
+            "esp32": "esp_task_wdt_init(8, true); esp_task_wdt_add(NULL);"
+        },
+        "loop": {
+            "avr": "wdt_reset();",
+            "renesas_uno": "WDT.refresh();",
+            "esp8266": "ESP.wdtFeed();",
+            "esp32": "esp_task_wdt_reset();"
+        }
+    }
+}

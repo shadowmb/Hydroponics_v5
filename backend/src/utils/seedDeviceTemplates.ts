@@ -34,11 +34,11 @@ const templates = [
         name: 'DHT22 (Temp/Humidity)',
         description: 'Digital temperature and humidity sensor',
         physicalType: 'humidity',
-        requiredCommand: 'SINGLE_WIRE_PULSE',
+        requiredCommand: 'DHT_READ',
         defaultUnits: ['%RH', '°C'],
         portRequirements: [{ type: 'digital', count: 1, description: 'Digital Pin (D2-D13)' }],
         executionConfig: {
-            commandType: 'SINGLE_WIRE_PULSE',
+            commandType: 'DHT_READ',
             parameters: { model: 'dht22' },
             responseMapping: { conversionMethod: 'dht22' }
         },
@@ -60,11 +60,11 @@ const templates = [
         name: 'DS18B20 Temperature',
         description: 'Waterproof OneWire temperature sensor',
         physicalType: 'temp',
-        requiredCommand: 'SINGLE_WIRE_ONEWIRE',
+        requiredCommand: 'ONEWIRE_READ_TEMP',
         defaultUnits: ['°C', '°F'],
         portRequirements: [{ type: 'digital', count: 1, description: 'Digital Pin (D2-D13)' }],
         executionConfig: {
-            commandType: 'SINGLE_WIRE_ONEWIRE',
+            commandType: 'ONEWIRE_READ_TEMP',
             responseMapping: { conversionMethod: 'ds18b20' }
         },
         uiConfig: { category: 'Sensors', icon: 'thermometer' }
@@ -74,11 +74,11 @@ const templates = [
         name: 'Standard Relay',
         description: 'Generic relay for controlling pumps, lights, etc.',
         physicalType: 'relay',
-        requiredCommand: 'SET_PIN',
+        requiredCommand: 'RELAY_SET',
         defaultUnits: ['On/Off'],
         portRequirements: [{ type: 'digital', count: 1, description: 'Digital Pin' }],
         executionConfig: {
-            commandType: 'SET_PIN'
+            commandType: 'RELAY_SET'
         },
         uiConfig: { category: 'Actuators', icon: 'power' }
     },

@@ -1,0 +1,24 @@
+{
+    "id": "serial_standard",
+    "type": "serial",
+    "name": "Standard Serial (USB)",
+    "description": "Basic communication via USB Serial port",
+    "compatible_architectures": [
+        "*"
+    ],
+    "parameters": [
+        {
+            "name": "baud_rate",
+            "type": "number",
+            "default": 9600,
+            "label": "Baud Rate"
+        }
+    ],
+    "code": {
+        "includes": "",
+        "globals": "",
+        "setup": "Serial.begin({{baud_rate}});\nwhile (!Serial && millis() < 3000);",
+        "loop": "handleSerial();",
+        "functions": "void handleSerial() {\n  if (Serial.available() > 0) {\n    String input = Serial.readStringUntil('\\n');\n    input.trim();\n    if (input.length() > 0) {\n      String response = processCommand(input);\n      Serial.println(response);\n    }\n  }\n}"
+    }
+}

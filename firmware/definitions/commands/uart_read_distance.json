@@ -1,0 +1,11 @@
+{
+    "id": "uart_read_distance",
+    "name": "UART Read Distance",
+    "description": "Reads distance from UART ultrasonic sensors (A02YYUW, JSN-SR04T)",
+    "code": {
+        "includes": "#include <SoftwareSerial.h>",
+        "globals": "",
+        "functions": "@file:commands/src/uart_read_distance.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"UART_READ_DISTANCE\") == 0) { return handleUARTReadDistance(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

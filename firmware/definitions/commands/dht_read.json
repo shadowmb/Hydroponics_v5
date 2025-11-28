@@ -1,0 +1,11 @@
+{
+    "id": "dht_read",
+    "name": "DHT Read",
+    "description": "Reads temperature and humidity from DHT11/DHT22 sensors",
+    "code": {
+        "includes": [],
+        "globals": "",
+        "functions": "@file:commands/src/dht_read.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"DHT_READ\") == 0) { return handleDHTRead(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

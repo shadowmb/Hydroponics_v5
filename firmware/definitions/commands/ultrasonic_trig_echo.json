@@ -1,0 +1,11 @@
+{
+    "id": "ultrasonic_trig_echo",
+    "name": "Ultrasonic Trig/Echo",
+    "description": "Reads distance from HC-SR04 sensor",
+    "code": {
+        "includes": [],
+        "globals": "",
+        "functions": "@file:commands/src/ultrasonic_trig_echo.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"ULTRASONIC_TRIG_ECHO\") == 0) { return handleUltrasonicTrigEcho(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

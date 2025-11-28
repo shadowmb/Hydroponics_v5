@@ -18,6 +18,7 @@ import { hardwareService } from '../services/hardwareService';
 import { RelayWizard } from '../components/hardware/RelayWizard';
 import { ControllerWizard } from '../components/hardware/ControllerWizard';
 import { RecycleBinDialog } from '../components/common/RecycleBinDialog';
+import { FirmwareBuilderDialog } from '../components/firmware-builder/FirmwareBuilderDialog';
 
 const Hardware: React.FC = () => {
     const [activeTab, setActiveTab] = useState("devices");
@@ -28,6 +29,7 @@ const Hardware: React.FC = () => {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [pendingControllerData, setPendingControllerData] = useState<any>(null);
     const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+    const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [controllerRefreshTrigger, setControllerRefreshTrigger] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isScanPromptOpen, setIsScanPromptOpen] = useState(false);
@@ -180,7 +182,11 @@ const Hardware: React.FC = () => {
 
                     <Button onClick={() => setIsGeneratorOpen(true)} size="sm" variant="outline">
                         <Code className="mr-2 h-4 w-4" />
-                        Generate Firmware
+                        Generate Firmware (Legacy)
+                    </Button>
+                    <Button onClick={() => setIsBuilderOpen(true)} size="sm" variant="default">
+                        <Code className="mr-2 h-4 w-4" />
+                        Firmware Builder (v5)
                     </Button>
                     {activeTab === "devices" && (
                         <>
@@ -256,6 +262,10 @@ const Hardware: React.FC = () => {
             <FirmwareGeneratorDialog
                 open={isGeneratorOpen}
                 onOpenChange={setIsGeneratorOpen}
+            />
+            <FirmwareBuilderDialog
+                open={isBuilderOpen}
+                onOpenChange={setIsBuilderOpen}
             />
 
             <NetworkScanPrompt
