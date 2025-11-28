@@ -1,0 +1,35 @@
+{
+    "id": "hc_sr04",
+    "name": "HC-SR04 Ultrasonic Sensor",
+    "category": "SENSOR",
+    "capabilities": [
+        "READ"
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "ULTRASONIC_TRIG_ECHO",
+            "valuePath": "distance",
+            "sourceUnit": "cm",
+            "outputs": [
+                {
+                    "key": "distance",
+                    "label": "Distance",
+                    "unit": "mm"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "TRIG",
+            "type": "DIGITAL_OUT"
+        },
+        {
+            "name": "ECHO",
+            "type": "DIGITAL_IN"
+        }
+    ],
+    "initialState": {
+        "value": 0
+    }
+}

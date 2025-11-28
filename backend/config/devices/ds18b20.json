@@ -1,0 +1,31 @@
+{
+    "id": "ds18b20",
+    "name": "DS18B20 Temperature Sensor",
+    "category": "SENSOR",
+    "capabilities": [
+        "READ"
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "ONEWIRE_READ_TEMP",
+            "valuePath": "temp",
+            "sourceUnit": "C",
+            "outputs": [
+                {
+                    "key": "temp",
+                    "label": "Temperature",
+                    "unit": "C"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "DATA",
+            "type": "DIGITAL_IN"
+        }
+    ],
+    "initialState": {
+        "value": 0
+    }
+}

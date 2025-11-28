@@ -174,6 +174,24 @@ export class UdpTransport implements IHardwareTransport {
 
                 message += `|${rxStr}|${txStr}`;
             }
+            // ULTRASONIC (Format: ULTRASONIC_TRIG_ECHO|TRIG|ECHO)
+            else if (packet.cmd === 'ULTRASONIC_TRIG_ECHO') {
+                let trigStr: string | undefined;
+                let echoStr: string | undefined;
+
+                if (packet.pins && Array.isArray(packet.pins)) {
+                    const trigPin = packet.pins.find((p: any) => p.role === 'TRIG');
+                    const echoPin = packet.pins.find((p: any) => p.role === 'ECHO');
+                    if (trigPin) trigStr = `${trigPin.portId}_${trigPin.gpio}`;
+                    if (echoPin) echoStr = `${echoPin.portId}_${echoPin.gpio}`;
+                }
+
+                if (!trigStr || !echoStr) {
+                    throw new Error('ULTRASONIC_TRIG_ECHO requires TRIG and ECHO pins');
+                }
+
+                message += `|${trigStr}|${echoStr}`;
+            }
         }
 
         logger.debug({ ip: this.targetIp, port: this.targetPort, message }, '📤 [UdpTransport] Sending');
