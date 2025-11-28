@@ -22,6 +22,7 @@ Reads an analog value from an ADC pin.
 *   **Usage:** Sensors (pH, EC, Moisture, Light)
 *   **Returns:** Integer (0-1023 or 0-4095 depending on MCU)
 *   **Protocol Example:** `ANALOG|A0_14` (Pin A0, GPIO 14)
+*   **JSON Response Keys:** `value` (Use `"valuePath": "value"`)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -98,6 +99,7 @@ Reads Temperature and Humidity from DHT11/DHT22 sensors.
 *   **Usage:** DHT11, DHT22, AM2302
 *   **Returns:** Object `{ "temp": 24.5, "hum": 60.0 }`
 *   **Protocol Example:** `DHT_READ|D4_4|11` (Pin D4, GPIO 4, Type DHT11)
+*   **JSON Response Keys:** `temp`, `humidity` (Use `"outputs": [{"key": "temp"}, {"key": "humidity"}]`)
 *   **JSON Example:**
     ```json
     "commands": {
@@ -134,6 +136,7 @@ Reads registers from an RS485 Modbus device.
 *   **Usage:** Industrial Sensors (Soil NPK, PAR, CO2)
 *   **Parameters:** RX Pin, TX Pin, JSON Params
 *   **Protocol Example:** `MODBUS_RTU_READ|D2_2|D3_3|{"addr":1,"func":3,"reg":0,"count":1}`
+*   **JSON Response Keys:** `registers` (Array). Use `"valuePath": "registers.0"` for first value.
 *   **JSON Example:**
     ```json
     "commands": {

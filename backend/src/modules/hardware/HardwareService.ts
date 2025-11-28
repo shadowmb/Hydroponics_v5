@@ -239,6 +239,16 @@ export class HardwareService {
             };
             await device.save();
 
+            // Construct readings object with normalized value and correct key
+            const readings: Record<string, any> = (typeof rawResponse === 'object') ? { ...rawResponse } : { value: rawResponse };
+
+            // If driver defines a single output key, map the normalized value to it
+            // This ensures 'par', 'ec', etc. are present in the DB record
+            const outputs = driver.commands?.READ?.outputs;
+            if (outputs && outputs.length === 1 && outputs[0].key) {
+                readings[outputs[0].key] = value;
+            }
+
             // Emit data event for HistoryService
             events.emit('device:data', {
                 deviceId: device.id,
@@ -246,6 +256,7 @@ export class HardwareService {
                 driverId: device.config.driverId,
                 value,
                 raw,
+                readings,     // <--- NEW: Send constructed readings
                 details: rawResponse, // Pass raw response as details
                 timestamp: new Date()
             });

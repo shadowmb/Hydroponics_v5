@@ -27,35 +27,16 @@ export class HistoryService {
 
     private async handleDeviceData(payload: any): Promise<void> {
         try {
-            const { deviceId, driverId, deviceName, value, raw, details, timestamp } = payload;
+            const { deviceId, driverId, deviceName, value, raw, details, timestamp, readings: incomingReadings } = payload;
 
             // Construct readings object
-            // If details is an object with multiple values (e.g. DHT22), use it.
-            // Otherwise, use the single 'value' and 'raw'.
             let readings: Record<string, any> = {};
 
-            if (details && typeof details === 'object' && !Array.isArray(details)) {
-                // If details contains useful keys like 'temp', 'humidity', use them.
-                // We filter out internal keys if necessary, but for now, let's trust the details.
-                // However, 'details' might be the raw response structure (e.g. { ok: 1, registers: [...] }).
-                // We need to be careful. 
-
-                // Strategy: If 'details' has keys that look like physical values, use them.
-                // For now, let's store the 'value' as 'primaryValue' and 'raw' as 'rawInput'.
-                // AND if we have specific known keys from multi-value sensors, we should map them.
-                // But the payload from HardwareService should ideally be clean.
-
-                // Let's rely on what we send from HardwareService.
-                // If HardwareService sends a clean 'readings' object, that's best.
-                // If not, we construct it here.
-
-                // For this iteration, let's assume HardwareService sends a 'readings' object in the payload
-                // OR we construct it from value/raw.
-
-                // Let's look at what we have:
-                // Single Value: value=7.2, raw=123
-                // Multi Value: value=24.5, details={temp: 24.5, humidity: 60}
-
+            if (incomingReadings && Object.keys(incomingReadings).length > 0) {
+                // Use the pre-constructed readings from HardwareService (contains correct metric keys)
+                readings = incomingReadings;
+            } else if (details && typeof details === 'object' && !Array.isArray(details)) {
+                // Legacy Fallback: If details contains useful keys like 'temp', 'humidity', use them.
                 if (Object.keys(details).length > 0) {
                     readings = { ...details };
                 } else {
