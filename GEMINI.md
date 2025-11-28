@@ -228,3 +228,8 @@ This protocol applies to ALL documentation in `Docs/Instructions/` and other cri
 2.  **IMMEDIATELY Update Docs:** Once the code is working, you MUST update the relevant documentation files (e.g., `procedure-*.md`, `firmware-commands.md`) to reflect the new reality.
 3.  **No Lag:** Do not wait for the user to ask. The documentation must always be a "Live Mirror" of the codebase.
 4.  **Self-Correction:** If you find yourself explaining a new feature to the user, check if it's in the docs. If not, add it immediately.
+
+## Documentation Standards
+For detailed rules on how to structure and write documentation, refer to:
+👉 **[DOC_RULES.md](./DOC_RULES.md)**
+Always follow these standards when creating or updating documentation.

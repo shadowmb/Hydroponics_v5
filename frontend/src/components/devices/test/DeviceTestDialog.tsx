@@ -206,15 +206,25 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
 
                                     {/* Scenario A: Multi-Value Sensor (e.g. DHT22) */}
                                     {device.config?.driverId?.commands?.READ?.outputs ? (
-                                        device.config.driverId.commands.READ.outputs.map((output: any) => (
-                                            <SensorValueCard
-                                                key={output.key}
-                                                label={output.label}
-                                                value={multiValues ? multiValues[output.key] : null}
-                                                unit={output.unit}
-                                                subValue={multiValues ? multiValues[output.key] : null} // Showing same value as raw for now unless we have separate raw
-                                            />
-                                        ))
+                                        device.config.driverId.commands.READ.outputs.map((output: any) => {
+                                            // Resolve value: Try direct key match in details, fallback to liveValue if single output
+                                            let val = multiValues && multiValues[output.key] !== undefined
+                                                ? multiValues[output.key]
+                                                : (device.config.driverId.commands.READ.outputs.length === 1 ? liveValue : null);
+
+                                            // Format number
+                                            if (typeof val === 'number') val = val.toFixed(2);
+
+                                            return (
+                                                <SensorValueCard
+                                                    key={output.key}
+                                                    label={output.label}
+                                                    value={val}
+                                                    unit={output.unit}
+                                                    subValue={rawValue}
+                                                />
+                                            );
+                                        })
                                     ) : (
                                         /* Scenario B: Single-Value Sensor (e.g. pH) */
                                         <>

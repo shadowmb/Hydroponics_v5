@@ -158,15 +158,19 @@ export class HardwareService {
         // Check if Driver has a specific value path configured
         const driver = templates.getDriver(device.config.driverId);
         const valuePath = driver.commands?.READ?.valuePath;
+        let valueFound = false;
 
         if (valuePath && typeof rawResponse === 'object') {
             const extracted = this.getValueByPath(rawResponse, valuePath);
             if (extracted !== undefined) {
                 raw = Number(extracted);
+                valueFound = true;
             } else {
-                logger.warn({ deviceId, valuePath, rawResponse }, '⚠️ [HardwareService] Configured valuePath not found in response');
+                logger.warn({ deviceId, valuePath, rawResponse }, '⚠️ [HardwareService] Configured valuePath not found in response, attempting auto-detect');
             }
-        } else {
+        }
+
+        if (!valueFound) {
             // Fallback: Auto-detect common formats
             if (typeof rawResponse === 'number') {
                 raw = rawResponse;

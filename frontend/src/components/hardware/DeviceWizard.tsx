@@ -7,9 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, Settings2 } from 'lucide-react';
+import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DeviceWizardProps {
@@ -24,6 +24,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const [templates, setTemplates] = useState<any[]>([]);
     const [controllers, setControllers] = useState<IController[]>([]);
     const [relays, setRelays] = useState<any[]>([]);
+    const [existingTags, setExistingTags] = useState<string[]>([]); // For suggestions
     const [loading, setLoading] = useState(false);
 
     // Form Data
@@ -37,8 +38,11 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         pins: {} as Record<string, string>, // New multi-pin map
         relayId: '',
         channel: '',
-        isEnabled: true
+        isEnabled: true,
+        tags: [] as string[]
     });
+
+    const [tagInput, setTagInput] = useState('');
 
     const isEditMode = !!initialData;
 
@@ -58,7 +62,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                         : initialData.hardware?.pins || {},
                     relayId: initialData.hardware?.relayId || '',
                     channel: initialData.hardware?.channel !== undefined ? String(initialData.hardware.channel) : '',
-                    isEnabled: initialData.isEnabled !== undefined ? initialData.isEnabled : true
+                    isEnabled: initialData.isEnabled !== undefined ? initialData.isEnabled : true,
+                    tags: initialData.tags || []
                 });
                 // Determine connection type
                 if (initialData.hardware?.relayId) {
@@ -73,9 +78,20 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             } else {
                 // Reset for New Device
                 setStep(1);
-                setFormData({ name: '', description: '', controllerId: '', port: '', pins: {}, relayId: '', channel: '', isEnabled: true });
+                setFormData({
+                    name: '',
+                    description: '',
+                    controllerId: '',
+                    port: '',
+                    pins: {},
+                    relayId: '',
+                    channel: '',
+                    isEnabled: true,
+                    tags: []
+                });
                 setSelectedTemplate(null);
                 setConnectionType('direct');
+                setTagInput('');
             }
         }
     }, [open, initialData]);
@@ -83,14 +99,25 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [tpls, ctrls, rlys] = await Promise.all([
+            const [tpls, ctrls, rlys, devices] = await Promise.all([
                 hardwareService.getDeviceTemplates(),
                 hardwareService.getControllers(),
-                hardwareService.getRelays()
+                hardwareService.getRelays(),
+                hardwareService.getDevices() // Fetch devices to get existing tags
             ]);
             setTemplates(tpls);
             setControllers(ctrls);
             setRelays(rlys);
+
+            // Extract unique tags
+            const tags = new Set<string>();
+            devices.forEach((d: any) => {
+                if (d.tags && Array.isArray(d.tags)) {
+                    d.tags.forEach((t: string) => tags.add(t));
+                }
+            });
+            setExistingTags(Array.from(tags).sort());
+
         } catch (error) {
             toast.error('Failed to load data');
         } finally {
@@ -101,6 +128,24 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const handleTemplateSelect = (template: any) => {
         setSelectedTemplate(template);
         setStep(2);
+    };
+
+    const handleAddTag = () => {
+        if (tagInput && !formData.tags.includes(tagInput)) {
+            setFormData({ ...formData, tags: [...formData.tags, tagInput] });
+            setTagInput('');
+        }
+    };
+
+    const handleRemoveTag = (tagToRemove: string) => {
+        setFormData({ ...formData, tags: formData.tags.filter(tag => tag !== tagToRemove) });
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddTag();
+        }
     };
 
     const handleSubmit = async () => {
@@ -117,6 +162,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                 metadata: {
                     description: formData.description
                 },
+                tags: formData.tags, // Include tags
                 hardware: {}
             };
 
@@ -270,6 +316,57 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                 />
                             </div>
 
+                            {/* Tags Section */}
+                            <div className="space-y-2">
+                                <Label>Device Group / Tags</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={tagInput}
+                                        onChange={e => setTagInput(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="Add a tag (e.g. 'Tank 1', 'Nutrients')"
+                                        className="flex-1"
+                                    />
+                                    <Button type="button" size="icon" variant="outline" onClick={handleAddTag}>
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
+
+                                {/* Active Tags */}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {formData.tags.map(tag => (
+                                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                                            {tag}
+                                            <X
+                                                className="h-3 w-3 cursor-pointer hover:text-destructive"
+                                                onClick={() => handleRemoveTag(tag)}
+                                            />
+                                        </Badge>
+                                    ))}
+                                </div>
+
+                                {/* Suggested Tags */}
+                                {existingTags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        <span className="text-xs text-muted-foreground mr-2">Suggestions:</span>
+                                        {existingTags.filter(t => !formData.tags.includes(t)).map(tag => (
+                                            <Badge
+                                                key={tag}
+                                                variant="outline"
+                                                className="cursor-pointer hover:bg-muted text-xs"
+                                                onClick={() => {
+                                                    if (!formData.tags.includes(tag)) {
+                                                        setFormData({ ...formData, tags: [...formData.tags, tag] });
+                                                    }
+                                                }}
+                                            >
+                                                + {tag}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex items-center justify-between space-x-2 border p-3 rounded-md">
                                 <div className="space-y-0.5">
                                     <Label className="text-base">Enabled</Label>
@@ -284,14 +381,24 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                             </div>
 
                             {selectedTemplate && (
-                                <div className="p-4 bg-muted/50 rounded-lg flex items-center gap-3">
-                                    {getIcon(selectedTemplate.uiConfig?.icon)}
-                                    <div>
-                                        <p className="font-medium">{selectedTemplate.name}</p>
-                                        <p className="text-xs text-muted-foreground">Type: {selectedTemplate.physicalType}</p>
+                                <div className="p-4 bg-muted/50 rounded-lg flex flex-col gap-3">
+                                    <div className="flex items-center gap-3">
+                                        {getIcon(selectedTemplate.uiConfig?.icon)}
+                                        <div>
+                                            <p className="font-medium">{selectedTemplate.name}</p>
+                                            <p className="text-xs text-muted-foreground">Type: {selectedTemplate.physicalType}</p>
+                                        </div>
+                                        {!isEditMode && (
+                                            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setStep(1)}>Change</Button>
+                                        )}
                                     </div>
-                                    {!isEditMode && (
-                                        <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setStep(1)}>Change</Button>
+
+                                    {/* Read-Only Metric Key Context */}
+                                    {selectedTemplate.commands?.READ?.outputs && (
+                                        <div className="text-xs text-muted-foreground border-t pt-2 mt-1">
+                                            <span className="font-semibold">Metric Keys: </span>
+                                            {selectedTemplate.commands.READ.outputs.map((o: any) => o.key).join(', ')}
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -400,7 +507,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                             >
                                                 <SelectTrigger><SelectValue placeholder="Select Channel" /></SelectTrigger>
                                                 <SelectContent>
-                                                    {getAvailableChannels().map(c => (
+                                                    {getAvailableChannels().map((c: any) => (
                                                         <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                                                     ))}
                                                     {getAvailableChannels().length === 0 && (

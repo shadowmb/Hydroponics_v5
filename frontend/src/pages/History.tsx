@@ -5,9 +5,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, subHours, subDays } from 'date-fns';
-import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Tag, Activity } from 'lucide-react';
 import { hardwareService } from '../services/hardwareService';
 import { Input } from '@/components/ui/input';
 import { getMetricConfig } from '../config/MetricConfig';
@@ -24,12 +25,15 @@ const fetchDeviceHistory = async (deviceId: string, startDate?: Date, endDate?: 
 };
 
 type TimeRange = '1h' | '6h' | '24h' | '7d' | 'custom';
+type FilterMode = 'metric' | 'tag';
 
 export function History() {
     const { devices, setDevices } = useStore();
 
     // Selection State
+    const [filterMode, setFilterMode] = useState<FilterMode>('metric');
     const [selectedMetric, setSelectedMetric] = useState<string>('temp');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
 
     // Time Range State
@@ -40,6 +44,7 @@ export function History() {
     // Data State
     const [historyData, setHistoryData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [chartUnits, setChartUnits] = useState<string[]>([]);
 
     // Initial Load
     useEffect(() => {
@@ -50,42 +55,57 @@ export function History() {
         }
     }, [devices, setDevices]);
 
-    // 1. Extract Available Metrics from Sensors
-    const availableMetrics = useMemo(() => {
+    // 1. Extract Available Metrics and Tags
+    const { availableMetrics, availableTags } = useMemo(() => {
         const metrics = new Set<string>();
+        const tags = new Set<string>();
+
         devices.forEach(d => {
             if (d.type === 'SENSOR') {
+                // Metrics
                 const outputs = d.config?.driverId?.commands?.READ?.outputs;
                 if (outputs && Array.isArray(outputs)) {
                     outputs.forEach((output: any) => metrics.add(output.key));
                 } else {
-                    // Fallback for single-value sensors
                     metrics.add('value');
+                }
+
+                // Tags
+                if (d.tags && Array.isArray(d.tags)) {
+                    d.tags.forEach(t => tags.add(t));
                 }
             }
         });
-        return Array.from(metrics).sort();
+        return {
+            availableMetrics: Array.from(metrics).sort(),
+            availableTags: Array.from(tags).sort()
+        };
     }, [devices]);
 
-    // 2. Filter Devices by Selected Metric
+    // 2. Filter Devices based on Mode
     const filteredDevices = useMemo(() => {
         return Array.from(devices.values()).filter(d => {
             if (d.type !== 'SENSOR') return false;
 
-            const outputs = d.config?.driverId?.commands?.READ?.outputs;
-            if (outputs && Array.isArray(outputs)) {
-                return outputs.some((o: any) => o.key === selectedMetric);
+            if (filterMode === 'metric') {
+                const outputs = d.config?.driverId?.commands?.READ?.outputs;
+                if (outputs && Array.isArray(outputs)) {
+                    return outputs.some((o: any) => o.key === selectedMetric);
+                }
+                return selectedMetric === 'value';
+            } else {
+                // Tag Mode
+                if (selectedTags.length === 0) return true; // Show all if no tags selected? Or none? Let's show none to be clean.
+                if (!d.tags || d.tags.length === 0) return false;
+                return d.tags.some(t => selectedTags.includes(t));
             }
-
-            // Fallback: if selected metric is 'value', include devices without explicit outputs
-            return selectedMetric === 'value';
         });
-    }, [devices, selectedMetric]);
+    }, [devices, filterMode, selectedMetric, selectedTags]);
 
-    // Reset selected devices when metric changes
+    // Reset selected devices when filters change
     useEffect(() => {
         setSelectedDevices([]);
-    }, [selectedMetric]);
+    }, [filterMode, selectedMetric, selectedTags]);
 
     const handleDeviceToggle = (deviceId: string) => {
         setSelectedDevices(prev =>
@@ -93,6 +113,32 @@ export function History() {
                 ? prev.filter(id => id !== deviceId)
                 : [...prev, deviceId]
         );
+    };
+
+    const handleTagToggle = (tag: string) => {
+        setSelectedTags(prev =>
+            prev.includes(tag)
+                ? prev.filter(t => t !== tag)
+                : [...prev, tag]
+        );
+    };
+
+    // Helpers for Multi-Axis Support
+    const getDevicePrimaryMetric = (device: any) => {
+        if (filterMode === 'metric') return selectedMetric;
+
+        const outputs = device.config?.driverId?.commands?.READ?.outputs;
+        if (outputs && outputs.length > 0) return outputs[0].key;
+        return 'value';
+    };
+
+    const getDeviceUnit = (device: any, metricKey: string) => {
+        const outputs = device.config?.driverId?.commands?.READ?.outputs;
+        if (outputs) {
+            const out = outputs.find((o: any) => o.key === metricKey);
+            if (out) return out.unit;
+        }
+        return '';
     };
 
     // Calculate Date Range
@@ -120,6 +166,7 @@ export function History() {
         const loadData = async () => {
             if (selectedDevices.length === 0) {
                 setHistoryData([]);
+                setChartUnits([]);
                 return;
             }
 
@@ -132,19 +179,25 @@ export function History() {
                 const results = await Promise.all(promises);
 
                 const mergedData: any[] = [];
+                const units = new Set<string>();
 
                 results.forEach((deviceReadings, index) => {
                     const deviceId = selectedDevices[index];
                     const device = devices.get(deviceId);
                     const deviceName = device?.name || deviceId;
 
+                    // Determine which metric to plot for this device
+                    const metricKey = getDevicePrimaryMetric(device);
+                    const unit = getDeviceUnit(device, metricKey);
+                    if (unit) units.add(unit);
+
                     deviceReadings.forEach((r: any) => {
-                        // Extract the specific metric value
                         let val = r.readings?.value; // Default
+
                         if (r.readings && typeof r.readings === 'object') {
-                            if (r.readings[selectedMetric] !== undefined) {
-                                val = r.readings[selectedMetric];
-                            } else if (selectedMetric === 'value' && r.readings.value !== undefined) {
+                            if (r.readings[metricKey] !== undefined) {
+                                val = r.readings[metricKey];
+                            } else if (metricKey === 'value' && r.readings.value !== undefined) {
                                 val = r.readings.value;
                             }
                         }
@@ -153,7 +206,8 @@ export function History() {
                             mergedData.push({
                                 timestamp: new Date(r.timestamp).getTime(),
                                 [deviceName]: val,
-                                deviceName: deviceName
+                                deviceName: deviceName,
+                                unit: unit // Attach unit to data point if needed, mostly for tooltip
                             });
                         }
                     });
@@ -161,6 +215,7 @@ export function History() {
 
                 mergedData.sort((a, b) => a.timestamp - b.timestamp);
                 setHistoryData(mergedData);
+                setChartUnits(Array.from(units));
 
             } catch (error) {
                 console.error("Failed to load history", error);
@@ -170,7 +225,7 @@ export function History() {
         };
 
         loadData();
-    }, [selectedDevices, timeRange, customStart, customEnd, selectedMetric, devices]);
+    }, [selectedDevices, timeRange, customStart, customEnd, selectedMetric, filterMode, devices]); // Added filterMode
 
     const metricConfig = getMetricConfig(selectedMetric);
 
@@ -179,30 +234,65 @@ export function History() {
             {/* Sidebar for Filters */}
             <div className="w-80 border-r bg-card p-4 space-y-6 overflow-y-auto flex flex-col">
 
-                {/* 1. Metric Selection */}
+                {/* 1. Filter Mode & Selection */}
                 <div>
                     <h3 className="font-semibold mb-2 flex items-center gap-2">
-                        1. Select Metric
+                        1. Filter By
                     </h3>
-                    <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select metric" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableMetrics.map(m => {
-                                const config = getMetricConfig(m);
-                                return (
-                                    <SelectItem key={m} value={m}>
-                                        <span className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }}></span>
-                                            {config.label}
-                                        </span>
-                                    </SelectItem>
-                                );
-                            })}
-                            {availableMetrics.length === 0 && <SelectItem value="none" disabled>No metrics found</SelectItem>}
-                        </SelectContent>
-                    </Select>
+                    <Tabs value={filterMode} onValueChange={(v: string) => setFilterMode(v as FilterMode)} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-4">
+                            <TabsTrigger value="metric" className="flex items-center gap-2">
+                                <Activity className="h-4 w-4" /> Metric
+                            </TabsTrigger>
+                            <TabsTrigger value="tag" className="flex items-center gap-2">
+                                <Tag className="h-4 w-4" /> Tags
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="metric" className="mt-0">
+                            <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select metric" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableMetrics.map(m => {
+                                        const config = getMetricConfig(m);
+                                        return (
+                                            <SelectItem key={m} value={m}>
+                                                <span className="flex items-center gap-2">
+                                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }}></span>
+                                                    {config.label}
+                                                </span>
+                                            </SelectItem>
+                                        );
+                                    })}
+                                    {availableMetrics.length === 0 && <SelectItem value="none" disabled>No metrics found</SelectItem>}
+                                </SelectContent>
+                            </Select>
+                        </TabsContent>
+
+                        <TabsContent value="tag" className="mt-0">
+                            <ScrollArea className="h-[150px] border rounded-md p-2">
+                                <div className="space-y-2">
+                                    {availableTags.map(tag => (
+                                        <div key={tag} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={`tag-${tag}`}
+                                                checked={selectedTags.includes(tag)}
+                                                onCheckedChange={() => handleTagToggle(tag)}
+                                            />
+                                            <Label htmlFor={`tag-${tag}`} className="text-sm cursor-pointer w-full">
+                                                {tag}
+                                            </Label>
+                                        </div>
+                                    ))}
+                                    {availableTags.length === 0 && (
+                                        <div className="text-sm text-muted-foreground p-2">No tags found</div>
+                                    )}
+                                </div>
+                            </ScrollArea>
+                        </TabsContent>
+                    </Tabs>
                 </div>
 
                 {/* 2. Device Selection */}
@@ -219,14 +309,22 @@ export function History() {
                                         checked={selectedDevices.includes(device.id)}
                                         onCheckedChange={() => handleDeviceToggle(device.id)}
                                     />
-                                    <Label htmlFor={device.id} className="text-sm cursor-pointer w-full">
-                                        {device.name}
+                                    <Label htmlFor={device.id} className="text-sm cursor-pointer w-full flex flex-col">
+                                        <span>{device.name}</span>
+                                        {filterMode === 'tag' && (
+                                            <span className="text-xs text-muted-foreground">
+                                                {getDevicePrimaryMetric(device)} ({getDeviceUnit(device, getDevicePrimaryMetric(device))})
+                                            </span>
+                                        )}
                                     </Label>
                                 </div>
                             ))}
                             {filteredDevices.length === 0 && (
                                 <div className="text-sm text-muted-foreground p-2">
-                                    No devices found for {metricConfig.label}
+                                    {filterMode === 'metric'
+                                        ? `No devices found for ${metricConfig.label}`
+                                        : (selectedTags.length === 0 ? "Select tags to view devices" : "No devices found for selected tags")
+                                    }
                                 </div>
                             )}
                         </div>
@@ -295,8 +393,17 @@ export function History() {
                         <CardHeader className="pb-2">
                             <CardTitle className="flex justify-between items-center">
                                 <span className="flex items-center gap-2">
-                                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: metricConfig.color }}></span>
-                                    {metricConfig.label} History
+                                    {filterMode === 'metric' ? (
+                                        <>
+                                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: metricConfig.color }}></span>
+                                            {metricConfig.label} History
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Tag className="h-5 w-5" />
+                                            Tag Analysis: {selectedTags.join(', ') || 'None'}
+                                        </>
+                                    )}
                                 </span>
                                 {loading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
                             </CardTitle>
@@ -319,19 +426,36 @@ export function History() {
                                             domain={['dataMin', 'dataMax']}
                                             scale="time"
                                         />
-                                        <YAxis
-                                            stroke="#888"
-                                            label={{
-                                                value: `${metricConfig.label} (${metricConfig.unit})`,
-                                                angle: -90,
-                                                position: 'insideLeft',
-                                                style: { fill: '#888' }
-                                            }}
-                                        />
+
+                                        {/* Dynamic Y-Axes based on Units */}
+                                        {chartUnits.length > 0 ? (
+                                            chartUnits.map((unit, index) => (
+                                                <YAxis
+                                                    key={unit}
+                                                    yAxisId={unit}
+                                                    orientation={index % 2 === 0 ? 'left' : 'right'}
+                                                    stroke="#888"
+                                                    label={{
+                                                        value: unit,
+                                                        angle: -90,
+                                                        position: index % 2 === 0 ? 'insideLeft' : 'insideRight',
+                                                        style: { fill: '#888' }
+                                                    }}
+                                                />
+                                            ))
+                                        ) : (
+                                            <YAxis stroke="#888" />
+                                        )}
+
                                         <Tooltip
                                             labelFormatter={(label) => format(new Date(label), 'PP pp')}
                                             contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
-                                            formatter={(value: number) => [`${value} ${metricConfig.unit}`, '']}
+                                            formatter={(value: number, name: string) => {
+                                                // Find unit for this line
+                                                // We can't easily access the unit here directly without passing it in data or finding the device
+                                                // But we can try to guess or just show value
+                                                return [value, name];
+                                            }}
                                         />
                                         <Legend />
                                         {selectedDevices.map((id, index) => {
@@ -340,9 +464,13 @@ export function History() {
                                             const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
                                             const color = colors[index % colors.length];
 
+                                            const metricKey = getDevicePrimaryMetric(device);
+                                            const unit = getDeviceUnit(device, metricKey);
+
                                             return (
                                                 <Line
                                                     key={id}
+                                                    yAxisId={unit || 0} // Bind to unit axis
                                                     type="monotone"
                                                     dataKey={name}
                                                     stroke={color}

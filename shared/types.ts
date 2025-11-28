@@ -12,6 +12,7 @@ export interface IDevice {
     driverId: string;
     pin?: number;
     config: Record<string, any>;
+    tags?: string[];
     // State is runtime only, not stored here
 }
 
@@ -79,6 +80,7 @@ export interface SystemEvents {
     'device:connected': { deviceId: string };
     'device:disconnected': { deviceId: string };
     'device:update': { deviceId: string;[key: string]: any }; // Generic update
+    'device:data': { deviceId: string; driverId?: string; deviceName?: string; value: any; raw?: any; details?: any; timestamp?: Date | string };
     'sensor:data': { deviceId: string; value: number; timestamp: Date | string };
     'error:critical': { source: string; message: string; error?: any };
 
