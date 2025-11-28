@@ -9,13 +9,14 @@
     "commands": {
         "READ": {
             "hardwareCmd": "MODBUS_RTU_READ",
+            "valuePath": "registers",
+            "sourceUnit": "umol_m2_s",
             "params": {
                 "slaveId": 1,
                 "funcCode": 3,
                 "startAddr": 0,
                 "len": 1
             },
-            "valuePath": "par",
             "outputs": [
                 {
                     "key": "par",

@@ -23,18 +23,27 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 ### Step 2: Create Device Driver
 1.  Create a new file: `backend/config/devices/<device_id>.json`.
 2.  Use `lowercase_underscores` for the filename.
-3.  Paste and adapt the template below:
 
+**Template Reference:**
 ```json
 {
-    "id": "dfrobot_ec_k1",
-    "name": "DFRobot EC Sensor (K=1.0)",
-    "category": "SENSOR",
-    "capabilities": ["READ"],
+    "id": "unique_device_id",          // REQUIRED: Must match filename (without .json)
+    "name": "Human Readable Name",     // REQUIRED: Displayed in UI
+    "category": "SENSOR",              // REQUIRED: SENSOR, ACTUATOR, or HYBRID
+    "conversionStrategy": "linear",    // OPTIONAL: Only if raw data needs formula (e.g., analog voltage -> pH)
+    "capabilities": ["READ"],          // REQUIRED: List of supported commands
     "commands": {
-        "READ": {
-            "hardwareCmd": "ANALOG",
-            "valuePath": "val"
+        "READ": {                      // Must match a capability
+            "hardwareCmd": "ANALOG",   // Must match firmware command
+            "valuePath": "val",        // Key in firmware response. VERIFY in `firmware/templates/commands/<cmd>.ino`
+            "sourceUnit": "V",         // REQUIRED: Unit returned by hardware (e.g., V, cm, raw)
+            "outputs": [
+                {
+                    "key": "ph",       // REQUIRED: Must be an Allowed Key from UnitRegistry
+                    "label": "pH",
+                    "unit": "pH"       // Base Unit from UnitRegistry
+                }
+            ]
         }
     },
     "pins": [
@@ -44,9 +53,12 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 }
 ```
 
-> [!IMPORTANT]
-> **Integration Mapping Verification**
-> The `valuePath` (or `outputs` keys) **MUST** match the JSON keys returned by the firmware command.
+**Key Fields Explained:**
+*   **`sourceUnit`**: The unit the *hardware* speaks. Backend uses this to normalize data.
+*   **`conversionStrategy`**:
+    *   **Omit** if the sensor returns the final value directly (e.g., DHT22 returns °C).
+    *   **Include** if the sensor returns raw data (e.g., Analog 0-5V) that needs a formula to become the final value (e.g., pH).
+*   **`outputs.key`**: MUST be a valid key from `Docs/Reference/units-and-metrics.md`.
 > *   **Firmware:** Returns `{"val": 123}` -> **Config:** `"valuePath": "val"`
 > *   **Firmware:** Returns `{"temp": 24}` -> **Config:** `"outputs": [{"key": "temp"}]`
 >
@@ -54,9 +66,10 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 
 ### Step 3: Configure Metrics (Frontend)
 **Only if using a new metric type (e.g., "Wind Speed").**
-1.  Open `frontend/src/config/MetricConfig.ts`.
-2.  Add the new metric key to the `METRICS` object.
-3.  Define `label`, `unit`, and `color`.
+1.  **Check `shared/UnitRegistry.ts`:** Ensure the new metric key is added to the `keys` array of the appropriate Unit Family.
+2.  **Open `frontend/src/config/MetricConfig.ts`:**
+3.  Add the new metric key to the `METRICS` object.
+4.  **CRITICAL:** The `unit` in MetricConfig MUST match the **Base Unit** defined in `UnitRegistry` (unless client-side conversion is implemented).
 
 ### Step 4: Sync to Database
 1.  Save the JSON file.
@@ -74,6 +87,8 @@ frontend/
 └── src/
     └── config/
         └── MetricConfig.ts         <-- EDIT (Optional)
+shared/
+└── UnitRegistry.ts                 <-- EDIT (If new key needed)
 ```
 
 ## 6. Validations & Constraints

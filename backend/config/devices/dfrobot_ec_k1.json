@@ -9,12 +9,13 @@
     "commands": {
         "READ": {
             "hardwareCmd": "ANALOG",
-            "valuePath": "ec",
+            "valuePath": "value",
+            "sourceUnit": "uS_cm",
             "outputs": [
                 {
                     "key": "ec",
                     "label": "Conductivity",
-                    "unit": "mS/cm"
+                    "unit": "µS/cm"
                 }
             ]
         }

@@ -81,6 +81,13 @@ export const UNIT_REGISTRY: Record<string, UnitDefinition> = {
         derived: [],
         toBase: { ph: (val) => val },
         fromBase: { ph: (val) => val }
+    },
+    LIGHT: {
+        base: 'umol_m2_s',
+        keys: ['par'],
+        derived: [],
+        toBase: { umol_m2_s: (val) => val },
+        fromBase: { umol_m2_s: (val) => val }
     }
 };
 
