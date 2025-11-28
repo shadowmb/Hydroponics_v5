@@ -1,0 +1,35 @@
+{
+    "id": "dfrobot_a02yyuw",
+    "name": "DFRobot A02YYUW Waterproof Ultrasonic Sensor",
+    "category": "SENSOR",
+    "capabilities": [
+        "READ"
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "UART_READ_DISTANCE",
+            "valuePath": "distance",
+            "sourceUnit": "mm",
+            "outputs": [
+                {
+                    "key": "distance",
+                    "label": "Distance",
+                    "unit": "mm"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "RX",
+            "type": "DIGITAL_IN"
+        },
+        {
+            "name": "TX",
+            "type": "DIGITAL_OUT"
+        }
+    ],
+    "initialState": {
+        "value": 0
+    }
+}

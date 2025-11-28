@@ -30,7 +30,7 @@ export const METRICS: Record<string, MetricDefinition> = {
     par: { key: 'par', label: 'PAR', unit: 'µmol/m²/s', color: '#eab308' }, // Yellow
 
     // Other
-    distance: { key: 'distance', label: 'Distance', unit: 'cm', color: '#64748b' }, // Slate
+    distance: { key: 'distance', label: 'Distance', unit: 'mm', color: '#64748b' }, // Slate
     voltage: { key: 'voltage', label: 'Voltage', unit: 'V', color: '#f97316' }, // Orange
     current: { key: 'current', label: 'Current', unit: 'A', color: '#ea580c' }, // Orange-Red
 

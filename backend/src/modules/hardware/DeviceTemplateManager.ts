@@ -9,6 +9,7 @@ const CommandSchema = z.object({
     hardwareCmd: z.string(),
     params: z.record(z.any()).optional(),
     valuePath: z.string().optional(),
+    sourceUnit: z.string().optional(), // Added for Unit Normalization
     outputs: z.array(z.object({
         key: z.string(),
         label: z.string(),

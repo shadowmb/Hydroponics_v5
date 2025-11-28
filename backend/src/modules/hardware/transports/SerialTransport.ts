@@ -167,6 +167,24 @@ export class SerialTransport implements IHardwareTransport {
                 }
                 message += `|${addr}|${count}`;
             }
+            // UART SENSORS (Format: UART_READ_DISTANCE|RX|TX)
+            else if (packet.cmd === 'UART_READ_DISTANCE') {
+                let rxStr: string | undefined;
+                let txStr: string | undefined;
+
+                if (packet.pins && Array.isArray(packet.pins)) {
+                    const rxPin = packet.pins.find((p: any) => p.role === 'RX');
+                    const txPin = packet.pins.find((p: any) => p.role === 'TX');
+                    if (rxPin) rxStr = `${rxPin.portId}_${rxPin.gpio}`;
+                    if (txPin) txStr = `${txPin.portId}_${txPin.gpio}`;
+                }
+
+                if (!rxStr || !txStr) {
+                    throw new Error('UART_READ_DISTANCE requires RX and TX pins');
+                }
+
+                message += `|${rxStr}|${txStr}`;
+            }
         }
 
         // Add newline delimiter
