@@ -207,23 +207,49 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         }
     };
 
-    const getAvailablePorts = (pinType: string) => {
+    const getAvailablePorts = (pinType: string, currentRole?: string) => {
         if (!formData.controllerId) return [];
         const controller = controllers.find(c => c._id === formData.controllerId);
         if (!controller) return [];
 
         return Object.entries(controller.ports)
             .filter(([id, state]) => {
-                // If editing and this is the current port, allow it
-                // Check both legacy port and new pins map
-                const isCurrentLegacy = isEditMode && initialData?.hardware?.parentId === formData.controllerId && initialData?.hardware?.port === id;
-                const isCurrentPin = isEditMode && initialData?.hardware?.parentId === formData.controllerId && Object.values(initialData?.hardware?.pins || {}).includes(id);
+                // 1. Check Backend Occupancy & Ownership
+                // Is this port occupied by someone else?
+                let isOccupiedByOther = state.isOccupied;
 
-                if (isCurrentLegacy || isCurrentPin) return true;
+                // If we are editing, and this port belongs to THIS device (in initialData), 
+                // then it is NOT "occupied by other" for us.
+                if (isEditMode && initialData?.hardware?.parentId === formData.controllerId) {
+                    const isLegacyPort = initialData.hardware.port === id;
 
-                if (state.isOccupied) return false;
+                    let isMyPin = false;
+                    const pins = initialData.hardware.pins;
+                    if (Array.isArray(pins)) {
+                        isMyPin = pins.some((p: any) => p.portId === id);
+                    } else if (pins && typeof pins === 'object') {
+                        isMyPin = Object.values(pins).includes(id);
+                    }
 
-                // Filter by type
+                    if (isLegacyPort || isMyPin) {
+                        isOccupiedByOther = false;
+                    }
+                }
+
+                if (isOccupiedByOther) return false;
+
+                // 2. Check Frontend usage (Dynamic Swapping)
+                // Is this port currently selected in another field of this form?
+                const usedInOtherField = Object.entries(formData.pins).some(([role, portId]) => {
+                    return role !== currentRole && portId === id;
+                });
+
+                // Also check legacy port field if we are in a mixed state (unlikely but safe)
+                const usedInLegacyField = !currentRole && formData.port === id;
+
+                if (usedInOtherField || usedInLegacyField) return false;
+
+                // 3. Filter by type
                 if (pinType === 'ANALOG_IN' && !id.startsWith('A')) return false;
                 if ((pinType === 'DIGITAL_IN' || pinType === 'DIGITAL_OUT') && !id.startsWith('D')) return false;
 
@@ -442,19 +468,20 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                                     <div key={pin.name} className="space-y-2">
                                                         <Label>Select {pin.name} ({pin.type})</Label>
                                                         <Select
-                                                            value={formData.pins[pin.name] || ''}
+                                                            value={formData.pins[pin.name] || 'none'}
                                                             onValueChange={v => setFormData({
                                                                 ...formData,
-                                                                pins: { ...formData.pins, [pin.name]: v }
+                                                                pins: { ...formData.pins, [pin.name]: v === 'none' ? '' : v }
                                                             })}
                                                         >
                                                             <SelectTrigger><SelectValue placeholder={`Select ${pin.name} Pin`} /></SelectTrigger>
                                                             <SelectContent>
-                                                                {getAvailablePorts(pin.type).map(p => (
+                                                                <SelectItem value="none" className="text-muted-foreground italic">None (Deselect)</SelectItem>
+                                                                {getAvailablePorts(pin.type, pin.name).map(p => (
                                                                     <SelectItem key={p} value={p}>{p}</SelectItem>
                                                                 ))}
-                                                                {getAvailablePorts(pin.type).length === 0 && (
-                                                                    <SelectItem value="none" disabled>No available ports</SelectItem>
+                                                                {getAvailablePorts(pin.type, pin.name).length === 0 && (
+                                                                    <SelectItem value="no_ports" disabled>No available ports</SelectItem>
                                                                 )}
                                                             </SelectContent>
                                                         </Select>
@@ -465,11 +492,12 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                                 <div className="space-y-2">
                                                     <Label>Select Port ({selectedTemplate?.portRequirements?.[0]?.type || 'Generic'})</Label>
                                                     <Select
-                                                        value={formData.port}
-                                                        onValueChange={v => setFormData({ ...formData, port: v })}
+                                                        value={formData.port || 'none'}
+                                                        onValueChange={v => setFormData({ ...formData, port: v === 'none' ? '' : v })}
                                                     >
                                                         <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
                                                         <SelectContent>
+                                                            <SelectItem value="none" className="text-muted-foreground italic">None (Deselect)</SelectItem>
                                                             {getAvailablePorts(selectedTemplate?.portRequirements?.[0]?.type === 'analog' ? 'ANALOG_IN' : 'DIGITAL_IN').map(p => (
                                                                 <SelectItem key={p} value={p}>{p}</SelectItem>
                                                             ))}
