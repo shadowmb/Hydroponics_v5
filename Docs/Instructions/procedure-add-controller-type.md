@@ -1,30 +1,40 @@
-# Add New Controller Type - Streamlined Procedure
+# Procedure: Add New Controller Type
 
-## 3 Required Steps
+## 1. Goal
+Add a new microcontroller board (e.g., Arduino Mega, ESP32) to the system, enabling firmware generation and backend management.
 
-### STEP 1: Firmware Configuration
+## 2. Scope
+*   **Included:** Firmware Generator config, Backend Template definition, Frontend UI mapping.
+*   **Excluded:** Adding new sensors or commands.
 
-**File:** `firmware/config/controllers.json`
+## 3. Definitions & Dependencies
+*   **Firmware Config:** `firmware/config/controllers.json` - Defines hardware capabilities for the generator.
+*   **Backend Template:** `backend/src/data/controller-templates.json` - Defines ports and UI representation.
+*   **Frontend Map:** `frontend/src/components/hardware/ControllerWizard.tsx` - Links the two above.
 
-Add to `controllers` array:
+## 4. Steps (Algorithm)
+
+### Step 1: Configure Firmware Generator
+1.  Open `firmware/config/controllers.json`.
+2.  Add a new object to the `controllers` array.
 
 ```json
 {
-    "id": "controller_id",              // lowercase_underscores (used in discovery)
-    "displayName": "Display Name",
-    "chipset": "Chipset Name",
-    "communicationTypes": ["serial"],   // or ["serial", "wifi"]
+    "id": "arduino_mega",               // Unique ID (lowercase)
+    "displayName": "Arduino Mega 2560",
+    "chipset": "atmega2560",
+    "communicationTypes": ["serial"],
     "capabilities": {
-        "analogPins": 6,
-        "digitalPins": 14,
-        "uartCount": 1,
+        "analogPins": 16,
+        "digitalPins": 54,
+        "uartCount": 4,
         "hasHardwareUART": true,
         "hasRS485": false,
-        "flashMemory": 32768,
-        "sram": 2048
+        "flashMemory": 253952,
+        "sram": 8192
     },
     "commandCompatibility": {
-        "compatible": ["ANALOG", "DHT", "ONE_WIRE"]  // from sensor-families.json
+        "compatible": ["ANALOG", "DHT", "ONE_WIRE"]
     },
     "baseTemplates": {
         "serial": "controller_serial_base.ino"
@@ -33,76 +43,78 @@ Add to `controllers` array:
 }
 ```
 
----
-
-### STEP 2: Database Seed
-
-**File:** `backend/src/data/controller-templates.json`
-
-Add top-level key:
+### Step 2: Define Backend Template
+1.  Open `backend/src/data/controller-templates.json`.
+2.  Add a new top-level key (PascalCase).
 
 ```json
 {
-    "Controller_Key": {                // PascalCase_With_Underscores
-        "label": "Display Name",
+    "Arduino_Mega": {                  // Template Key
+        "label": "Arduino Mega 2560",
         "communication_by": ["serial"],
         "communication_type": ["raw_serial"],
         "ports": [
-            {"id": "D0", "label": "Pin Label", "type": "digital", "reserved": true},
-            {"id": "D1", "label": "Pin Label", "type": "digital", "pwm": true},
-            {"id": "A0", "label": "Pin Label", "type": "analog"}
+            {"id": "D0", "label": "RX0", "type": "digital", "reserved": true},
+            {"id": "D1", "label": "TX0", "type": "digital", "reserved": true},
+            {"id": "D2", "label": "D2 (PWM)", "type": "digital", "pwm": true},
+            {"id": "A0", "label": "Analog 0", "type": "analog"}
         ]
     }
 }
 ```
 
-**Port Rules:**
-- `id`: `D0-DXX` (digital), `A0-AXX` (analog)
-- `type`: `"digital"` or `"analog"`
-- `reserved`: `true` for UART/I2C/SPI pins
-- `pwm`: `true` if PWM capable
-
-**Get PWM pins from:** Controller datasheet or Arduino reference
-
-**Reserved pins:**
-- UART: TX/RX pins
-- I2C: SDA/SCL pins
-- SPI: MISO/MOSI/SCK/SS pins
-
----
-
-### STEP 3: Frontend Mapping
-
-**File:** `frontend/src/components/hardware/ControllerWizard.tsx`
-
-**Line ~52**, add to `MODEL_MAP`:
+### Step 3: Map in Frontend
+1.  Open `frontend/src/components/hardware/ControllerWizard.tsx`.
+2.  Locate `MODEL_MAP` constant.
+3.  Add the mapping entry.
 
 ```typescript
 const MODEL_MAP: Record<string, string> = {
-    'existing_entries': 'Values',
-    'controller_id': 'Controller_Key'  // Add this
+    // 'firmware_id': 'Backend_Key'
+    'arduino_mega': 'Arduino_Mega'
 };
 ```
 
-**Mapping Rules:**
-- **Left** = `id` from STEP 1 (exact match, case-sensitive)
-- **Right** = key from STEP 2 (exact match)
+### Step 4: Apply Changes
+1.  Restart the Backend (`npm run dev`).
+2.  Templates are automatically seeded on startup.
 
----
+## 5. File Structure
+```
+firmware/
+└── config/
+    └── controllers.json           <-- Step 1
+backend/
+└── src/
+    └── data/
+        └── controller-templates.json <-- Step 2
+frontend/
+└── src/
+    └── components/
+        └── hardware/
+            └── ControllerWizard.tsx <-- Step 3
+```
 
-## Apply Changes
+## 6. Validations & Constraints
+*   **Port IDs:** Must match physical labels (e.g., `D0`, `A0`).
+*   **Reserved Pins:** Mark UART (TX/RX), I2C (SDA/SCL), and SPI pins as `"reserved": true`.
+*   **PWM:** Verify PWM capability against the datasheet.
 
-**Restart backend** - templates auto-seed on startup
+## 7. Integration Mapping Verification (CRITICAL)
+You **MUST** ensure the IDs link correctly across the three files.
 
----
+| System | File | Key/Property | Value Example |
+| :--- | :--- | :--- | :--- |
+| **Firmware** | `controllers.json` | `id` | `"arduino_mega"` |
+| **Frontend** | `ControllerWizard.tsx` | `MODEL_MAP` (Key) | `'arduino_mega'` |
+| **Frontend** | `ControllerWizard.tsx` | `MODEL_MAP` (Value) | `'Arduino_Mega'` |
+| **Backend** | `controller-templates.json` | Root Key | `"Arduino_Mega"` |
 
-## Quick Reference
+> [!IMPORTANT]
+> **Broken Link Risk**
+> If the `MODEL_MAP` value does not EXACTLY match the `controller-templates.json` key, the UI will fail to load ports for the selected controller.
 
-| Item | Format | Example |
-|------|--------|---------|
-| Firmware `id` | lowercase_underscores | `arduino_leonardo` |
-| Seed key | PascalCase_Underscores | `Arduino_Leonardo` |
-| Digital port | `D` + number | `D0`, `D13` |
-| Analog port | `A` + number | `A0`, `A5` |
-
-**CRITICAL:** All three identifiers must match exactly as shown in mapping rules.
+## 8. Test Scenarios
+1.  **Wizard:** Open "Add Controller". Select the new type.
+2.  **Port Load:** Verify the "Ports" step shows the correct number of D/A pins.
+3.  **Generation:** Click "Generate Firmware". Verify the correct chipset is selected in the download.

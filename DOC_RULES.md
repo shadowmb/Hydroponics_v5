@@ -80,7 +80,13 @@ Documentation must be **unambiguous**, **algorithmically precise**, and **self-c
 *   **No Guesswork:** The AI should be able to complete the task using *only* this document and the specific files mentioned in the steps.
 *   **Completeness over Brevity:** While fluff is banned, necessary technical context (signatures, critical constants, configuration keys) is MANDATORY.
 
-## 9. Template
+## 9. Integration Mapping Verification (CRITICAL)
+If the task involves communication between two systems (e.g., Firmware <-> Backend, Backend <-> Frontend), the documentation **MUST** include an **Explicit Mapping Table**.
+*   **Format:** "System A Parameter [X] maps to System B Parameter [Y]".
+*   **Purpose:** To prevent "silent failures" where keys or formats mismatch (e.g., `value` vs `val`, `mm` vs `cm`).
+*   **Cross-Reference:** If a step relies on another procedure, provide a **Deep Link** to the specific section AND a summary of what is expected from that external step.
+
+## 10. Template
 ```markdown
 # [Document Name]
 
@@ -112,5 +118,5 @@ Documentation must be **unambiguous**, **algorithmically precise**, and **self-c
 ...
 ```
 
-## 10. Maintenance
+## 11. Maintenance
 Any architectural change MUST be reflected in the documentation immediately. This file is a "Live Mirror" of the codebase.

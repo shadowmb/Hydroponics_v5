@@ -140,8 +140,6 @@ export class HardwareService {
         const device = await DeviceModel.findById(deviceId);
         if (!device) throw new Error('Device not found');
 
-
-
         // Execute 'READ' command
         const rawResponse = await this.sendCommand(
             deviceId,
@@ -192,7 +190,45 @@ export class HardwareService {
             raw = 0;
         }
 
-        const value = conversionService.convert(device, raw);
+        let value = conversionService.convert(device, raw);
+
+        // --- Normalization Layer ---
+        // Check if driver has a sourceUnit and normalize if needed
+        const driverDoc = templates.getDriver(device.config.driverId);
+        // @ts-ignore - sourceUnit is new, might not be in interface yet
+        const sourceUnit = driverDoc.commands?.READ?.sourceUnit;
+
+        logger.info({
+            deviceId,
+            driverId: device.config.driverId,
+            sourceUnit,
+            raw,
+            value
+        }, '🔍 [HardwareService] Checking Normalization');
+
+        if (sourceUnit) {
+            try {
+                // Dynamic import with absolute path to avoid relative path hell and ts-node restrictions
+                const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
+                const { normalizeValue } = require(registryPath);
+
+                const normalized = normalizeValue(value, sourceUnit);
+
+                logger.info({ normalized }, '🔍 [HardwareService] Normalization Result');
+
+                if (normalized) {
+                    // If normalization happened, we update 'value' to be the Base Unit
+                    if (normalized.baseUnit !== sourceUnit) {
+                        logger.info({ deviceId, from: sourceUnit, to: normalized.baseUnit, original: value, normalized: normalized.value }, '📏 [HardwareService] Normalized Value');
+                        value = normalized.value;
+                    }
+                } else {
+                    logger.warn({ deviceId, sourceUnit }, '⚠️ [HardwareService] Unknown sourceUnit in driver');
+                }
+            } catch (err) {
+                logger.error({ err, sourceUnit }, '❌ [HardwareService] Failed to load UnitRegistry');
+            }
+        }
 
         // Save last reading to DB
         try {

@@ -1,137 +1,111 @@
-# Add New Firmware Command - Procedure
+# Procedure: Add New Firmware Command
 
-This guide describes how to add a new low-level command to the firmware generator and backend system.
-Use this when you need to support a new hardware protocol or sensor type that isn't covered by existing commands (like `ANALOG`, `DHT`, `I2C`).
+## 1. Goal
+Implement a new low-level command (e.g., `MY_PROTOCOL_READ`) in the C++ firmware generator and enable the backend to send it.
 
-## 3 Required Steps
+## 2. Scope
+*   **Included:** C++ implementation, Generator configuration, Backend serialization.
+*   **Excluded:** Creating the Device Driver JSON (see `procedure-add-device-type.md`).
 
-### STEP 1: C++ Implementation (Firmware Template)
+## 3. Definitions & Dependencies
+*   **Command Module:** A `.ino` file in `firmware/templates/commands/` containing the C++ logic.
+*   **Generator Config:** `firmware/config/commands.json` registry.
+*   **SerialTransport:** `backend/src/modules/hardware/transports/SerialTransport.ts` handles string formatting.
 
-**File:** `firmware/templates/commands/<command_name>.ino`
+## 4. Steps (Algorithm)
 
-Create a new `.ino` file. This file **MUST** follow a strict structure with specific comment markers, as the generator uses Regex to extract sections.
-
-**Structure:**
-
-> **IMPORTANT:** Always use the global `parsePin(String)` function to parse pin parameters. Do not use `atoi()` directly on pins, as the format is now `Label_GPIO` (e.g., `D2_2`).
+### Step 1: Create C++ Implementation
+1.  Create `firmware/templates/commands/<command_name>.ino`.
+2.  **CRITICAL:** Use the exact structure below (Regex depends on it).
 
 ```cpp
 /*
  * MY_COMMAND Command Module
- * Description of what it does.
  */
 
 // === INCLUDES ===
-// Add libraries here, e.g.:
-// #include <SomeLibrary.h>
+// #include <Wire.h>
 
 // === GLOBALS ===
-// Add global variables here (use unique names to avoid collisions)
-// SomeLibrary mySensor;
+// int myGlobal = 0;
 
 // === DISPATCHER ===
-// This snippet is injected into the main loop's command parser.
-// 'cmd' is the command string (e.g., "MY_COMMAND")
-// 'delimiter' points to the first pipe '|' character
 else if (strcmp(cmd, "MY_COMMAND") == 0) {
   return handleMyCommand(delimiter ? delimiter + 1 : NULL);
 }
 
 // === FUNCTIONS ===
-// Implement your logic here.
 String handleMyCommand(const char* params) {
-  // 1. Parse Parameters
-  // params string will be "PARAM1|PARAM2" or "D2_2|..."
-  
-  // Use global parsePin() for any pin parameters!
+  // Use global parsePin(String) for pins!
   // int pin = parsePin(paramString);
-  
-  // 2. Execute Logic
-  int result = 42;
-
-  // 3. Return JSON Response
-  // Must return a String with JSON
-  return "{\"ok\":1,\"value\":" + String(result) + "}";
+  return "{\"ok\":1,\"val\":100}";
 }
 ```
 
----
-
-### STEP 2: Configuration (Generator Metadata)
-
-**File:** `firmware/config/commands.json`
-
-Add a new entry to the `commands` array. This tells the generator how to use your template.
+### Step 2: Register in Generator
+1.  Open `firmware/config/commands.json`.
+2.  Add a new object to the `commands` array:
 
 ```json
 {
-    "name": "MY_COMMAND",               // MUST match the string in strcmp() in Step 1
-    "displayName": "My Custom Command",
-    "description": "Does something cool",
+    "name": "MY_COMMAND",
+    "displayName": "My Command",
     "category": "sensors",
-    "commandFormat": "delimited",
-    "syntax": "MY_COMMAND|{param1}",
-    "example": "MY_COMMAND|123",
-    "response": {
-        "success": "{\"ok\":1,\"value\":42}",
-        "error": "{\"ok\":0,\"error\":\"ERR_FAIL\"}"
-    },
-    "parameters": [
-        {
-            "name": "param1",
-            "type": "integer",
-            "required": true,
-            "description": "Some parameter",
-            "validation": "^[0-9]+$",
-            "example": "123"
-        }
-    ],
-    "memoryFootprint": {
-        "flash": 500,                   // Estimate in bytes
-        "sram": 50
-    },
-    "requiredLibraries": [],            // e.g. ["Wire"]
-    "sensorFamily": "CUSTOM",
-    "primitives": ["MY_PRIMITIVE"],
-    "templateFile": {
-        "serial": "my_command.ino",     // Filename from Step 1
-        "wifi": "my_command.ino"
-    },
+    "syntax": "MY_COMMAND|{pin}",
+    "templateFile": { "serial": "my_command.ino", "wifi": "my_command.ino" },
     "isActive": true
 }
 ```
 
----
-
-### STEP 3: Backend Serialization (Transport Layer)
-
-**File:** `backend/src/modules/hardware/transports/SerialTransport.ts`
-
-You must teach the backend how to format the command string before sending it to the serial port.
-Locate the `send(packet)` method and add your command to the serialization logic.
+### Step 3: Implement Backend Serialization
+1.  Open `backend/src/modules/hardware/transports/SerialTransport.ts`.
+2.  Locate the `send(packet)` method.
+3.  Add logic to format the command string.
 
 ```typescript
-// Inside send() method:
-
 else if (packet.cmd === 'MY_COMMAND') {
-    // Format: MY_COMMAND|PARAM1
-    if (packet.param1 !== undefined) message += `|${packet.param1}`;
+    // MUST match C++ expectation: "MY_COMMAND|PIN"
+    if (!packet.pins || packet.pins.length === 0) throw new Error('Missing Pin');
+    const pin = packet.pins[0];
+    message += `|${pin.portId}_${pin.gpio}`; 
 }
 ```
 
----
+## 5. File Structure
+```
+firmware/
+├── config/
+│   └── commands.json
+└── templates/
+    └── commands/
+        └── <command_name>.ino  <-- NEW
+backend/
+└── src/
+    └── modules/
+        └── hardware/
+            └── transports/
+                └── SerialTransport.ts <-- EDIT
+```
 
-## Verification
+## 6. Validations & Constraints
+*   **Pin Parsing:** Always use `parsePin()` in C++. Do NOT use `atoi()`.
+*   **JSON Response:** Firmware MUST return valid JSON (e.g., `{"ok":1}`).
+*   **Unique Name:** Command name must be unique in `commands.json`.
 
-1.  **Regenerate Firmware:**
-    *   Go to the Frontend -> Controllers -> Create New.
-    *   Select a controller and add a device that uses your new command.
-    *   Download the firmware.
-2.  **Inspect Code:**
-    *   Open the downloaded `.ino` file.
-    *   Verify your `// === FUNCTIONS ===` are at the bottom.
-    *   Verify your `// === DISPATCHER ===` logic is inside `processCommand()`.
-3.  **Test:**
-    *   Upload to Arduino.
-    *   Send `MY_COMMAND|123` via Serial Monitor.
-    *   Verify JSON response.
+## 7. Integration Mapping Verification (CRITICAL)
+You **MUST** verify that the string constructed in Backend matches the C++ parser.
+
+| Parameter | Backend Source (`SerialTransport.ts`) | C++ Expectation (`.ino`) |
+| :--- | :--- | :--- |
+| **Command** | `packet.cmd` ('MY_CMD') | `strcmp(cmd, "MY_CMD")` |
+| **Arg 1** | `packet.pins[0]` ('D2_2') | `parsePin(params)` |
+| **Arg 2** | `packet.param1` | `strtok(params, "|")` |
+
+> [!WARNING]
+> **Serialization Mismatch**
+> If `SerialTransport` sends `MY_CMD|123` but C++ expects `MY_CMD|PIN|123`, the command will fail silently or return garbage. **Check the delimiters!**
+
+## 8. Test Scenarios
+1.  **Generation:** Create a controller with the new command. Download firmware. Check `.ino` for injected code.
+2.  **Compilation:** Verify firmware compiles in Arduino IDE.
+3.  **Execution:** Send command via Serial Monitor (`MY_CMD|...`). Verify JSON response.

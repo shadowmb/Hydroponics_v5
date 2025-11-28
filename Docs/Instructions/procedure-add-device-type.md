@@ -44,6 +44,14 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 }
 ```
 
+> [!IMPORTANT]
+> **Integration Mapping Verification**
+> The `valuePath` (or `outputs` keys) **MUST** match the JSON keys returned by the firmware command.
+> *   **Firmware:** Returns `{"val": 123}` -> **Config:** `"valuePath": "val"`
+> *   **Firmware:** Returns `{"temp": 24}` -> **Config:** `"outputs": [{"key": "temp"}]`
+>
+> **Do NOT** use the metric name (e.g., `distance_mm`) if the firmware returns `distance`. The mapping happens in the UI, not here.
+
 ### Step 3: Configure Metrics (Frontend)
 **Only if using a new metric type (e.g., "Wind Speed").**
 1.  Open `frontend/src/config/MetricConfig.ts`.
