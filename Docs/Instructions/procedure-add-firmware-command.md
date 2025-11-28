@@ -42,6 +42,16 @@ String handleMyCommand(const char* params) {
 }
 ```
 
+> [!CAUTION]
+> **Strict Section Markers Required**
+> The Firmware Generator uses Regex to extract code. You **MUST** use these exact markers (case-sensitive, with spaces):
+> 1. `// === INCLUDES ===`
+> 2. `// === GLOBALS ===`
+> 3. `// === DISPATCHER ===`
+> 4. `// === FUNCTIONS ===`
+>
+> **Do NOT use:** `// === HELPER FUNCTIONS ===`, `//===INCLUDES===`, or any other variation. The generator will fail silently or produce broken firmware.
+
 ### Step 2: Register in Generator
 1.  Open `firmware/config/commands.json`.
 2.  Add a new object to the `commands` array:
@@ -58,9 +68,10 @@ String handleMyCommand(const char* params) {
 ```
 
 ### Step 3: Implement Backend Serialization
-1.  Open `backend/src/modules/hardware/transports/SerialTransport.ts`.
-2.  Locate the `send(packet)` method.
-3.  Add logic to format the command string.
+1.  **Serial:** Open `backend/src/modules/hardware/transports/SerialTransport.ts`.
+2.  **UDP:** Open `backend/src/modules/hardware/transports/UdpTransport.ts`.
+3.  Locate the `send(packet)` method in **BOTH** files.
+4.  Add logic to format the command string.
 
 ```typescript
 else if (packet.cmd === 'MY_COMMAND') {

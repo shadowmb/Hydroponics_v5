@@ -105,10 +105,7 @@
                 "flash": 1500,
                 "sram": 200
             },
-            "requiredLibraries": [
-                "OneWire",
-                "DallasTemperature"
-            ],
+            "requiredLibraries": [],
             "sensorFamily": "ONEWIRE",
             "primitives": [
                 "SINGLE_WIRE_ONEWIRE"
@@ -492,6 +489,51 @@
             "templateFile": {
                 "serial": "uart_read_distance.ino",
                 "wifi": "uart_read_distance.ino"
+            },
+            "isActive": true
+        },
+        {
+            "name": "ULTRASONIC_TRIG_ECHO",
+            "displayName": "Ultrasonic (Trig/Echo)",
+            "description": "Reads distance from HC-SR04 ultrasonic sensors",
+            "category": "sensors",
+            "commandFormat": "delimited",
+            "syntax": "ULTRASONIC_TRIG_ECHO|{trig_pin}|{echo_pin}",
+            "example": "ULTRASONIC_TRIG_ECHO|D2_2|D3_3",
+            "response": {
+                "success": "{\"ok\":1,\"distance\":150.5}",
+                "error": "{\"ok\":0,\"error\":\"ERR_TIMEOUT\"}"
+            },
+            "parameters": [
+                {
+                    "name": "trig_pin",
+                    "type": "string",
+                    "required": true,
+                    "description": "Trigger Pin (D2-D13)",
+                    "validation": "^D([2-9]|1[0-3])$",
+                    "example": "D2"
+                },
+                {
+                    "name": "echo_pin",
+                    "type": "string",
+                    "required": true,
+                    "description": "Echo Pin (D2-D13)",
+                    "validation": "^D([2-9]|1[0-3])$",
+                    "example": "D3"
+                }
+            ],
+            "memoryFootprint": {
+                "flash": 500,
+                "sram": 50
+            },
+            "requiredLibraries": [],
+            "sensorFamily": "ULTRASONIC",
+            "primitives": [
+                "PULSE_IN"
+            ],
+            "templateFile": {
+                "serial": "ultrasonic_trig_echo.ino",
+                "wifi": "ultrasonic_trig_echo.ino"
             },
             "isActive": true
         }
