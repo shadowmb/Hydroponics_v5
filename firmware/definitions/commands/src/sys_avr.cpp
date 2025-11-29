@@ -13,3 +13,7 @@ void resetDevice() {
   void(* resetFunc) (void) = 0;
   resetFunc();
 }
+
+String getMacAddress() {
+  return "00:00:00:00:00:00";
+}

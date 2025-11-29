@@ -10,7 +10,8 @@ const PortTemplateSchema = z.object({
     type: z.enum(['digital', 'analog']),
     reserved: z.boolean().optional().default(false),
     pwm: z.boolean().optional().default(false),
-    pin: z.number()
+    pin: z.number(),
+    interface: z.enum(['uart', 'i2c', 'spi']).optional()
 });
 
 const ControllerTemplateSchema = z.object({

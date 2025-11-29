@@ -24,6 +24,9 @@ export interface BoardDefinition {
         digital_count: number;
         analog_input_count: number;
         pwm_pins: (number | string)[];
+        uart_pins?: (number | string)[];
+        i2c_pins?: (number | string)[];
+        spi_pins?: (number | string)[];
     };
     electrical_specs?: {
         logic_voltage: string;

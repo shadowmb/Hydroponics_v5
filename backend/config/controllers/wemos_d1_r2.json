@@ -96,14 +96,16 @@
             "label": "D1 (GPIO5), SCL (I2C)",
             "type": "digital",
             "reserved": false,
-            "pin": 5
+            "pin": 5,
+            "interface": "i2c"
         },
         {
             "id": "D2",
             "label": "D2 (GPIO4), SDA (I2C)",
             "type": "digital",
             "reserved": false,
-            "pin": 4
+            "pin": 4,
+            "interface": "i2c"
         },
         {
             "id": "D3",
@@ -124,42 +126,48 @@
             "label": "D5 (GPIO14), SCK (SPI)",
             "type": "digital",
             "reserved": false,
-            "pin": 14
+            "pin": 14,
+            "interface": "spi"
         },
         {
             "id": "D6",
             "label": "D6 (GPIO12), MISO (SPI)",
             "type": "digital",
             "reserved": false,
-            "pin": 12
+            "pin": 12,
+            "interface": "spi"
         },
         {
             "id": "D7",
             "label": "D7 (GPIO13), MOSI (SPI)",
             "type": "digital",
             "reserved": false,
-            "pin": 13
+            "pin": 13,
+            "interface": "spi"
         },
         {
             "id": "D8",
             "label": "D8 (GPIO15), SS (SPI)",
             "type": "digital",
             "reserved": false,
-            "pin": 15
+            "pin": 15,
+            "interface": "spi"
         },
         {
             "id": "D9",
             "label": "RX (Serial)",
             "type": "digital",
             "reserved": false,
-            "pin": 3
+            "pin": 3,
+            "interface": "uart"
         },
         {
             "id": "D10",
             "label": "TX (Serial)",
             "type": "digital",
             "reserved": false,
-            "pin": 1
+            "pin": 1,
+            "interface": "uart"
         },
         {
             "id": "D11",

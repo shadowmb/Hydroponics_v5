@@ -67,6 +67,7 @@ Defines a single physical pin or port on the controller.
 | `pin` | Number | **Yes** | The internal GPIO number used by the firmware (Arduino pin number). |
 | `reserved` | Boolean | No | If `true`, this port is used by the system (e.g., USB Serial) and cannot be assigned to devices. Default: `false`. |
 | `pwm` | Boolean | No | If `true`, this port supports PWM output. Default: `false`. |
+| `interface` | String | No | Specific interface capability: `uart`, `i2c`, or `spi`. |
 | `max_voltage` | Number | No | Maximum voltage for analog inputs (e.g., 3.3 or 5.0). |
 
 ## Example (`arduino_uno.json`)

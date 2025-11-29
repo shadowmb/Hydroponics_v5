@@ -57,7 +57,10 @@ export class FirmwareBuilderController {
             pins: {
                 digital_count: t.pin_counts?.digital || 0,
                 analog_input_count: t.pin_counts?.analog || 0,
-                pwm_pins: [] // TODO: Extract from ports if needed, or keep simple count
+                pwm_pins: t.ports?.filter((p: any) => p.pwm).map((p: any) => p.pin) || [],
+                uart_pins: t.ports?.filter((p: any) => p.interface === 'uart').map((p: any) => p.pin) || [],
+                i2c_pins: t.ports?.filter((p: any) => p.interface === 'i2c').map((p: any) => p.pin) || [],
+                spi_pins: t.ports?.filter((p: any) => p.interface === 'spi').map((p: any) => p.pin) || []
             },
             electrical_specs: t.electrical_specs,
             constraints: t.constraints

@@ -75,14 +75,16 @@
             "label": "RX (Serial)",
             "type": "digital",
             "reserved": true,
-            "pin": 0
+            "pin": 0,
+            "interface": "uart"
         },
         {
             "id": "D1",
             "label": "TX (Serial)",
             "type": "digital",
             "reserved": true,
-            "pin": 1
+            "pin": 1,
+            "interface": "uart"
         },
         {
             "id": "D2",
@@ -145,28 +147,32 @@
             "label": "Digital Pin 10 (PWM, SS)",
             "type": "digital",
             "pwm": true,
-            "pin": 10
+            "pin": 10,
+            "interface": "spi"
         },
         {
             "id": "D11",
             "label": "Digital Pin 11 (PWM, MOSI)",
             "type": "digital",
             "pwm": true,
-            "pin": 11
+            "pin": 11,
+            "interface": "spi"
         },
         {
             "id": "D12",
             "label": "Digital Pin 12 (MISO)",
             "type": "digital",
             "reserved": false,
-            "pin": 12
+            "pin": 12,
+            "interface": "spi"
         },
         {
             "id": "D13",
             "label": "Digital Pin 13 (SCK, LED)",
             "type": "digital",
             "pwm": true,
-            "pin": 13
+            "pin": 13,
+            "interface": "spi"
         },
         {
             "id": "A0",
@@ -197,14 +203,16 @@
             "label": "SDA (I2C)",
             "type": "analog",
             "reserved": true,
-            "pin": 18
+            "pin": 18,
+            "interface": "i2c"
         },
         {
             "id": "A5",
             "label": "SCL (I2C)",
             "type": "analog",
             "reserved": true,
-            "pin": 19
+            "pin": 19,
+            "interface": "i2c"
         }
     ]
 }

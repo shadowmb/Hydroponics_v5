@@ -6,6 +6,7 @@
 // These must be implemented in the architecture-specific files (e.g., sys_avr.cpp)
 int freeMemory();
 void resetDevice();
+String getMacAddress();
 
 // === COMMAND PARSER ===
 String processCommand(String input) {
@@ -24,6 +25,22 @@ String processCommand(String input) {
   
   if (strcmp(cmd, "PING") == 0) {
     return "{\"ok\":1,\"pong\":1}";
+  }
+
+  else if (strcmp(cmd, "HYDROPONICS_DISCOVERY") == 0) {
+    String response = "{\"type\":\"ANNOUNCE\",\"mac\":\"";
+    response += getMacAddress();
+    response += "\",\"model\":\"Hydroponics Controller\",\"firmware\":\"";
+    response += FIRMWARE_VERSION;
+    response += "\",\"capabilities\":[";
+    for (int i = 0; i < CAPABILITIES_COUNT; i++) {
+      response += "\"";
+      response += CAPABILITIES[i];
+      response += "\"";
+      if (i < CAPABILITIES_COUNT - 1) response += ",";
+    }
+    response += "]}";
+    return response;
   }
   
   else if (strcmp(cmd, "INFO") == 0) {
