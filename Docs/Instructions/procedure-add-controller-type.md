@@ -11,12 +11,17 @@ Add a new microcontroller board (e.g., Arduino Mega, ESP32) to the system, enabl
 *   **Firmware Config:** `firmware/config/controllers.json` - Defines hardware capabilities for the generator.
 *   **Backend Template:** `backend/src/data/controller-templates.json` - Defines ports and UI representation.
 *   **Frontend Map:** `frontend/src/components/hardware/ControllerWizard.tsx` - Links the two above.
+*   **Validation Schema:** `backend/src/modules/hardware/ControllerTemplateManager.ts` - Zod schema for validating JSON templates.
 
 ## 4. Steps (Algorithm)
 
 ### Step 1: Configure Firmware Generator
 1.  Open `firmware/config/controllers.json`.
 2.  Add a new object to the `controllers` array.
+
+> [!IMPORTANT]
+> **Schema Updates**
+> If you are adding new fields to the JSON template that are not yet defined, you **MUST** update the Zod schema in `backend/src/modules/hardware/ControllerTemplateManager.ts` and the Mongoose schema in `backend/src/models/ControllerTemplate.ts`. Otherwise, the new fields will be stripped during validation.
 
 ```json
 {

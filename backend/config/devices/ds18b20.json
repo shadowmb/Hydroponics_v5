@@ -5,6 +5,13 @@
     "capabilities": [
         "READ"
     ],
+    "requirements": {
+        "interface": "onewire",
+        "voltage": "3.3V-5V",
+        "pin_count": {
+            "digital": 1
+        }
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ONEWIRE_READ_TEMP",
@@ -27,5 +34,9 @@
     ],
     "initialState": {
         "value": 0
+    },
+    "uiConfig": {
+        "category": "Sensors",
+        "icon": "activity"
     }
 }

@@ -7,6 +7,7 @@ export interface IPortTemplate {
     reserved?: boolean;
     pwm?: boolean;
     pin: number;
+    interface?: 'uart' | 'i2c' | 'spi';
 }
 
 export interface IControllerTemplate extends Omit<Document, '_id'> {
@@ -69,7 +70,8 @@ const PortTemplateSchema = new Schema({
     type: { type: String, enum: ['digital', 'analog'], required: true },
     reserved: { type: Boolean, default: false },
     pwm: { type: Boolean, default: false },
-    pin: { type: Number, required: true }
+    pin: { type: Number, required: true },
+    interface: { type: String, enum: ['uart', 'i2c', 'spi'] }
 }, { _id: false });
 
 const ControllerTemplateSchema = new Schema({

@@ -9,8 +9,7 @@
     ],
     "compatible_architectures": [
         "esp8266",
-        "esp32",
-        "renesas_uno"
+        "esp32"
     ],
     "parameters": [
         {
@@ -26,11 +25,23 @@
             "esp32": "#include <ESPmDNS.h>",
             "renesas_uno": ""
         },
-        "setup": [
-            "if (MDNS.begin(\"{{hostname}}\")) {",
-            "  Serial.println(\"mDNS responder started\");",
-            "}"
-        ],
-        "loop": "MDNS.update();"
+        "setup": {
+            "esp8266": [
+                "if (MDNS.begin(\"{{hostname}}\")) {",
+                "  Serial.println(\"mDNS responder started\");",
+                "}"
+            ],
+            "esp32": [
+                "if (MDNS.begin(\"{{hostname}}\")) {",
+                "  Serial.println(\"mDNS responder started\");",
+                "}"
+            ],
+            "renesas_uno": "// mDNS not supported on Renesas yet"
+        },
+        "loop": {
+            "esp8266": "MDNS.update();",
+            "esp32": "MDNS.update();",
+            "renesas_uno": ""
+        }
     }
 }

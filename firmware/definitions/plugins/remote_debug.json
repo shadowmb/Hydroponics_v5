@@ -4,23 +4,44 @@
     "description": "Send debug logs via Telnet/UDP",
     "category": "debugging",
     "compatible_transports": [
-        "wifi",
-        "ethernet"
+        "wifi"
     ],
     "compatible_architectures": [
-        "*"
+        "esp8266",
+        "esp32",
+        "renesas_uno"
     ],
     "parameters": [],
     "code": {
-        "globals": "WiFiServer telnetServer(23); WiFiClient telnetClient;",
-        "setup": "telnetServer.begin();",
+        "globals": "WiFiServer telnetServer(23); WiFiClient telnetClient; bool telnetStarted = false;",
+        "setup": "// Server started in loop when WiFi is ready",
         "loop": [
-            "if (telnetServer.hasClient()) {",
+            "// Lazy Start Telnet Server",
+            "if (WiFi.status() == WL_CONNECTED && !telnetStarted) {",
+            "  telnetServer.begin();",
+            "  telnetStarted = true;",
+            "  Serial.println(\"Telnet Server Started on port 23\");",
+            "}",
+            "// Handle New Clients",
+            "WiFiClient newClient = telnetServer.available();",
+            "if (newClient) {",
             "  if (!telnetClient || !telnetClient.connected()) {",
             "    if (telnetClient) telnetClient.stop();",
-            "    telnetClient = telnetServer.available();",
+            "    telnetClient = newClient;",
+            "    telnetClient.println(\"Connected to Hydroponics Controller\");",
             "  } else {",
-            "    telnetServer.available().stop();",
+            "    newClient.stop();",
+            "  }",
+            "}",
+            "// Handle Input from Telnet",
+            "if (telnetClient && telnetClient.connected() && telnetClient.available()) {",
+            "  String input = telnetClient.readStringUntil('\\n');",
+            "  input.trim();",
+            "  if (input.length() > 0) {",
+            "    Serial.print(\"Command via Telnet: \");",
+            "    Serial.println(input);",
+            "    String response = processCommand(input);",
+            "    telnetClient.println(response);",
             "  }",
             "}"
         ],

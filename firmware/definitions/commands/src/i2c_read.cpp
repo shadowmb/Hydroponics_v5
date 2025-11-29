@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 #include <Wire.h>
 
 String handleI2CRead(const char* params) {

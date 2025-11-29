@@ -6,6 +6,13 @@
     "capabilities": [
         "READ"
     ],
+    "requirements": {
+        "interface": "uart",
+        "voltage": "5V",
+        "pin_count": {
+            "uart": 1
+        }
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "MODBUS_RTU_READ",
@@ -38,5 +45,13 @@
     ],
     "initialState": {
         "value": 0
+    },
+    "uiConfig": {
+        "category": "Sensors",
+        "icon": "activity",
+        "recommendedPins": [
+            "D0",
+            "D1"
+        ]
     }
 }

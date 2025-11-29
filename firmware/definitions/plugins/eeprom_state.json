@@ -12,10 +12,77 @@
     "parameters": [],
     "code": {
         "includes": "#include <EEPROM.h>",
-        "setup": "restoreState();",
-        "functions": [
-            "void saveState(int pin, int state) { EEPROM.write(pin, state); EEPROM.commit(); }",
-            "void restoreState() { /* Implementation to read EEPROM and set pins */ }"
-        ]
+        "globals": "#define ENABLE_EEPROM_STATE_SAVE\nvoid saveState(int pin, int state);\nvoid restoreState();",
+        "setup": "EEPROM.begin(512); // For ESP\nrestoreState();",
+        "functions": {
+            "esp8266": [
+                "void saveState(int pin, int state) {",
+                "  if (pin >= 512) return;",
+                "  if (EEPROM.read(pin) != state) {",
+                "    EEPROM.write(pin, state);",
+                "    EEPROM.commit();",
+                "  }",
+                "}",
+                "void restoreState() {",
+                "  for (int i = 0; i < 20; i++) { // Scan first 20 pins",
+                "    int val = EEPROM.read(i);",
+                "    if (val == 0 || val == 1) {",
+                "      pinMode(i, OUTPUT);",
+                "      digitalWrite(i, val);",
+                "    }",
+                "  }",
+                "}"
+            ],
+            "esp32": [
+                "void saveState(int pin, int state) {",
+                "  if (pin >= 512) return;",
+                "  if (EEPROM.read(pin) != state) {",
+                "    EEPROM.write(pin, state);",
+                "    EEPROM.commit();",
+                "  }",
+                "}",
+                "void restoreState() {",
+                "  for (int i = 0; i < 40; i++) { // Scan first 40 pins",
+                "    int val = EEPROM.read(i);",
+                "    if (val == 0 || val == 1) {",
+                "      pinMode(i, OUTPUT);",
+                "      digitalWrite(i, val);",
+                "    }",
+                "  }",
+                "}"
+            ],
+            "renesas_uno": [
+                "void saveState(int pin, int state) {",
+                "  if (EEPROM.read(pin) != state) {",
+                "    EEPROM.write(pin, state);",
+                "  }",
+                "}",
+                "void restoreState() {",
+                "  for (int i = 0; i < 20; i++) {",
+                "    int val = EEPROM.read(i);",
+                "    if (val == 0 || val == 1) {",
+                "      pinMode(i, OUTPUT);",
+                "      digitalWrite(i, val);",
+                "    }",
+                "  }",
+                "}"
+            ],
+            "*": [
+                "void saveState(int pin, int state) {",
+                "  if (EEPROM.read(pin) != state) {",
+                "    EEPROM.write(pin, state);",
+                "  }",
+                "}",
+                "void restoreState() {",
+                "  for (int i = 0; i < 20; i++) {",
+                "    int val = EEPROM.read(i);",
+                "    if (val == 0 || val == 1) {",
+                "      pinMode(i, OUTPUT);",
+                "      digitalWrite(i, val);",
+                "    }",
+                "  }",
+                "}"
+            ]
+        }
     }
 }

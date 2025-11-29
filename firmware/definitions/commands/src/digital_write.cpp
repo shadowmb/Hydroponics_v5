@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 
 String handleDigitalWrite(const char* params) {
   // Parse params: "D8|1" -> pin=D8, state=1
@@ -35,6 +35,10 @@ String handleDigitalWrite(const char* params) {
   // Set pin mode and state
   pinMode(pin, OUTPUT);
   digitalWrite(pin, state);
+
+  #ifdef ENABLE_EEPROM_STATE_SAVE
+  saveState(pin, state);
+  #endif
 
   // Build and return JSON response
   String response = "{\"ok\":1,\"pin\":\"";

@@ -5,6 +5,13 @@
     "capabilities": [
         "READ"
     ],
+    "requirements": {
+        "interface": "uart",
+        "voltage": "3.3V-5V",
+        "pin_count": {
+            "uart": 1
+        }
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "UART_READ_DISTANCE",
@@ -34,6 +41,10 @@
     },
     "uiConfig": {
         "category": "Sensors",
-        "icon": "activity"
+        "icon": "activity",
+        "recommendedPins": [
+            "D0",
+            "D1"
+        ]
     }
 }

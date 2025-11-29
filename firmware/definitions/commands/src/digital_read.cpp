@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 
 String handleDigitalRead(const char* params) {
   // Parse pin from params (e.g., "D3")

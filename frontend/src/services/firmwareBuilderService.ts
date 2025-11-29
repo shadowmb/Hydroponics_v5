@@ -24,6 +24,9 @@ export interface BoardDefinition {
         digital_count: number;
         analog_input_count: number;
         pwm_pins: (number | string)[];
+        uart_pins?: (number | string)[];
+        i2c_pins?: (number | string)[];
+        spi_pins?: (number | string)[];
     };
     electrical_specs?: {
         logic_voltage: string;
@@ -55,6 +58,7 @@ export interface PluginDefinition {
     description: string;
     category: string;
     compatible_architectures: string[];
+    compatible_transports: string[];
     parameters: Array<{
         name: string;
         type: string;
@@ -75,10 +79,20 @@ export interface DeviceTemplate {
     description: string;
     physicalType: string;
     requiredCommand: string;
-    portRequirements: Array<{
+    portRequirements?: Array<{
         type: 'analog' | 'digital' | 'i2c' | 'uart';
         count: number;
     }>;
+    requirements?: {
+        interface?: 'digital' | 'analog' | 'i2c' | 'uart' | 'onewire';
+        voltage?: string;
+        pin_count?: {
+            digital?: number;
+            analog?: number;
+            uart?: number;
+            i2c?: number;
+        };
+    };
     uiConfig: {
         category: string;
         icon?: string;

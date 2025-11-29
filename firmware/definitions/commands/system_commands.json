@@ -6,6 +6,30 @@
         "*"
     ],
     "code": {
-        "functions": "@file:commands/src/system_commands.cpp"
+        "includes": {
+            "renesas_uno": "#include <malloc.h>"
+        },
+        "functions": {
+            "avr": [
+                "@file:commands/src/sys_avr.cpp",
+                "@file:commands/src/sys_common.cpp"
+            ],
+            "renesas_uno": [
+                "@file:commands/src/sys_renesas.cpp",
+                "@file:commands/src/sys_common.cpp"
+            ],
+            "esp8266": [
+                "@file:commands/src/sys_esp.cpp",
+                "@file:commands/src/sys_common.cpp"
+            ],
+            "esp32": [
+                "@file:commands/src/sys_esp.cpp",
+                "@file:commands/src/sys_common.cpp"
+            ],
+            "*": [
+                "@file:commands/src/sys_stub.cpp",
+                "@file:commands/src/sys_common.cpp"
+            ]
+        }
     }
 }

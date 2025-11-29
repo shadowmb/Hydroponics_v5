@@ -113,10 +113,10 @@ export class FirmwareBuilder {
         // 3. Initialize Code Sections
         let includes = new Set<string>();
         let globals = new Set<string>();
-        let setup = new Set<string>();
-        let loop = new Set<string>();
-        let functions = new Set<string>();
-        let dispatchers = new Set<string>();
+        let setup: string[] = [];
+        let loop: string[] = [];
+        let functions: string[] = [];
+        let dispatchers: string[] = [];
 
         // 3.1 Generate Capabilities Array
         // Filter out system commands from capabilities list
@@ -147,12 +147,12 @@ export class FirmwareBuilder {
 
         skeleton = skeleton.replace('{{INCLUDES}}', Array.from(includes).join('\n'));
         skeleton = skeleton.replace('{{GLOBALS}}', Array.from(globals).join('\n'));
-        skeleton = skeleton.replace('{{SETUP_CODE}}', Array.from(setup).join('\n  '));
-        skeleton = skeleton.replace('{{LOOP_CODE}}', Array.from(loop).join('\n  '));
+        skeleton = skeleton.replace('{{SETUP_CODE}}', setup.join('\n  '));
+        skeleton = skeleton.replace('{{LOOP_CODE}}', loop.join('\n  '));
 
         // Special handling for functions to inject dispatchers
-        let functionsCode = Array.from(functions).join('\n');
-        const dispatchersCode = Array.from(dispatchers).join('\n  ');
+        let functionsCode = functions.join('\n');
+        const dispatchersCode = dispatchers.join('\n  ');
         functionsCode = functionsCode.replace('{{COMMAND_DISPATCHERS}}', dispatchersCode);
 
         skeleton = skeleton.replace('{{FUNCTIONS_CODE}}', functionsCode);
@@ -184,7 +184,7 @@ export class FirmwareBuilder {
         block: CodeBlock,
         arch: string,
         settings: Record<string, any> | undefined,
-        output: { includes: Set<string>, globals: Set<string>, setup: Set<string>, loop: Set<string>, functions: Set<string>, dispatchers: Set<string> }
+        output: { includes: Set<string>, globals: Set<string>, setup: string[], loop: string[], functions: string[], dispatchers: string[] }
     ) {
         if (block.includes) this.addCode(output.includes, block.includes, arch, settings);
         if (block.globals) this.addCode(output.globals, block.globals, arch, settings);
@@ -195,7 +195,7 @@ export class FirmwareBuilder {
     }
 
     private addCode(
-        target: Set<string>,
+        target: Set<string> | string[],
         source: string | string[] | Record<string, string | string[]> | undefined,
         arch: string,
         settings?: Record<string, any>
@@ -244,7 +244,12 @@ export class FirmwareBuilder {
                     processedLine = processedLine.split(`{{${key}}}`).join(String(value));
                 }
             }
-            target.add(processedLine);
+
+            if (Array.isArray(target)) {
+                target.push(processedLine);
+            } else {
+                target.add(processedLine);
+            }
         });
     }
 }

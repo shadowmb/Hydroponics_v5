@@ -1,4 +1,3 @@
-#include <Arduino.h>
 
 void writeOnewireByte(int pin, byte data) {
   for (int i = 0; i < 8; i++) {

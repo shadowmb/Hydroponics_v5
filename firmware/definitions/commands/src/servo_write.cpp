@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 #include <Servo.h>
 
 // Note: Globals must be declared in the JSON 'globals' section, but for C++ compilation of this file alone, 

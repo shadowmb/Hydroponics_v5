@@ -117,10 +117,14 @@ export const FirmwareBuilderWizard: React.FC = () => {
                 />;
             case 3:
                 const boardForPlugins = boards.find(b => b.id === config.boardId);
+                const transportForPlugins = transports.find(t => t.id === config.transportId);
                 return <PluginSelectionStep
                     plugins={plugins}
                     selectedPluginIds={config.pluginIds}
                     selectedBoard={boardForPlugins}
+                    selectedTransport={transportForPlugins}
+                    settings={config.settings}
+                    onUpdateSettings={updateSettings}
                     onToggle={(id) => {
                         const current = config.pluginIds;
                         const next = current.includes(id)
@@ -230,7 +234,36 @@ export const FirmwareBuilderWizard: React.FC = () => {
                             onClick={handleNext}
                             disabled={
                                 (step === 1 && !config.boardId) ||
-                                (step === 2 && !config.transportId)
+                                (step === 2 && (!config.transportId || (() => {
+                                    const selectedTransport = transports.find(t => t.id === config.transportId);
+                                    if (!selectedTransport) return true;
+
+                                    // Check if all parameters are filled
+                                    const allFilled = selectedTransport.parameters.every(p => config.settings[p.name]);
+                                    if (!allFilled) return true;
+
+                                    // Specific validation for UDP Port
+                                    if (config.settings['udp_port']) {
+                                        const port = parseInt(config.settings['udp_port'], 10);
+                                        if (isNaN(port) || port < 1024 || port > 65535) {
+                                            return true; // Invalid port
+                                        }
+                                    }
+
+                                    return false; // All good
+                                })())) ||
+                                (step === 3 && (() => {
+                                    // Get selected plugins
+                                    const selectedPlugins = plugins.filter(p => config.pluginIds.includes(p.id));
+
+                                    // Check if any selected plugin has missing parameters
+                                    const hasMissingParams = selectedPlugins.some(plugin => {
+                                        if (!plugin.parameters || plugin.parameters.length === 0) return false;
+                                        return plugin.parameters.some(param => !config.settings[param.name]);
+                                    });
+
+                                    return hasMissingParams;
+                                })())
                             }
                         >
                             Next

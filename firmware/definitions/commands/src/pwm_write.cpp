@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 
 bool isPWMPin(int pin) {
   // Basic check for common Arduino boards. 

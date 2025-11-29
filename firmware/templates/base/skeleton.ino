@@ -12,6 +12,9 @@
 // === GLOBALS ===
 {{GLOBALS}}
 
+// === PROTOTYPES ===
+String processCommand(String input);
+
 // === SETUP ===
 void setup() {
   {{SETUP_CODE}}
