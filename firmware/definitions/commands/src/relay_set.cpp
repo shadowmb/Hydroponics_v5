@@ -36,6 +36,10 @@ String handleRelaySet(const char* params) {
   pinMode(pin, OUTPUT);
   digitalWrite(pin, state);
 
+  #ifdef ENABLE_EEPROM_STATE_SAVE
+  saveState(pin, state);
+  #endif
+
   // Build and return JSON response
   String response = "{\"ok\":1,\"pin\":\"";
   response += pinStr;

@@ -26,14 +26,68 @@
         }
     ],
     "code": {
-        "includes": "#include <WiFiMulti.h>",
-        "globals": "WiFiMulti wifiMulti;",
-        "setup": [
-            "// Override standard WiFi.begin",
-            "wifiMulti.addAP(\"{{ssid}}\", \"{{password}}\");",
-            "wifiMulti.addAP(\"{{backup_ssid}}\", \"{{backup_password}}\");",
-            "while (wifiMulti.run() != WL_CONNECTED) { delay(500); }"
-        ],
-        "loop": "if (wifiMulti.run() != WL_CONNECTED) { Serial.println(\"WiFi Connection Lost\"); }"
+        "includes": {
+            "esp8266": "#include <WiFiMulti.h>",
+            "esp32": "#include <WiFiMulti.h>",
+            "renesas_uno": "// Custom Failover Logic"
+        },
+        "globals": {
+            "esp8266": "WiFiMulti wifiMulti;",
+            "esp32": "WiFiMulti wifiMulti;",
+            "renesas_uno": "unsigned long lastWifiCheck = 0;\nconst char* backupSsid = \"{{backup_ssid}}\";\nconst char* backupPass = \"{{backup_password}}\";"
+        },
+        "setup": {
+            "esp8266": [
+                "// Override standard WiFi.begin",
+                "wifiMulti.addAP(\"{{ssid}}\", \"{{password}}\");",
+                "wifiMulti.addAP(\"{{backup_ssid}}\", \"{{backup_password}}\");",
+                "while (wifiMulti.run() != WL_CONNECTED) { delay(500); }"
+            ],
+            "esp32": [
+                "// Override standard WiFi.begin",
+                "wifiMulti.addAP(\"{{ssid}}\", \"{{password}}\");",
+                "wifiMulti.addAP(\"{{backup_ssid}}\", \"{{backup_password}}\");",
+                "while (wifiMulti.run() != WL_CONNECTED) { delay(500); }"
+            ],
+            "renesas_uno": [
+                "// Primary connection handled by Transport",
+                "// If Primary failed (timeout), try Backup",
+                "if (WiFi.status() != WL_CONNECTED) {",
+                "  Serial.print(\"Primary failed. Connecting to Backup: {{backup_ssid}}\");",
+                "  WiFi.disconnect();",
+                "  WiFi.begin(\"{{backup_ssid}}\", \"{{backup_password}}\");",
+                "  int backupRetries = 0;",
+                "  while (WiFi.status() != WL_CONNECTED && backupRetries < 20) {",
+                "    delay(500);",
+                "    Serial.print(\".\");",
+                "    backupRetries++;",
+                "  }",
+                "  Serial.println();",
+                "  if (WiFi.status() == WL_CONNECTED) {",
+                "    Serial.println(\"Backup WiFi Connected!\");",
+                "    Serial.print(\"IP Address: \");",
+                "    Serial.println(WiFi.localIP());",
+                "    udp.begin(8888); // Ensure UDP is started",
+                "  } else {",
+                "    Serial.println(\"Backup WiFi Failed! System running offline.\");",
+                "  }",
+                "}"
+            ]
+        },
+        "loop": {
+            "esp8266": "if (wifiMulti.run() != WL_CONNECTED) { Serial.println(\"WiFi Connection Lost\"); }",
+            "esp32": "if (wifiMulti.run() != WL_CONNECTED) { Serial.println(\"WiFi Connection Lost\"); }",
+            "renesas_uno": [
+                "if (millis() - lastWifiCheck > 10000) {",
+                "  lastWifiCheck = millis();",
+                "  if (WiFi.status() != WL_CONNECTED) {",
+                "    Serial.println(\"Primary WiFi lost. Trying Backup...\");",
+                "    WiFi.disconnect();",
+                "    WiFi.begin(backupSsid, backupPass);",
+                "    // Non-blocking attempt (check status next loop)",
+                "  }",
+                "}"
+            ]
+        }
     }
 }

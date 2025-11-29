@@ -16,9 +16,20 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         name: string;
         type: 'DIGITAL_IN' | 'DIGITAL_OUT' | 'ANALOG_IN' | 'PWM_OUT';
     }[];
+    requirements?: {
+        interface?: 'digital' | 'analog' | 'i2c' | 'uart' | 'onewire';
+        voltage?: string;
+        pin_count?: {
+            digital?: number;
+            analog?: number;
+            uart?: number;
+            i2c?: number;
+        };
+    };
     uiConfig?: {
         category?: string;
         icon?: string;
+        recommendedPins?: string[];
     };
     initialState?: Record<string, any>;
 }
@@ -39,9 +50,20 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
         name: { type: String },
         type: { type: String, enum: ['DIGITAL_IN', 'DIGITAL_OUT', 'ANALOG_IN', 'PWM_OUT'] }
     }],
+    requirements: {
+        interface: { type: String, enum: ['digital', 'analog', 'i2c', 'uart', 'onewire'] },
+        voltage: { type: String },
+        pin_count: {
+            digital: { type: Number },
+            analog: { type: Number },
+            uart: { type: Number },
+            i2c: { type: Number }
+        }
+    },
     uiConfig: {
         category: { type: String },
-        icon: { type: String }
+        icon: { type: String },
+        recommendedPins: [{ type: String }]
     },
     initialState: { type: Schema.Types.Mixed }
 }, {

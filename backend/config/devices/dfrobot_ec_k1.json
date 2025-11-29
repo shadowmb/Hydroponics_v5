@@ -6,6 +6,13 @@
     "capabilities": [
         "READ"
     ],
+    "requirements": {
+        "interface": "analog",
+        "voltage": "3.3V-5V",
+        "pin_count": {
+            "analog": 1
+        }
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ANALOG",
@@ -28,5 +35,10 @@
     ],
     "initialState": {
         "value": 0
+    },
+    "uiConfig": {
+        "category": "Sensors",
+        "icon": "activity",
+        "recommendedPins": []
     }
 }

@@ -5,6 +5,13 @@
     "capabilities": [
         "READ"
     ],
+    "requirements": {
+        "interface": "digital",
+        "voltage": "5V",
+        "pin_count": {
+            "digital": 2
+        }
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ULTRASONIC_TRIG_ECHO",

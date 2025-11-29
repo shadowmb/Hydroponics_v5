@@ -30,10 +30,21 @@ const DeviceTemplateSchema = z.object({
     capabilities: z.array(z.string()),
     commands: z.record(CommandSchema),
     pins: z.array(PinSchema),
+    requirements: z.object({
+        interface: z.enum(['digital', 'analog', 'i2c', 'uart', 'onewire']).optional(),
+        voltage: z.string().optional(),
+        pin_count: z.object({
+            digital: z.number().optional(),
+            analog: z.number().optional(),
+            uart: z.number().optional(),
+            i2c: z.number().optional()
+        }).optional()
+    }).optional(),
     initialState: z.record(z.any()).optional(),
     uiConfig: z.object({
         category: z.string().optional(),
-        icon: z.string().optional()
+        icon: z.string().optional(),
+        recommendedPins: z.array(z.string()).optional()
     }).optional(),
 });
 

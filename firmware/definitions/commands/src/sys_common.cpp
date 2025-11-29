@@ -57,6 +57,12 @@ String processCommand(String input) {
     resetDevice();
     return "{\"ok\":1,\"msg\":\"Resetting\"}";
   }
+
+  else if (strcmp(cmd, "TEST_WATCHDOG") == 0) {
+    Serial.println("{\"ok\":1,\"msg\":\"Blocking loop for 10s to test Watchdog...\"}");
+    delay(10000); // Block for 10s, should trigger WDT (8s timeout)
+    return "{\"ok\":0,\"error\":\"WDT_FAILED_TO_RESET\"}"; // Should not be reached if WDT is working
+  }
   
   // === DYNAMIC DISPATCHERS ===
   {{COMMAND_DISPATCHERS}}

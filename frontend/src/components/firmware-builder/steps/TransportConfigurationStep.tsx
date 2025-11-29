@@ -47,16 +47,50 @@ export const TransportConfigurationStep: React.FC<Props> = ({
             {selectedTransport && selectedTransport.parameters.length > 0 && (
                 <div className="space-y-4 border p-4 rounded-md bg-muted/10">
                     <h4 className="font-medium text-sm">Configuration</h4>
-                    {selectedTransport.parameters.map(param => (
-                        <div key={param.name} className="space-y-2">
-                            <Label>{param.label}</Label>
-                            <Input
-                                value={settings[param.name] || ''}
-                                onChange={(e) => onUpdateSettings(param.name, e.target.value)}
-                                placeholder={String(param.default || '')}
-                            />
-                        </div>
-                    ))}
+                    {selectedTransport.parameters.map(param => {
+                        const isBaudRate = param.name === 'baud_rate';
+
+                        if (isBaudRate) {
+                            return (
+                                <div key={param.name} className="space-y-2">
+                                    <Label>{param.label} <span className="text-destructive">*</span></Label>
+                                    <Select
+                                        value={settings[param.name] || ''}
+                                        onValueChange={(val) => onUpdateSettings(param.name, val)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Baud Rate" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="9600">9600</SelectItem>
+                                            <SelectItem value="19200">19200</SelectItem>
+                                            <SelectItem value="38400">38400</SelectItem>
+                                            <SelectItem value="57600">57600</SelectItem>
+                                            <SelectItem value="74880">74880</SelectItem>
+                                            <SelectItem value="115200">115200</SelectItem>
+                                            <SelectItem value="230400">230400</SelectItem>
+                                            <SelectItem value="250000">250000</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div key={param.name} className="space-y-2">
+                                <Label>
+                                    {param.label}
+                                    {param.name === 'udp_port' && <span className="text-xs text-muted-foreground ml-1 font-normal">(1024-65535)</span>}
+                                    <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                    value={settings[param.name] || ''}
+                                    onChange={(e) => onUpdateSettings(param.name, e.target.value)}
+                                    placeholder={String(param.default || '')}
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>

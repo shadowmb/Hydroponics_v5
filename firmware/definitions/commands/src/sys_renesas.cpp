@@ -1,7 +1,7 @@
 // === SYSTEM COMMANDS (RENESAS UNO R4 IMPLEMENTATION) ===
 // For Arduino Uno R4 WiFi / Minima
 
-#include <malloc.h> // Required for mallinfo on some ARM toolchains
+
 
 // === MEMORY ===
 int freeMemory() {

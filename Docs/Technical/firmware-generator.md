@@ -10,6 +10,7 @@ To generate a compilable `.ino` firmware file for a specific hardware controller
     - Selection of Commands (e.g., `DHT_READ`, `RELAY_SET`).
     - Dynamic generation of C++ code (includes, globals, setup, loop, dispatchers).
     - Automatic inclusion of capabilities in the `INFO` command.
+    - **Device Compatibility Checks:** Validation of voltage, interface, and pin availability.
 - **Excluded:**
     - Compilation of the firmware (done by user in Arduino IDE/PlatformIO).
     - Uploading to the device.
@@ -19,117 +20,107 @@ To generate a compilable `.ino` firmware file for a specific hardware controller
 - **Definitions Repository:** `firmware/definitions/` - JSON templates for boards, transports, and commands.
 - **Source Code:** `firmware/definitions/commands/src/` - C++ implementation files.
 - **Frontend Wizard:** `frontend/src/components/firmware-builder/FirmwareBuilderWizard.tsx`.
+- **Validation Logic:** `frontend/src/utils/firmwareValidation.ts`.
 
-## 4. Steps (Algorithm)
+## 4. Architecture & Logic
 
-### 4.1. Discovery & Selection Logic (Frontend)
-1.  **Fetch Templates:** Frontend calls `/api/hardware/device-templates` to get all available device types.
-2.  **Extract Commands:**
-    - Iterates through selected devices.
-    - Extracts `requiredCommand` (e.g., `dht_read`) from the template.
-    - Extracts `hardwareCmd` from `commands` object (e.g., `RELAY_SET`).
-    - **Normalization:** Converts all extracted IDs to **lowercase**.
-3.  **Send Configuration:** Sends the list of unique, lowercase command IDs to the backend.
+### 4.1. Multi-Architecture Support
+The system supports multiple hardware architectures (AVR, ESP8266, ESP32, Renesas) by dynamically resolving implementation files.
+- **JSON Mapping:** Command definitions (e.g., `system_commands.json`) use a `functions` object to map architectures to files.
+    ```json
+    "functions": {
+        "avr": "@file:commands/src/sys_avr.cpp",
+        "renesas_uno": "@file:commands/src/sys_renesas.cpp",
+        "esp8266": "@file:commands/src/sys_esp.cpp",
+        "esp32": "@file:commands/src/sys_esp.cpp",
+        "*": "@file:commands/src/sys_stub.cpp"
+    }
+    ```
+- **Common Logic:** Shared code is extracted to `sys_common.cpp` and included where needed.
 
-### 4.2. Template Loading (Backend)
-**File:** `backend/src/services/FirmwareBuilder.ts`
-1.  **Load Board:** Reads `firmware/definitions/boards/<boardId>.json`.
-2.  **Load Transport:** Reads `firmware/definitions/transports/<transportId>.json`.
-3.  **Load Commands:**
-    - Iterates through `commandIds`.
-    - Reads `firmware/definitions/commands/<commandId>.json`.
-    - **Error Handling:** If a file is missing, it logs a warning and skips it (preventing crash).
-4.  **Load System Commands:** Always loads `firmware/definitions/commands/system_commands.json` (contains `PING`, `INFO`, `RESET`).
+### 4.2. Device Compatibility & Validation
+**File:** `frontend/src/utils/firmwareValidation.ts`
 
-### 4.3. Code Assembly (Backend)
-**File:** `backend/src/services/FirmwareBuilder.ts` -> `processCodeBlock()`
+The system prevents invalid hardware configurations by validating three key constraints:
 
-1.  **Architecture Resolution:**
-    - For each code block (`includes`, `globals`, etc.), checks if it's an object.
-    - **Priority:** 1. Exact Architecture Match (e.g., `esp8266`) -> 2. Wildcard (`*`) -> 3. Skip.
+#### A. Voltage Compatibility
+- **Source:** `BoardDefinition.electrical_specs.logic_voltage` (e.g., "5V").
+- **Requirement:** `DeviceTemplate.requirements.voltage` (e.g., "3.3V", "3.3V-5V").
+- **Logic:** Strict equality check, unless device supports a range. Mismatch disables the device.
 
-2.  **Content Resolution:**
-    - **`@file:` Directive:** If a line starts with `@file:`, it reads the content from `firmware/definitions/<path>`.
-    - **Placeholders:** Replaces `{{BAUD_RATE}}`, `{{WIFI_SSID}}`, etc., with values from `settings`.
+#### B. Interface Availability
+- **Source:** `BoardDefinition.interfaces` (e.g., `i2c: true`, `serial: { hardware: [...] }`).
+- **Requirement:** `DeviceTemplate.requirements.interface` ("i2c", "uart").
+- **Logic:**
+    - **I2C:** Checks if board supports I2C.
+    - **UART:** Checks if board has free Hardware UART ports. **Fallback:** If HW UARTs are full, checks for 2 free Digital Pins (SoftwareSerial).
 
-3.  **Capabilities Generation:**
-    - Filters out `system_commands`.
-    - Maps remaining IDs to **UPPERCASE**.
-    - Generates C++ code: `const char* CAPABILITIES[] = { "CMD1", "CMD2" };`
+#### C. Pin Budgeting
+- **Source:** `BoardDefinition.pins` (counts for digital, analog).
+- **Requirement:** `DeviceTemplate.requirements.pin_count` (e.g., `{ digital: 1 }`).
+- **Logic:**
+    - Tracks cumulative usage of `digital`, `analog`, `uart`, `i2c`.
+    - **SoftwareSerial Fallback:** If a UART device uses SoftwareSerial, it consumes **2 Digital Pins**.
+    - If usage > total available, device is disabled.
 
-4.  **Skeleton Injection:**
-    - Reads `firmware/templates/base/skeleton.ino`.
-    - Injects accumulated code into `{{INCLUDES}}`, `{{GLOBALS}}`, `{{SETUP_CODE}}`, `{{LOOP_CODE}}`.
-    - **Dispatcher Injection:** Injects `{{COMMAND_DISPATCHERS}}` into the `functions` block (specifically into `processCommand` function).
+### 4.3. Recommended Pins
+**File:** `backend/src/models/DeviceTemplate.ts`
+- **Field:** `uiConfig.recommendedPins` (Array of strings, e.g., `["D0", "D1"]`).
+- **Purpose:** Guides the user to optimal pins (e.g., Hardware UART pins) via the UI.
 
-### 4.4. Response Generation
-**Backend → Frontend**
-1.  Return JSON: `{ success: true, data: { filename: string, content: string } }`.
+## 5. Steps (Algorithm)
 
-## 5. File Structure
+### 5.1. Discovery & Selection Logic (Frontend)
+1.  **Fetch Templates:** Frontend calls `/api/hardware/device-templates`.
+2.  **Validate Compatibility:** Runs `checkCompatibility` for each device against the selected board.
+3.  **Extract Commands:** Extracts `hardwareCmd` from compatible, selected devices.
+4.  **Send Configuration:** Sends unique command IDs to backend.
+
+### 5.2. Template Loading (Backend)
+1.  **Load Board & Transport:** Reads JSON definitions.
+2.  **Load Commands:** Reads command JSONs based on IDs.
+3.  **Load System Commands:** Always loads `system_commands.json`.
+
+### 5.3. Code Assembly (Backend)
+1.  **Architecture Resolution:** Resolves `@file:` references based on board architecture.
+2.  **Content Resolution:** Replaces placeholders (`{{BAUD_RATE}}`).
+3.  **Capabilities Generation:** Generates `CAPABILITIES[]` array.
+4.  **Skeleton Injection:** Injects code into `skeleton.ino`.
+
+## 6. File Structure
 ```
 firmware/
 ├── definitions/
-│   ├── boards/             # Board definitions (pins, architecture)
-│   │   ├── wemos_d1_mini.json
-│   │   └── ...
-│   ├── transports/         # Communication logic (Serial, WiFi)
-│   │   ├── serial_standard.json
-│   │   └── ...
+│   ├── boards/             # Board definitions
+│   ├── transports/         # Transport definitions
 │   └── commands/           # Command definitions
-│       ├── src/            # C++ implementation files (.cpp)
-│       │   ├── system_commands.cpp
+│       ├── src/            # C++ implementation files
+│       │   ├── sys_avr.cpp
+│       │   ├── sys_renesas.cpp
+│       │   ├── sys_common.cpp
 │       │   └── ...
-│       ├── dht_read.json   # JSON metadata & file references
 │       ├── system_commands.json
 │       └── ...
 backend/src/services/
 └── FirmwareBuilder.ts      # Builder Logic
+frontend/src/utils/
+└── firmwareValidation.ts   # Validation Logic
 ```
 
-## 6. Validations & Constraints (Nuances)
-1.  **Case Sensitivity (CRITICAL):**
-    - **JSON Definitions:** Command IDs must be **lowercase** (e.g., `modbus_rtu_read.json`).
-    - **Firmware Capabilities:** Generated as **UPPERCASE** in `INFO` response (e.g., `"MODBUS_RTU_READ"`).
-    - **Backend Storage:** `HardwareService` normalizes `INFO` capabilities to **lowercase** before saving to DB.
-2.  **File References:**
-    - `@file:` paths in JSON must be relative to `firmware/definitions/`.
-    - Example: `@file:commands/src/my_command.cpp`.
-3.  **System Commands:**
-    - `system_commands` must always be processed **last** by the builder.
-    - This ensures the `processCommand` function (in `system_commands.cpp`) can see all other dispatcher functions declared before it.
+## 7. Validations & Constraints (Nuances)
+1.  **Case Sensitivity:** Command IDs must be **lowercase**. Capabilities are **UPPERCASE**.
+2.  **SoftwareSerial:** Uno R3 has 1 HW UART (shared with USB). Sensors MUST use SoftwareSerial (Digital Pins) if USB is used. The validation logic accounts for this by allowing "spillover" to digital pins.
+3.  **System Commands:** Must be processed last to ensure dispatcher visibility.
 
-## 7. Integration Mapping Verification
+## 8. Integration Mapping Verification
 
 | Concept | Frontend (UI) | Backend (Builder) | Firmware (C++) | Backend (HardwareService) |
 | :--- | :--- | :--- | :--- | :--- |
 | **Command ID** | `modbus_rtu_read` | `modbus_rtu_read` | N/A | `modbus_rtu_read` |
 | **Capability** | N/A | `MODBUS_RTU_READ` | `CAPABILITIES[]` | `modbus_rtu_read` (Normalized) |
 | **Baud Rate** | User Input | `{{BAUD_RATE}}` | `Serial.begin(115200)` | `controller.connection.baudRate` |
+| **Requirements**| `requirements` obj| N/A | N/A | `DeviceTemplate.requirements` |
 
-## 8. Expected Outcome
-- A valid `.ino` file containing a complete C++ program.
-- The `INFO` command returns `{"capabilities": ["COMMAND_1", "COMMAND_2"]}`.
-- The firmware compiles without errors in Arduino IDE.
-
-## 9. Test Scenarios
-1.  **Generate & Build:**
-    - Select Wemos D1 Mini + Serial + DHT_READ.
-    - Generate firmware.
-    - Verify `CAPABILITIES` array contains `"DHT_READ"`.
-2.  **Capabilities Check:**
-    - Flash firmware.
-    - Send `INFO` via Serial Monitor.
-    - Expect: `{"ok":1, ..., "capabilities":["DHT_READ"]}`.
-3.  **Backend Sync:**
-    - Connect Controller to Backend.
-    - Backend logs: `✨ [HardwareService] Capabilities Updated`.
-    - DB Record: `capabilities: ["dht_read"]`.
-
-## 10. Critical Dependency: Device Templates
-The Firmware Builder relies on `DeviceTemplate` configurations to determine which commands to include.
-- **Requirement:** The `requiredCommand` (or `commands.*.hardwareCmd`) in the `DeviceTemplate` (DB/Seed) **MUST** match the `id` of the Command Definition JSON file.
-- **Example:**
-    - If `firmware/definitions/commands/dht_read.json` exists (ID: `dht_read`).
-    - Then `backend/src/utils/seedDeviceTemplates.ts` MUST use `requiredCommand: 'dht_read'`.
-    - **Failure to match (e.g., using legacy `SINGLE_WIRE_PULSE`) will cause the device to appear as "Disabled" in the Builder UI.**
+## 9. Critical Dependency: Device Templates
+- **Requirement:** `requiredCommand` in `DeviceTemplate` MUST match Command Definition ID.
+- **Requirement:** `requirements` object MUST be present for validation to work.

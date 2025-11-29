@@ -2,38 +2,139 @@
  * Hydroponics v5 Firmware
  * Board: Arduino Uno R4 WiFi
  * Transport: wifi_native
- * Generated: 2025-11-29T15:45:52.294Z
+ * Generated: 2025-11-29T20:52:40.644Z
  */
 
 // === INCLUDES ===
 #include <Arduino.h>
 #include <WiFiS3.h>
 #include <WiFiUdp.h>
+#include <EEPROM.h>
+#include <WDT.h>
+// Custom Failover Logic
+#include <malloc.h>
 
 // === GLOBALS ===
 const char* CAPABILITIES[] = { "ULTRASONIC_TRIG_ECHO" };
 const int CAPABILITIES_COUNT = 1;
 WiFiUDP udp;
 char packetBuffer[255];
+void saveState(int pin, int state);
+void restoreState();
+WiFiServer telnetServer(23); WiFiClient telnetClient;
+unsigned long lastWifiCheck = 0;
+const char* backupSsid = "sunny_ad";
+const char* backupPass = "1122334455";
+
+// === PROTOTYPES ===
+String processCommand(String input);
 
 // === SETUP ===
 void setup() {
+  Serial.begin(115200);
+  delay(2000); // Wait for Serial
+  Serial.println("Booting...");
   // Connect to WiFi
-  WiFi.begin("", "");
-  while (WiFi.status() != WL_CONNECTED) { delay(500); }
-  udp.begin(8888);
+  Serial.print("Connecting to WiFi: sunny_ad1");
+  WiFi.begin("sunny_ad", "11223344555");
+  int wifiRetries = 0;
+  while (WiFi.status() != WL_CONNECTED && wifiRetries < 20) {
+    delay(500);
+    Serial.print(".");
+    wifiRetries++;
+  }
+  Serial.println();
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("WiFi Connected!");
+    // Wait for IP Address
+    Serial.print("Waiting for IP");
+    int ipRetries = 0;
+    while (WiFi.localIP() == IPAddress(0,0,0,0) && ipRetries < 20) {
+      delay(500);
+      Serial.print(".");
+      ipRetries++;
+    }
+    Serial.println();
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+    udp.begin(8888);
+  } else {
+    Serial.println("WiFi Connection Failed! Continuing...");
+  }
+  restoreState();
+  // mDNS not supported on Renesas yet
+  // OTA not supported on Renesas yet
+  telnetServer.begin();
+  WDT.begin(2684); // ~8s
+  // Primary connection handled by Transport
+  // If Primary failed (timeout), try Backup
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.print("Primary failed. Connecting to Backup: sunny_ad");
+    WiFi.disconnect();
+    WiFi.begin("sunny_ad", "1122334455");
+    int backupRetries = 0;
+    while (WiFi.status() != WL_CONNECTED && backupRetries < 20) {
+      delay(500);
+      Serial.print(".");
+      backupRetries++;
+    }
+    Serial.println();
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Backup WiFi Connected!");
+      Serial.print("IP Address: ");
+      Serial.println(WiFi.localIP());
+      udp.begin(8888); // Ensure UDP is started
+    } else {
+      Serial.println("Backup WiFi Failed! System running offline.");
+    }
+  }
 }
 
 // === LOOP ===
 void loop() {
+  // UDP Handling
   int packetSize = udp.parsePacket();
   if (packetSize) {
+    Serial.print("Received UDP packet: ");
+    Serial.println(packetSize);
     int len = udp.read(packetBuffer, 255);
     if (len > 0) packetBuffer[len] = 0;
+    Serial.print("Payload: ");
+    Serial.println(packetBuffer);
     String response = processCommand(String(packetBuffer));
     udp.beginPacket(udp.remoteIP(), udp.remotePort());
     udp.print(response);
     udp.endPacket();
+  }
+  // Serial Handling (for debugging)
+  if (Serial.available()) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    if (input.length() > 0) {
+      Serial.print("Command received via Serial: ");
+      Serial.println(input);
+      String response = processCommand(input);
+      Serial.println(response);
+    }
+  }
+  WiFiClient newClient = telnetServer.available();
+  if (newClient) {
+    if (!telnetClient || !telnetClient.connected()) {
+      if (telnetClient) telnetClient.stop();
+      telnetClient = newClient;
+    } else {
+      newClient.stop();
+    }
+  }
+  WDT.refresh();
+  if (millis() - lastWifiCheck > 10000) {
+    lastWifiCheck = millis();
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("Primary WiFi lost. Trying Backup...");
+      WiFi.disconnect();
+      WiFi.begin(backupSsid, backupPass);
+      // Non-blocking attempt (check status next loop)
+    }
   }
 }
 
@@ -57,7 +158,10 @@ int parsePin(String pinStr) {
   return pinStr.toInt();
 }
 
-#include <Arduino.h>
+void saveState(int pin, int state) { EEPROM.write(pin, state); }
+void restoreState() { /* Implementation to read EEPROM and set pins */ }
+void debugPrint(String msg) { if (telnetClient && telnetClient.connected()) telnetClient.print(msg); Serial.print(msg); }
+
 
 String handleUltrasonicTrigEcho(const char* params) {
   // Expected params: "D2_2|D3_3" (Trig|Echo)
@@ -122,7 +226,7 @@ String handleUltrasonicTrigEcho(const char* params) {
 // === SYSTEM COMMANDS (RENESAS UNO R4 IMPLEMENTATION) ===
 // For Arduino Uno R4 WiFi / Minima
 
-#include <malloc.h> // Required for mallinfo on some ARM toolchains
+
 
 // === MEMORY ===
 int freeMemory() {

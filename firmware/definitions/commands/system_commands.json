@@ -6,6 +6,9 @@
         "*"
     ],
     "code": {
+        "includes": {
+            "renesas_uno": "#include <malloc.h>"
+        },
         "functions": {
             "avr": [
                 "@file:commands/src/sys_avr.cpp",

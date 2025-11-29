@@ -5,6 +5,13 @@
     "capabilities": [
         "DHT_READ"
     ],
+    "requirements": {
+        "interface": "digital",
+        "voltage": "3.3V-5V",
+        "pin_count": {
+            "digital": 1
+        }
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "DHT_READ",
@@ -32,5 +39,9 @@
             "name": "Data",
             "type": "DIGITAL_IN"
         }
-    ]
+    ],
+    "uiConfig": {
+        "category": "Sensors",
+        "icon": "activity"
+    }
 }

@@ -9,8 +9,7 @@
     ],
     "compatible_architectures": [
         "esp8266",
-        "esp32",
-        "renesas_uno"
+        "esp32"
     ],
     "parameters": [
         {
@@ -20,19 +19,35 @@
             "label": "Device Hostname"
         },
         {
-            "name": "password",
+            "name": "ota_password",
             "type": "password",
             "default": "admin",
             "label": "OTA Password"
         }
     ],
     "code": {
-        "includes": "#include <ArduinoOTA.h>",
-        "setup": [
-            "ArduinoOTA.setHostname(\"{{hostname}}\");",
-            "ArduinoOTA.setPassword(\"{{password}}\");",
-            "ArduinoOTA.begin();"
-        ],
-        "loop": "ArduinoOTA.handle();"
+        "includes": {
+            "esp8266": "#include <ArduinoOTA.h>",
+            "esp32": "#include <ArduinoOTA.h>",
+            "renesas_uno": ""
+        },
+        "setup": {
+            "esp8266": [
+                "ArduinoOTA.setHostname(\"{{hostname}}\");",
+                "ArduinoOTA.setPassword(\"{{ota_password}}\");",
+                "ArduinoOTA.begin();"
+            ],
+            "esp32": [
+                "ArduinoOTA.setHostname(\"{{hostname}}\");",
+                "ArduinoOTA.setPassword(\"{{ota_password}}\");",
+                "ArduinoOTA.begin();"
+            ],
+            "renesas_uno": "// OTA not supported on Renesas yet"
+        },
+        "loop": {
+            "esp8266": "ArduinoOTA.handle();",
+            "esp32": "ArduinoOTA.handle();",
+            "renesas_uno": ""
+        }
     }
 }
