@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 #include <SoftwareSerial.h>
 
 // Globals for UART sensor

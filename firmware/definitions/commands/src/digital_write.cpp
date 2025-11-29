@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 
 String handleDigitalWrite(const char* params) {
   // Parse params: "D8|1" -> pin=D8, state=1

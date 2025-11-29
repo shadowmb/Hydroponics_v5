@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 
 String handleUltrasonicTrigEcho(const char* params) {
   // Expected params: "D2_2|D3_3" (Trig|Echo)

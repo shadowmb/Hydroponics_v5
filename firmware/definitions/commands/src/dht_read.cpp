@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 
 String handleDHTRead(const char* params) {
   // Parse pin from params (e.g., "D4")
