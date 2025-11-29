@@ -3,7 +3,6 @@ import { HardwareController } from './controllers/HardwareController';
 import { AutomationController } from './controllers/AutomationController';
 import { SessionController } from './controllers/SessionController';
 import { ProgramController } from './controllers/ProgramController';
-import { FirmwareGeneratorController } from './controllers/FirmwareGeneratorController';
 
 export async function apiRoutes(app: FastifyInstance) {
 
@@ -38,10 +37,6 @@ export async function apiRoutes(app: FastifyInstance) {
     // Discovery Routes
     app.post('/api/discovery/scan', require('./controllers/discovery-controller').scanNetwork);
 
-    // Firmware Generator Routes
-    app.get('/api/firmware/controllers', FirmwareGeneratorController.getControllers);
-    app.get('/api/firmware/commands', FirmwareGeneratorController.getCommands);
-    app.post('/api/firmware/generate', FirmwareGeneratorController.generate);
 
     // Firmware Builder Routes (v5)
     const builderController = new (require('./controllers/FirmwareBuilderController').FirmwareBuilderController)();

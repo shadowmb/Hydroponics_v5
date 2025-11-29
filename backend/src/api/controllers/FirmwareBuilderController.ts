@@ -31,7 +31,38 @@ export class FirmwareBuilderController {
     }
 
     public getBoards = async (req: FastifyRequest, reply: FastifyReply) => {
-        const boards = this.readDefinitions('boards');
+        // Use ControllerTemplateManager to get boards
+        const { controllerTemplates } = await import('../../modules/hardware/ControllerTemplateManager');
+
+        // We need to map the internal template structure to what the frontend expects for the builder
+        // Ideally, the frontend should just use the full template, but for now we map it to keep compatibility
+        // or just return the full template if the frontend is updated (which we did earlier)
+
+        // Actually, let's return the full templates as "boards" since we updated the frontend type
+        const templates = Array.from((controllerTemplates as any).templates.values());
+
+        const boards = templates.map((t: any) => ({
+            id: t.key,
+            name: t.label,
+            description: t.description,
+            architecture: t.architecture,
+            voltage: t.firmware_config?.voltage || 5,
+            clock_speed_hz: t.firmware_config?.clock_speed_hz || 16000000,
+            memory: {
+                flash_bytes: t.memory?.flash,
+                sram_bytes: t.memory?.sram,
+                eeprom_bytes: t.memory?.eeprom
+            },
+            interfaces: t.firmware_config?.interfaces || {},
+            pins: {
+                digital_count: t.pin_counts?.digital || 0,
+                analog_input_count: t.pin_counts?.analog || 0,
+                pwm_pins: [] // TODO: Extract from ports if needed, or keep simple count
+            },
+            electrical_specs: t.electrical_specs,
+            constraints: t.constraints
+        }));
+
         return reply.send({ success: true, data: boards });
     }
 
@@ -54,7 +85,16 @@ export class FirmwareBuilderController {
     public buildFirmware = async (req: FastifyRequest, reply: FastifyReply) => {
         try {
             const config = req.body as any; // Typed in Service
-            const firmwareCode = this.builder.build(config);
+
+            // Fetch the board template from Manager
+            const { controllerTemplates } = await import('../../modules/hardware/ControllerTemplateManager');
+            const boardTemplate = controllerTemplates.getTemplate(config.boardId);
+
+            if (!boardTemplate) {
+                throw new Error(`Board template not found: ${config.boardId}`);
+            }
+
+            const firmwareCode = this.builder.build(config, boardTemplate);
 
             return reply.send({
                 success: true,

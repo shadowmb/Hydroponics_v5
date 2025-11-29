@@ -25,6 +25,14 @@ export interface BoardDefinition {
         analog_input_count: number;
         pwm_pins: (number | string)[];
     };
+    electrical_specs?: {
+        logic_voltage: string;
+        input_voltage: string;
+        max_current_per_pin: string;
+        analog_resolution: string;
+        adc_range: string;
+    };
+    constraints?: string[];
 }
 
 export interface TransportDefinition {

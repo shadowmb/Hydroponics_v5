@@ -60,11 +60,13 @@ export class FirmwareBuilder {
         this.templatesPath = path.join(__dirname, '../../../firmware/templates');
     }
 
-    public build(config: BuildConfiguration): string {
+    public build(config: BuildConfiguration, boardTemplate: any): string {
         logger.info({ commandIds: config.commandIds }, '🏗️ [FirmwareBuilder] Building with commands');
 
         // 1. Load Definitions
-        const board = this.loadJSON<BoardDefinition>('boards', config.boardId);
+        // Board is now passed directly, not loaded from file
+        const board = this.mapTemplateToBoardDefinition(boardTemplate);
+
         const transport = this.loadJSON<TransportDefinition>('transports', config.transportId);
         const plugins = config.pluginIds.map(id => this.loadJSON<PluginDefinition>('plugins', id));
 
@@ -156,6 +158,20 @@ export class FirmwareBuilder {
         skeleton = skeleton.replace('{{FUNCTIONS_CODE}}', functionsCode);
 
         return skeleton;
+    }
+
+    private mapTemplateToBoardDefinition(template: any): BoardDefinition {
+        if (!template.firmware_config) {
+            throw new Error(`Controller template ${template.key} is missing firmware_config`);
+        }
+
+        return {
+            id: template.key,
+            name: template.label,
+            architecture: template.firmware_config.requirements.core.split(':')[1] || 'avr', // rough extraction or use define
+            pins: template.firmware_config.pins,
+            interfaces: template.firmware_config.interfaces
+        };
     }
 
     private loadJSON<T>(type: string, id: string): T {

@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Plus } from 'lucide-react';
 
 import { NetworkScanner } from '../components/hardware/NetworkScanner';
-import { FirmwareGeneratorDialog } from '../components/hardware/FirmwareGeneratorDialog';
 import { NetworkScanPrompt } from '../components/hardware/NetworkScanPrompt';
 import { hardwareService } from '../services/hardwareService';
 import { RelayWizard } from '../components/hardware/RelayWizard';
@@ -28,7 +27,6 @@ const Hardware: React.FC = () => {
     const [selectedDevice, setSelectedDevice] = useState<any>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [pendingControllerData, setPendingControllerData] = useState<any>(null);
-    const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [controllerRefreshTrigger, setControllerRefreshTrigger] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -180,13 +178,9 @@ const Hardware: React.FC = () => {
                     </Button>
                     <NetworkScanner onAddController={handleScannerAdd} />
 
-                    <Button onClick={() => setIsGeneratorOpen(true)} size="sm" variant="outline">
+                    <Button onClick={() => setIsBuilderOpen(true)} size="sm" variant="outline">
                         <Code className="mr-2 h-4 w-4" />
-                        Generate Firmware (Legacy)
-                    </Button>
-                    <Button onClick={() => setIsBuilderOpen(true)} size="sm" variant="default">
-                        <Code className="mr-2 h-4 w-4" />
-                        Firmware Builder (v5)
+                        Firmware Builder
                     </Button>
                     {activeTab === "devices" && (
                         <>
@@ -258,10 +252,6 @@ const Hardware: React.FC = () => {
                 onOpenChange={handleWizardOpenChange}
                 onSuccess={handleDeviceWizardSuccess}
                 initialData={selectedDevice}
-            />
-            <FirmwareGeneratorDialog
-                open={isGeneratorOpen}
-                onOpenChange={setIsGeneratorOpen}
             />
             <FirmwareBuilderDialog
                 open={isBuilderOpen}
