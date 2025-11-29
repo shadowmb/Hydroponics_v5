@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
+// import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
 import { seedControllerTemplates } from './utils/seedTemplates';
 import dotenv from 'dotenv';
 
@@ -23,7 +23,7 @@ const run = async () => {
         await seedControllerTemplates();
 
         console.log('Seeding Device Templates...');
-        await seedDeviceTemplates();
+        // await seedDeviceTemplates(); // Removed
 
         const count = await mongoose.connection.collection('devicetemplates').countDocuments();
         console.log('Count in DB:', count);
