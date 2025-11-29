@@ -27,67 +27,6 @@ Add a new microcontroller board (e.g., Arduino Mega, ESP32) to the system, enabl
     "capabilities": {
         "analogPins": 16,
         "digitalPins": 54,
-        "uartCount": 4,
-        "hasHardwareUART": true,
-        "hasRS485": false,
-        "flashMemory": 253952,
-        "sram": 8192
-    },
-    "commandCompatibility": {
-        "compatible": ["ANALOG", "DHT", "ONE_WIRE"]
-    },
-    "baseTemplates": {
-        "serial": "controller_serial_base.ino"
-    },
-    "isActive": true
-}
-```
-
-### Step 2: Define Backend Template
-1.  Open `backend/src/data/controller-templates.json`.
-2.  Add a new top-level key (PascalCase).
-
-```json
-{
-    "Arduino_Mega": {                  // Template Key
-        "label": "Arduino Mega 2560",
-        "communication_by": ["serial"],
-        "communication_type": ["raw_serial"],
-        "ports": [
-            {"id": "D0", "label": "RX0", "type": "digital", "reserved": true},
-            {"id": "D1", "label": "TX0", "type": "digital", "reserved": true},
-            {"id": "D2", "label": "D2 (PWM)", "type": "digital", "pwm": true},
-            {"id": "A0", "label": "Analog 0", "type": "analog"}
-        ]
-    }
-}
-```
-
-### Step 3: Map in Frontend
-1.  Open `frontend/src/components/hardware/ControllerWizard.tsx`.
-2.  Locate `MODEL_MAP` constant.
-3.  Add the mapping entry.
-
-```typescript
-const MODEL_MAP: Record<string, string> = {
-    // 'firmware_id': 'Backend_Key'
-    'arduino_mega': 'Arduino_Mega'
-};
-```
-
-### Step 4: Apply Changes
-1.  Restart the Backend (`npm run dev`).
-2.  Templates are automatically seeded on startup.
-
-## 5. File Structure
-```
-firmware/
-└── config/
-    └── controllers.json           <-- Step 1
-backend/
-└── src/
-    └── data/
-        └── controller-templates.json <-- Step 2
 frontend/
 └── src/
     └── components/

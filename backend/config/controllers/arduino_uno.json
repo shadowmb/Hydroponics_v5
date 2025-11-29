@@ -1,0 +1,210 @@
+{
+    "key": "Arduino_Uno",
+    "label": "Arduino Uno R3",
+    "description": "Classic ATmega328P based board",
+    "architecture": "avr",
+    "memory": {
+        "flash": 32256,
+        "sram": 2048,
+        "eeprom": 1024
+    },
+    "communication_by": [
+        "serial"
+    ],
+    "communication_type": [
+        "raw_serial"
+    ],
+    "pin_counts": {
+        "digital": 14,
+        "analog": 6,
+        "pwm": 6,
+        "i2c": 1,
+        "spi": 1,
+        "uart": 1
+    },
+    "electrical_specs": {
+        "logic_voltage": "5V",
+        "input_voltage": "7-12V (Vin) / 5V (USB)",
+        "max_current_per_pin": "20mA",
+        "analog_resolution": "10-bit",
+        "adc_range": "0-5V"
+    },
+    "firmware_config": {
+        "voltage": 5.0,
+        "clock_speed_hz": 16000000,
+        "requirements": {
+            "core": "arduino:avr",
+            "libraries": []
+        },
+        "defines": [
+            "ARDUINO_UNO"
+        ],
+        "interfaces": {
+            "serial": {
+                "hardware": [
+                    "Serial"
+                ],
+                "usb": "Serial"
+            },
+            "i2c": [
+                "Wire"
+            ],
+            "spi": [
+                "SPI"
+            ],
+            "wifi": {
+                "type": "none",
+                "chipset": null
+            }
+        },
+        "pins": {
+            "mappings": {
+                "LED_BUILTIN": 13,
+                "SDA": "A4",
+                "SCL": "A5"
+            }
+        }
+    },
+    "constraints": [
+        "No native WiFi or Bluetooth",
+        "Single Hardware Serial (Shared with USB)"
+    ],
+    "ports": [
+        {
+            "id": "D0",
+            "label": "RX (Serial)",
+            "type": "digital",
+            "reserved": true,
+            "pin": 0
+        },
+        {
+            "id": "D1",
+            "label": "TX (Serial)",
+            "type": "digital",
+            "reserved": true,
+            "pin": 1
+        },
+        {
+            "id": "D2",
+            "label": "Digital Pin 2",
+            "type": "digital",
+            "reserved": false,
+            "pin": 2
+        },
+        {
+            "id": "D3",
+            "label": "Digital Pin 3 (PWM)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 3
+        },
+        {
+            "id": "D4",
+            "label": "Digital Pin 4",
+            "type": "digital",
+            "reserved": false,
+            "pin": 4
+        },
+        {
+            "id": "D5",
+            "label": "Digital Pin 5 (PWM)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 5
+        },
+        {
+            "id": "D6",
+            "label": "Digital Pin 6 (PWM)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 6
+        },
+        {
+            "id": "D7",
+            "label": "Digital Pin 7",
+            "type": "digital",
+            "reserved": false,
+            "pin": 7
+        },
+        {
+            "id": "D8",
+            "label": "Digital Pin 8",
+            "type": "digital",
+            "reserved": false,
+            "pin": 8
+        },
+        {
+            "id": "D9",
+            "label": "Digital Pin 9 (PWM)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 9
+        },
+        {
+            "id": "D10",
+            "label": "Digital Pin 10 (PWM, SS)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 10
+        },
+        {
+            "id": "D11",
+            "label": "Digital Pin 11 (PWM, MOSI)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 11
+        },
+        {
+            "id": "D12",
+            "label": "Digital Pin 12 (MISO)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 12
+        },
+        {
+            "id": "D13",
+            "label": "Digital Pin 13 (SCK, LED)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 13
+        },
+        {
+            "id": "A0",
+            "label": "Analog Pin A0",
+            "type": "analog",
+            "pin": 14
+        },
+        {
+            "id": "A1",
+            "label": "Analog Pin A1",
+            "type": "analog",
+            "pin": 15
+        },
+        {
+            "id": "A2",
+            "label": "Analog Pin A2",
+            "type": "analog",
+            "pin": 16
+        },
+        {
+            "id": "A3",
+            "label": "Analog Pin A3",
+            "type": "analog",
+            "pin": 17
+        },
+        {
+            "id": "A4",
+            "label": "SDA (I2C)",
+            "type": "analog",
+            "reserved": true,
+            "pin": 18
+        },
+        {
+            "id": "A5",
+            "label": "SCL (I2C)",
+            "type": "analog",
+            "reserved": true,
+            "pin": 19
+        }
+    ]
+}

@@ -25,11 +25,47 @@ export const BoardSelectionStep: React.FC<Props> = ({ boards, selectedBoardId, o
                         </div>
                         <p className="text-sm text-muted-foreground mb-4">{board.description}</p>
 
-                        <div className="text-xs space-y-1 text-muted-foreground">
-                            <div>Flash: {Math.round(board.memory.flash_bytes / 1024)}KB</div>
-                            <div>SRAM: {Math.round(board.memory.sram_bytes / 1024)}KB</div>
-                            <div>Digital Pins: {board.pins.digital_count}</div>
+                        {/* Electrical Specs */}
+                        {board.electrical_specs && (
+                            <div className="mb-4 p-2 bg-muted/50 rounded-md text-xs grid grid-cols-2 gap-2">
+                                <div>
+                                    <span className="font-semibold block">Logic Voltage</span>
+                                    {board.electrical_specs.logic_voltage}
+                                </div>
+                                <div>
+                                    <span className="font-semibold block">Input Voltage</span>
+                                    {board.electrical_specs.input_voltage}
+                                </div>
+                                <div>
+                                    <span className="font-semibold block">Max Current/Pin</span>
+                                    {board.electrical_specs.max_current_per_pin}
+                                </div>
+                                <div>
+                                    <span className="font-semibold block">ADC Resolution</span>
+                                    {board.electrical_specs.analog_resolution}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Pin Counts */}
+                        <div className="text-xs space-y-1 text-muted-foreground mb-4">
+                            <div className="flex gap-2 flex-wrap">
+                                <Badge variant="outline">Digital: {board.pins.digital_count}</Badge>
+                                <Badge variant="outline">Analog In: {board.pins.analog_input_count}</Badge>
+                                <Badge variant="outline">PWM: {board.pins.pwm_pins.length}</Badge>
+                            </div>
                         </div>
+
+                        {/* Constraints */}
+                        {board.constraints && board.constraints.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                                {board.constraints.map((constraint, idx) => (
+                                    <div key={idx} className="text-xs text-amber-600 dark:text-amber-400 flex items-center">
+                                        • {constraint}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             ))}

@@ -15,6 +15,14 @@ export interface IControllerTemplate {
     label: string;
     communication_by: string[];
     communication_type: string[];
+    electrical_specs?: {
+        logic_voltage: string;
+        input_voltage: string;
+        max_current_per_pin: string;
+        analog_resolution: string;
+        adc_range: string;
+    };
+    constraints?: string[];
     ports: IPortTemplate[];
 }
 

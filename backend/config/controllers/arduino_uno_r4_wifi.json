@@ -1,0 +1,221 @@
+{
+    "key": "Arduino_Uno_R4_WiFi",
+    "label": "Arduino Uno R4 WiFi",
+    "description": "Renesas RA4M1 32-bit MCU with ESP32-S3 WiFi Module",
+    "architecture": "renesas_uno",
+    "memory": {
+        "flash": 262144,
+        "sram": 32768,
+        "eeprom": 8192
+    },
+    "communication_by": [
+        "wifi",
+        "serial"
+    ],
+    "communication_type": [
+        "http",
+        "raw_serial"
+    ],
+    "pin_counts": {
+        "digital": 14,
+        "analog": 6,
+        "pwm": 6,
+        "i2c": 1,
+        "spi": 1,
+        "uart": 2
+    },
+    "electrical_specs": {
+        "logic_voltage": "5V",
+        "input_voltage": "6-24V (Vin) / 5V (USB-C)",
+        "max_current_per_pin": "8mA",
+        "analog_resolution": "14-bit",
+        "adc_range": "0-5V"
+    },
+    "firmware_config": {
+        "voltage": 5.0,
+        "clock_speed_hz": 48000000,
+        "requirements": {
+            "core": "arduino:renesas_uno",
+            "libraries": [
+                {
+                    "name": "WiFiS3",
+                    "version": "^0.0.0",
+                    "required_for": [
+                        "wifi"
+                    ]
+                }
+            ]
+        },
+        "defines": [
+            "ARDUINO_UNOR4_WIFI"
+        ],
+        "interfaces": {
+            "serial": {
+                "hardware": [
+                    "Serial",
+                    "Serial1"
+                ],
+                "usb": "Serial"
+            },
+            "i2c": [
+                "Wire"
+            ],
+            "spi": [
+                "SPI"
+            ],
+            "wifi": {
+                "type": "native",
+                "chipset": "ESP32-S3"
+            }
+        },
+        "pins": {
+            "mappings": {
+                "LED_BUILTIN": 13,
+                "SDA": "SDA",
+                "SCL": "SCL"
+            }
+        }
+    },
+    "constraints": [
+        "Lower current limit per pin (8mA) vs Uno R3",
+        "Some AVR-specific libraries may not work"
+    ],
+    "ports": [
+        {
+            "id": "D0",
+            "label": "RX (Serial)",
+            "type": "digital",
+            "reserved": true,
+            "pin": 0
+        },
+        {
+            "id": "D1",
+            "label": "TX (Serial)",
+            "type": "digital",
+            "reserved": true,
+            "pin": 1
+        },
+        {
+            "id": "D2",
+            "label": "Digital Pin 2",
+            "type": "digital",
+            "reserved": false,
+            "pin": 2
+        },
+        {
+            "id": "D3",
+            "label": "Digital Pin 3 (PWM)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 3
+        },
+        {
+            "id": "D4",
+            "label": "Digital Pin 4",
+            "type": "digital",
+            "reserved": false,
+            "pin": 4
+        },
+        {
+            "id": "D5",
+            "label": "Digital Pin 5 (PWM)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 5
+        },
+        {
+            "id": "D6",
+            "label": "Digital Pin 6 (PWM)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 6
+        },
+        {
+            "id": "D7",
+            "label": "Digital Pin 7",
+            "type": "digital",
+            "reserved": false,
+            "pin": 7
+        },
+        {
+            "id": "D8",
+            "label": "Digital Pin 8",
+            "type": "digital",
+            "reserved": false,
+            "pin": 8
+        },
+        {
+            "id": "D9",
+            "label": "Digital Pin 9 (PWM)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 9
+        },
+        {
+            "id": "D10",
+            "label": "Digital Pin 10 (PWM, SS)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 10
+        },
+        {
+            "id": "D11",
+            "label": "Digital Pin 11 (PWM, MOSI)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 11
+        },
+        {
+            "id": "D12",
+            "label": "Digital Pin 12 (MISO)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 12
+        },
+        {
+            "id": "D13",
+            "label": "Digital Pin 13 (SCK, LED)",
+            "type": "digital",
+            "pwm": true,
+            "pin": 13
+        },
+        {
+            "id": "A0",
+            "label": "Analog Pin A0",
+            "type": "analog",
+            "pin": 14
+        },
+        {
+            "id": "A1",
+            "label": "Analog Pin A1",
+            "type": "analog",
+            "pin": 15
+        },
+        {
+            "id": "A2",
+            "label": "Analog Pin A2",
+            "type": "analog",
+            "pin": 16
+        },
+        {
+            "id": "A3",
+            "label": "Analog Pin A3",
+            "type": "analog",
+            "pin": 17
+        },
+        {
+            "id": "A4",
+            "label": "Analog Pin A4 (SDA)",
+            "type": "analog",
+            "reserved": true,
+            "pin": 18
+        },
+        {
+            "id": "A5",
+            "label": "Analog Pin A5 (SCL)",
+            "type": "analog",
+            "reserved": true,
+            "pin": 19
+        }
+    ]
+}

@@ -1,0 +1,200 @@
+{
+    "key": "WeMos_D1_R2",
+    "label": "WeMos D1 R2 V2.1.0 (ESP8266)",
+    "description": "ESP8266 based mini WiFi board",
+    "architecture": "esp8266",
+    "memory": {
+        "flash": 4194304,
+        "sram": 81920,
+        "eeprom": 0
+    },
+    "communication_by": [
+        "wifi",
+        "serial"
+    ],
+    "communication_type": [
+        "raw_serial",
+        "http",
+        "mqtt",
+        "websocket"
+    ],
+    "pin_counts": {
+        "digital": 11,
+        "analog": 1,
+        "pwm": 9,
+        "i2c": 1,
+        "spi": 1,
+        "uart": 1
+    },
+    "electrical_specs": {
+        "logic_voltage": "3.3V",
+        "input_voltage": "9-24V (Vin) / 5V (USB)",
+        "max_current_per_pin": "12mA",
+        "analog_resolution": "10-bit",
+        "adc_range": "0-3.3V (Board has voltage divider)"
+    },
+    "firmware_config": {
+        "voltage": 3.3,
+        "clock_speed_hz": 80000000,
+        "requirements": {
+            "core": "esp8266:esp8266",
+            "libraries": [
+                {
+                    "name": "ESP8266WiFi",
+                    "version": "^1.0.0",
+                    "required_for": [
+                        "wifi"
+                    ]
+                }
+            ]
+        },
+        "defines": [
+            "ESP8266",
+            "WEMOS_D1_R2"
+        ],
+        "interfaces": {
+            "serial": {
+                "hardware": [
+                    "Serial",
+                    "Serial1"
+                ],
+                "usb": "Serial"
+            },
+            "i2c": [
+                "Wire"
+            ],
+            "spi": [
+                "SPI"
+            ],
+            "wifi": {
+                "type": "native",
+                "chipset": "ESP8266"
+            }
+        },
+        "pins": {
+            "mappings": {
+                "LED_BUILTIN": 2,
+                "SDA": "D2",
+                "SCL": "D1"
+            }
+        }
+    },
+    "constraints": [
+        "3.3V Logic Only (Not 5V tolerant)",
+        "Only 1 Analog Input (A0)"
+    ],
+    "ports": [
+        {
+            "id": "D0",
+            "label": "D0 (GPIO16)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 16
+        },
+        {
+            "id": "D1",
+            "label": "D1 (GPIO5), SCL (I2C)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 5
+        },
+        {
+            "id": "D2",
+            "label": "D2 (GPIO4), SDA (I2C)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 4
+        },
+        {
+            "id": "D3",
+            "label": "D3 (GPIO0), Flash",
+            "type": "digital",
+            "reserved": false,
+            "pin": 0
+        },
+        {
+            "id": "D4",
+            "label": "D4 (GPIO2), TX (Serial)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 2
+        },
+        {
+            "id": "D5",
+            "label": "D5 (GPIO14), SCK (SPI)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 14
+        },
+        {
+            "id": "D6",
+            "label": "D6 (GPIO12), MISO (SPI)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 12
+        },
+        {
+            "id": "D7",
+            "label": "D7 (GPIO13), MOSI (SPI)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 13
+        },
+        {
+            "id": "D8",
+            "label": "D8 (GPIO15), SS (SPI)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 15
+        },
+        {
+            "id": "D9",
+            "label": "RX (Serial)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 3
+        },
+        {
+            "id": "D10",
+            "label": "TX (Serial)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 1
+        },
+        {
+            "id": "D11",
+            "label": "D11 (GPIO9), SPI (HSPI CS0)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 9
+        },
+        {
+            "id": "D12",
+            "label": "D12 (GPIO10), SPI (HSPI CS1)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 10
+        },
+        {
+            "id": "D13",
+            "label": "D13 (GPIO3), RX (Serial)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 3
+        },
+        {
+            "id": "D14",
+            "label": "D14 (GPIO1), TX (Serial)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 1
+        },
+        {
+            "id": "A0",
+            "label": "Analog Input (ADC)",
+            "type": "analog",
+            "max_voltage": 3.3,
+            "pin": 17
+        }
+    ]
+}
