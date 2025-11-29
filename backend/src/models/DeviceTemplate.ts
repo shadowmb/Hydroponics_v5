@@ -3,79 +3,50 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IDeviceTemplate extends Omit<Document, '_id'> {
     _id: string; // Manual ID (e.g., 'dfrobot_ph_pro')
     name: string;
-    description: string;
-    physicalType: 'ph' | 'ec' | 'temp' | 'humidity' | 'distance' | 'flow' | 'light' | 'relay' | 'pump' | 'valve' | 'other';
-    requiredCommand: string; // e.g., 'ANALOG', 'ONEWIRE', 'SET_PIN'
-    defaultUnits: string[];
-
+    description?: string;
+    category: 'CONTROLLER' | 'SENSOR' | 'ACTUATOR';
+    capabilities: string[]; // List of supported commands (e.g., ['ANALOG', 'DHT_READ'])
+    commands: Record<string, any>; // Command definitions
     portRequirements: {
         type: 'analog' | 'digital' | 'i2c' | 'uart';
         count: number;
         description?: string;
     }[];
-
     pins?: {
         name: string;
         type: 'DIGITAL_IN' | 'DIGITAL_OUT' | 'ANALOG_IN' | 'PWM_OUT';
     }[];
-
-    executionConfig: {
-        commandType: string;
-        parameters?: Record<string, any>;
-        responseMapping?: {
-            valueKey?: string;
-            conversionMethod?: string;
-        };
-    };
-
-    commands?: Record<string, any>; // v5: Flexible command structure
-
-    uiConfig: {
-        category: string;
+    uiConfig?: {
+        category?: string;
         icon?: string;
     };
+    initialState?: Record<string, any>;
 }
 
 const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
-    _id: { type: String, required: true }, // User-friendly ID
+    _id: { type: String, required: true },
     name: { type: String, required: true },
     description: { type: String },
-    physicalType: {
-        type: String,
-        required: true,
-        enum: ['ph', 'ec', 'temp', 'humidity', 'distance', 'flow', 'light', 'relay', 'pump', 'valve', 'other']
-    },
-    requiredCommand: { type: String, required: true },
-    defaultUnits: [{ type: String }],
-
+    category: { type: String, enum: ['CONTROLLER', 'SENSOR', 'ACTUATOR'], default: 'SENSOR' },
+    capabilities: [{ type: String }],
+    commands: { type: Map, of: Schema.Types.Mixed },
     portRequirements: [{
-        type: { type: String, enum: ['analog', 'digital', 'i2c', 'uart'], required: true },
-        count: { type: Number, default: 1 },
-        description: String
+        type: { type: String, enum: ['analog', 'digital', 'i2c', 'uart'] },
+        count: { type: Number },
+        description: { type: String }
     }],
-
     pins: [{
-        name: { type: String, required: true },
-        type: { type: String, enum: ['DIGITAL_IN', 'DIGITAL_OUT', 'ANALOG_IN', 'PWM_OUT'], required: true }
+        name: { type: String },
+        type: { type: String, enum: ['DIGITAL_IN', 'DIGITAL_OUT', 'ANALOG_IN', 'PWM_OUT'] }
     }],
-
-    executionConfig: {
-        commandType: { type: String, required: true },
-        parameters: { type: Schema.Types.Mixed },
-        responseMapping: {
-            valueKey: String,
-            conversionMethod: String
-        }
-    },
-
-    commands: { type: Schema.Types.Mixed }, // v5: Flexible command structure (matches JSON templates)
-
     uiConfig: {
-        category: { type: String, required: true },
-        icon: String
-    }
+        category: { type: String },
+        icon: { type: String }
+    },
+    initialState: { type: Schema.Types.Mixed }
 }, {
-    timestamps: true
+    timestamps: true,
+    _id: false // Don't auto-generate _id
 });
 
 export const DeviceTemplate = mongoose.model<IDeviceTemplate>('DeviceTemplate', DeviceTemplateSchema);

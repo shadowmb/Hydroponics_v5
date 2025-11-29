@@ -46,9 +46,6 @@ export const DeviceSelectionStep: React.FC<Props> = ({ devices, selectedDeviceId
     }, {} as Record<string, DeviceTemplate[]>);
 
     const isCommandAvailable = (device: DeviceTemplate) => {
-        if (device.requiredCommand) {
-            return commands.some(c => c.id.toLowerCase() === device.requiredCommand.toLowerCase());
-        }
         if (device.commands) {
             // Check if ALL required hardware commands exist
             return Object.values(device.commands).every((cmdConfig: any) => {
@@ -58,13 +55,10 @@ export const DeviceSelectionStep: React.FC<Props> = ({ devices, selectedDeviceId
                 return true;
             });
         }
-        return true; // No command required? Assume available or handled elsewhere.
+        return true; // No command required? Assume available.
     };
 
     const getMissingCommandName = (device: DeviceTemplate) => {
-        if (device.requiredCommand && !commands.some(c => c.id.toLowerCase() === device.requiredCommand.toLowerCase())) {
-            return device.requiredCommand;
-        }
         if (device.commands) {
             for (const cmdConfig of Object.values(device.commands) as any[]) {
                 if (cmdConfig.hardwareCmd && !commands.some((c: any) => c.id.toLowerCase() === cmdConfig.hardwareCmd.toLowerCase())) {
@@ -92,10 +86,10 @@ export const DeviceSelectionStep: React.FC<Props> = ({ devices, selectedDeviceId
                                             <TooltipTrigger asChild>
                                                 <div
                                                     className={`flex items-start space-x-3 p-3 border rounded-md transition-colors ${!available
-                                                            ? 'opacity-50 cursor-not-allowed bg-muted'
-                                                            : selectedDeviceIds.includes(device._id)
-                                                                ? 'bg-primary/5 border-primary cursor-pointer'
-                                                                : 'hover:bg-muted/50 cursor-pointer'
+                                                        ? 'opacity-50 cursor-not-allowed bg-muted'
+                                                        : selectedDeviceIds.includes(device._id)
+                                                            ? 'bg-primary/5 border-primary cursor-pointer'
+                                                            : 'hover:bg-muted/50 cursor-pointer'
                                                         }`}
                                                     onClick={() => available && onToggle(device._id)}
                                                 >

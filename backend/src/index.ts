@@ -9,7 +9,7 @@ import { automation } from './modules/automation/AutomationEngine';
 import { LogBlockExecutor, WaitBlockExecutor, ActuatorSetBlockExecutor } from './modules/automation/blocks';
 import { socketService } from './core/SocketService';
 import { seedControllerTemplates } from './utils/seedTemplates';
-import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
+// import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
 import { hardware } from './modules/hardware/HardwareService';
 import { historyService } from './services/HistoryService';
 
@@ -49,7 +49,7 @@ async function bootstrap() {
 
         // 3.1 Seed Templates
         await seedControllerTemplates();
-        await seedDeviceTemplates();
+        // await seedDeviceTemplates(); // Removed: Templates are now JSON-only
 
         // 4. Register Routes
         console.log('Registering Routes...');

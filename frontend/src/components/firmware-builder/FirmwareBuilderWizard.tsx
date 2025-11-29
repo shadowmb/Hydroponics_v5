@@ -66,17 +66,12 @@ export const FirmwareBuilderWizard: React.FC = () => {
 
         selectedDeviceIds.forEach(deviceId => {
             const template = deviceTemplates.find(t => t._id === deviceId);
-            if (template) {
-                if (template.requiredCommand) {
-                    newCommandIds.add(template.requiredCommand.toLowerCase());
-                }
-                if (template.commands) {
-                    Object.values(template.commands).forEach((cmdConfig: any) => {
-                        if (cmdConfig.hardwareCmd) {
-                            newCommandIds.add(cmdConfig.hardwareCmd.toLowerCase());
-                        }
-                    });
-                }
+            if (template && template.commands) {
+                Object.values(template.commands).forEach((cmdConfig: any) => {
+                    if (cmdConfig.hardwareCmd) {
+                        newCommandIds.add(cmdConfig.hardwareCmd.toLowerCase());
+                    }
+                });
             }
         });
 
