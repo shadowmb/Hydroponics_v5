@@ -31,6 +31,10 @@ const DeviceTemplateSchema = z.object({
     commands: z.record(CommandSchema),
     pins: z.array(PinSchema),
     initialState: z.record(z.any()).optional(),
+    uiConfig: z.object({
+        category: z.string().optional(),
+        icon: z.string().optional()
+    }).optional(),
 });
 
 type DeviceTemplate = z.infer<typeof DeviceTemplateSchema>;
