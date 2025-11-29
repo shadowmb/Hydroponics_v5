@@ -244,10 +244,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                     )}
                                 </div>
 
-                                {/* Placeholder for Chart */}
-                                <div className="w-full max-w-3xl h-48 border rounded-lg bg-muted/5 flex items-center justify-center text-muted-foreground border-dashed mt-8">
-                                    Chart Visualization Coming Soon
-                                </div>
+
                             </TabsContent>
 
                             <TabsContent value="history" className="m-0 h-full">

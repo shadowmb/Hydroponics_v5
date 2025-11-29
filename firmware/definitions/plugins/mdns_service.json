@@ -1,0 +1,36 @@
+{
+    "id": "mdns_service",
+    "name": "mDNS (Bonjour)",
+    "description": "Access device via hostname.local",
+    "category": "connectivity",
+    "compatible_transports": [
+        "wifi",
+        "ethernet"
+    ],
+    "compatible_architectures": [
+        "esp8266",
+        "esp32",
+        "renesas_uno"
+    ],
+    "parameters": [
+        {
+            "name": "hostname",
+            "type": "string",
+            "default": "hydro-device",
+            "label": "Hostname"
+        }
+    ],
+    "code": {
+        "includes": {
+            "esp8266": "#include <ESP8266mDNS.h>",
+            "esp32": "#include <ESPmDNS.h>",
+            "renesas_uno": ""
+        },
+        "setup": [
+            "if (MDNS.begin(\"{{hostname}}\")) {",
+            "  Serial.println(\"mDNS responder started\");",
+            "}"
+        ],
+        "loop": "MDNS.update();"
+    }
+}

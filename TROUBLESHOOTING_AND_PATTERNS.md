@@ -99,3 +99,14 @@ The frontend expected specific output keys (e.g., `ec`) in the raw response, but
 **Robust Fallback Logic:**
 - **Frontend:** If the specific key is missing, fallback to the converted `liveValue` (if single output).
 - **Backend:** If the configured `valuePath` is not found, auto-detect common keys (`value`, `val`, `raw`).
+
+## 10. Firmware: Command ID Mismatch
+### Problem
+Devices (e.g., DHT22, DS18B20) appeared disabled in the Firmware Builder with the message "Missing Firmware Command", even though the command files existed.
+### Cause
+The `DeviceTemplate` in the database (seeded from `seedDeviceTemplates.ts`) referenced **legacy command IDs** (e.g., `SINGLE_WIRE_PULSE`) that did not match the **new JSON-based Command Definition IDs** (e.g., `DHT_READ`). The frontend performs a case-insensitive check between `device.requiredCommand` and `command.id`.
+### Solution
+**Sync Seed Data:** Ensure that `backend/src/utils/seedDeviceTemplates.ts` uses the EXACT command IDs defined in `firmware/definitions/commands/*.json`.
+### Example
+- **Wrong:** `requiredCommand: 'SINGLE_WIRE_PULSE'`
+- **Correct:** `requiredCommand: 'DHT_READ'` (matches `dht_read.json`)

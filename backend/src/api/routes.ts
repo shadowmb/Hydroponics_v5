@@ -42,6 +42,15 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/firmware/controllers', FirmwareGeneratorController.getControllers);
     app.get('/api/firmware/commands', FirmwareGeneratorController.getCommands);
     app.post('/api/firmware/generate', FirmwareGeneratorController.generate);
+
+    // Firmware Builder Routes (v5)
+    const builderController = new (require('./controllers/FirmwareBuilderController').FirmwareBuilderController)();
+    app.get('/api/firmware/builder/boards', builderController.getBoards);
+    app.get('/api/firmware/builder/transports', builderController.getTransports);
+    app.get('/api/firmware/builder/plugins', builderController.getPlugins);
+    app.get('/api/firmware/builder/commands', builderController.getCommands);
+    app.post('/api/firmware/builder/build', builderController.buildFirmware);
+
     app.get('/api/hardware/relays', HardwareController.getRelays);
     app.post('/api/hardware/relays', HardwareController.createRelay);
     app.put('/api/hardware/relays/:id', HardwareController.updateRelay);

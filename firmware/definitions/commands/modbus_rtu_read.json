@@ -1,0 +1,14 @@
+{
+    "id": "modbus_rtu_read",
+    "name": "Modbus RTU Read",
+    "compatible_architectures": [
+        "*"
+    ],
+    "code": {
+        "includes": "#include <SoftwareSerial.h>",
+        "globals": "SoftwareSerial* modbusSerial = nullptr;\nint modbusRxPin = -1;\nint modbusTxPin = -1;",
+        "functions": "@file:commands/src/modbus_generic.cpp",
+        "loop": "// Modbus loop logic if needed",
+        "dispatcher": "else if (strcmp(cmd, \"MODBUS_RTU_READ\") == 0) { return handleModbusRtuRead(cmdBuffer); }"
+    }
+}

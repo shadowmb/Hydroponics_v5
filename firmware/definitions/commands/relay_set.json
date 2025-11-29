@@ -1,0 +1,11 @@
+{
+    "id": "relay_set",
+    "name": "Relay Set",
+    "description": "Controls relay state (ON/OFF)",
+    "code": {
+        "includes": [],
+        "globals": "",
+        "functions": "@file:commands/src/relay_set.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"RELAY_SET\") == 0) { return handleRelaySet(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

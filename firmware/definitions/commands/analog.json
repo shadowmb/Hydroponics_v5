@@ -1,0 +1,11 @@
+{
+    "id": "analog",
+    "name": "Analog Read",
+    "description": "Reads analog value from specified pin (0-1023)",
+    "code": {
+        "includes": [],
+        "globals": "",
+        "functions": "@file:commands/src/analog.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"ANALOG\") == 0) { return handleAnalog(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

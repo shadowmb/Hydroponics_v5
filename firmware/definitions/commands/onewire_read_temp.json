@@ -1,0 +1,11 @@
+{
+    "id": "onewire_read_temp",
+    "name": "OneWire Read Temp",
+    "description": "Reads temperature from DS18B20 OneWire sensors using bit-banging",
+    "code": {
+        "includes": [],
+        "globals": "",
+        "functions": "@file:commands/src/onewire_read_temp.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"ONEWIRE_READ_TEMP\") == 0) { return handleOneWireReadTemp(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

@@ -494,7 +494,7 @@ export class HardwareService {
                     const oldCaps = (controller.capabilities || []).sort();
 
                     if (JSON.stringify(newCaps) !== JSON.stringify(oldCaps)) {
-                        controller.capabilities = infoResponse.capabilities;
+                        controller.capabilities = infoResponse.capabilities.map((c: string) => c.toLowerCase());
                         await controller.save();
                         logger.info({ controllerId, capabilities: controller.capabilities }, '✨ [HardwareService] Capabilities Updated');
                     }

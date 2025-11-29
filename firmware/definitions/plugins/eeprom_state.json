@@ -1,0 +1,21 @@
+{
+    "id": "eeprom_state",
+    "name": "EEPROM State Save",
+    "description": "Restore relay states after power loss",
+    "category": "reliability",
+    "compatible_transports": [
+        "*"
+    ],
+    "compatible_architectures": [
+        "*"
+    ],
+    "parameters": [],
+    "code": {
+        "includes": "#include <EEPROM.h>",
+        "setup": "restoreState();",
+        "functions": [
+            "void saveState(int pin, int state) { EEPROM.write(pin, state); EEPROM.commit(); }",
+            "void restoreState() { /* Implementation to read EEPROM and set pins */ }"
+        ]
+    }
+}

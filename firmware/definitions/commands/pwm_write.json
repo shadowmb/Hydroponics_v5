@@ -1,0 +1,11 @@
+{
+    "id": "pwm_write",
+    "name": "PWM Write",
+    "description": "Sets PWM duty cycle on pin (0-255)",
+    "code": {
+        "includes": [],
+        "globals": "",
+        "functions": "@file:commands/src/pwm_write.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"PWM_WRITE\") == 0) { return handlePWMWrite(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

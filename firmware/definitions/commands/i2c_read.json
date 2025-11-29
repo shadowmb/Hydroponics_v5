@@ -1,0 +1,11 @@
+{
+    "id": "i2c_read",
+    "name": "I2C Read",
+    "description": "Reads data from I2C devices",
+    "code": {
+        "includes": "#include <Wire.h>",
+        "globals": "",
+        "functions": "@file:commands/src/i2c_read.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"I2C_READ\") == 0) { return handleI2CRead(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

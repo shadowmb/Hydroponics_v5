@@ -1,0 +1,39 @@
+{
+    "id": "wifi_failover",
+    "name": "WiFi Failover (Dual SSID)",
+    "description": "Connects to a backup WiFi network if primary fails",
+    "category": "connectivity",
+    "compatible_transports": [
+        "wifi"
+    ],
+    "compatible_architectures": [
+        "esp8266",
+        "esp32",
+        "renesas_uno"
+    ],
+    "parameters": [
+        {
+            "name": "backup_ssid",
+            "type": "string",
+            "default": "",
+            "label": "Backup SSID"
+        },
+        {
+            "name": "backup_password",
+            "type": "password",
+            "default": "",
+            "label": "Backup Password"
+        }
+    ],
+    "code": {
+        "includes": "#include <WiFiMulti.h>",
+        "globals": "WiFiMulti wifiMulti;",
+        "setup": [
+            "// Override standard WiFi.begin",
+            "wifiMulti.addAP(\"{{ssid}}\", \"{{password}}\");",
+            "wifiMulti.addAP(\"{{backup_ssid}}\", \"{{backup_password}}\");",
+            "while (wifiMulti.run() != WL_CONNECTED) { delay(500); }"
+        ],
+        "loop": "if (wifiMulti.run() != WL_CONNECTED) { Serial.println(\"WiFi Connection Lost\"); }"
+    }
+}

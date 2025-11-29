@@ -10,6 +10,7 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 ## 3. Definitions & Dependencies
 *   **Device Driver:** A JSON file in `backend/config/devices/` that defines capabilities and commands.
 *   **Device Template:** The database representation of the driver, synced automatically on startup.
+*   **Reference Schema:** `Docs/Reference/device-template-schema.md` - **Full definition of all fields.**
 *   **Metric Config:** Frontend configuration (`frontend/src/config/MetricConfig.ts`) for charts and history.
 *   **Firmware Command:** Low-level protocol command (e.g., `ANALOG`, `DHT_READ`) must already exist.
 
@@ -49,6 +50,10 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
     "pins": [
         { "name": "Signal", "type": "ANALOG_IN" }
     ],
+    "uiConfig": {                      // REQUIRED for UI Categorization
+        "category": "Sensors",         // "Sensors", "Actuators", "Water", etc.
+        "icon": "activity"             // Lucide icon name (lowercase)
+    },
     "initialState": { "value": 0 }
 }
 ```

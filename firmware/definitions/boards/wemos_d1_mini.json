@@ -1,0 +1,68 @@
+{
+    "id": "wemos_d1_mini",
+    "name": "Wemos D1 Mini (ESP8266)",
+    "description": "ESP8266 based mini WiFi board",
+    "architecture": "esp8266",
+    "voltage": 3.3,
+    "clock_speed_hz": 80000000,
+    "memory": {
+        "flash_bytes": 4194304,
+        "sram_bytes": 81920,
+        "eeprom_bytes": 0
+    },
+    "interfaces": {
+        "serial": {
+            "hardware": [
+                "Serial",
+                "Serial1"
+            ],
+            "usb": "Serial"
+        },
+        "i2c": [
+            "Wire"
+        ],
+        "spi": [
+            "SPI"
+        ],
+        "wifi": {
+            "type": "native",
+            "chipset": "ESP8266"
+        }
+    },
+    "pins": {
+        "digital_count": 9,
+        "analog_input_count": 1,
+        "analog_output_count": 0,
+        "pwm_pins": [
+            "D1",
+            "D2",
+            "D3",
+            "D4",
+            "D5",
+            "D6",
+            "D7",
+            "D8"
+        ],
+        "mappings": {
+            "LED_BUILTIN": 2,
+            "SDA": "D2",
+            "SCL": "D1"
+        }
+    },
+    "requirements": {
+        "core": "esp8266:esp8266",
+        "libraries": [
+            {
+                "name": "ESP8266WiFi",
+                "version": "^1.0.0",
+                "required_for": [
+                    "wifi"
+                ]
+            }
+        ]
+    },
+    "defines": [
+        "ESP8266",
+        "WEMOS_D1_MINI"
+    ]
+}
