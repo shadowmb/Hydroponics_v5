@@ -69,6 +69,23 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 >
 > **Do NOT** use the metric name (e.g., `distance_mm`) if the firmware returns `distance`. The mapping happens in the UI, not here.
 
+### Step 2.1: Special Considerations for Actuators
+If you are adding an **ACTUATOR** (e.g., Pump, Fan, Light):
+
+1.  **Capabilities:** Always include `"DIGITAL_WRITE"` in `capabilities`. This ensures the firmware includes the basic pin control logic, which is required for both direct connection and relay routing.
+2.  **Commands:**
+    *   **ON/OFF:** Map your command (e.g., `RELAY_SET`) to `DIGITAL_WRITE` if possible.
+    *   **Parameters:** Use `state: "number"` (0 for OFF, 1 for ON) instead of `boolean`. Firmware parsers handle integers more reliably than booleans.
+3.  **Example:**
+    ```json
+    "commands": {
+        "RELAY_SET": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": { "state": "number" }
+        }
+    }
+    ```
+
 ### Step 3: Configure Metrics (Frontend)
 **Only if using a new metric type (e.g., "Wind Speed").**
 1.  **Check `shared/UnitRegistry.ts`:** Ensure the new metric key is added to the `keys` array of the appropriate Unit Family.

@@ -1,0 +1,59 @@
+{
+    "id": "pump_generic",
+    "name": "Generic Pump",
+    "category": "ACTUATOR",
+    "capabilities": [
+        "RELAY_SET",
+        "READ",
+        "DIGITAL_WRITE"
+    ],
+    "requirements": {
+        "interface": "digital",
+        "voltage": "5V",
+        "pin_count": {
+            "digital": 1
+        }
+    },
+    "commands": {
+        "RELAY_SET": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": "number"
+            },
+            "valuePath": "state",
+            "sourceUnit": "boolean",
+            "outputs": [
+                {
+                    "key": "state",
+                    "label": "State",
+                    "unit": "on/off"
+                }
+            ]
+        },
+        "READ": {
+            "hardwareCmd": "DIGITAL_READ",
+            "valuePath": "state",
+            "sourceUnit": "boolean",
+            "outputs": [
+                {
+                    "key": "state",
+                    "label": "State",
+                    "unit": "on/off"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "Control Pin",
+            "type": "DIGITAL_OUT"
+        }
+    ],
+    "uiConfig": {
+        "category": "Water",
+        "icon": "droplets"
+    },
+    "initialState": {
+        "state": false
+    }
+}

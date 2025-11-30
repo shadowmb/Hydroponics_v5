@@ -98,18 +98,62 @@ export class HardwareService {
         // 1. Find which controller owns this device
         const { DeviceModel } = await import('../../models/Device');
         const deviceDoc = await DeviceModel.findById(deviceId);
-        if (!deviceDoc || !deviceDoc.hardware?.parentId) {
-            throw new Error(`Device ${deviceId} not linked to a controller`);
+
+        // Check if device exists
+        if (!deviceDoc) {
+            throw new Error(`Device ${deviceId} not found`);
         }
 
-        const controllerId = deviceDoc.hardware.parentId.toString();
+        let controllerId: string;
+        let resolvedPin: string | undefined;
+
+        // Case A: Connected via Relay
+        if (deviceDoc.hardware?.relayId) {
+            const { Relay } = await import('../../models/Relay');
+            const relay = await Relay.findById(deviceDoc.hardware.relayId);
+            if (!relay) throw new Error(`Relay ${deviceDoc.hardware.relayId} not found`);
+
+            if (!relay.controllerId) throw new Error(`Relay ${relay.name} not linked to a controller`);
+            controllerId = relay.controllerId.toString();
+
+            // Find the channel
+            const channelIndex = deviceDoc.hardware.channel;
+            const channel = relay.channels.find(c => c.channelIndex === channelIndex);
+            if (!channel) throw new Error(`Invalid relay channel ${channelIndex}`);
+
+            // Use the physical pin from the relay channel
+            resolvedPin = channel.controllerPortId;
+
+            // Update Relay State in DB (Shadow State)
+            // We do this asynchronously to not block the command
+            // But we might want to wait if we want strict consistency? 
+            // For now, fire and forget or await? Let's await to ensure DB is in sync.
+            if (command === 'RELAY_SET' || command === 'DIGITAL_WRITE') {
+                // params.state is 1 or 0
+                const newState = params.state === 1 || params.state === true;
+                // Update specific channel state
+                await Relay.updateOne(
+                    { _id: relay._id, "channels.channelIndex": channelIndex },
+                    { $set: { "channels.$.state": newState } }
+                );
+            }
+
+        }
+        // Case B: Direct Connection
+        else if (deviceDoc.hardware?.parentId) {
+            controllerId = deviceDoc.hardware.parentId.toString();
+        } else {
+            throw new Error(`Device ${deviceId} not linked to a controller or relay`);
+        }
 
         // 2. Get Driver & Create Packet
         const driver = templates.getDriver(driverId);
 
         // Merge context with device pins
+        // If we resolved a pin from Relay, it takes precedence
         const finalContext = {
             ...context,
+            pin: resolvedPin || context.pin, // Inject resolved pin (e.g. "D2")
             pins: deviceDoc.hardware?.pins || context.pins
         };
 

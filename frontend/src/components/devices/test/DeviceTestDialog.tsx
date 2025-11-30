@@ -11,6 +11,7 @@ import { ECCalibration } from './calibration/ECCalibration';
 import { socketService } from '../../../core/SocketService';
 import { SensorValueCard } from './SensorValueCard';
 import { DeviceHistoryTab } from '../history/DeviceHistoryTab';
+import { ActuatorControlPanel } from './ActuatorControlPanel';
 
 interface DeviceTestDialogProps {
     open: boolean;
@@ -71,9 +72,9 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
+            addLog('Live stream stopped.', 'info');
         }
         setIsStreaming(false);
-        addLog('Live stream stopped.', 'info');
     };
 
     const startStream = () => {
@@ -166,81 +167,90 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                         <div className="flex-1 overflow-y-auto bg-background p-6 min-h-0">
 
                             <TabsContent value="monitor" className="m-0 flex flex-col items-center space-y-8">
-                                <div className="text-center space-y-2">
-                                    <h2 className="text-2xl font-semibold tracking-tight">Live Monitor</h2>
-                                    <p className="text-muted-foreground">
-                                        Read real-time values from the sensor to verify operation.
-                                    </p>
-                                </div>
+                                {device.config?.driverId?.category !== 'ACTUATOR' && (
+                                    <>
+                                        <div className="text-center space-y-2">
+                                            <h2 className="text-2xl font-semibold tracking-tight">Live Monitor</h2>
+                                            <p className="text-muted-foreground">
+                                                Read real-time values from the sensor to verify operation.
+                                            </p>
+                                        </div>
 
-                                <div className="flex items-center gap-4">
-                                    <Button
-                                        size="lg"
-                                        variant={isStreaming ? "destructive" : "default"}
-                                        onClick={toggleStream}
-                                        className="min-w-[160px]"
-                                    >
-                                        {isStreaming ? (
-                                            <>
-                                                <Square className="mr-2 h-4 w-4 fill-current" /> Stop Stream
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Play className="mr-2 h-4 w-4" /> Start Live Stream
-                                            </>
-                                        )}
-                                    </Button>
+                                        <div className="flex items-center gap-4">
+                                            <Button
+                                                size="lg"
+                                                variant={isStreaming ? "destructive" : "default"}
+                                                onClick={toggleStream}
+                                                className="min-w-[160px]"
+                                            >
+                                                {isStreaming ? (
+                                                    <>
+                                                        <Square className="mr-2 h-4 w-4 fill-current" /> Stop Stream
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Play className="mr-2 h-4 w-4" /> Start Live Stream
+                                                    </>
+                                                )}
+                                            </Button>
 
-                                    <Button
-                                        size="lg"
-                                        variant="outline"
-                                        onClick={readValue}
-                                        disabled={isStreaming}
-                                    >
-                                        Read Once
-                                    </Button>
-                                </div>
+                                            <Button
+                                                size="lg"
+                                                variant="outline"
+                                                onClick={readValue}
+                                                disabled={isStreaming}
+                                            >
+                                                Read Once
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
 
-                                {/* Data Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-
-                                    {/* Scenario A: Multi-Value Sensor (e.g. DHT22) */}
-                                    {device.config?.driverId?.commands?.READ?.outputs ? (
-                                        device.config.driverId.commands.READ.outputs.map((output: any) => {
-                                            // Resolve value: Try direct key match in details, fallback to liveValue if single output
-                                            let val = multiValues && multiValues[output.key] !== undefined
-                                                ? multiValues[output.key]
-                                                : (device.config.driverId.commands.READ.outputs.length === 1 ? liveValue : null);
-
-                                            // Format number
-                                            if (typeof val === 'number') val = val.toFixed(2);
-
-                                            return (
-                                                <SensorValueCard
-                                                    key={output.key}
-                                                    label={output.label}
-                                                    value={val}
-                                                    unit={output.unit}
-                                                    subValue={rawValue}
-                                                />
-                                            );
-                                        })
+                                {/* Data Grid or Control Panel */}
+                                <div className="w-full max-w-3xl">
+                                    {device.config?.driverId?.category === 'ACTUATOR' ? (
+                                        <ActuatorControlPanel device={device} onLog={addLog} />
                                     ) : (
-                                        /* Scenario B: Single-Value Sensor (e.g. pH) */
-                                        <>
-                                            <SensorValueCard
-                                                label={device.config?.driverId?.physicalType === 'ph' ? 'pH Value' : 'Calibrated Value'}
-                                                value={liveValue !== null ? liveValue.toFixed(2) : null}
-                                                unit={device.config?.driverId?.defaultUnits?.[0]}
-                                                variant="primary"
-                                            />
-                                            <SensorValueCard
-                                                label="Raw Input"
-                                                value={rawValue}
-                                                unit="ADC"
-                                                variant="raw"
-                                            />
-                                        </>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                                            {/* Scenario A: Multi-Value Sensor (e.g. DHT22) */}
+                                            {device.config?.driverId?.commands?.READ?.outputs ? (
+                                                device.config.driverId.commands.READ.outputs.map((output: any) => {
+                                                    // Resolve value: Try direct key match in details, fallback to liveValue if single output
+                                                    let val = multiValues && multiValues[output.key] !== undefined
+                                                        ? multiValues[output.key]
+                                                        : (device.config.driverId.commands.READ.outputs.length === 1 ? liveValue : null);
+
+                                                    // Format number
+                                                    if (typeof val === 'number') val = val.toFixed(2);
+
+                                                    return (
+                                                        <SensorValueCard
+                                                            key={output.key}
+                                                            label={output.label}
+                                                            value={val}
+                                                            unit={output.unit}
+                                                            subValue={rawValue}
+                                                        />
+                                                    );
+                                                })
+                                            ) : (
+                                                /* Scenario B: Single-Value Sensor (e.g. pH) */
+                                                <>
+                                                    <SensorValueCard
+                                                        label={device.config?.driverId?.physicalType === 'ph' ? 'pH Value' : 'Calibrated Value'}
+                                                        value={liveValue !== null ? liveValue.toFixed(2) : null}
+                                                        unit={device.config?.driverId?.defaultUnits?.[0]}
+                                                        variant="primary"
+                                                    />
+                                                    <SensorValueCard
+                                                        label="Raw Input"
+                                                        value={rawValue}
+                                                        unit="ADC"
+                                                        variant="raw"
+                                                    />
+                                                </>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
 
