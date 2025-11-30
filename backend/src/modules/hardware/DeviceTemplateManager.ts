@@ -159,8 +159,8 @@ export class DeviceTemplateManager {
                 }
 
                 // Merge static params from template with dynamic params
-                // Template params take precedence (e.g. inverting logic)
-                const finalParams = { ...params, ...cmdDef.params };
+                // Dynamic params take precedence (allowing overrides of defaults/definitions)
+                const finalParams = { ...cmdDef.params, ...params };
 
                 // Inject Pin if available in context
                 if (context.pin !== undefined) {

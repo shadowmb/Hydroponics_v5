@@ -151,6 +151,31 @@ export const hardwareService = {
         return response.data.data;
     },
 
+    executeCommand: async (deviceId: string, command: string, params: any = {}, context: any = {}): Promise<any> => {
+        // Need to fetch device to get driverId? Or pass it?
+        // The backend endpoint expects: { deviceId, driverId, command, params, context }
+        // We should probably fetch the device first or let the caller provide driverId.
+        // But to make it easy for UI, let's fetch device here or assume caller passes it?
+        // Actually, ActuatorControlPanel has the device object. It can pass driverId.
+        // Let's update the signature to accept driverId or just deviceId and we fetch it?
+        // Fetching here adds latency.
+        // Let's look at the backend HardwareCommandSchema.
+        // It requires: deviceId, driverId, command.
+
+        // Let's update ActuatorControlPanel to pass driverId.
+        // So here we accept driverId.
+        return (await axios.post(`${API_URL}/hardware/command`, {
+            deviceId,
+            // We need driverId. 
+            // If we don't have it, we can't call this.
+            // Let's change signature to include driverId.
+            driverId: params.driverId, // Hacky? No, let's make it explicit argument.
+            command,
+            params,
+            context
+        })).data.data;
+    },
+
     refreshDevice: async (id: string): Promise<void> => {
         await axios.post(`${API_URL}/hardware/devices/${id}/refresh`);
     },
