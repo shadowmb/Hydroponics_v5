@@ -2,6 +2,10 @@
     "id": "ds18b20",
     "name": "DS18B20 Temperature Sensor",
     "category": "SENSOR",
+    "supportedStrategies": [
+        "offset_only",
+        "linear"
+    ],
     "capabilities": [
         "READ"
     ],

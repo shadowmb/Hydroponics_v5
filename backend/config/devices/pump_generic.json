@@ -2,6 +2,10 @@
     "id": "pump_generic",
     "name": "Generic Pump",
     "category": "ACTUATOR",
+    "supportedStrategies": [
+        "volumetric_flow",
+        "duration_position"
+    ],
     "capabilities": [
         "RELAY_SET",
         "READ",

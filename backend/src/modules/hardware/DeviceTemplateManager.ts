@@ -26,6 +26,7 @@ const DeviceTemplateSchema = z.object({
     id: z.string(),
     name: z.string(),
     category: z.enum(['CONTROLLER', 'SENSOR', 'ACTUATOR']),
+    supportedStrategies: z.array(z.string()).optional(),
     conversionStrategy: z.string().optional(),
     capabilities: z.array(z.string()),
     commands: z.record(CommandSchema),

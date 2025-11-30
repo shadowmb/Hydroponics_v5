@@ -5,6 +5,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
     name: string;
     description?: string;
     category: 'CONTROLLER' | 'SENSOR' | 'ACTUATOR';
+    supportedStrategies?: string[]; // List of supported calibration strategies
     capabilities: string[]; // List of supported commands (e.g., ['ANALOG', 'DHT_READ'])
     commands: Record<string, any>; // Command definitions
     portRequirements: {
@@ -39,6 +40,7 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     name: { type: String, required: true },
     description: { type: String },
     category: { type: String, enum: ['CONTROLLER', 'SENSOR', 'ACTUATOR'], default: 'SENSOR' },
+    supportedStrategies: [{ type: String }],
     capabilities: [{ type: String }],
     commands: { type: Map, of: Schema.Types.Mixed },
     portRequirements: [{

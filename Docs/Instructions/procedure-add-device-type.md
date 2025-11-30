@@ -1,3 +1,4 @@
+
 # Procedure: Add New Device Type
 
 ## 1. Goal
@@ -31,7 +32,8 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
     "id": "unique_device_id",          // REQUIRED: Must match filename (without .json)
     "name": "Human Readable Name",     // REQUIRED: Displayed in UI
     "category": "SENSOR",              // REQUIRED: SENSOR, ACTUATOR, or HYBRID
-    "conversionStrategy": "linear",    // OPTIONAL: Only if raw data needs formula (e.g., analog voltage -> pH)
+    "supportedStrategies": ["linear"], // REQUIRED: List of valid calibration strategies
+    "conversionStrategy": "linear",    // OPTIONAL: Default strategy (deprecated in v5 favor of supportedStrategies?)
     "capabilities": ["READ"],          // REQUIRED: List of supported commands
     "commands": {
         "READ": {                      // Must match a capability
@@ -59,6 +61,7 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 ```
 
 **Key Fields Explained:**
+*   **`supportedStrategies`**: Defines which calibration wizards are available in the UI. See `backend/config/calibration_strategies.json` for IDs.
 *   **`sourceUnit`**: The unit the *hardware* speaks. Backend uses this to normalize data.
 *   **`conversionStrategy`**:
     *   **Omit** if the sensor returns the final value directly (e.g., DHT22 returns °C).
@@ -69,7 +72,19 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 >
 > **Do NOT** use the metric name (e.g., `distance_mm`) if the firmware returns `distance`. The mapping happens in the UI, not here.
 
-### Step 2.1: Special Considerations for Actuators
+### Step 2.1: Define Calibration Strategies
+Choose appropriate strategies from `backend/config/calibration_strategies.json`:
+
+*   **Sensors:**
+    *   `linear`: Standard y=mx+c (Analog sensors).
+    *   `two_point_linear`: pH, EC, DO.
+    *   `offset_only`: Temperature, Scale.
+*   **Actuators:**
+    *   `volumetric_flow`: Pumps, Dosers.
+    *   `duration_position`: Motorized Valves.
+    *   `range_linear`: Servos.
+
+### Step 2.2: Special Considerations for Actuators
 If you are adding an **ACTUATOR** (e.g., Pump, Fan, Light):
 
 1.  **Capabilities:** Always include `"DIGITAL_WRITE"` in `capabilities`. This ensures the firmware includes the basic pin control logic, which is required for both direct connection and relay routing.
@@ -153,7 +168,8 @@ shared/
         }
     }
     ```
-3.  Register it in `backend/src/services/conversion/ConversionService.ts` (constructor).
+3.  Register it in `backend/src/services/conversion/ConversionService.ts`.
+4.  Add definition to `backend/config/calibration_strategies.json`.
 
 ### Step B: Update Calibration UI
 1.  Open `frontend/src/components/devices/test/calibration/ECCalibration.tsx` (or create new).

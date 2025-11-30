@@ -2,6 +2,10 @@
     "id": "hc_sr04",
     "name": "HC-SR04 Ultrasonic Sensor",
     "category": "SENSOR",
+    "supportedStrategies": [
+        "offset_only",
+        "linear"
+    ],
     "capabilities": [
         "READ"
     ],

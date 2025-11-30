@@ -6,6 +6,9 @@
     "capabilities": [
         "READ"
     ],
+    "supportedStrategies": [
+        "linear"
+    ],
     "requirements": {
         "interface": "uart",
         "voltage": "5V",

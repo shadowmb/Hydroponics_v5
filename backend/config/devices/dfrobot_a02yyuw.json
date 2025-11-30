@@ -2,6 +2,10 @@
     "id": "dfrobot_a02yyuw",
     "name": "DFRobot A02YYUW Waterproof Ultrasonic Sensor",
     "category": "SENSOR",
+    "supportedStrategies": [
+        "offset_only",
+        "linear"
+    ],
     "capabilities": [
         "READ"
     ],

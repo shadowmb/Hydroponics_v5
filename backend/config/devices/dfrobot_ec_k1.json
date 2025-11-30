@@ -2,6 +2,10 @@
     "id": "dfrobot_ec_k1",
     "name": "DFRobot EC Sensor (K=1.0)",
     "category": "SENSOR",
+    "supportedStrategies": [
+        "two_point_linear",
+        "linear"
+    ],
     "conversionStrategy": "ec-dfr-analog",
     "capabilities": [
         "READ"
