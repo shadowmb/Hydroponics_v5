@@ -2,6 +2,10 @@
     "id": "dht22",
     "name": "DHT22 Temp/Humidity",
     "category": "SENSOR",
+    "supportedStrategies": [
+        "offset_only",
+        "linear"
+    ],
     "capabilities": [
         "DHT_READ"
     ],

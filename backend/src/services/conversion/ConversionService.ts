@@ -2,6 +2,7 @@ import { IDevice } from '../../models/Device';
 import { IConversionStrategy } from './strategies/IConversionStrategy';
 import { LinearInterpolationStrategy } from './strategies/LinearInterpolationStrategy';
 import { EcDfrStrategy } from './strategies/EcDfrStrategy';
+import { VolumetricFlowStrategy } from './strategies/VolumetricFlowStrategy';
 
 export class ConversionService {
     private strategies: Map<string, IConversionStrategy> = new Map();
@@ -10,6 +11,7 @@ export class ConversionService {
         // Register default strategies
         this.registerStrategy('linear', new LinearInterpolationStrategy());
         this.registerStrategy('ec-dfr-analog', new EcDfrStrategy());
+        this.registerStrategy('volumetric_flow', new VolumetricFlowStrategy());
     }
 
     registerStrategy(name: string, strategy: IConversionStrategy) {

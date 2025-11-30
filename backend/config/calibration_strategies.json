@@ -1,0 +1,323 @@
+[
+    {
+        "id": "linear",
+        "name": "Linear Interpolation (Standard)",
+        "description": "Standard y = mx + c calibration. Suitable for most analog sensors.",
+        "category": "SENSOR",
+        "compatibility": [
+            "sensor",
+            "analog"
+        ],
+        "storageSchema": {
+            "multiplier": {
+                "type": "number",
+                "required": true,
+                "default": 1
+            },
+            "offset": {
+                "type": "number",
+                "required": true,
+                "default": 0
+            }
+        },
+        "wizard": {
+            "component": "LinearWizard",
+            "steps": [
+                {
+                    "type": "input",
+                    "key": "multiplier",
+                    "label": "Multiplier (Slope)",
+                    "default": 1
+                },
+                {
+                    "type": "input",
+                    "key": "offset",
+                    "label": "Offset (Intercept)",
+                    "default": 0
+                }
+            ]
+        }
+    },
+    {
+        "id": "two_point_linear",
+        "name": "Two-Point Calibration",
+        "description": "Calibrate using two known reference points (e.g., pH 4.0 and 7.0). System calculates slope and offset.",
+        "category": "SENSOR",
+        "compatibility": [
+            "ph",
+            "ec",
+            "do"
+        ],
+        "storageSchema": {
+            "multiplier": {
+                "type": "number",
+                "required": true
+            },
+            "offset": {
+                "type": "number",
+                "required": true
+            }
+        },
+        "wizard": {
+            "component": "TwoPointWizard",
+            "steps": [
+                {
+                    "type": "measure",
+                    "label": "Low Reference Point",
+                    "refKey": "lowRef",
+                    "instructions": "Place sensor in LOW reference solution (e.g., pH 4.0)."
+                },
+                {
+                    "type": "measure",
+                    "label": "High Reference Point",
+                    "refKey": "highRef",
+                    "instructions": "Place sensor in HIGH reference solution (e.g., pH 7.0)."
+                }
+            ]
+        }
+    },
+    {
+        "id": "three_point_linear",
+        "name": "Three-Point Calibration",
+        "description": "High precision calibration using three reference points (e.g., pH 4, 7, 10).",
+        "category": "SENSOR",
+        "compatibility": [
+            "ph"
+        ],
+        "storageSchema": {
+            "multiplier": {
+                "type": "number",
+                "required": true
+            },
+            "offset": {
+                "type": "number",
+                "required": true
+            }
+        },
+        "wizard": {
+            "component": "ThreePointWizard",
+            "steps": [
+                {
+                    "type": "measure",
+                    "label": "Low Point (e.g. pH 4)",
+                    "refKey": "lowRef",
+                    "instructions": "Place sensor in LOW reference solution."
+                },
+                {
+                    "type": "measure",
+                    "label": "Mid Point (e.g. pH 7)",
+                    "refKey": "midRef",
+                    "instructions": "Place sensor in MID reference solution."
+                },
+                {
+                    "type": "measure",
+                    "label": "High Point (e.g. pH 10)",
+                    "refKey": "highRef",
+                    "instructions": "Place sensor in HIGH reference solution."
+                }
+            ]
+        }
+    },
+    {
+        "id": "offset_only",
+        "name": "Offset Only (Tare)",
+        "description": "Adjusts only the zero-point (intercept). Slope remains 1.",
+        "category": "SENSOR",
+        "compatibility": [
+            "scale",
+            "temp"
+        ],
+        "storageSchema": {
+            "offset": {
+                "type": "number",
+                "required": true
+            }
+        },
+        "wizard": {
+            "component": "OffsetWizard",
+            "steps": [
+                {
+                    "type": "measure",
+                    "label": "Zero Point (Tare)",
+                    "refKey": "zeroRef",
+                    "instructions": "Ensure sensor is at zero state (e.g. empty scale)."
+                }
+            ]
+        }
+    },
+    {
+        "id": "volumetric_flow",
+        "name": "Volumetric Flow (Dosing)",
+        "description": "Calibrate pumps by measuring output volume over a specific time to determine flow rate.",
+        "category": "ACTUATOR",
+        "compatibility": [
+            "pump",
+            "valve",
+            "doser"
+        ],
+        "storageSchema": {
+            "flowRate": {
+                "type": "number",
+                "required": true
+            },
+            "unit": {
+                "type": "string",
+                "required": true,
+                "enum": [
+                    "ml",
+                    "l",
+                    "g"
+                ]
+            }
+        },
+        "wizard": {
+            "component": "TimeBasedWizard",
+            "steps": [
+                {
+                    "type": "action",
+                    "label": "Run Test",
+                    "command": "run",
+                    "params": {
+                        "duration": "input_duration"
+                    },
+                    "instructions": "Place output tube in a measuring cup."
+                },
+                {
+                    "type": "input",
+                    "key": "measuredValue",
+                    "label": "Measured Output",
+                    "unit": "ml"
+                }
+            ],
+            "formula": "measuredValue / duration"
+        }
+    },
+    {
+        "id": "range_linear",
+        "name": "Range Mapping (Linear)",
+        "description": "Map 0-100% UI range to specific hardware limits (e.g., Servo angles or PWM limits).",
+        "category": "ACTUATOR",
+        "compatibility": [
+            "servo",
+            "dimmer",
+            "motor"
+        ],
+        "storageSchema": {
+            "minRaw": {
+                "type": "number",
+                "required": true
+            },
+            "maxRaw": {
+                "type": "number",
+                "required": true
+            }
+        },
+        "wizard": {
+            "component": "RangeWizard",
+            "steps": [
+                {
+                    "type": "set_limit",
+                    "label": "Set Minimum (0%)",
+                    "key": "minRaw",
+                    "instructions": "Adjust slider to the desired minimum position."
+                },
+                {
+                    "type": "set_limit",
+                    "label": "Set Maximum (100%)",
+                    "key": "maxRaw",
+                    "instructions": "Adjust slider to the desired maximum position."
+                }
+            ]
+        }
+    },
+    {
+        "id": "range_curve",
+        "name": "Range Mapping (Curved/Dimming)",
+        "description": "Non-linear mapping for dimming (Logarithmic) to match human perception.",
+        "category": "ACTUATOR",
+        "compatibility": [
+            "dimmer",
+            "led"
+        ],
+        "storageSchema": {
+            "minRaw": {
+                "type": "number",
+                "required": true
+            },
+            "maxRaw": {
+                "type": "number",
+                "required": true
+            },
+            "curve": {
+                "type": "string",
+                "enum": [
+                    "logarithmic",
+                    "exponential",
+                    "s-curve"
+                ],
+                "default": "logarithmic"
+            }
+        },
+        "wizard": {
+            "component": "CurveWizard",
+            "steps": [
+                {
+                    "type": "set_limit",
+                    "label": "Min Brightness",
+                    "key": "minRaw"
+                },
+                {
+                    "type": "set_limit",
+                    "label": "Max Brightness",
+                    "key": "maxRaw"
+                },
+                {
+                    "type": "select",
+                    "label": "Curve Type",
+                    "key": "curve",
+                    "options": [
+                        "logarithmic",
+                        "exponential"
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "duration_position",
+        "name": "Duration to Position (Motorized Valve)",
+        "description": "Controls position (0-100%) based on travel time.",
+        "category": "ACTUATOR",
+        "compatibility": [
+            "valve_motorized",
+            "curtain"
+        ],
+        "storageSchema": {
+            "totalDuration": {
+                "type": "number",
+                "required": true,
+                "description": "Time in ms to travel 0-100%"
+            }
+        },
+        "wizard": {
+            "component": "DurationWizard",
+            "steps": [
+                {
+                    "type": "action",
+                    "label": "Open Fully",
+                    "command": "open"
+                },
+                {
+                    "type": "action",
+                    "label": "Close Fully",
+                    "command": "close"
+                },
+                {
+                    "type": "input",
+                    "label": "Travel Time (ms)",
+                    "key": "totalDuration"
+                }
+            ]
+        }
+    }
+]

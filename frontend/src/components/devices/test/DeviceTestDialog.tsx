@@ -7,11 +7,12 @@ import { Play, Square } from 'lucide-react';
 import { hardwareService } from '../../../services/hardwareService';
 import { DeviceTestHeader } from './DeviceTestHeader';
 import { toast } from 'sonner';
-import { ECCalibration } from './calibration/ECCalibration';
+
 import { socketService } from '../../../core/SocketService';
 import { SensorValueCard } from './SensorValueCard';
 import { DeviceHistoryTab } from '../history/DeviceHistoryTab';
 import { ActuatorControlPanel } from './ActuatorControlPanel';
+import { ActuatorCalibration } from './calibration/ActuatorCalibration';
 
 interface DeviceTestDialogProps {
     open: boolean;
@@ -262,7 +263,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                             </TabsContent>
 
                             <TabsContent value="calibration" className="m-0">
-                                <ECCalibration device={device} onUpdate={() => onDeviceUpdate && onDeviceUpdate()} />
+                                <ActuatorCalibration device={device} onUpdate={() => onDeviceUpdate && onDeviceUpdate()} />
                             </TabsContent>
 
                             <TabsContent value="settings" className="m-0">

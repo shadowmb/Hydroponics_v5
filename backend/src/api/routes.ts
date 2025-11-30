@@ -64,6 +64,9 @@ export async function apiRoutes(app: FastifyInstance) {
     // Session Routes
     app.get('/api/sessions/:id', SessionController.getSession);
 
+    // Calibration Routes
+    app.get('/api/calibration/strategies', require('./controllers/CalibrationController').CalibrationController.getStrategies);
+
     // Program Routes
     app.post('/api/programs', ProgramController.create);
     app.get('/api/programs', ProgramController.list);

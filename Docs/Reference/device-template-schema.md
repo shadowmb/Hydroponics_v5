@@ -18,6 +18,7 @@ The **Device Template** is the single source of truth for a hardware device in H
     "id": "unique_id_snake_case",
     "name": "Human Readable Name",
     "category": "SENSOR",
+    "supportedStrategies": ["linear", "two_point_linear"],
     "capabilities": ["FIRMWARE_COMMAND_ID"],
     "commands": {
         "READ": {
@@ -53,6 +54,7 @@ The **Device Template** is the single source of truth for a hardware device in H
 | `id` | String | **YES** | Unique identifier. Must match filename. Used in DB as `_id`. |
 | `name` | String | **YES** | Display name in the UI. |
 | `category` | Enum | **YES** | System Type: `SENSOR`, `ACTUATOR`, `CONTROLLER`. Used for backend logic. |
+| `supportedStrategies` | Array | **YES** | List of calibration strategy IDs (e.g., `["linear", "two_point_linear"]`). See `backend/config/calibration_strategies.json`. |
 | `capabilities` | Array | **YES** | List of Firmware Command IDs this device supports (e.g., `["DHT_READ"]`). |
 
 ### 4.2. UI Configuration (`uiConfig`)
@@ -96,6 +98,7 @@ Defines the physical connections required.
     "id": "hc_sr04",
     "name": "HC-SR04 Ultrasonic",
     "category": "SENSOR",
+    "supportedStrategies": ["offset_only", "linear"],
     "capabilities": ["READ"],
     "commands": {
         "READ": {
@@ -117,3 +120,13 @@ Defines the physical connections required.
     }
 }
 ```
+
+## 6. Extending the Schema
+If you add a new field to the JSON template (e.g., `supportedStrategies`), you **MUST** update the backend validation logic to allow it. Otherwise, it will be stripped or cause validation errors during the database sync.
+
+**Files to Update:**
+1.  **Zod Validation:** `backend/src/modules/hardware/DeviceTemplateManager.ts`
+    *   Update `DeviceTemplateSchema` to include the new field.
+2.  **Database Model:** `backend/src/models/DeviceTemplate.ts`
+    *   Update `IDeviceTemplate` interface.
+    *   Update `DeviceTemplateSchema` (Mongoose).
