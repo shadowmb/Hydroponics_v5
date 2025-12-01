@@ -9,6 +9,14 @@ export interface WizardStep {
     refKey?: string;
     instructions?: string;
     options?: string[];
+    fields?: { key: string; label: string; default?: any; unit?: string }[];
+    optionalAction?: {
+        label: string;
+        description?: string;
+        command: string;
+        params?: Record<string, any>;
+        instructions?: string;
+    };
 }
 
 export interface CalibrationStrategy {
