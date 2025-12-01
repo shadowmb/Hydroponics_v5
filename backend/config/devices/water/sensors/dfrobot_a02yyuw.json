@@ -1,26 +1,26 @@
 {
-    "id": "hc_sr04",
-    "name": "HC-SR04 Ultrasonic Sensor",
+    "id": "dfrobot_a02yyuw",
+    "name": "DFRobot A02YYUW Waterproof Ultrasonic Sensor",
     "category": "SENSOR",
     "supportedStrategies": [
         "offset_only",
         "linear"
     ],
     "capabilities": [
-        "ULTRASONIC_TRIG_ECHO"
+        "UART_READ_DISTANCE"
     ],
     "requirements": {
-        "interface": "digital",
-        "voltage": "5V",
+        "interface": "uart",
+        "voltage": "3.3V-5V",
         "pin_count": {
-            "digital": 2
+            "uart": 1
         }
     },
     "commands": {
         "READ": {
-            "hardwareCmd": "ULTRASONIC_TRIG_ECHO",
+            "hardwareCmd": "UART_READ_DISTANCE",
             "valuePath": "distance",
-            "sourceUnit": "cm",
+            "sourceUnit": "mm",
             "outputs": [
                 {
                     "key": "distance",
@@ -32,19 +32,18 @@
     },
     "pins": [
         {
-            "name": "TRIG",
-            "type": "DIGITAL_OUT"
+            "name": "RX",
+            "type": "DIGITAL_IN"
         },
         {
-            "name": "ECHO",
-            "type": "DIGITAL_IN"
+            "name": "TX",
+            "type": "DIGITAL_OUT"
         }
     ],
     "initialState": {
         "value": 0
     },
     "uiConfig": {
-        "category": "Sensors",
         "icon": "activity"
     }
 }

@@ -33,6 +33,15 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         recommendedPins?: string[];
     };
     initialState?: Record<string, any>;
+    variants?: {
+        id: string;
+        label: string;
+        description?: string;
+        requirements?: IDeviceTemplate['requirements'];
+        commands?: IDeviceTemplate['commands'];
+        capabilities?: string[];
+        pins?: IDeviceTemplate['pins'];
+    }[];
 }
 
 const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
@@ -67,7 +76,19 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
         icon: { type: String },
         recommendedPins: [{ type: String }]
     },
-    initialState: { type: Schema.Types.Mixed }
+    initialState: { type: Schema.Types.Mixed },
+    variants: [{
+        id: { type: String, required: true },
+        label: { type: String, required: true },
+        description: { type: String },
+        requirements: { type: Schema.Types.Mixed }, // Reuse structure if possible or define explicitly
+        commands: { type: Map, of: Schema.Types.Mixed },
+        capabilities: [{ type: String }],
+        pins: [{
+            name: { type: String },
+            type: { type: String, enum: ['DIGITAL_IN', 'DIGITAL_OUT', 'ANALOG_IN', 'PWM_OUT'] }
+        }]
+    }]
 }, {
     timestamps: true,
     _id: false // Don't auto-generate _id

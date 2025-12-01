@@ -395,6 +395,19 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, on
                         <div className="p-4 bg-muted rounded-md text-sm">
                             {step.instructions}
                         </div>
+
+                        {/* Simulation Mode Toggle */}
+                        <div className="flex items-center justify-between p-2 border rounded bg-muted/10">
+                            <span className="text-sm font-medium">Simulation Mode</span>
+                            <Button
+                                variant={formData._simulationMode ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setFormData(prev => ({ ...prev, _simulationMode: !prev._simulationMode }))}
+                            >
+                                {formData._simulationMode ? "ON" : "OFF"}
+                            </Button>
+                        </div>
+
                         <div className="space-y-2">
                             <div className="flex justify-between">
                                 <label className="text-sm font-medium">{step.label}</label>
@@ -402,11 +415,46 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, on
                             </div>
                             <Slider
                                 value={[formData[step.key!] || 0]}
-                                max={100}
+                                // Ideally, we should read the max from the driver or template, but for now let's assume 0-100 or 0-255 based on context?
+                                // The strategy says "Map 0-100% UI range to specific hardware limits". 
+                                // So here we are setting the RAW limits. 
+                                // If it's a servo, we might want 0-180. If it's PWM, 0-255.
+                                // Let's assume 255 for now as a safe default for "Raw", or add a max prop to the step config later.
+                                max={255}
                                 step={1}
-                                onValueChange={(vals: number[]) => handleInputChange(step.key!, vals[0])}
+                                onValueChange={(vals: number[]) => {
+                                    const val = vals[0];
+                                    handleInputChange(step.key!, val);
+
+                                    // Live Test Logic
+                                    if (formData._simulationMode) {
+                                        // Update simulated position immediately
+                                        setFormData(prev => ({ ...prev, _simulatedPosition: val }));
+                                    } else {
+                                        // Send command to hardware (Throttled)
+                                        // We need a ref for throttling, but for simplicity in this wizard we can just fire it.
+                                        // Ideally use lodash.debounce or similar, but let's try direct first.
+                                        if (onRunCommand) {
+                                            onRunCommand('WRITE', { value: val }).catch(err => console.error("Live test failed", err));
+                                        }
+                                    }
+                                }}
                             />
                         </div>
+
+                        {/* Simulation Feedback */}
+                        {formData._simulationMode && (
+                            <div className="space-y-2 p-4 border border-dashed rounded-md">
+                                <p className="text-xs font-mono text-muted-foreground uppercase">Simulated Device Output</p>
+                                <div className="h-4 w-full bg-secondary rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-primary transition-all duration-75"
+                                        style={{ width: `${((formData._simulatedPosition || 0) / 255) * 100}%` }}
+                                    />
+                                </div>
+                                <p className="text-center text-xs">{formData._simulatedPosition || 0} / 255</p>
+                            </div>
+                        )}
                     </div>
                 );
 

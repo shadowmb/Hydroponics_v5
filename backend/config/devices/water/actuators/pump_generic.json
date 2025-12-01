@@ -2,21 +2,13 @@
     "id": "pump_generic",
     "name": "Generic Pump",
     "category": "ACTUATOR",
+    "description": "Standard water pump (Relay or PWM control)",
     "supportedStrategies": [
         "volumetric_flow",
-        "duration_position"
+        "duration_position",
+        "range_linear"
     ],
-    "capabilities": [
-        "DIGITAL_WRITE",
-        "DIGITAL_READ"
-    ],
-    "requirements": {
-        "interface": "digital",
-        "voltage": "5V",
-        "pin_count": {
-            "digital": 1
-        }
-    },
+    "capabilities": [],
     "commands": {
         "RELAY_SET": {
             "hardwareCmd": "DIGITAL_WRITE",
@@ -67,7 +59,6 @@
         }
     ],
     "uiConfig": {
-        "category": "Water",
         "icon": "droplets"
     },
     "initialState": {

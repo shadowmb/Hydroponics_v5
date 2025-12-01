@@ -8,8 +8,9 @@ The **Device Template** is the single source of truth for a hardware device in H
 4.  **UI:** How to display it in the frontend (`uiConfig`).
 
 ## 2. File Location
-*   **Path:** `backend/config/devices/<device_id>.json`
-*   **Naming:** `<device_id>` must match the `id` field inside the JSON. Use lowercase snake_case (e.g., `dht22.json`).
+*   **Path:** `backend/config/devices/<environment>/<type>/<device_id>.json`
+    *   Example: `backend/config/devices/water/sensors/ph_meter.json`
+*   **Naming:** `<device_id>` must match the `id` field inside the JSON. Use lowercase snake_case.
 
 ## 3. JSON Structure (Full)
 
@@ -39,9 +40,17 @@ The **Device Template** is the single source of truth for a hardware device in H
         { "name": "Label", "type": "DIGITAL_IN" }
     ],
     "uiConfig": {
-        "category": "Sensors",
         "icon": "activity"
     },
+    "variants": [
+        {
+            "id": "variant_id",
+            "label": "Variant Label",
+            "requirements": { ... },
+            "commands": { ... },
+            "pins": [ ... ]
+        }
+    ],
     "initialState": { "value": 0 }
 }
 ```
@@ -56,14 +65,15 @@ The **Device Template** is the single source of truth for a hardware device in H
 | `category` | Enum | **YES** | System Type: `SENSOR`, `ACTUATOR`, `CONTROLLER`. Used for backend logic. |
 | `supportedStrategies` | Array | **YES** | List of calibration strategy IDs (e.g., `["linear", "two_point_linear"]`). See `backend/config/calibration_strategies.json`. |
 | `capabilities` | Array | **YES** | List of Firmware Command IDs this device supports (e.g., `["DHT_READ"]`). |
+| `variants` | Array | No | List of control mode variants (e.g., Relay vs PWM). Overrides base config. |
 
 ### 4.2. UI Configuration (`uiConfig`)
 Controls how the device appears in the "Add Device" Wizard and Lists.
 
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `category` | String | **YES** | The visual category header in the UI (e.g., "Sensors", "Actuators", "Water"). |
 | `icon` | String | **YES** | Lucide React icon name (lowercase, e.g., `thermometer`, `activity`, `droplet`). |
+| `category` | String | **NO** | **DEPRECATED**. Category is now inferred from the folder structure (e.g., `water/sensors` -> Category: Water). |
 
 ### 4.3. Commands (`commands`)
 Maps high-level actions (like `READ`) to low-level firmware commands.

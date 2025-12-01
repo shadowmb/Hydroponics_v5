@@ -116,6 +116,11 @@ export class SerialTransport implements IHardwareTransport {
                 if (pinStr) message += `|${pinStr}`;
                 if (packet.value !== undefined) message += `|${packet.value}`;
             }
+            else if (packet.cmd === 'WRITE') {
+                const pinStr = this.formatPin(packet);
+                if (pinStr) message += `|${pinStr}`;
+                if (packet.value !== undefined) message += `|${packet.value}`;
+            }
             else if (packet.cmd === 'SERVO_WRITE') {
                 const pinStr = this.formatPin(packet);
                 if (pinStr) message += `|${pinStr}`;

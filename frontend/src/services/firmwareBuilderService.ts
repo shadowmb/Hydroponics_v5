@@ -98,6 +98,12 @@ export interface DeviceTemplate {
         icon?: string;
     };
     commands?: Record<string, { hardwareCmd: string }>;
+    variants?: Array<{
+        id: string;
+        label: string;
+        description?: string;
+        commands?: Record<string, { hardwareCmd: string }>;
+    }>;
 }
 
 export interface BuildConfiguration {

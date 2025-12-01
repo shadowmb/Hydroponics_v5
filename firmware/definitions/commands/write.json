@@ -1,0 +1,11 @@
+{
+    "id": "write",
+    "name": "Write (PWM)",
+    "description": "Writes a PWM value (0-255) to a pin using analogWrite.",
+    "code": {
+        "includes": [],
+        "globals": "",
+        "functions": "@file:commands/src/write.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"WRITE\") == 0) { return handleWrite(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

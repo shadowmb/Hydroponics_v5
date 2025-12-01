@@ -61,17 +61,37 @@ export const FirmwareBuilderWizard: React.FC = () => {
     }, []);
 
     // Update commandIds whenever selectedDeviceIds changes
+    // Update commandIds whenever selectedDeviceIds changes
     useEffect(() => {
         const newCommandIds = new Set<string>();
 
         selectedDeviceIds.forEach(deviceId => {
             const template = deviceTemplates.find(t => t._id === deviceId);
-            if (template && template.commands) {
-                Object.values(template.commands).forEach((cmdConfig: any) => {
-                    if (cmdConfig.hardwareCmd) {
-                        newCommandIds.add(cmdConfig.hardwareCmd.toLowerCase());
-                    }
-                });
+            if (template) {
+                // 1. Collect from root commands
+                if (template.commands) {
+                    Object.values(template.commands).forEach((cmdConfig: any) => {
+                        // Handle both string format "CMD" and object format { hardwareCmd: "CMD" }
+                        const cmd = typeof cmdConfig === 'string' ? cmdConfig : cmdConfig.hardwareCmd;
+                        if (cmd) {
+                            newCommandIds.add(cmd.toLowerCase());
+                        }
+                    });
+                }
+
+                // 2. Collect from variants
+                if (template.variants) {
+                    template.variants.forEach((variant: any) => {
+                        if (variant.commands) {
+                            Object.values(variant.commands).forEach((cmdConfig: any) => {
+                                const cmd = typeof cmdConfig === 'string' ? cmdConfig : cmdConfig.hardwareCmd;
+                                if (cmd) {
+                                    newCommandIds.add(cmd.toLowerCase());
+                                }
+                            });
+                        }
+                    });
+                }
             }
         });
 

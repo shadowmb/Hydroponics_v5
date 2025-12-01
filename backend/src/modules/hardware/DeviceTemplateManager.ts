@@ -70,21 +70,16 @@ export class DeviceTemplateManager {
     }
 
     /**
-     * Load all templates from the config directory.
+     * Load all templates from the config directory recursively.
      */
     public async loadTemplates(): Promise<void> {
         try {
             // Ensure directory exists
             await fs.mkdir(this.templatesDir, { recursive: true });
 
-            const files = await fs.readdir(this.templatesDir);
-            const jsonFiles = files.filter(f => f.endsWith('.json'));
+            logger.info({ dir: this.templatesDir }, '📂 Loading Device Templates...');
 
-            logger.info({ dir: this.templatesDir, files: jsonFiles }, '📂 Loading Device Templates from...');
-
-            for (const file of jsonFiles) {
-                await this.loadTemplateFile(path.join(this.templatesDir, file));
-            }
+            await this.scanDirectory(this.templatesDir);
 
             logger.info({ count: this.templates.size, ids: Array.from(this.templates.keys()) }, '📂 Device Templates Loaded');
         } catch (error) {
@@ -93,16 +88,49 @@ export class DeviceTemplateManager {
         }
     }
 
+    private async scanDirectory(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                await this.scanDirectory(fullPath);
+            } else if (entry.isFile() && entry.name.endsWith('.json')) {
+                await this.loadTemplateFile(fullPath);
+            }
+        }
+    }
+
     private async loadTemplateFile(filePath: string): Promise<void> {
         try {
             const content = await fs.readFile(filePath, 'utf-8');
             const raw = JSON.parse(content);
 
+            // Infer Category from Path
+            const relativePath = path.relative(this.templatesDir, filePath);
+            const pathParts = relativePath.split(path.sep);
+
+            // Expected structure: <category>/<type>/<file.json>
+            // e.g. water/sensors/ph.json -> category: water
+            let inferredCategory = 'other';
+            if (pathParts.length >= 2) {
+                inferredCategory = pathParts[0]; // 'water', 'air', etc.
+            }
+
+            // Inject inferred category if not present
+            if (!raw.uiConfig) raw.uiConfig = {};
+            if (!raw.uiConfig.category) {
+                raw.uiConfig.category = inferredCategory;
+            } else {
+                // Normalize to lowercase to match frontend IDs (e.g. 'Water' -> 'water')
+                raw.uiConfig.category = raw.uiConfig.category.toLowerCase();
+            }
+
             // Validate with Zod
             const template = DeviceTemplateSchema.parse(raw);
 
             this.templates.set(template.id, template);
-            logger.debug({ id: template.id }, 'Loaded Template');
+            logger.debug({ id: template.id, category: inferredCategory }, 'Loaded Template');
 
             // Sync to DB (Source of Truth for API/Frontend)
             try {
