@@ -1,6 +1,7 @@
 {
     "id": "dfrobot_par_rs485",
     "name": "DFRobot PAR Sensor (RS485)",
+    "description": "Photosynthetically Active Radiation (PAR) sensor using RS485 Modbus.",
     "category": "SENSOR",
     "conversionStrategy": "linear",
     "capabilities": [
@@ -50,10 +51,17 @@
         "value": 0
     },
     "uiConfig": {
-        "icon": "activity",
+        "icon": "lightbulb",
         "recommendedPins": [
             "D0",
             "D1"
-        ]
+        ],
+        "capabilities": {
+            "READ": {
+                "label": "PAR Reading",
+                "icon": "lightbulb",
+                "tooltip": "Measures light intensity relevant for photosynthesis (400-700nm)."
+            }
+        }
     }
 }

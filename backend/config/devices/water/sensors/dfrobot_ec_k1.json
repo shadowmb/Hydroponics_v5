@@ -42,6 +42,13 @@
     },
     "uiConfig": {
         "icon": "activity",
-        "recommendedPins": []
+        "recommendedPins": [],
+        "capabilities": {
+            "READ": {
+                "label": "Conductivity",
+                "icon": "activity",
+                "tooltip": "Measures electrical conductivity (EC) in µS/cm. Requires temperature compensation."
+            }
+        }
     }
 }

@@ -77,7 +77,9 @@ export class HardwareController {
             template.ports.forEach(p => {
                 ports.set(p.id, {
                     isActive: !p.reserved,
-                    isOccupied: false
+                    isOccupied: false,
+                    pwm: p.pwm || false,
+                    interface: p.interface
                 });
             });
 

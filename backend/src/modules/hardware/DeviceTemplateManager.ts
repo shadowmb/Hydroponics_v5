@@ -22,6 +22,36 @@ const PinSchema = z.object({
     type: z.enum(['DIGITAL_IN', 'DIGITAL_OUT', 'ANALOG_IN', 'PWM_OUT']),
 });
 
+const RequirementsSchema = z.object({
+    interface: z.enum(['digital', 'analog', 'i2c', 'uart', 'onewire', 'pwm']).optional(),
+    voltage: z.string().optional(),
+    pin_count: z.object({
+        digital: z.number().optional(),
+        analog: z.number().optional(),
+        uart: z.number().optional(),
+        i2c: z.number().optional(),
+        pwm: z.number().optional()
+    }).optional()
+});
+
+const VariantSchema = z.object({
+    id: z.string(),
+    label: z.string(),
+    description: z.string().optional(),
+    requirements: RequirementsSchema.optional(),
+    capabilities: z.array(z.string()).optional(),
+    commands: z.record(CommandSchema).optional(),
+    pins: z.array(PinSchema).optional(),
+    uiConfig: z.object({
+        icon: z.string().optional(),
+        capabilities: z.record(z.object({
+            label: z.string(),
+            icon: z.string().optional(),
+            tooltip: z.string().optional()
+        })).optional()
+    }).optional()
+});
+
 const DeviceTemplateSchema = z.object({
     id: z.string(),
     name: z.string(),
@@ -31,21 +61,18 @@ const DeviceTemplateSchema = z.object({
     capabilities: z.array(z.string()),
     commands: z.record(CommandSchema),
     pins: z.array(PinSchema),
-    requirements: z.object({
-        interface: z.enum(['digital', 'analog', 'i2c', 'uart', 'onewire']).optional(),
-        voltage: z.string().optional(),
-        pin_count: z.object({
-            digital: z.number().optional(),
-            analog: z.number().optional(),
-            uart: z.number().optional(),
-            i2c: z.number().optional()
-        }).optional()
-    }).optional(),
+    requirements: RequirementsSchema.optional(),
+    variants: z.array(VariantSchema).optional(),
     initialState: z.record(z.any()).optional(),
     uiConfig: z.object({
         category: z.string().optional(),
         icon: z.string().optional(),
-        recommendedPins: z.array(z.string()).optional()
+        recommendedPins: z.array(z.string()).optional(),
+        capabilities: z.record(z.object({
+            label: z.string(),
+            icon: z.string().optional(),
+            tooltip: z.string().optional()
+        })).optional()
     }).optional(),
 });
 

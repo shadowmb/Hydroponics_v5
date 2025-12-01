@@ -1,6 +1,7 @@
 {
     "id": "hc_sr04",
     "name": "HC-SR04 Ultrasonic Sensor",
+    "description": "Ultrasonic distance sensor for measuring liquid levels or proximity.",
     "category": "SENSOR",
     "supportedStrategies": [
         "offset_only",
@@ -44,6 +45,14 @@
         "value": 0
     },
     "uiConfig": {
-        "icon": "activity"
+        "icon": "ruler",
+        "recommendedPins": [],
+        "capabilities": {
+            "ULTRASONIC_TRIG_ECHO": {
+                "label": "Distance",
+                "icon": "ruler",
+                "tooltip": "Measures distance using ultrasonic waves. Range: 2cm - 400cm."
+            }
+        }
     }
 }

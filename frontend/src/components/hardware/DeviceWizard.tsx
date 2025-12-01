@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, X, Plus, Settings2, Wind, Lightbulb } from 'lucide-react';
+import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, X, Settings2, Wind, Lightbulb, Ruler, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     Table,
@@ -21,6 +21,27 @@ import {
 } from "@/components/ui/table";
 import { Search, Filter, LayoutGrid, List, ChevronRight } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const categoryConfig: Record<string, { color: string }> = {
     'water': { color: 'bg-blue-100 text-blue-600' },
@@ -61,7 +82,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         tags: [] as string[]
     });
 
-    const [tagInput, setTagInput] = useState('');
+    const [openCombobox, setOpenCombobox] = useState(false);
 
     // Device Selection State
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -76,8 +97,10 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             if (!categoryMatch) return false;
 
             // 2. Search Filter
-            const searchMatch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                t.description.toLowerCase().includes(searchQuery.toLowerCase());
+            const name = t.name || '';
+            const description = t.description || '';
+            const searchMatch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                description.toLowerCase().includes(searchQuery.toLowerCase());
             if (!searchMatch) return false;
 
             // 3. Type Filter
@@ -135,7 +158,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                 setSelectedTemplate(null);
                 setSelectedVariant(null);
                 setConnectionType('direct');
-                setTagInput('');
+
             }
         }
     }, [open, initialData]);
@@ -217,23 +240,13 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
 
     const effectiveTemplate = getEffectiveTemplate();
 
-    const handleAddTag = () => {
-        if (tagInput && !formData.tags.includes(tagInput)) {
-            setFormData({ ...formData, tags: [...formData.tags, tagInput] });
-            setTagInput('');
-        }
-    };
+
 
     const handleRemoveTag = (tagToRemove: string) => {
         setFormData({ ...formData, tags: formData.tags.filter(tag => tag !== tagToRemove) });
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleAddTag();
-        }
-    };
+
 
     const handleSubmit = async () => {
         try {
@@ -293,6 +306,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             case 'power': return <Zap className="h-6 w-6" />;
             case 'wind': return <Wind className="h-6 w-6" />;
             case 'light': return <Lightbulb className="h-6 w-6" />;
+            case 'ruler': return <Ruler className="h-6 w-6" />;
             default: return <Cpu className="h-6 w-6" />;
         }
     };
@@ -389,6 +403,9 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             <DialogContent className="sm:max-w-[600px] h-[700px] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{isEditMode ? 'Edit Device' : `Add New Device - Step ${step}`}</DialogTitle>
+                    <div className="hidden" id="dialog-description">
+                        Wizard to configure and add a new hardware device to the system.
+                    </div>
                 </DialogHeader>
 
                 <div className="flex-1 overflow-y-auto py-4 px-1">
@@ -470,31 +487,120 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                     </div>
                                 ) : viewMode === 'grid' ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {filteredTemplates.map((template) => (
-                                            <Card
-                                                key={template.id}
-                                                className="cursor-pointer hover:border-primary transition-colors"
-                                                onClick={() => handleTemplateSelect(template)}
-                                            >
-                                                <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
-                                                    <div className={`p-3 rounded-full ${categoryConfig[selectedCategory as string]?.color || 'bg-gray-100 text-gray-600'}`}>
-                                                        {getIcon(template.uiConfig?.icon)}
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-semibold">{template.name}</h3>
-                                                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                                            {template.description}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex gap-2 flex-wrap justify-center">
-                                                        <Badge variant="outline">{template.category}</Badge>
-                                                        {template.requirements?.interface && (
-                                                            <Badge variant="secondary">{template.requirements.interface}</Badge>
+                                        {filteredTemplates.map((template) => {
+                                            // Enrich Badges Logic
+                                            const hasVariants = template.variants && template.variants.length > 0;
+                                            const variantLabels = hasVariants ? template.variants.map((v: any) => v.label).join(' • ') : '';
+
+                                            // Capabilities (from variants or base)
+                                            const capabilities = new Set<string>(template.capabilities || []);
+                                            if (hasVariants) {
+                                                template.variants.forEach((v: any) => {
+                                                    if (v.capabilities) v.capabilities.forEach((c: string) => capabilities.add(c));
+                                                });
+                                            }
+
+                                            // Aggregate Tooltips
+                                            const tooltips: string[] = [];
+                                            capabilities.forEach(cap => {
+                                                const uiConfig = template.uiConfig?.capabilities?.[cap];
+                                                if (uiConfig?.tooltip) {
+                                                    const label = uiConfig.label || cap.replace(/_/g, ' ');
+                                                    tooltips.push(`${label}: ${uiConfig.tooltip}`);
+                                                }
+                                            });
+
+                                            // Interfaces (from variants or base)
+                                            const interfaces = new Set<string>();
+                                            if (template.requirements?.interface) interfaces.add(template.requirements.interface);
+                                            if (hasVariants) {
+                                                template.variants.forEach((v: any) => {
+                                                    if (v.requirements?.interface) interfaces.add(v.requirements.interface);
+                                                });
+                                            }
+                                            const interfaceLabel = Array.from(interfaces).join(' / ');
+
+                                            return (
+                                                <Card
+                                                    key={template._id}
+                                                    className="cursor-pointer hover:border-primary transition-colors"
+                                                    onClick={() => handleTemplateSelect(template)}
+                                                >
+                                                    <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                                                        <div className={`p-3 rounded-full ${categoryConfig[selectedCategory as string]?.color || 'bg-gray-100 text-gray-600'}`}>
+                                                            {getIcon(template.uiConfig?.icon)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <h3 className="font-semibold">{template.name}</h3>
+                                                                {tooltips.length > 0 && (
+                                                                    <TooltipProvider delayDuration={0}>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <div className="cursor-help text-muted-foreground hover:text-primary">
+                                                                                    <Info className="h-4 w-4" />
+                                                                                </div>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <div className="flex flex-col gap-1">
+                                                                                    {tooltips.map((t, i) => (
+                                                                                        <p key={i} className="text-xs">{t}</p>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                )}
+                                                            </div>
+                                                            {hasVariants && (
+                                                                <p className="text-xs font-medium text-primary mt-1">
+                                                                    {variantLabels}
+                                                                </p>
+                                                            )}
+                                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                                                {template.description}
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Capabilities Badges */}
+                                                        {capabilities.size > 0 && (
+                                                            <div className="flex flex-wrap gap-1 justify-center">
+                                                                {Array.from(capabilities).slice(0, 3).map(cap => {
+                                                                    // Check for UI config override
+                                                                    const uiConfig = template.uiConfig?.capabilities?.[cap];
+                                                                    const label = uiConfig?.label || cap.replace(/_/g, ' ');
+                                                                    const iconName = uiConfig?.icon;
+
+                                                                    return (
+                                                                        <Badge key={cap} variant="outline" className="text-[10px] px-1 py-0 h-5 flex items-center gap-1">
+                                                                            {iconName && getIcon(iconName)}
+                                                                            {label}
+                                                                        </Badge>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         )}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
+
+                                                        <div className="flex gap-2 flex-wrap justify-center mt-2">
+                                                            {template.requirements?.voltage && (
+                                                                <Badge variant="secondary" className="uppercase text-[10px] flex items-center gap-1">
+                                                                    <Zap className="h-3 w-3" />
+                                                                    {template.requirements.voltage}
+                                                                </Badge>
+                                                            )}
+                                                            <Badge variant="secondary" className="uppercase text-[10px]">
+                                                                {template.category}
+                                                            </Badge>
+                                                            {interfaceLabel && (
+                                                                <Badge variant="secondary" className="uppercase text-[10px]">
+                                                                    {interfaceLabel}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            );
+                                        })}
                                     </div>
                                 ) : (
                                     <div className="border rounded-md">
@@ -551,238 +657,294 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     {/* STEP 3: CONFIGURATION + MODE */}
                     {step === 3 && (
                         <div className="space-y-6">
-                            {/* MODE SELECTION (If Variants Exist) */}
-                            {selectedTemplate?.variants && selectedTemplate.variants.length > 0 && (
-                                <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-                                    <Label className="text-base font-semibold flex items-center gap-2">
-                                        <Settings2 className="h-4 w-4" />
-                                        Control Mode
-                                    </Label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {selectedTemplate.variants.map((variant: any) => (
-                                            <div
-                                                key={variant.id}
-                                                className={`cursor-pointer border rounded-md p-3 flex flex-col gap-1 transition-colors ${selectedVariant?.id === variant.id
-                                                    ? 'bg-primary/10 border-primary'
-                                                    : 'hover:bg-muted'
-                                                    }`}
-                                                onClick={() => {
-                                                    setSelectedVariant(variant);
-                                                    // Reset pins when changing mode as requirements change
-                                                    setFormData(prev => ({ ...prev, pins: {}, port: '' }));
-                                                }}
-                                            >
-                                                <span className="font-medium text-sm">{variant.label}</span>
-                                                {variant.description && <span className="text-xs text-muted-foreground">{variant.description}</span>}
-                                            </div>
-                                        ))}
+                            {/* 1. General Info Card */}
+                            <Card>
+                                <CardContent className="p-4 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                                            <Settings2 className="h-5 w-5 text-primary" />
+                                            General Configuration
+                                        </h3>
+                                        <div className="flex items-center space-x-2">
+                                            <Label htmlFor="enabled-mode" className="text-sm text-muted-foreground">Enabled</Label>
+                                            <Switch
+                                                id="enabled-mode"
+                                                checked={formData.isEnabled}
+                                                onCheckedChange={checked => setFormData({ ...formData, isEnabled: checked })}
+                                            />
+                                        </div>
                                     </div>
-                                </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Device Name <span className="text-destructive">*</span></Label>
+                                            <Input
+                                                value={formData.name}
+                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                placeholder="e.g. Main Tank pH"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Description</Label>
+                                            <Input
+                                                value={formData.description}
+                                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                                placeholder="Optional description"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Smart Tag Combobox */}
+                                    <div className="space-y-2">
+                                        <Label>Device Group / Tags</Label>
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                            {formData.tags.map(tag => (
+                                                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                                                    {tag}
+                                                    <X
+                                                        className="h-3 w-3 cursor-pointer hover:text-destructive"
+                                                        onClick={() => handleRemoveTag(tag)}
+                                                    />
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={openCombobox}
+                                                    className="w-full justify-between"
+                                                >
+                                                    <span className="text-muted-foreground">Select or type a tag...</span>
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[400px] p-0">
+                                                <Command>
+                                                    <CommandInput
+                                                        placeholder="Search or create tag..."
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                const val = e.currentTarget.value;
+                                                                if (val && !formData.tags.includes(val)) {
+                                                                    setFormData(prev => ({ ...prev, tags: [...prev.tags, val] }));
+                                                                    setOpenCombobox(false);
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                    <CommandList>
+                                                        <CommandEmpty>Type and press Enter to create new tag.</CommandEmpty>
+                                                        <CommandGroup heading="Existing Tags">
+                                                            {existingTags.map((tag) => (
+                                                                <CommandItem
+                                                                    key={tag}
+                                                                    value={tag.toLowerCase()}
+                                                                    onSelect={() => {
+                                                                        if (!formData.tags.includes(tag)) {
+                                                                            setFormData(prev => ({ ...prev, tags: [...prev.tags, tag] }));
+                                                                        }
+                                                                        setOpenCombobox(false);
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            formData.tags.includes(tag) ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {tag}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* 2. Control Mode (Variants) */}
+                            {selectedTemplate?.variants && selectedTemplate.variants.length > 0 && (
+                                <Card>
+                                    <CardContent className="p-4 space-y-3">
+                                        <Label className="text-base font-semibold flex items-center gap-2">
+                                            <Settings2 className="h-4 w-4" />
+                                            Control Mode
+                                        </Label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {selectedTemplate.variants.map((variant: any) => (
+                                                <div
+                                                    key={variant.id}
+                                                    className={`cursor-pointer border rounded-md p-3 flex flex-col gap-1 transition-colors ${selectedVariant?.id === variant.id
+                                                        ? 'bg-primary/10 border-primary'
+                                                        : 'hover:bg-muted'
+                                                        }`}
+                                                    onClick={() => {
+                                                        setSelectedVariant(variant);
+                                                        setFormData(prev => ({ ...prev, pins: {}, port: '' }));
+                                                    }}
+                                                >
+                                                    <span className="font-medium text-sm">{variant.label}</span>
+                                                    {variant.description && <span className="text-xs text-muted-foreground">{variant.description}</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             )}
 
-                            <div className="space-y-2">
-                                <Label>Device Name</Label>
-                                <Input
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="e.g. Main Tank pH"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Description</Label>
-                                <Input
-                                    value={formData.description}
-                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="Optional description"
-                                />
-                            </div>
+                            {/* 3. Hardware Connection */}
+                            {/* 3. Hardware Connection */}
+                            <Card>
+                                <CardContent className="p-4 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                                            <Cpu className="h-5 w-5 text-primary" />
+                                            Hardware Connection
+                                        </h3>
+                                        {(() => {
+                                            const isActuator = effectiveTemplate?.category === 'ACTUATOR';
+                                            const hasIncompatiblePins = effectiveTemplate?.pins?.some((p: any) =>
+                                                ['PWM_OUT', 'ANALOG_IN', 'DIGITAL_IN'].includes(p.type)
+                                            );
+                                            const requiresComplexInterface = ['uart', 'i2c', 'onewire', 'pwm'].includes(effectiveTemplate?.requirements?.interface || '');
 
-                            {/* Tags Section */}
-                            <div className="space-y-2">
-                                <Label>Device Group / Tags</Label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        value={tagInput}
-                                        onChange={e => setTagInput(e.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        placeholder="Add a tag (e.g. 'Tank 1', 'Nutrients')"
-                                        className="flex-1"
-                                    />
-                                    <Button type="button" size="icon" variant="outline" onClick={handleAddTag}>
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                                            const canUseRelay = isActuator && !hasIncompatiblePins && !requiresComplexInterface;
 
-                                {/* Active Tags */}
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {formData.tags.map(tag => (
-                                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                                            {tag}
-                                            <X
-                                                className="h-3 w-3 cursor-pointer hover:text-destructive"
-                                                onClick={() => handleRemoveTag(tag)}
-                                            />
-                                        </Badge>
-                                    ))}
-                                </div>
+                                            let restrictionReason = '';
+                                            if (!isActuator) restrictionReason = 'Sensors cannot be connected via relay.';
+                                            else if (hasIncompatiblePins) restrictionReason = 'Devices requiring PWM or Input pins cannot be connected via relay.';
+                                            else if (requiresComplexInterface) restrictionReason = 'Devices with complex interfaces (UART, I2C, etc.) cannot be connected via relay.';
 
-                                {/* Suggested Tags */}
-                                {existingTags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                        <span className="text-xs text-muted-foreground mr-2">Suggestions:</span>
-                                        {existingTags.filter(t => !formData.tags.includes(t)).map(tag => (
-                                            <Badge
-                                                key={tag}
-                                                variant="outline"
-                                                className="cursor-pointer hover:bg-muted text-xs"
-                                                onClick={() => {
-                                                    if (!formData.tags.includes(tag)) {
-                                                        setFormData({ ...formData, tags: [...formData.tags, tag] });
-                                                    }
-                                                }}
-                                            >
-                                                + {tag}
-                                            </Badge>
-                                        ))}
+                                            return (
+                                                <>
+                                                    <Tabs value={connectionType} onValueChange={(v: any) => setConnectionType(v)} className="w-[300px]">
+                                                        <TabsList className="grid w-full grid-cols-2">
+                                                            <TabsTrigger value="direct">Direct</TabsTrigger>
+                                                            <TabsTrigger value="relay" disabled={!canUseRelay}>
+                                                                Via Relay
+                                                            </TabsTrigger>
+                                                        </TabsList>
+                                                    </Tabs>
+                                                    {!canUseRelay && (
+                                                        <p className="text-xs text-amber-500">{restrictionReason}</p>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
-                                )}
-                            </div>
 
-                            <div className="flex items-center justify-between space-x-2 border p-3 rounded-md">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Enabled</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Disable to stop polling this device without deleting it.
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={formData.isEnabled}
-                                    onCheckedChange={checked => setFormData({ ...formData, isEnabled: checked })}
-                                />
-                            </div>
-
-                            {/* Hardware Connection */}
-                            <div className="space-y-4 pt-4 border-t">
-                                <h3 className="font-medium">Hardware Connection</h3>
-
-                                <div className="space-y-2">
-                                    <Label>Connection Type</Label>
-                                    <Tabs value={connectionType} onValueChange={(v: any) => setConnectionType(v)} className="w-full">
-                                        <TabsList className="grid w-full grid-cols-2">
-                                            <TabsTrigger value="direct">Direct to Controller</TabsTrigger>
-                                            <TabsTrigger value="relay" disabled={effectiveTemplate?.pins?.some((p: any) => p.type === 'PWM_OUT')}>
-                                                Via Relay Module
-                                            </TabsTrigger>
-                                        </TabsList>
-                                    </Tabs>
-                                    {effectiveTemplate?.pins?.some((p: any) => p.type === 'PWM_OUT') && (
-                                        <p className="text-xs text-amber-500">Relay modules do not support PWM control.</p>
-                                    )}
-                                </div>
-
-                                {connectionType === 'direct' ? (
-                                    <div className="space-y-4 border p-4 rounded-md bg-muted/10">
-                                        <div className="space-y-2">
-                                            <Label>Select Controller</Label>
-                                            <Select
-                                                value={formData.controllerId}
-                                                onValueChange={v => setFormData({ ...formData, controllerId: v, port: '', pins: {} })}
-                                            >
-                                                <SelectTrigger><SelectValue placeholder="Select Controller" /></SelectTrigger>
-                                                <SelectContent>
-                                                    {controllers.map(c => (
-                                                        <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        {formData.controllerId && (
-                                            <div className="space-y-4">
-                                                {effectiveTemplate?.pins?.length > 0 ? (
-                                                    effectiveTemplate.pins.map((pin: any) => (
-                                                        <div key={pin.name} className="space-y-2">
-                                                            <Label>Select {pin.name} ({pin.type})</Label>
-                                                            <Select
-                                                                value={formData.pins[pin.name] || 'none'}
-                                                                onValueChange={v => setFormData({
-                                                                    ...formData,
-                                                                    pins: { ...formData.pins, [pin.name]: v === 'none' ? '' : v }
-                                                                })}
-                                                            >
-                                                                <SelectTrigger><SelectValue placeholder={`Select ${pin.name} Pin`} /></SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="none" className="text-muted-foreground italic">None (Deselect)</SelectItem>
-                                                                    {getAvailablePorts(pin.type, pin.name).map(p => (
-                                                                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                                                                    ))}
-                                                                    {getAvailablePorts(pin.type, pin.name).length === 0 && (
-                                                                        <SelectItem value="no_ports" disabled>No available ports</SelectItem>
-                                                                    )}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                    ))
-                                                ) : (
-                                                    <div className="space-y-2">
-                                                        <Label>Select Port ({effectiveTemplate?.portRequirements?.[0]?.type || 'Generic'})</Label>
-                                                        <Select
-                                                            value={formData.port || 'none'}
-                                                            onValueChange={v => setFormData({ ...formData, port: v === 'none' ? '' : v })}
-                                                        >
-                                                            <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="none" className="text-muted-foreground italic">None (Deselect)</SelectItem>
-                                                                {getAvailablePorts(effectiveTemplate?.portRequirements?.[0]?.type === 'analog' ? 'ANALOG_IN' : 'DIGITAL_IN').map(p => (
-                                                                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4 border p-4 rounded-md bg-muted/10">
-                                        <div className="space-y-2">
-                                            <Label>Select Relay Module</Label>
-                                            <Select
-                                                value={formData.relayId}
-                                                onValueChange={v => setFormData({ ...formData, relayId: v, channel: '' })}
-                                            >
-                                                <SelectTrigger><SelectValue placeholder="Select Relay" /></SelectTrigger>
-                                                <SelectContent>
-                                                    {relays.map(r => (
-                                                        <SelectItem key={r._id} value={r._id}>{r.name}</SelectItem>
-                                                    ))}
-                                                    {relays.length === 0 && <SelectItem value="none" disabled>No relays found</SelectItem>}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        {formData.relayId && (
+                                    {connectionType === 'direct' ? (
+                                        <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label>Select Channel</Label>
+                                                <Label>Select Controller</Label>
                                                 <Select
-                                                    value={formData.channel}
-                                                    onValueChange={v => setFormData({ ...formData, channel: v })}
+                                                    value={formData.controllerId}
+                                                    onValueChange={v => setFormData({ ...formData, controllerId: v, port: '', pins: {} })}
                                                 >
-                                                    <SelectTrigger><SelectValue placeholder="Select Channel" /></SelectTrigger>
+                                                    <SelectTrigger><SelectValue placeholder="Select Controller" /></SelectTrigger>
                                                     <SelectContent>
-                                                        {getAvailableChannels().map((c: any) => (
-                                                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                                        {controllers.map(c => (
+                                                            <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
                                                         ))}
-                                                        {getAvailableChannels().length === 0 && (
-                                                            <SelectItem value="none" disabled>No available channels</SelectItem>
-                                                        )}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+
+                                            {formData.controllerId && (
+                                                <div className="border rounded-md overflow-hidden">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow className="bg-muted/50">
+                                                                <TableHead className="w-[150px]">Device Pin</TableHead>
+                                                                <TableHead>Type</TableHead>
+                                                                <TableHead>Controller Port</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {effectiveTemplate?.pins?.length > 0 ? (
+                                                                effectiveTemplate.pins.map((pin: any) => (
+                                                                    <TableRow key={pin.name}>
+                                                                        <TableCell className="font-medium">{pin.name}</TableCell>
+                                                                        <TableCell><Badge variant="outline">{pin.type}</Badge></TableCell>
+                                                                        <TableCell>
+                                                                            <Select
+                                                                                value={formData.pins[pin.name] || 'none'}
+                                                                                onValueChange={v => setFormData({
+                                                                                    ...formData,
+                                                                                    pins: { ...formData.pins, [pin.name]: v === 'none' ? '' : v }
+                                                                                })}
+                                                                            >
+                                                                                <SelectTrigger className="w-full h-8">
+                                                                                    <SelectValue placeholder="Select Port" />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    <SelectItem value="none" className="text-muted-foreground italic">None</SelectItem>
+                                                                                    {getAvailablePorts(pin.type, pin.name).map(p => (
+                                                                                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                                                                                    ))}
+                                                                                    {getAvailablePorts(pin.type, pin.name).length === 0 && (
+                                                                                        <SelectItem value="no_ports" disabled>No ports available</SelectItem>
+                                                                                    )}
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                ))
+                                                            ) : (
+                                                                <TableRow>
+                                                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                                                        No pins defined for this device.
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            )}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4 border p-4 rounded-md bg-muted/10">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>Relay Module</Label>
+                                                    <Select
+                                                        value={formData.relayId}
+                                                        onValueChange={v => setFormData({ ...formData, relayId: v, channel: '' })}
+                                                    >
+                                                        <SelectTrigger><SelectValue placeholder="Select Relay Board" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {relays.map(r => (
+                                                                <SelectItem key={r._id} value={r._id}>{r.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Channel</Label>
+                                                    <Select
+                                                        value={formData.channel}
+                                                        onValueChange={v => setFormData({ ...formData, channel: v })}
+                                                        disabled={!formData.relayId}
+                                                    >
+                                                        <SelectTrigger><SelectValue placeholder="Select Channel" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {formData.relayId && relays.find(r => r._id === formData.relayId)?.channels.map((ch: any, idx: number) => (
+                                                                <SelectItem key={idx} value={String(idx + 1)} disabled={ch.isOccupied}>
+                                                                    Channel {idx + 1} {ch.isOccupied ? '(Occupied)' : ''}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </div>
                     )}
                 </div>

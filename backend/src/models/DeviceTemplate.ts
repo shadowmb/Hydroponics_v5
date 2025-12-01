@@ -31,6 +31,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         category?: string;
         icon?: string;
         recommendedPins?: string[];
+        capabilities?: Record<string, { label: string; icon?: string; tooltip?: string }>;
     };
     initialState?: Record<string, any>;
     variants?: {
@@ -74,7 +75,8 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     uiConfig: {
         category: { type: String },
         icon: { type: String },
-        recommendedPins: [{ type: String }]
+        recommendedPins: [{ type: String }],
+        capabilities: { type: Map, of: { label: String, icon: String, tooltip: String } }
     },
     initialState: { type: Schema.Types.Mixed },
     variants: [{

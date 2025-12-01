@@ -54,14 +54,80 @@
     },
     "pins": [
         {
-            "name": "Control Pin",
+            "name": "Control",
             "type": "DIGITAL_OUT"
         }
     ],
+    "variants": [
+        {
+            "id": "relay",
+            "label": "Relay Control (ON/OFF)",
+            "description": "Simple ON/OFF control via Relay Module",
+            "requirements": {
+                "interface": "digital",
+                "pin_count": {
+                    "digital": 1
+                }
+            },
+            "capabilities": [
+                "DIGITAL_WRITE"
+            ],
+            "pins": [
+                {
+                    "name": "Relay",
+                    "type": "DIGITAL_OUT"
+                }
+            ]
+        },
+        {
+            "id": "pwm",
+            "label": "PWM Speed Control",
+            "description": "Variable speed control via PWM Driver or MOSFET",
+            "requirements": {
+                "interface": "pwm",
+                "pin_count": {
+                    "pwm": 1
+                }
+            },
+            "capabilities": [
+                "PWM_WRITE"
+            ],
+            "commands": {
+                "SET_SPEED": {
+                    "hardwareCmd": "PWM_WRITE",
+                    "params": {
+                        "duty": "number"
+                    },
+                    "valuePath": "duty",
+                    "sourceUnit": "percent"
+                }
+            },
+            "pins": [
+                {
+                    "name": "PWM Signal",
+                    "type": "PWM_OUT"
+                }
+            ]
+        }
+    ],
     "uiConfig": {
-        "icon": "droplets"
+        "icon": "droplet",
+        "recommendedPins": [],
+        "capabilities": {
+            "DIGITAL_WRITE": {
+                "label": "On/Off Control",
+                "icon": "power",
+                "tooltip": "Standard relay control for switching the pump on and off."
+            },
+            "PWM_WRITE": {
+                "label": "Flow Control",
+                "icon": "activity",
+                "tooltip": "Variable speed control using Pulse Width Modulation (PWM)."
+            }
+        }
     },
     "initialState": {
-        "state": false
+        "state": 0,
+        "speed": 0
     }
 }
