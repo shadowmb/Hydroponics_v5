@@ -66,6 +66,8 @@ export async function apiRoutes(app: FastifyInstance) {
 
     // Calibration Routes
     app.get('/api/calibration/strategies', require('./controllers/CalibrationController').CalibrationController.getStrategies);
+    app.post('/api/hardware/devices/:id/calibration', require('./controllers/CalibrationController').CalibrationController.saveCalibration);
+    app.delete('/api/hardware/devices/:id/calibration/:strategyId', require('./controllers/CalibrationController').CalibrationController.deleteCalibration);
 
     // Program Routes
     app.post('/api/programs', ProgramController.create);

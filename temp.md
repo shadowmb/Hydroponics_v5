@@ -1,60 +1,97 @@
-Рестартирах сървъра и това е схемата на помпата в ДБ:{
+Това е схемата на устройството PumpB след съдаването му:
+{
   "_id": {
-    "$oid": "692b82f86cac3d9a9e401840"
+    "$oid": "692c82aad32b5571d51c7213"
   },
-  "name": "Pump A",
+  "name": "PumpB",
   "type": "SENSOR",
   "isEnabled": true,
   "status": "online",
   "hardware": {
-    "relayId": "692751843f62c7df1f01329d",
-    "channel": 1,
-    "pins": []
+    "pins": [
+      {
+        "role": "Control Pin",
+        "portId": "D6",
+        "gpio": 6,
+        "_id": {
+          "$oid": "692c82aad32b5571d51c7214"
+        }
+      }
+    ],
+    "parentId": "6926198161346dc01f570ae9"
   },
   "config": {
     "driverId": "pump_generic",
     "pollInterval": 5000,
-    "calibration": {
-      "multiplier": 1,
-      "offset": 0,
-      "points": []
-    },
     "conversionStrategy": "linear"
   },
   "tags": [],
   "deletedAt": null,
   "createdAt": {
-    "$date": "2025-11-29T23:34:16.013Z"
+    "$date": "2025-11-30T17:45:14.806Z"
   },
   "updatedAt": {
-    "$date": "2025-11-30T01:21:14.284Z"
+    "$date": "2025-11-30T17:45:19.612Z"
   },
-  "__v": 3,
+  "__v": 0,
   "lastConnectionCheck": {
-    "$date": "2025-11-30T00:00:41.428Z"
-  },
-  "lastReading": {
-    "value": 0,
-    "raw": 0,
-    "timestamp": {
-      "$date": "2025-11-30T01:21:14.277Z"
-    }
-  },
-  "metadata": {
-    "description": ""
+    "$date": "2025-11-30T17:45:19.612Z"
   }
 }
 
+Това е след като записах калибрациятана стратегията Volumetric Flow (Dosing):
+-=-=-==
 
-Това е от конзолата Network:
 
 {
-  "code": "INTERNAL_ERROR",
-  "message": "ERR_INVALID_COMMAND"
+  "_id": {
+    "$oid": "692c82aad32b5571d51c7213"
+  },
+  "name": "PumpB",
+  "type": "SENSOR",
+  "isEnabled": true,
+  "status": "online",
+  "hardware": {
+    "pins": [
+      {
+        "role": "Control Pin",
+        "portId": "D6",
+        "gpio": 6,
+        "_id": {
+          "$oid": "692c82aad32b5571d51c7214"
+        }
+      }
+    ],
+    "parentId": "6926198161346dc01f570ae9"
+  },
+  "config": {
+    "driverId": "pump_generic",
+    "pollInterval": 5000,
+    "conversionStrategy": "linear",
+    "calibrations": {
+      "volumetric_flow": {
+        "lastCalibrated": {
+          "$date": "2025-11-30T17:47:31.471Z"
+        },
+        "data": {
+          "duration_seconds": 4,
+          "_isRunning": false,
+          "_countdown": 0,
+          "measuredValue": 56
+        }
+      }
+    }
+  },
+  "tags": [],
+  "deletedAt": null,
+  "createdAt": {
+    "$date": "2025-11-30T17:45:14.806Z"
+  },
+  "updatedAt": {
+    "$date": "2025-11-30T17:47:31.472Z"
+  },
+  "__v": 0,
+  "lastConnectionCheck": {
+    "$date": "2025-11-30T17:45:19.612Z"
+  }
 }
-
-towa e от SYSTEM CONSOLE:
-[3:22:47 AM] [INFO] [SENT] DIGITAL_WRITE {"state":1,"driverId":"pump_generic","pin":"D6","pins":[]}
-[3:22:28 AM] [INFO] [SENT] DIGITAL_WRITE {"state":1,"driverId":"pump_generic","pin":"D6","pins":[]}
-[3:22:22 AM] [INFO] Read Result: {"raw":0,"value":0,"details":{"ok":1,"pin":"D6","state":0}}
-[3:22:22 AM] [INFO] [SENT] DIGITAL_READ {"pin":"D6","pins":[]}

@@ -7,7 +7,7 @@
         "linear"
     ],
     "capabilities": [
-        "READ"
+        "ONEWIRE_READ_TEMP"
     ],
     "requirements": {
         "interface": "onewire",

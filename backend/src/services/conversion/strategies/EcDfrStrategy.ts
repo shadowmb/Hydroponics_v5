@@ -19,7 +19,8 @@ export class EcDfrStrategy implements IConversionStrategy {
         let ec = voltage / 1000.0;
 
         // Apply K factor if present in calibration
-        const k = device.config.calibration?.multiplier || 1.0;
+        const calibration = device.config.calibrations?.['ec-dfr-analog']?.data || (device.config as any).calibration || {};
+        const k = calibration.multiplier || 1.0;
         ec = ec * k;
 
         return parseFloat(ec.toFixed(2));

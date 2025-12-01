@@ -9,6 +9,7 @@ import { templates } from './DeviceTemplateManager';
 import { deviceRepository } from '../persistence/repositories/DeviceRepository';
 import { Controller } from '../../models/Controller';
 import { conversionService } from '../../services/conversion/ConversionService';
+import { CalibrationService } from '../calibration/CalibrationService';
 
 export interface Device {
     id: string;
@@ -103,6 +104,18 @@ export class HardwareService {
         if (!deviceDoc) {
             throw new Error(`Device ${deviceId} not found`);
         }
+
+        // --- INTERCEPT SPECIAL COMMANDS ---
+        if (command === 'TEST_DOSING') {
+            return CalibrationService.getInstance().runDosingTest(
+                this,
+                deviceId,
+                driverId,
+                Number(params.duration),
+                context
+            );
+        }
+        // ----------------------------------
 
         let controllerId: string;
         let resolvedPin: string | undefined;

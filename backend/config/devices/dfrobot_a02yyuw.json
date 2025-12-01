@@ -7,7 +7,7 @@
         "linear"
     ],
     "capabilities": [
-        "READ"
+        "UART_READ_DISTANCE"
     ],
     "requirements": {
         "interface": "uart",
@@ -45,10 +45,6 @@
     },
     "uiConfig": {
         "category": "Sensors",
-        "icon": "activity",
-        "recommendedPins": [
-            "D0",
-            "D1"
-        ]
+        "icon": "activity"
     }
 }
