@@ -11,6 +11,7 @@ The **Device Template** is the single source of truth for a hardware device in H
 *   **Path:** `backend/config/devices/<environment>/<type>/<device_id>.json`
     *   Example: `backend/config/devices/water/sensors/ph_meter.json`
 *   **Naming:** `<device_id>` must match the `id` field inside the JSON. Use lowercase snake_case.
+*   **Reference:** See `Docs/Reference/_TEMPLATE_REFERENCE.json` for a complete example of all available fields.
 
 ## 3. Extending the Schema
 If you add a new field to the JSON template (e.g., `supportedStrategies`), you **MUST** update the backend validation logic to allow it. Otherwise, it will be stripped or cause validation errors during the database sync.

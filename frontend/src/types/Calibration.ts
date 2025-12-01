@@ -1,3 +1,12 @@
+export interface WizardAction {
+    label: string;
+    description?: string;
+    command: string;
+    params?: Record<string, any>;
+    instructions?: string;
+    writeToField?: string; // If set, the duration of the action will be written to this field
+}
+
 export interface WizardStep {
     type: 'input' | 'measure' | 'action' | 'set_limit' | 'select';
     key?: string;
@@ -10,13 +19,8 @@ export interface WizardStep {
     instructions?: string;
     options?: string[];
     fields?: { key: string; label: string; default?: any; unit?: string }[];
-    optionalAction?: {
-        label: string;
-        description?: string;
-        command: string;
-        params?: Record<string, any>;
-        instructions?: string;
-    };
+    optionalAction?: WizardAction;
+    actions?: WizardAction[];
 }
 
 export interface CalibrationStrategy {
