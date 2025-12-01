@@ -1,6 +1,7 @@
 {
     "id": "dht22",
     "name": "DHT22 Temp/Humidity",
+    "description": "Digital temperature and humidity sensor.",
     "category": "SENSOR",
     "supportedStrategies": [
         "offset_only",
@@ -45,8 +46,15 @@
         }
     ],
     "uiConfig": {
-        "category": "Sensors",
-        "icon": "activity"
+        "icon": "thermometer",
+        "recommendedPins": [],
+        "capabilities": {
+            "DHT_READ": {
+                "label": "Temp & Humidity",
+                "icon": "thermometer",
+                "tooltip": "Measures both temperature (-40 to 80°C) and humidity (0-100%)."
+            }
+        }
     },
     "initialState": {
         "value": 0

@@ -1,6 +1,6 @@
 {
     "id": "dfrobot_a02yyuw",
-    "name": "DFRobot A02YYUW Waterproof Ultrasonic Sensor",
+    "name": "DFRobot Waterproof Ultrasonic",
     "category": "SENSOR",
     "supportedStrategies": [
         "offset_only",
@@ -44,7 +44,13 @@
         "value": 0
     },
     "uiConfig": {
-        "category": "Sensors",
-        "icon": "activity"
+        "icon": "activity",
+        "capabilities": {
+            "UART_READ_DISTANCE": {
+                "label": "Distance",
+                "icon": "ruler",
+                "tooltip": "Measures distance from 20cm to 450cm. Blind zone < 20cm."
+            }
+        }
     }
 }

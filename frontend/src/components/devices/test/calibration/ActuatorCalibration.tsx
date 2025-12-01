@@ -50,13 +50,21 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
 
     const handleSave = async (data: any) => {
         try {
-            // Construct the calibration object to save
-            // The structure depends on the strategy, but generally we want to save it under 'calibration'
-            // We might want to merge with existing calibration or overwrite.
-            // For now, let's assume we overwrite the calibration for this strategy.
+            let dataToSave = { ...data };
+
+            // Special handling for Volumetric Flow to calculate flowRate
+            if (selectedStrategyId === 'volumetric_flow') {
+                const duration = Number(data.duration_seconds);
+                const measured = Number(data.measuredValue);
+
+                if (duration > 0 && !isNaN(measured)) {
+                    dataToSave.flowRate = measured / duration;
+                    dataToSave.unit = 'ml'; // Defaulting to ml for now
+                }
+            }
 
             // Use the dedicated calibration service to save
-            await calibrationService.saveCalibration(device._id, selectedStrategyId!, data);
+            await calibrationService.saveCalibration(device._id, selectedStrategyId!, dataToSave);
 
             // We also need to update the local device state if possible, or trigger a refresh
             // The parent component might handle onUpdate by refreshing the device

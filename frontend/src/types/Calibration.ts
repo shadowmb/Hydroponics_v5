@@ -24,6 +24,7 @@ export interface CalibrationStrategy {
     name: string;
     description: string;
     category: 'SENSOR' | 'ACTUATOR' | 'BOTH';
+    capabilities?: string[];
     compatibility: string[];
     storageSchema: Record<string, any>;
     wizard: {

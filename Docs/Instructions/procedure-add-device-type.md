@@ -23,8 +23,13 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
 3.  **If NO:** Stop. Go to `procedure-add-firmware-command.md`.
 
 ### Step 2: Create Device Driver
-1.  Create a new file: `backend/config/devices/<device_id>.json`.
-2.  Use `lowercase_underscores` for the filename.
+1.  Choose the correct folder based on **Environment** and **Type**:
+    *   `backend/config/devices/water/sensors/`
+    *   `backend/config/devices/water/actuators/`
+    *   `backend/config/devices/air/sensors/`
+    *   ... (light, power)
+2.  Create a new file: `<device_id>.json`.
+3.  Use `lowercase_underscores` for the filename.
 
 **Template Reference:**
 ```json
@@ -33,13 +38,12 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
     "name": "Human Readable Name",     // REQUIRED: Displayed in UI
     "category": "SENSOR",              // REQUIRED: SENSOR, ACTUATOR, or HYBRID
     "supportedStrategies": ["linear"], // REQUIRED: List of valid calibration strategies
-    "conversionStrategy": "linear",    // OPTIONAL: Default strategy (deprecated in v5 favor of supportedStrategies?)
     "capabilities": ["READ"],          // REQUIRED: List of supported commands
     "commands": {
         "READ": {                      // Must match a capability
             "hardwareCmd": "ANALOG",   // Must match firmware command
-            "valuePath": "val",        // Key in firmware response. VERIFY in `firmware/templates/commands/<cmd>.ino`
-            "sourceUnit": "V",         // REQUIRED: Unit returned by hardware (e.g., V, cm, raw)
+            "valuePath": "val",        // Key in firmware response
+            "sourceUnit": "V",         // REQUIRED: Unit returned by hardware
             "outputs": [
                 {
                     "key": "ph",       // REQUIRED: Must be an Allowed Key from UnitRegistry
@@ -52,12 +56,36 @@ Add a new sensor or actuator type to the Hydroponics v5 system so it can be sele
     "pins": [
         { "name": "Signal", "type": "ANALOG_IN" }
     ],
-    "uiConfig": {                      // REQUIRED for UI Categorization
-        "category": "Sensors",         // "Sensors", "Actuators", "Water", etc.
+    "uiConfig": {
         "icon": "activity"             // Lucide icon name (lowercase)
+        // NOTE: "category" is NO LONGER required here. It is inferred from the folder name.
     },
     "initialState": { "value": 0 }
 }
+```
+
+**Advanced: Variants (Control Modes)**
+For devices that support multiple control modes (e.g., a Pump that can be ON/OFF or PWM), use the `variants` array:
+
+```json
+"variants": [
+    {
+        "id": "relay",
+        "label": "Relay Control",
+        "description": "Simple ON/OFF control via Relay",
+        "requirements": { "interface": "digital", "pin_count": { "digital": 1 } },
+        "commands": { ... },
+        "pins": [ { "name": "Control", "type": "DIGITAL_OUT" } ]
+    },
+    {
+        "id": "pwm",
+        "label": "PWM Control",
+        "description": "Variable speed control",
+        "requirements": { "interface": "pwm", "pin_count": { "pwm": 1 } },
+        "commands": { ... },
+        "pins": [ { "name": "PWM", "type": "PWM_OUT" } ]
+    }
+]
 ```
 
 **Key Fields Explained:**
@@ -118,8 +146,13 @@ If you are adding an **ACTUATOR** (e.g., Pump, Fan, Light):
 backend/
 └── config/
     └── devices/
-        ├── dfrobot_ph_pro.json
-        └── <your_new_device>.json  <-- NEW
+        ├── water/
+        │   ├── sensors/
+        │   │   └── dfrobot_ph_pro.json
+        │   └── actuators/
+        │       └── pump_generic.json
+        ├── air/
+        └── ...
 frontend/
 └── src/
     └── config/

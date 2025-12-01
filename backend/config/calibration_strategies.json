@@ -150,6 +150,9 @@
         "name": "Volumetric Flow (Dosing)",
         "description": "Calibrate pumps by measuring output volume over a specific time to determine flow rate.",
         "category": "ACTUATOR",
+        "capabilities": [
+            "dosing_ml"
+        ],
         "compatibility": [
             "pump",
             "valve",
@@ -208,6 +211,9 @@
         "name": "Range Mapping (Linear)",
         "description": "Map 0-100% UI range to specific hardware limits (e.g., Servo angles or PWM limits).",
         "category": "ACTUATOR",
+        "capabilities": [
+            "range_control"
+        ],
         "compatibility": [
             "servo",
             "dimmer",

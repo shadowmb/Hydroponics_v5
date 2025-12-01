@@ -1,0 +1,133 @@
+{
+    "id": "pump_generic",
+    "name": "Generic Pump",
+    "category": "ACTUATOR",
+    "description": "Standard water pump (Relay or PWM control)",
+    "supportedStrategies": [
+        "volumetric_flow",
+        "duration_position",
+        "range_linear"
+    ],
+    "capabilities": [],
+    "commands": {
+        "RELAY_SET": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": "number"
+            },
+            "valuePath": "state",
+            "sourceUnit": "boolean",
+            "outputs": [
+                {
+                    "key": "state",
+                    "label": "State",
+                    "unit": "on/off"
+                }
+            ]
+        },
+        "READ": {
+            "hardwareCmd": "DIGITAL_READ",
+            "valuePath": "state",
+            "sourceUnit": "boolean",
+            "outputs": [
+                {
+                    "key": "state",
+                    "label": "State",
+                    "unit": "on/off"
+                }
+            ]
+        },
+        "ON": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 1
+            },
+            "description": "Turn pump ON"
+        },
+        "OFF": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 0
+            },
+            "description": "Turn pump OFF"
+        }
+    },
+    "pins": [
+        {
+            "name": "Control",
+            "type": "DIGITAL_OUT"
+        }
+    ],
+    "variants": [
+        {
+            "id": "relay",
+            "label": "Relay Control (ON/OFF)",
+            "description": "Simple ON/OFF control via Relay Module",
+            "requirements": {
+                "interface": "digital",
+                "pin_count": {
+                    "digital": 1
+                }
+            },
+            "capabilities": [
+                "DIGITAL_WRITE"
+            ],
+            "pins": [
+                {
+                    "name": "Relay",
+                    "type": "DIGITAL_OUT"
+                }
+            ]
+        },
+        {
+            "id": "pwm",
+            "label": "PWM Speed Control",
+            "description": "Variable speed control via PWM Driver or MOSFET",
+            "requirements": {
+                "interface": "pwm",
+                "pin_count": {
+                    "pwm": 1
+                }
+            },
+            "capabilities": [
+                "PWM_WRITE"
+            ],
+            "commands": {
+                "SET_SPEED": {
+                    "hardwareCmd": "PWM_WRITE",
+                    "params": {
+                        "duty": "number"
+                    },
+                    "valuePath": "duty",
+                    "sourceUnit": "percent"
+                }
+            },
+            "pins": [
+                {
+                    "name": "PWM Signal",
+                    "type": "PWM_OUT"
+                }
+            ]
+        }
+    ],
+    "uiConfig": {
+        "icon": "droplet",
+        "recommendedPins": [],
+        "capabilities": {
+            "DIGITAL_WRITE": {
+                "label": "On/Off Control",
+                "icon": "power",
+                "tooltip": "Standard relay control for switching the pump on and off."
+            },
+            "PWM_WRITE": {
+                "label": "Flow Control",
+                "icon": "activity",
+                "tooltip": "Variable speed control using Pulse Width Modulation (PWM)."
+            }
+        }
+    },
+    "initialState": {
+        "state": 0,
+        "speed": 0
+    }
+}

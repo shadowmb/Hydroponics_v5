@@ -22,6 +22,36 @@ const PinSchema = z.object({
     type: z.enum(['DIGITAL_IN', 'DIGITAL_OUT', 'ANALOG_IN', 'PWM_OUT']),
 });
 
+const RequirementsSchema = z.object({
+    interface: z.enum(['digital', 'analog', 'i2c', 'uart', 'onewire', 'pwm']).optional(),
+    voltage: z.string().optional(),
+    pin_count: z.object({
+        digital: z.number().optional(),
+        analog: z.number().optional(),
+        uart: z.number().optional(),
+        i2c: z.number().optional(),
+        pwm: z.number().optional()
+    }).optional()
+});
+
+const VariantSchema = z.object({
+    id: z.string(),
+    label: z.string(),
+    description: z.string().optional(),
+    requirements: RequirementsSchema.optional(),
+    capabilities: z.array(z.string()).optional(),
+    commands: z.record(CommandSchema).optional(),
+    pins: z.array(PinSchema).optional(),
+    uiConfig: z.object({
+        icon: z.string().optional(),
+        capabilities: z.record(z.object({
+            label: z.string(),
+            icon: z.string().optional(),
+            tooltip: z.string().optional()
+        })).optional()
+    }).optional()
+});
+
 const DeviceTemplateSchema = z.object({
     id: z.string(),
     name: z.string(),
@@ -31,21 +61,18 @@ const DeviceTemplateSchema = z.object({
     capabilities: z.array(z.string()),
     commands: z.record(CommandSchema),
     pins: z.array(PinSchema),
-    requirements: z.object({
-        interface: z.enum(['digital', 'analog', 'i2c', 'uart', 'onewire']).optional(),
-        voltage: z.string().optional(),
-        pin_count: z.object({
-            digital: z.number().optional(),
-            analog: z.number().optional(),
-            uart: z.number().optional(),
-            i2c: z.number().optional()
-        }).optional()
-    }).optional(),
+    requirements: RequirementsSchema.optional(),
+    variants: z.array(VariantSchema).optional(),
     initialState: z.record(z.any()).optional(),
     uiConfig: z.object({
         category: z.string().optional(),
         icon: z.string().optional(),
-        recommendedPins: z.array(z.string()).optional()
+        recommendedPins: z.array(z.string()).optional(),
+        capabilities: z.record(z.object({
+            label: z.string(),
+            icon: z.string().optional(),
+            tooltip: z.string().optional()
+        })).optional()
     }).optional(),
 });
 
@@ -70,21 +97,16 @@ export class DeviceTemplateManager {
     }
 
     /**
-     * Load all templates from the config directory.
+     * Load all templates from the config directory recursively.
      */
     public async loadTemplates(): Promise<void> {
         try {
             // Ensure directory exists
             await fs.mkdir(this.templatesDir, { recursive: true });
 
-            const files = await fs.readdir(this.templatesDir);
-            const jsonFiles = files.filter(f => f.endsWith('.json'));
+            logger.info({ dir: this.templatesDir }, '📂 Loading Device Templates...');
 
-            logger.info({ dir: this.templatesDir, files: jsonFiles }, '📂 Loading Device Templates from...');
-
-            for (const file of jsonFiles) {
-                await this.loadTemplateFile(path.join(this.templatesDir, file));
-            }
+            await this.scanDirectory(this.templatesDir);
 
             logger.info({ count: this.templates.size, ids: Array.from(this.templates.keys()) }, '📂 Device Templates Loaded');
         } catch (error) {
@@ -93,16 +115,49 @@ export class DeviceTemplateManager {
         }
     }
 
+    private async scanDirectory(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                await this.scanDirectory(fullPath);
+            } else if (entry.isFile() && entry.name.endsWith('.json')) {
+                await this.loadTemplateFile(fullPath);
+            }
+        }
+    }
+
     private async loadTemplateFile(filePath: string): Promise<void> {
         try {
             const content = await fs.readFile(filePath, 'utf-8');
             const raw = JSON.parse(content);
 
+            // Infer Category from Path
+            const relativePath = path.relative(this.templatesDir, filePath);
+            const pathParts = relativePath.split(path.sep);
+
+            // Expected structure: <category>/<type>/<file.json>
+            // e.g. water/sensors/ph.json -> category: water
+            let inferredCategory = 'other';
+            if (pathParts.length >= 2) {
+                inferredCategory = pathParts[0]; // 'water', 'air', etc.
+            }
+
+            // Inject inferred category if not present
+            if (!raw.uiConfig) raw.uiConfig = {};
+            if (!raw.uiConfig.category) {
+                raw.uiConfig.category = inferredCategory;
+            } else {
+                // Normalize to lowercase to match frontend IDs (e.g. 'Water' -> 'water')
+                raw.uiConfig.category = raw.uiConfig.category.toLowerCase();
+            }
+
             // Validate with Zod
             const template = DeviceTemplateSchema.parse(raw);
 
             this.templates.set(template.id, template);
-            logger.debug({ id: template.id }, 'Loaded Template');
+            logger.debug({ id: template.id, category: inferredCategory }, 'Loaded Template');
 
             // Sync to DB (Source of Truth for API/Frontend)
             try {

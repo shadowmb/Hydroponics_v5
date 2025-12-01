@@ -35,6 +35,7 @@ export interface IPortState {
         name: string;
     };
     deviceId?: string; // Deprecated
+    pwm?: boolean; // Capability from template
 }
 
 export interface IController {

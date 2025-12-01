@@ -40,7 +40,13 @@
         "value": 0
     },
     "uiConfig": {
-        "category": "Sensors",
-        "icon": "activity"
+        "icon": "thermometer",
+        "capabilities": {
+            "ONEWIRE_READ_TEMP": {
+                "label": "Temperature",
+                "icon": "thermometer",
+                "tooltip": "Measures ambient temperature in Celsius. Waterproof probe available."
+            }
+        }
     }
 }

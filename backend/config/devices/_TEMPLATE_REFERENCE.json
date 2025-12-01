@@ -1,0 +1,84 @@
+{
+    "id": "template_reference_id",
+    "name": "Device Name (e.g. DFRobot pH Sensor)",
+    "description": "Short description of the device",
+    "category": "SENSOR | ACTUATOR | CONTROLLER",
+    "supportedStrategies": [
+        "linear",
+        "two_point_linear",
+        "offset_only"
+    ],
+    "conversionStrategy": "optional_strategy_name",
+    "capabilities": [
+        "READ",
+        "PWM",
+        "RELAY"
+    ],
+    "requirements": {
+        "interface": "analog | digital | i2c | uart | onewire | pwm",
+        "voltage": "3.3V-5V",
+        "pin_count": {
+            "analog": 1,
+            "digital": 1,
+            "uart": 1,
+            "i2c": 1,
+            "pwm": 1
+        }
+    },
+    "commands": {
+        "READ": {
+            "hardwareCmd": "ANALOG | DIGITAL_READ | etc",
+            "valuePath": "value",
+            "sourceUnit": "raw_unit",
+            "outputs": [
+                {
+                    "key": "ph",
+                    "label": "Acidity",
+                    "unit": "pH"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "Signal",
+            "type": "ANALOG_IN | DIGITAL_IN | DIGITAL_OUT | PWM_OUT"
+        }
+    ],
+    "initialState": {
+        "value": 0
+    },
+    "uiConfig": {
+        "category": "water | air | light | power",
+        "icon": "activity | droplet | thermometer | zap | wind | lightbulb | ruler",
+        "recommendedPins": [
+            "A0",
+            "D13"
+        ],
+        "capabilities": {
+            "READ": {
+                "label": "Conductivity",
+                "icon": "activity",
+                "tooltip": "Measures electrical conductivity in µS/cm. Temperature compensation recommended."
+            },
+            "PWM": {
+                "label": "Speed Control",
+                "icon": "zap"
+            }
+        }
+    },
+    "variants": [
+        {
+            "id": "variant_id",
+            "label": "Variant Label (e.g. PWM Mode)",
+            "description": "Description of this variant",
+            "requirements": {
+                "interface": "pwm"
+            },
+            "capabilities": [
+                "PWM"
+            ],
+            "pins": []
+        }
+    ]
+}

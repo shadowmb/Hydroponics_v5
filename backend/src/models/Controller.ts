@@ -40,7 +40,9 @@ const PortStateSchema = new Schema({
         id: { type: String },
         name: { type: String }
     },
-    deviceId: { type: Schema.Types.ObjectId, ref: 'Device' }
+    deviceId: { type: Schema.Types.ObjectId, ref: 'Device' },
+    pwm: { type: Boolean, default: false },
+    interface: { type: String }
 }, { _id: false });
 
 const ControllerSchema = new Schema({
