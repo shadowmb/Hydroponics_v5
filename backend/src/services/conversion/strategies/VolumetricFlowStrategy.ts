@@ -5,7 +5,8 @@ export class VolumetricFlowStrategy implements IConversionStrategy {
     convert(rawValue: number, device: IDevice): number {
         // Usually not needed for pumps (we don't read flow from them directly unless they have a flow meter)
         // But if we did, rawValue (ms) * flowRate (ml/ms) = Volume (ml)
-        const calibration = device.config.calibration || {};
+        // But if we did, rawValue (ms) * flowRate (ml/ms) = Volume (ml)
+        const calibration = device.config.calibrations?.['volumetric_flow']?.data || (device.config as any).calibration || {};
         const flowRatePerSec = calibration.flowRate ?? 0;
 
         // rawValue is duration in ms
@@ -16,7 +17,7 @@ export class VolumetricFlowStrategy implements IConversionStrategy {
 
     reverseConvert(targetValue: number, device: IDevice): number {
         // Target: Volume (ml) -> Output: Duration (ms)
-        const calibration = device.config.calibration || {};
+        const calibration = device.config.calibrations?.['volumetric_flow']?.data || (device.config as any).calibration || {};
         const flowRatePerSec = calibration.flowRate ?? 0;
 
         if (flowRatePerSec === 0) return 0;

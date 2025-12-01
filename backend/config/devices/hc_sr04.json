@@ -7,7 +7,7 @@
         "linear"
     ],
     "capabilities": [
-        "READ"
+        "ULTRASONIC_TRIG_ECHO"
     ],
     "requirements": {
         "interface": "digital",

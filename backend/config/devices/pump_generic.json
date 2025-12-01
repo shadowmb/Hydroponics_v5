@@ -7,9 +7,8 @@
         "duration_position"
     ],
     "capabilities": [
-        "RELAY_SET",
-        "READ",
-        "DIGITAL_WRITE"
+        "DIGITAL_WRITE",
+        "DIGITAL_READ"
     ],
     "requirements": {
         "interface": "digital",
@@ -45,6 +44,20 @@
                     "unit": "on/off"
                 }
             ]
+        },
+        "ON": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 1
+            },
+            "description": "Turn pump ON"
+        },
+        "OFF": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 0
+            },
+            "description": "Turn pump OFF"
         }
     },
     "pins": [

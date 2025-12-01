@@ -55,30 +55,14 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
             // We might want to merge with existing calibration or overwrite.
             // For now, let's assume we overwrite the calibration for this strategy.
 
-            const calibrationUpdate = {
-                ...device.config.calibration, // Keep existing fields
-                ...data, // Merge new data (e.g., multiplier, offset, flowRate)
-                lastCalibrated: new Date().toISOString(),
-                strategyId: selectedStrategyId
-            };
+            // Use the dedicated calibration service to save
+            await calibrationService.saveCalibration(device._id, selectedStrategyId!, data);
 
-            // We need to update the device config. 
-            // Assuming hardwareService has a method to update device config.
-            // If not, we might need to add it or use a generic update.
-            // Looking at hardwareService, we have updateController but maybe not updateDevice directly?
-            // Let's assume we can update the device via its parent controller or a direct device update endpoint.
-            // Actually, usually we update the device document.
-
-            await hardwareService.updateDevice(device._id, {
-                config: {
-                    ...device.config,
-                    calibration: calibrationUpdate,
-                    conversionStrategy: selectedStrategyId // Set the active strategy
-                }
-            });
+            // We also need to update the local device state if possible, or trigger a refresh
+            // The parent component might handle onUpdate by refreshing the device
+            if (onUpdate) onUpdate();
 
             toast.success('Calibration saved successfully');
-            if (onUpdate) onUpdate();
         } catch (error) {
             console.error('Failed to save calibration:', error);
             toast.error('Failed to save calibration');
@@ -87,18 +71,64 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
 
     const handleRunCommand = async (cmd: string, params: any) => {
         try {
-            await hardwareService.executeCommand(device._id, cmd, {
+            const result = await hardwareService.executeCommand(device._id, cmd, {
                 ...params,
-                driverId: device.config.driverId.id // Pass driverId for backend
+                driverId: device.config.driverId._id || device.config.driverId // Fix: use _id or fallback if it's already a string
             });
             toast.success(`Command '${cmd}' sent`);
-        } catch (error) {
+            return result;
+        } catch (error: any) {
             console.error('Command failed:', error);
-            toast.error(`Command '${cmd}' failed`);
+            // Inspect the error structure deeply
+            let errorMessage = 'Unknown error';
+
+            if (error.response && error.response.data) {
+                const data = error.response.data;
+                // Check if 'error' property exists and is an object or string
+                if (data.error) {
+                    if (typeof data.error === 'string') errorMessage = data.error;
+                    else if (data.error.message) errorMessage = data.error.message;
+                } else if (data.message) {
+                    errorMessage = data.message;
+                } else if (typeof data === 'string') {
+                    errorMessage = data;
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            toast.error(`Command '${cmd}' failed: ${errorMessage}`);
+            throw error;
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedStrategyId) return;
+        if (!confirm('Are you sure you want to delete this calibration?')) return;
+
+        try {
+            await calibrationService.deleteCalibration(device._id, selectedStrategyId);
+            toast.success('Calibration deleted');
+            if (onUpdate) onUpdate();
+        } catch (error) {
+            console.error('Failed to delete calibration:', error);
+            toast.error('Failed to delete calibration');
         }
     };
 
     const selectedStrategy = strategies.find(s => s.id === selectedStrategyId);
+
+    // Check if the selected strategy has existing calibration data
+    const existingCalibration = selectedStrategyId && device.config?.calibrations?.[selectedStrategyId];
+    const existingCalibrationsList = Object.keys(device.config?.calibrations || {});
+
+    // State to toggle between "Info" and "Wizard" modes
+    const [isRecalibrating, setIsRecalibrating] = useState(false);
+
+    // Reset recalibrating state when strategy changes
+    useEffect(() => {
+        setIsRecalibrating(false);
+    }, [selectedStrategyId]);
 
     if (loading) return <div>Loading strategies...</div>;
 
@@ -109,17 +139,50 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
                     strategies={strategies}
                     selectedId={selectedStrategyId}
                     onSelect={setSelectedStrategyId}
+                    existingCalibrations={existingCalibrationsList}
                 />
             </div>
 
             {selectedStrategy && (
                 <div className="mt-6">
-                    <h3 className="text-lg font-medium mb-4">Calibration Wizard: {selectedStrategy.name}</h3>
-                    <DynamicWizard
-                        config={selectedStrategy.wizard}
-                        onSave={handleSave}
-                        onRunCommand={handleRunCommand}
-                    />
+                    <h3 className="text-lg font-medium mb-4">Calibration: {selectedStrategy.name}</h3>
+
+                    {existingCalibration && !isRecalibrating ? (
+                        <div className="bg-muted/30 p-4 rounded-lg border space-y-4">
+                            <div className="flex items-center gap-2 text-green-600">
+                                <span className="text-xl">✓</span>
+                                <span className="font-medium">Calibrated</span>
+                            </div>
+
+                            <div className="text-sm space-y-1">
+                                <p><span className="text-muted-foreground">Last Calibrated:</span> {new Date(existingCalibration.lastCalibrated).toLocaleString()}</p>
+                                {existingCalibration.data && Object.entries(existingCalibration.data).map(([key, value]) => (
+                                    <p key={key}><span className="text-muted-foreground">{key}:</span> {String(value)}</p>
+                                ))}
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setIsRecalibrating(true)}
+                                    className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
+                                >
+                                    Recalibrate
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="px-3 py-1.5 bg-destructive text-destructive-foreground rounded-md text-sm hover:bg-destructive/90"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <DynamicWizard
+                            config={selectedStrategy.wizard}
+                            onSave={handleSave}
+                            onRunCommand={handleRunCommand}
+                        />
+                    )}
                 </div>
             )}
         </div>

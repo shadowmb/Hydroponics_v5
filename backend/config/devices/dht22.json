@@ -47,5 +47,8 @@
     "uiConfig": {
         "category": "Sensors",
         "icon": "activity"
+    },
+    "initialState": {
+        "value": 0
     }
 }

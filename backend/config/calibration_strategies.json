@@ -176,20 +176,31 @@
                 {
                     "type": "action",
                     "label": "Run Test",
-                    "command": "run",
+                    "command": "TEST_DOSING",
                     "params": {
-                        "duration": "input_duration"
+                        "duration": "input_duration_seconds"
                     },
                     "instructions": "Place output tube in a measuring cup."
                 },
                 {
                     "type": "input",
-                    "key": "measuredValue",
-                    "label": "Measured Output",
-                    "unit": "ml"
+                    "label": "Measured Output & Time",
+                    "instructions": "Enter the measured volume and the duration of the test.",
+                    "fields": [
+                        {
+                            "key": "measuredValue",
+                            "label": "Measured Output",
+                            "unit": "ml"
+                        },
+                        {
+                            "key": "duration_seconds",
+                            "label": "Test Duration",
+                            "unit": "sec"
+                        }
+                    ]
                 }
             ],
-            "formula": "measuredValue / duration"
+            "formula": "measuredValue / duration_seconds"
         }
     },
     {

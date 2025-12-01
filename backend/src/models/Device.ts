@@ -24,7 +24,7 @@ export interface IDevice extends SoftDeleteDocument {
         driverId: string;
         pollInterval?: number;
         conversionStrategy?: string;
-        calibration?: Record<string, any>; // Dynamic calibration data based on strategy
+        calibrations?: Record<string, { lastCalibrated: Date; data: any }>; // Dynamic calibration data based on strategy
     };
 
     metadata?: {
@@ -67,8 +67,8 @@ const DeviceSchema = new Schema<IDevice>(
             driverId: { type: String, required: true, ref: 'DeviceTemplate' },
             pollInterval: Number,
             conversionStrategy: { type: String, default: 'linear' },
-            calibration: {
-                // Dynamic structure to support various strategies
+            calibrations: {
+                // Dynamic structure to support various strategies: { [strategyId]: { lastCalibrated: Date, data: any } }
                 type: Schema.Types.Mixed,
                 default: {}
             },

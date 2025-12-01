@@ -3,7 +3,8 @@ import { IConversionStrategy } from './IConversionStrategy';
 
 export class LinearInterpolationStrategy implements IConversionStrategy {
     convert(rawValue: number, device: IDevice): number {
-        const calibration = device.config.calibration;
+        const strategyName = device.config.conversionStrategy || 'linear';
+        const calibration = device.config.calibrations?.[strategyName]?.data || (device.config as any).calibration;
 
         // 1. Basic Multiplier/Offset (Legacy/Simple support)
         // If no points are defined, fallback to simple linear: y = mx + c
@@ -47,7 +48,8 @@ export class LinearInterpolationStrategy implements IConversionStrategy {
     }
 
     reverseConvert(targetValue: number, device: IDevice): number {
-        const calibration = device.config.calibration || {};
+        const strategyName = device.config.conversionStrategy || 'linear';
+        const calibration = device.config.calibrations?.[strategyName]?.data || (device.config as any).calibration || {};
         const multiplier = calibration.multiplier ?? 1;
         const offset = calibration.offset ?? 0;
 

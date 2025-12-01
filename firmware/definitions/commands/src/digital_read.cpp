@@ -11,8 +11,7 @@ String handleDigitalRead(const char* params) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
-  // Set pin mode and read state
-  pinMode(pin, INPUT);
+  // Read state
   int state = digitalRead(pin);
 
   // Build and return JSON response
