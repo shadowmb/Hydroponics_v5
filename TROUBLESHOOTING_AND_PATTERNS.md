@@ -110,3 +110,15 @@ The `DeviceTemplate` in the database (seeded from `seedDeviceTemplates.ts`) refe
 ### Example
 - **Wrong:** `requiredCommand: 'SINGLE_WIRE_PULSE'`
 - **Correct:** `requiredCommand: 'DHT_READ'` (matches `dht_read.json`)
+
+## 11. Backend: Missing Schema Fields (VariantID)
+### Problem
+A PWM pump was only showing "Volumetric Flow" (Dosing) strategy, missing "Range Mapping" (Linear), even though the user selected the "PWM Speed Control" variant.
+### Cause
+The Mongoose schema for `Device` (`backend/src/models/Device.ts`) was missing the `variantId` field in the `config` object. Even though the Frontend sent the correct payload (`variantId: 'pwm'`), the Backend silently stripped this field during the save operation.
+### Solution
+1.  Add the missing field to the Mongoose Schema (`variantId: { type: String }`).
+2.  Update the TypeScript Interface (`IDevice`).
+3.  **Critical:** Restart the backend server process to apply the schema change.
+### Lesson
+Always verify that new fields added to the Frontend payload are explicitly defined in the Backend Mongoose Schema. Mongoose is strict by default.

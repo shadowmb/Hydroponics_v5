@@ -22,6 +22,7 @@ export interface IDevice extends SoftDeleteDocument {
 
     config: {
         driverId: string;
+        variantId?: string;
         pollInterval?: number;
         conversionStrategy?: string;
         calibrations?: Record<string, { lastCalibrated: Date; data: any }>; // Dynamic calibration data based on strategy
@@ -65,6 +66,7 @@ const DeviceSchema = new Schema<IDevice>(
 
         config: {
             driverId: { type: String, required: true, ref: 'DeviceTemplate' },
+            variantId: { type: String }, // New: Support for template variants
             pollInterval: Number,
             conversionStrategy: { type: String, default: 'linear' },
             calibrations: {

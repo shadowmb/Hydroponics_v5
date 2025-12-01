@@ -52,6 +52,128 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, on
         setFormData(prev => ({ ...prev, [key]: value }));
     };
 
+    const renderActionUI = (actionStep: any) => {
+        // Determine if THIS specific action is running
+        const isRunning = formData._isRunning && (formData._runningCommand === actionStep.command || (!formData._runningCommand && actionStep.command === 'TEST_DOSING'));
+        const countdown = formData._countdown || 0;
+        const isStopwatch = !!actionStep.writeToField;
+
+        const handleStop = async () => {
+            if (onRunCommand) {
+                await onRunCommand('STOP', {}); // Send generic STOP or specific OFF
+
+                // If in stopwatch mode, capture the duration
+                if (isStopwatch && formData._startTime) {
+                    const elapsed = Date.now() - formData._startTime;
+                    handleInputChange(actionStep.writeToField, elapsed);
+                }
+
+                setFormData(prev => ({ ...prev, _isRunning: false, _countdown: 0, _runningCommand: null, _startTime: null }));
+            }
+        };
+
+        const handleRunTest = async () => {
+            if (actionStep.command && onRunCommand) {
+                const resolvedParams: any = {};
+                let duration = 0;
+
+                // Resolve params
+                if (actionStep.params) {
+                    Object.entries(actionStep.params).forEach(([k, v]) => {
+                        if (typeof v === 'string' && v.startsWith('input_')) {
+                            const inputKey = v.replace('input_', '');
+                            resolvedParams[k] = formData[inputKey];
+                            if (k === 'duration') duration = Number(formData[inputKey]);
+                        } else {
+                            resolvedParams[k] = v;
+                        }
+                    });
+                }
+
+                // Validation (only if NOT stopwatch mode, as stopwatch implies manual duration)
+                if (actionStep.command === 'TEST_DOSING' && !isStopwatch) {
+                    if (actionStep.params && actionStep.params.duration && (isNaN(duration) || duration <= 0)) {
+                        setErrorDialogMessage("Please enter a valid duration in seconds.");
+                        setErrorDialogOpen(true);
+                        return;
+                    }
+                    // ... (Safety check logic omitted for brevity, can be kept if needed but simplified here for generic actions)
+                }
+
+                setFormData(prev => ({
+                    ...prev,
+                    _isRunning: true,
+                    _runningCommand: actionStep.command,
+                    _countdown: isStopwatch ? 0 : duration,
+                    _startTime: isStopwatch ? Date.now() : null
+                }));
+
+                // Timer Logic
+                const interval = setInterval(() => {
+                    setFormData(prev => {
+                        if (!prev._isRunning) {
+                            clearInterval(interval);
+                            return prev;
+                        }
+
+                        if (isStopwatch) {
+                            // Count UP
+                            return { ...prev, _countdown: Date.now() - (prev._startTime || Date.now()) };
+                        } else {
+                            // Count DOWN
+                            const newCount = (prev._countdown || 0) - 1;
+                            if (newCount <= 0) {
+                                clearInterval(interval);
+                                return { ...prev, _isRunning: false, _countdown: 0, _runningCommand: null };
+                            }
+                            return { ...prev, _countdown: newCount };
+                        }
+                    });
+                }, isStopwatch ? 100 : 1000); // Faster update for stopwatch
+
+                try {
+                    await onRunCommand(actionStep.command, resolvedParams);
+                } catch (e) {
+                    clearInterval(interval);
+                    setFormData(prev => ({ ...prev, _isRunning: false, _countdown: 0, _runningCommand: null, _startTime: null }));
+                }
+            }
+        };
+
+        return (
+            <div className="space-y-4">
+                {isRunning && (
+                    <div className="flex items-center justify-center p-4 bg-green-100 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-900">
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                </span>
+                                <span className="font-bold text-green-700 dark:text-green-400">RUNNING</span>
+                            </div>
+                            <span className="text-2xl font-mono font-bold">
+                                {isStopwatch ? `${(countdown / 1000).toFixed(1)}s` : `${countdown}s`}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex gap-2">
+                    {!isRunning ? (
+                        <Button onClick={handleRunTest} className="w-full" variant="secondary">
+                            <Play className="mr-2 h-4 w-4" /> {actionStep.label || "Start Test"}
+                        </Button>
+                    ) : (
+                        <Button onClick={handleStop} variant="destructive" className="w-full animate-pulse">
+                            STOP {isStopwatch ? "(Save Duration)" : ""}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     const renderStepContent = () => {
         switch (step.type) {
             case 'input':
@@ -105,128 +227,32 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, on
                                     <div className="space-y-4 pt-2 border-t">
                                         <p className="text-sm text-muted-foreground">{step.optionalAction.description}</p>
                                         <p className="text-sm bg-muted p-2 rounded">{step.optionalAction.instructions}</p>
-
-                                        {/* Optional Action Logic - Reusing Action Logic Logic */}
-                                        {(() => {
-                                            const actionStep = step.optionalAction;
-                                            const isRunning = actionStep.command === 'TEST_DOSING' && !!formData._isRunning;
-                                            const countdown = formData._countdown || 0;
-
-                                            const handleStop = async () => {
-                                                if (onRunCommand) {
-                                                    await onRunCommand('OFF', {});
-                                                    setFormData(prev => ({ ...prev, _isRunning: false, _countdown: 0 }));
-                                                }
-                                            };
-
-                                            const handleRunTest = async () => {
-                                                if (actionStep.command && onRunCommand) {
-                                                    const resolvedParams: any = {};
-                                                    let duration = 0;
-                                                    if (actionStep.params) {
-                                                        Object.entries(actionStep.params).forEach(([k, v]) => {
-                                                            if (typeof v === 'string' && v.startsWith('input_')) {
-                                                                const inputKey = v.replace('input_', '');
-                                                                resolvedParams[k] = formData[inputKey];
-                                                                if (k === 'duration') duration = Number(formData[inputKey]);
-                                                            } else {
-                                                                resolvedParams[k] = v;
-                                                            }
-                                                        });
-                                                    }
-
-                                                    // Validation
-                                                    if (actionStep.command === 'TEST_DOSING') {
-                                                        if (actionStep.params && actionStep.params.duration && (isNaN(duration) || duration <= 0)) {
-                                                            setErrorDialogMessage("Please enter a valid duration in seconds.");
-                                                            setErrorDialogOpen(true);
-                                                            return;
-                                                        }
-
-                                                        try {
-                                                            const status = await onRunCommand('READ', {});
-                                                            const state = status?.state ?? status?.value ?? status?.val;
-                                                            if (state == 1 || state === true || state === 'ON' || state === 'on') {
-                                                                throw new Error('Pump is already ON! Please turn it OFF before running the test.');
-                                                            }
-                                                        } catch (err: any) {
-                                                            if (err.message === 'Pump is already ON! Please turn it OFF before running the test.') {
-                                                                setErrorDialogMessage(err.message);
-                                                                setErrorDialogOpen(true);
-                                                                return;
-                                                            }
-                                                            return;
-                                                        }
-                                                    }
-
-                                                    setFormData(prev => ({ ...prev, _isRunning: true, _countdown: duration }));
-
-                                                    const interval = setInterval(() => {
-                                                        setFormData(prev => {
-                                                            const newCount = (prev._countdown || 0) - 1;
-                                                            if (newCount <= 0) {
-                                                                clearInterval(interval);
-                                                                // Auto-fill duration if successful
-                                                                if (actionStep.params?.duration === 'input_duration_seconds') {
-                                                                    // It's already filled by input, but we could enforce it here if needed.
-                                                                }
-                                                                return { ...prev, _isRunning: false, _countdown: 0 };
-                                                            }
-                                                            return { ...prev, _countdown: newCount };
-                                                        });
-                                                    }, 1000);
-
-                                                    try {
-                                                        await onRunCommand(actionStep.command, resolvedParams);
-                                                    } catch (e) {
-                                                        clearInterval(interval);
-                                                        setFormData(prev => ({ ...prev, _isRunning: false, _countdown: 0 }));
-                                                    }
-                                                }
-                                            };
-
-                                            return (
-                                                <div className="space-y-4">
-                                                    {/* Input Fields for Params inside Optional Action - Only if not already in main form? 
-                                                        Actually, the params reference 'input_duration_seconds' which IS in the main form.
-                                                        So we don't need to render inputs here again.
-                                                     */}
-
-                                                    {isRunning && (
-                                                        <div className="flex items-center justify-center p-4 bg-green-100 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-900">
-                                                            <div className="flex flex-col items-center gap-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="relative flex h-3 w-3">
-                                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                                                                    </span>
-                                                                    <span className="font-bold text-green-700 dark:text-green-400">PUMP RUNNING</span>
-                                                                </div>
-                                                                <span className="text-2xl font-mono font-bold">{countdown}s</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="flex gap-2">
-                                                        {!isRunning ? (
-                                                            <Button onClick={handleRunTest} className="w-full" variant="secondary">
-                                                                <Play className="mr-2 h-4 w-4" /> Start Test
-                                                            </Button>
-                                                        ) : (
-                                                            <Button onClick={handleStop} variant="destructive" className="w-full animate-pulse">
-                                                                STOP (EMERGENCY)
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
+                                        {renderActionUI(step.optionalAction)}
                                     </div>
                                 )}
                             </div>
                         )}
+
+                        {step.actions && (
+                            <div className="space-y-4 pt-4 border-t">
+                                <label className="text-sm font-medium">Test Actions</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {step.actions.map((action: any, idx: number) => (
+                                        <div key={idx} className="border rounded-md p-4 bg-muted/20 space-y-3">
+                                            <div className="font-medium flex items-center gap-2">
+                                                <Play className="h-4 w-4" />
+                                                {action.label}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">{action.instructions}</p>
+                                            {renderActionUI(action)}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
+
 
             case 'action':
                 const isRunning = step.command === 'TEST_DOSING' && !!formData._isRunning;

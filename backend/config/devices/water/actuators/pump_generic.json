@@ -5,10 +5,11 @@
     "description": "Standard water pump (Relay or PWM control)",
     "supportedStrategies": [
         "volumetric_flow",
-        "duration_position",
         "range_linear"
     ],
-    "capabilities": [],
+    "capabilities": [
+        "DIGITAL_WRITE"
+    ],
     "commands": {
         "RELAY_SET": {
             "hardwareCmd": "DIGITAL_WRITE",
@@ -50,6 +51,27 @@
                 "state": 0
             },
             "description": "Turn pump OFF"
+        },
+        "OPEN": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 1
+            },
+            "description": "Turn pump ON (Alias for OPEN)"
+        },
+        "CLOSE": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 0
+            },
+            "description": "Turn pump OFF (Alias for CLOSE)"
+        },
+        "STOP": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 0
+            },
+            "description": "Turn pump OFF (Alias for STOP)"
         }
     },
     "pins": [

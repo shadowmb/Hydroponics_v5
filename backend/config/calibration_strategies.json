@@ -151,7 +151,7 @@
         "description": "Calibrate pumps by measuring output volume over a specific time to determine flow rate.",
         "category": "ACTUATOR",
         "capabilities": [
-            "dosing_ml"
+            "DIGITAL_WRITE"
         ],
         "compatibility": [
             "pump",
@@ -212,7 +212,7 @@
         "description": "Map 0-100% UI range to specific hardware limits (e.g., Servo angles or PWM limits).",
         "category": "ACTUATOR",
         "capabilities": [
-            "range_control"
+            "PWM_WRITE"
         ],
         "compatibility": [
             "servo",
@@ -248,91 +248,59 @@
         }
     },
     {
-        "id": "range_curve",
-        "name": "Range Mapping (Curved/Dimming)",
-        "description": "Non-linear mapping for dimming (Logarithmic) to match human perception.",
-        "category": "ACTUATOR",
-        "compatibility": [
-            "dimmer",
-            "led"
-        ],
-        "storageSchema": {
-            "minRaw": {
-                "type": "number",
-                "required": true
-            },
-            "maxRaw": {
-                "type": "number",
-                "required": true
-            },
-            "curve": {
-                "type": "string",
-                "enum": [
-                    "logarithmic",
-                    "exponential",
-                    "s-curve"
-                ],
-                "default": "logarithmic"
-            }
-        },
-        "wizard": {
-            "component": "CurveWizard",
-            "steps": [
-                {
-                    "type": "set_limit",
-                    "label": "Min Brightness",
-                    "key": "minRaw"
-                },
-                {
-                    "type": "set_limit",
-                    "label": "Max Brightness",
-                    "key": "maxRaw"
-                },
-                {
-                    "type": "select",
-                    "label": "Curve Type",
-                    "key": "curve",
-                    "options": [
-                        "logarithmic",
-                        "exponential"
-                    ]
-                }
-            ]
-        }
-    },
-    {
         "id": "duration_position",
         "name": "Duration to Position (Motorized Valve)",
-        "description": "Controls position (0-100%) based on travel time.",
+        "description": "Controls position (0-100%) based on travel time. Supports separate Open/Close durations.",
         "category": "ACTUATOR",
         "compatibility": [
             "valve_motorized",
             "curtain"
         ],
         "storageSchema": {
-            "totalDuration": {
+            "durationOpen": {
                 "type": "number",
                 "required": true,
-                "description": "Time in ms to travel 0-100%"
+                "description": "Time in ms to travel 0% -> 100%"
+            },
+            "durationClose": {
+                "type": "number",
+                "required": true,
+                "description": "Time in ms to travel 100% -> 0%"
             }
         },
         "wizard": {
             "component": "DurationWizard",
             "steps": [
                 {
-                    "type": "action",
-                    "label": "Open Fully",
-                    "command": "open"
-                },
-                {
-                    "type": "action",
-                    "label": "Close Fully",
-                    "command": "close"
-                },
-                {
                     "type": "input",
-                    "label": "Travel Time (ms)",
-                    "key": "totalDuration"
+                    "label": "Calibration Data",
+                    "instructions": "Enter the time it takes to fully open and close the valve. If unknown, use the Test buttons below to measure.",
+                    "fields": [
+                        {
+                            "key": "durationOpen",
+                            "label": "Opening Time",
+                            "unit": "ms"
+                        },
+                        {
+                            "key": "durationClose",
+                            "label": "Closing Time",
+                            "unit": "ms"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "label": "Test Open (Measure)",
+                            "command": "OPEN",
+                            "instructions": "Click Start to open. Click Stop when fully open. Duration will be recorded.",
+                            "writeToField": "durationOpen"
+                        },
+                        {
+                            "label": "Test Close (Measure)",
+                            "command": "CLOSE",
+                            "instructions": "Click Start to close. Click Stop when fully closed. Duration will be recorded.",
+                            "writeToField": "durationClose"
+                        }
+                    ]
                 }
             ]
         }

@@ -16,20 +16,41 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
     const [selectedStrategyId, setSelectedStrategyId] = useState<string | undefined>(undefined);
     const [loading, setLoading] = useState(true);
 
+
+
     useEffect(() => {
         const loadStrategies = async () => {
             try {
                 const allStrategies = await calibrationService.getStrategies();
 
-                // Phase 3: Filter based on device.supportedStrategies
-                const supported = device.config?.supportedStrategies;
+                // Phase 3: Filter based on supportedStrategies
+                // CRITICAL: Prefer the FRESH template's supportedStrategies over the stale device.config copy.
+                // This ensures that file updates (like removing a strategy) are reflected immediately.
+
+                // Always fetch fresh templates first
+                let template = device.config?.driverId;
+                try {
+                    const templates = await hardwareService.getDeviceTemplates();
+                    const driverId = typeof device.config?.driverId === 'string'
+                        ? device.config.driverId
+                        : device.config?.driverId?._id || device.config?.driverId?.id;
+
+                    const freshTemplate = templates.find((t: any) => t._id === driverId || t.id === driverId);
+                    if (freshTemplate) {
+                        template = freshTemplate;
+                    }
+                } catch (e) {
+                    console.error("Could not fetch templates for capability check", e);
+                }
+
+                const supported = template?.supportedStrategies || device.config?.supportedStrategies;
 
                 let filtered = allStrategies;
                 if (supported && Array.isArray(supported) && supported.length > 0) {
                     filtered = allStrategies.filter(s => supported.includes(s.id));
                 } else {
                     // Fallback: Filter by category if no specific strategies defined
-                    const category = device.config?.driverId?.category; // 'SENSOR' or 'ACTUATOR'
+                    const category = template?.category || device.config?.driverId?.category; // 'SENSOR' or 'ACTUATOR'
                     filtered = allStrategies.filter(s => {
                         if (s.category === 'BOTH') return true;
                         if (category && s.category === category) return true;
@@ -37,7 +58,25 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
                     });
                 }
 
-                setStrategies(filtered.length > 0 ? filtered : allStrategies);
+                const templateCapabilities = template?.capabilities || [];
+                const variantCapabilities = device.config?.variantId && template?.variants ?
+                    (template.variants.find((v: any) => v.id === device.config.variantId)?.capabilities || [])
+                    : [];
+
+                // Merge unique capabilities
+                // Merge unique capabilities
+                const deviceCapabilities = Array.from(new Set([...templateCapabilities, ...variantCapabilities]));
+
+                // 2. Filter strategies
+                const capabilityFiltered = filtered.filter(s => {
+                    // If strategy has no specific capability requirements, it passes
+                    if (!s.capabilities || s.capabilities.length === 0) return true;
+
+                    // Check if device has ALL required capabilities
+                    return s.capabilities.every(cap => deviceCapabilities.includes(cap));
+                });
+
+                setStrategies(capabilityFiltered.length > 0 ? capabilityFiltered : []);
             } catch (error) {
                 console.error('Failed to load strategies:', error);
                 toast.error('Failed to load calibration strategies');
@@ -150,6 +189,7 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
                     existingCalibrations={existingCalibrationsList}
                 />
             </div>
+
 
             {selectedStrategy && (
                 <div className="mt-6">

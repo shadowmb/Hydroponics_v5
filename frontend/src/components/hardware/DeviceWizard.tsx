@@ -165,16 +165,33 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
 
     // When initialData is loaded, try to find and set the selected template
     useEffect(() => {
+
         if (initialData && templates.length > 0) {
-            const tpl = templates.find(t => t._id === initialData.config?.driverId);
+            const driverId = typeof initialData.config?.driverId === 'string'
+                ? initialData.config.driverId
+                : initialData.config?.driverId?._id || initialData.config?.driverId?.id;
+
+            const tpl = templates.find(t => t._id === driverId || t.id === driverId);
             if (tpl) {
                 setSelectedTemplate(tpl);
                 // Try to infer variant if possible (not strictly stored, but maybe inferred from capabilities/pins)
-                // For now, we leave selectedVariant null in edit mode unless we store it.
-                // If we stored variantId in config, we could use it:
                 if (initialData.config?.variantId && tpl.variants) {
                     const v = tpl.variants.find((v: any) => v.id === initialData.config.variantId);
                     if (v) setSelectedVariant(v);
+                } else if (tpl.variants && initialData.hardware?.pins) {
+                    // Inference Logic: Check if any of the variant's pin names match the roles in initialData
+                    const currentRoles = Array.isArray(initialData.hardware.pins)
+                        ? initialData.hardware.pins.map((p: any) => p.role)
+                        : Object.keys(initialData.hardware.pins || {});
+
+                    const inferredVariant = tpl.variants.find((v: any) => {
+                        // Check if this variant has a pin that matches one of the current roles
+                        return v.pins?.some((p: any) => currentRoles.includes(p.name));
+                    });
+
+                    if (inferredVariant) {
+                        setSelectedVariant(inferredVariant);
+                    }
                 }
             }
         }
@@ -253,7 +270,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             setLoading(true);
             const payload: any = {
                 name: formData.name,
-                type: effectiveTemplate?.physicalType === 'relay' ? 'ACTUATOR' : 'SENSOR', // This logic might need update based on variant
+                type: selectedTemplate?.category || (effectiveTemplate?.physicalType === 'relay' ? 'ACTUATOR' : 'SENSOR'),
                 isEnabled: formData.isEnabled,
                 config: {
                     driverId: selectedTemplate?._id, // Always use the base template ID
@@ -266,6 +283,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                 tags: formData.tags, // Include tags
                 hardware: {}
             };
+
 
             if (connectionType === 'direct') {
                 payload.hardware = {

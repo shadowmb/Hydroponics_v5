@@ -1,0 +1,62 @@
+{
+    "id": "valve_motorized_generic",
+    "name": "Motorized Ball Valve (Generic)",
+    "category": "ACTUATOR",
+    "description": "Motorized valve controlled by duration (Time-to-Open/Close). Supports CR02/CR05 (3-wire/5-wire) types.",
+    "supportedStrategies": [
+        "duration_position",
+        "volumetric_flow"
+    ],
+    "capabilities": [
+        "DIGITAL_WRITE"
+    ],
+    "commands": {
+        "OPEN": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "pin": "open_pin",
+                "state": 1
+            },
+            "description": "Start opening the valve"
+        },
+        "CLOSE": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "pin": "close_pin",
+                "state": 1
+            },
+            "description": "Start closing the valve"
+        },
+        "STOP": {
+            "hardwareCmd": "DIGITAL_WRITE",
+            "params": {
+                "state": 0
+            },
+            "description": "Stop movement (Turn off both relays)"
+        }
+    },
+    "pins": [
+        {
+            "name": "Open Relay",
+            "type": "DIGITAL_OUT"
+        },
+        {
+            "name": "Close Relay",
+            "type": "DIGITAL_OUT"
+        }
+    ],
+    "uiConfig": {
+        "icon": "activity",
+        "capabilities": {
+            "duration_position": {
+                "label": "Position Control",
+                "icon": "activity",
+                "tooltip": "Precise flow control by timing the valve opening/closing."
+            }
+        }
+    },
+    "initialState": {
+        "position": 0,
+        "state": "closed"
+    }
+}
