@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -56,34 +56,173 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, on
         switch (step.type) {
             case 'input':
                 return (
-                    <div className="space-y-4">
-                        {step.fields ? (
-                            step.fields.map((field: any) => (
-                                <div key={field.key} className="space-y-2">
-                                    <label className="text-sm font-medium">{field.label}</label>
+                    <div className="space-y-6">
+                        <div className="space-y-4">
+                            {step.fields ? (
+                                step.fields.map((field: any) => (
+                                    <div key={field.key} className="space-y-2">
+                                        <label className="text-sm font-medium">{field.label}</label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="number"
+                                                value={formData[field.key] || field.default || ''}
+                                                onChange={(e) => handleInputChange(field.key, parseFloat(e.target.value))}
+                                                placeholder="Enter value"
+                                            />
+                                            {field.unit && <span className="flex items-center text-sm text-muted-foreground">{field.unit}</span>}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">{step.label}</label>
                                     <div className="flex gap-2">
                                         <Input
                                             type="number"
-                                            value={formData[field.key] || field.default || ''}
-                                            onChange={(e) => handleInputChange(field.key, parseFloat(e.target.value))}
+                                            value={formData[step.key!] || step.default || ''}
+                                            onChange={(e) => handleInputChange(step.key!, parseFloat(e.target.value))}
                                             placeholder="Enter value"
                                         />
-                                        {field.unit && <span className="flex items-center text-sm text-muted-foreground">{field.unit}</span>}
+                                        {step.unit && <span className="flex items-center text-sm text-muted-foreground">{step.unit}</span>}
                                     </div>
                                 </div>
-                            ))
-                        ) : (
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">{step.label}</label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        type="number"
-                                        value={formData[step.key!] || step.default || ''}
-                                        onChange={(e) => handleInputChange(step.key!, parseFloat(e.target.value))}
-                                        placeholder="Enter value"
-                                    />
-                                    {step.unit && <span className="flex items-center text-sm text-muted-foreground">{step.unit}</span>}
+                            )}
+                        </div>
+
+                        {step.optionalAction && (
+                            <div className="border rounded-md p-4 bg-muted/20">
+                                <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setFormData(prev => ({ ...prev, _showOptionalTest: !prev._showOptionalTest }))}>
+                                    <div className="flex items-center gap-2 font-medium">
+                                        <Play className="h-4 w-4" />
+                                        {step.optionalAction.label}
+                                    </div>
+                                    <Button variant="ghost" size="sm">
+                                        {formData._showOptionalTest ? 'Hide' : 'Show'}
+                                    </Button>
                                 </div>
+
+                                {formData._showOptionalTest && (
+                                    <div className="space-y-4 pt-2 border-t">
+                                        <p className="text-sm text-muted-foreground">{step.optionalAction.description}</p>
+                                        <p className="text-sm bg-muted p-2 rounded">{step.optionalAction.instructions}</p>
+
+                                        {/* Optional Action Logic - Reusing Action Logic Logic */}
+                                        {(() => {
+                                            const actionStep = step.optionalAction;
+                                            const isRunning = actionStep.command === 'TEST_DOSING' && !!formData._isRunning;
+                                            const countdown = formData._countdown || 0;
+
+                                            const handleStop = async () => {
+                                                if (onRunCommand) {
+                                                    await onRunCommand('OFF', {});
+                                                    setFormData(prev => ({ ...prev, _isRunning: false, _countdown: 0 }));
+                                                }
+                                            };
+
+                                            const handleRunTest = async () => {
+                                                if (actionStep.command && onRunCommand) {
+                                                    const resolvedParams: any = {};
+                                                    let duration = 0;
+                                                    if (actionStep.params) {
+                                                        Object.entries(actionStep.params).forEach(([k, v]) => {
+                                                            if (typeof v === 'string' && v.startsWith('input_')) {
+                                                                const inputKey = v.replace('input_', '');
+                                                                resolvedParams[k] = formData[inputKey];
+                                                                if (k === 'duration') duration = Number(formData[inputKey]);
+                                                            } else {
+                                                                resolvedParams[k] = v;
+                                                            }
+                                                        });
+                                                    }
+
+                                                    // Validation
+                                                    if (actionStep.command === 'TEST_DOSING') {
+                                                        if (actionStep.params && actionStep.params.duration && (isNaN(duration) || duration <= 0)) {
+                                                            setErrorDialogMessage("Please enter a valid duration in seconds.");
+                                                            setErrorDialogOpen(true);
+                                                            return;
+                                                        }
+
+                                                        try {
+                                                            const status = await onRunCommand('READ', {});
+                                                            const state = status?.state ?? status?.value ?? status?.val;
+                                                            if (state == 1 || state === true || state === 'ON' || state === 'on') {
+                                                                throw new Error('Pump is already ON! Please turn it OFF before running the test.');
+                                                            }
+                                                        } catch (err: any) {
+                                                            if (err.message === 'Pump is already ON! Please turn it OFF before running the test.') {
+                                                                setErrorDialogMessage(err.message);
+                                                                setErrorDialogOpen(true);
+                                                                return;
+                                                            }
+                                                            return;
+                                                        }
+                                                    }
+
+                                                    setFormData(prev => ({ ...prev, _isRunning: true, _countdown: duration }));
+
+                                                    const interval = setInterval(() => {
+                                                        setFormData(prev => {
+                                                            const newCount = (prev._countdown || 0) - 1;
+                                                            if (newCount <= 0) {
+                                                                clearInterval(interval);
+                                                                // Auto-fill duration if successful
+                                                                if (actionStep.params?.duration === 'input_duration_seconds') {
+                                                                    // It's already filled by input, but we could enforce it here if needed.
+                                                                }
+                                                                return { ...prev, _isRunning: false, _countdown: 0 };
+                                                            }
+                                                            return { ...prev, _countdown: newCount };
+                                                        });
+                                                    }, 1000);
+
+                                                    try {
+                                                        await onRunCommand(actionStep.command, resolvedParams);
+                                                    } catch (e) {
+                                                        clearInterval(interval);
+                                                        setFormData(prev => ({ ...prev, _isRunning: false, _countdown: 0 }));
+                                                    }
+                                                }
+                                            };
+
+                                            return (
+                                                <div className="space-y-4">
+                                                    {/* Input Fields for Params inside Optional Action - Only if not already in main form? 
+                                                        Actually, the params reference 'input_duration_seconds' which IS in the main form.
+                                                        So we don't need to render inputs here again.
+                                                     */}
+
+                                                    {isRunning && (
+                                                        <div className="flex items-center justify-center p-4 bg-green-100 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-900">
+                                                            <div className="flex flex-col items-center gap-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="relative flex h-3 w-3">
+                                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                                                    </span>
+                                                                    <span className="font-bold text-green-700 dark:text-green-400">PUMP RUNNING</span>
+                                                                </div>
+                                                                <span className="text-2xl font-mono font-bold">{countdown}s</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex gap-2">
+                                                        {!isRunning ? (
+                                                            <Button onClick={handleRunTest} className="w-full" variant="secondary">
+                                                                <Play className="mr-2 h-4 w-4" /> Start Test
+                                                            </Button>
+                                                        ) : (
+                                                            <Button onClick={handleStop} variant="destructive" className="w-full animate-pulse">
+                                                                STOP (EMERGENCY)
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -115,6 +254,13 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, on
                                     resolvedParams[k] = v;
                                 }
                             });
+                        }
+
+                        // Validation: Check if duration is required and valid
+                        if (step.params && step.params.duration && (isNaN(duration) || duration <= 0)) {
+                            setErrorDialogMessage("Please enter a valid duration in seconds.");
+                            setErrorDialogOpen(true);
+                            return;
                         }
 
                         // Pre-flight Safety Check for TEST_DOSING

@@ -174,18 +174,9 @@
             "component": "TimeBasedWizard",
             "steps": [
                 {
-                    "type": "action",
-                    "label": "Run Test",
-                    "command": "TEST_DOSING",
-                    "params": {
-                        "duration": "input_duration_seconds"
-                    },
-                    "instructions": "Place output tube in a measuring cup."
-                },
-                {
                     "type": "input",
-                    "label": "Measured Output & Time",
-                    "instructions": "Enter the measured volume and the duration of the test.",
+                    "label": "Calibration Data",
+                    "instructions": "Enter the measured volume and test duration. If you don't have this data, use the 'Run Test' option below.",
                     "fields": [
                         {
                             "key": "measuredValue",
@@ -197,7 +188,16 @@
                             "label": "Test Duration",
                             "unit": "sec"
                         }
-                    ]
+                    ],
+                    "optionalAction": {
+                        "label": "Run Test (Optional)",
+                        "description": "Run the pump for a set time to generate calibration data.",
+                        "command": "TEST_DOSING",
+                        "params": {
+                            "duration": "input_duration_seconds"
+                        },
+                        "instructions": "Place output tube in a measuring cup."
+                    }
                 }
             ],
             "formula": "measuredValue / duration_seconds"
