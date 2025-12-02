@@ -50,14 +50,33 @@ export interface Block {
     position?: { x: number; y: number };
 }
 
-export interface IProgram {
+export interface IFlow {
     id: string;
     name: string;
     description?: string;
     mode: 'SIMPLE' | 'EXPERT';
     nodes: any[];
     edges: any[];
+    inputs?: {
+        name: string;
+        type: 'number' | 'string' | 'boolean';
+        default?: any;
+        description?: string;
+    }[];
     isActive: boolean;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+}
+
+export interface IProgram {
+    id: string;
+    name: string;
+    description?: string;
+    isActive: boolean;
+    schedule: {
+        time: string;
+        cycleId: string;
+    }[];
     createdAt?: Date | string;
     updatedAt?: Date | string;
 }

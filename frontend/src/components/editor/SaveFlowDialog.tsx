@@ -14,17 +14,17 @@ import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 
-interface SaveProgramDialogProps {
+interface SaveFlowDialogProps {
     children: React.ReactNode;
     defaultName?: string;
     onSave: (name: string, description: string) => Promise<void>;
 }
 
-export const SaveProgramDialog: React.FC<SaveProgramDialogProps> = ({ children, defaultName = '', onSave }) => {
+export const SaveFlowDialog: React.FC<SaveFlowDialogProps> = ({ children, defaultName = '', onSave }) => {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState(defaultName);
 
-    // Update local state if prop changes (e.g. when loading a program)
+    // Update local state if prop changes (e.g. when loading a flow)
     React.useEffect(() => {
         setName(defaultName);
     }, [defaultName]);
@@ -53,9 +53,9 @@ export const SaveProgramDialog: React.FC<SaveProgramDialogProps> = ({ children, 
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Save Program</DialogTitle>
+                    <DialogTitle>Save Flow</DialogTitle>
                     <DialogDescription>
-                        Give your automation program a name to save it.
+                        Give your automation flow a name to save it.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -74,7 +74,7 @@ export const SaveProgramDialog: React.FC<SaveProgramDialogProps> = ({ children, 
                             id="description"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Brief description of what this program does"
+                            placeholder="Brief description of what this flow does"
                         />
                     </div>
                 </div>
@@ -84,7 +84,7 @@ export const SaveProgramDialog: React.FC<SaveProgramDialogProps> = ({ children, 
                     </DialogClose>
                     <Button onClick={handleSave} disabled={loading || !name.trim()}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Program
+                        Save Flow
                     </Button>
                 </DialogFooter>
             </DialogContent>

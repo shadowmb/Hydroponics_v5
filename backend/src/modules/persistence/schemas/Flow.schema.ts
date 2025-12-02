@@ -1,32 +1,36 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { softDeletePlugin, ISoftDelete } from '../plugins/softDelete.plugin';
 
-export interface IActionTemplate extends Document, ISoftDelete {
+export interface IFlow extends Document, ISoftDelete {
     id: string;
     name: string;
-    type: string; // e.g., 'ACTUATOR_SET', 'WAIT'
-    defaultParams: Record<string, any>;
     description?: string;
+    mode: 'SIMPLE' | 'EXPERT';
+    nodes: any[];
+    edges: any[];
     inputs?: {
         name: string;
         type: 'number' | 'string' | 'boolean';
         default?: any;
         description?: string;
     }[];
+    isActive: boolean;
 }
 
-const ActionTemplateSchema = new Schema<IActionTemplate>({
+export const FlowSchema = new Schema<IFlow>({
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
-    type: { type: String, required: true },
-    defaultParams: { type: Schema.Types.Mixed, default: {} },
     description: { type: String },
+    mode: { type: String, enum: ['SIMPLE', 'EXPERT'], default: 'SIMPLE' },
+    nodes: { type: [Object], default: [] },
+    edges: { type: [Object], default: [] },
     inputs: [{
         name: { type: String, required: true },
         type: { type: String, enum: ['number', 'string', 'boolean'], required: true },
         default: { type: Schema.Types.Mixed },
         description: { type: String }
-    }]
+    }],
+    isActive: { type: Boolean, default: true }
 }, {
     timestamps: true,
     toJSON: {
@@ -38,6 +42,6 @@ const ActionTemplateSchema = new Schema<IActionTemplate>({
     }
 });
 
-ActionTemplateSchema.plugin(softDeletePlugin);
+FlowSchema.plugin(softDeletePlugin);
 
-export const ActionTemplateModel = mongoose.model<IActionTemplate>('ActionTemplate', ActionTemplateSchema);
+export const FlowModel = mongoose.model<IFlow>('Flow', FlowSchema);

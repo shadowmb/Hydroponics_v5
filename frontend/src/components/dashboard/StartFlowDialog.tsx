@@ -10,46 +10,46 @@ import {
     DialogTrigger,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
-import type { IProgram } from '../../../../shared/types';
+import type { IFlow } from '../../../../shared/types';
 
-interface StartProgramDialogProps {
+interface StartFlowDialogProps {
     children: React.ReactNode;
-    onStart: (programId: string) => Promise<void>;
+    onStart: (flowId: string) => Promise<void>;
 }
 
-export const StartProgramDialog: React.FC<StartProgramDialogProps> = ({ children, onStart }) => {
+export const StartFlowDialog: React.FC<StartFlowDialogProps> = ({ children, onStart }) => {
     const [open, setOpen] = useState(false);
-    const [programs, setPrograms] = useState<IProgram[]>([]);
+    const [flows, setFlows] = useState<IFlow[]>([]);
     const [loading, setLoading] = useState(false);
     const [startingId, setStartingId] = useState<string | null>(null);
 
     useEffect(() => {
         if (open) {
-            fetchPrograms();
+            fetchFlows();
         }
     }, [open]);
 
-    const fetchPrograms = async () => {
+    const fetchFlows = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/programs');
-            if (!res.ok) throw new Error('Failed to fetch programs');
+            const res = await fetch('/api/flows');
+            if (!res.ok) throw new Error('Failed to fetch flows');
             const data = await res.json();
-            setPrograms(data);
+            setFlows(data);
         } catch (error) {
             console.error(error);
-            toast.error('Failed to load programs');
+            toast.error('Failed to load flows');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleStart = async (programId: string) => {
-        setStartingId(programId);
+    const handleStart = async (flowId: string) => {
+        setStartingId(flowId);
         try {
-            await onStart(programId);
+            await onStart(flowId);
             setOpen(false);
-            toast.success('Program started successfully');
+            toast.success('Flow started successfully');
         } catch (error) {
             console.error(error);
             // Error handling is done in parent or via toast in parent
@@ -65,9 +65,9 @@ export const StartProgramDialog: React.FC<StartProgramDialogProps> = ({ children
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle>Start Automation Program</DialogTitle>
+                    <DialogTitle>Start Automation Flow</DialogTitle>
                     <DialogDescription>
-                        Select a program from the list below to start a new execution session.
+                        Select a flow from the list below to start a new execution session.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -76,9 +76,9 @@ export const StartProgramDialog: React.FC<StartProgramDialogProps> = ({ children
                         <div className="flex justify-center py-8">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
-                    ) : programs.length === 0 ? (
+                    ) : flows.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                            No programs found. Create one in the Editor.
+                            No flows found. Create one in the Editor.
                         </div>
                     ) : (
                         <div className="border rounded-md overflow-hidden">
@@ -91,19 +91,19 @@ export const StartProgramDialog: React.FC<StartProgramDialogProps> = ({ children
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {programs.map((program) => (
-                                        <tr key={program.id} className="hover:bg-muted/50 transition-colors">
-                                            <td className="px-4 py-3 font-medium">{program.name}</td>
-                                            <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{program.id}</td>
+                                    {flows.map((flow) => (
+                                        <tr key={flow.id} className="hover:bg-muted/50 transition-colors">
+                                            <td className="px-4 py-3 font-medium">{flow.name}</td>
+                                            <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{flow.id}</td>
                                             <td className="px-4 py-3 text-right">
                                                 <Button
                                                     size="sm"
                                                     variant="default"
                                                     className="gap-2 h-8"
-                                                    onClick={() => handleStart(program.id)}
-                                                    disabled={startingId === program.id}
+                                                    onClick={() => handleStart(flow.id)}
+                                                    disabled={startingId === flow.id}
                                                 >
-                                                    {startingId === program.id ? (
+                                                    {startingId === flow.id ? (
                                                         <Loader2 className="h-3 w-3 animate-spin" />
                                                     ) : (
                                                         <Play className="h-3 w-3" />

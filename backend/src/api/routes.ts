@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { HardwareController } from './controllers/HardwareController';
 import { AutomationController } from './controllers/AutomationController';
 import { SessionController } from './controllers/SessionController';
-import { ProgramController } from './controllers/ProgramController';
+import { FlowController } from './controllers/FlowController';
 
 export async function apiRoutes(app: FastifyInstance) {
 
@@ -71,10 +71,10 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/hardware/devices/:id/calibration', require('./controllers/CalibrationController').CalibrationController.saveCalibration);
     app.delete('/api/hardware/devices/:id/calibration/:strategyId', require('./controllers/CalibrationController').CalibrationController.deleteCalibration);
 
-    // Program Routes
-    app.post('/api/programs', ProgramController.create);
-    app.get('/api/programs', ProgramController.list);
-    app.get('/api/programs/:id', ProgramController.get);
-    app.put('/api/programs/:id', ProgramController.update);
-    app.delete('/api/programs/:id', ProgramController.delete);
+    // Flow Routes (formerly Programs)
+    app.post('/api/flows', FlowController.create);
+    app.get('/api/flows', FlowController.list);
+    app.get('/api/flows/:id', FlowController.get);
+    app.put('/api/flows/:id', FlowController.update);
+    app.delete('/api/flows/:id', FlowController.delete);
 }

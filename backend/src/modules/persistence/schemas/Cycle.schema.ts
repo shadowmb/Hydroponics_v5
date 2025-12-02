@@ -1,25 +1,23 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { softDeletePlugin, ISoftDelete } from '../plugins/softDelete.plugin';
 
-export interface IProgram extends Document, ISoftDelete {
+export interface ICycle extends Document, ISoftDelete {
     id: string;
     name: string;
     description?: string;
-    isActive: boolean;
-    schedule: {
-        time: string; // HH:mm
-        cycleId: string; // Refers to Cycle.id
+    steps: {
+        flowId: string; // Refers to ActionTemplate.id
+        overrides: Record<string, any>;
     }[];
 }
 
-const ProgramSchema = new Schema<IProgram>({
+const CycleSchema = new Schema<ICycle>({
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     description: { type: String },
-    isActive: { type: Boolean, default: false },
-    schedule: [{
-        time: { type: String, required: true }, // Validation regex could be added
-        cycleId: { type: String, required: true }
+    steps: [{
+        flowId: { type: String, required: true },
+        overrides: { type: Schema.Types.Mixed, default: {} }
     }]
 }, {
     timestamps: true,
@@ -32,6 +30,6 @@ const ProgramSchema = new Schema<IProgram>({
     }
 });
 
-ProgramSchema.plugin(softDeletePlugin);
+CycleSchema.plugin(softDeletePlugin);
 
-export const ProgramModel = mongoose.model<IProgram>('Program', ProgramSchema);
+export const CycleModel = mongoose.model<ICycle>('Cycle', CycleSchema);

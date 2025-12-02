@@ -149,13 +149,57 @@ export const automationMachine = createMachine({
                         }
                     }))
                 },
-                UNLOAD: { target: 'idle' }
+                UNLOAD: { target: 'idle' },
+                LOAD: {
+                    target: 'loaded',
+                    actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
+                        const blockMap = new Map<string, Block>();
+                        (event.blocks || []).forEach((b: Block) => blockMap.set(b.id, b));
+
+                        return {
+                            blocks: blockMap,
+                            edges: event.edges || [],
+                            currentBlockId: event.blocks?.[0]?.id || null,
+                            execContext: {
+                                ...context.execContext,
+                                programId: event.programId,
+                                actionTemplateId: event.templateId,
+                                startTime: 0, // Not started yet
+                                stepCount: 0,
+                                variables: {},
+                                errors: []
+                            }
+                        };
+                    })
+                }
             }
         },
         error: {
             on: {
                 STOP: { target: 'stopped' },
-                UNLOAD: { target: 'idle' }
+                UNLOAD: { target: 'idle' },
+                LOAD: {
+                    target: 'loaded',
+                    actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
+                        const blockMap = new Map<string, Block>();
+                        (event.blocks || []).forEach((b: Block) => blockMap.set(b.id, b));
+
+                        return {
+                            blocks: blockMap,
+                            edges: event.edges || [],
+                            currentBlockId: event.blocks?.[0]?.id || null,
+                            execContext: {
+                                ...context.execContext,
+                                programId: event.programId,
+                                actionTemplateId: event.templateId,
+                                startTime: 0, // Not started yet
+                                stepCount: 0,
+                                variables: {},
+                                errors: []
+                            }
+                        };
+                    })
+                }
             }
         },
         completed: {
@@ -173,7 +217,29 @@ export const automationMachine = createMachine({
                         }
                     }))
                 },
-                UNLOAD: { target: 'idle' }
+                UNLOAD: { target: 'idle' },
+                LOAD: {
+                    target: 'loaded',
+                    actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
+                        const blockMap = new Map<string, Block>();
+                        (event.blocks || []).forEach((b: Block) => blockMap.set(b.id, b));
+
+                        return {
+                            blocks: blockMap,
+                            edges: event.edges || [],
+                            currentBlockId: event.blocks?.[0]?.id || null,
+                            execContext: {
+                                ...context.execContext,
+                                programId: event.programId,
+                                actionTemplateId: event.templateId,
+                                startTime: 0, // Not started yet
+                                stepCount: 0,
+                                variables: {},
+                                errors: []
+                            }
+                        };
+                    })
+                }
             }
         }
     }

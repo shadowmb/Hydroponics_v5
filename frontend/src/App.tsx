@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './components/theme-provider';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
-import { Programs } from './pages/Programs';
+import { Flows } from './pages/Flows';
 import Controllers from './pages/Controllers'; // Default import
 import { Devices } from './pages/Devices';
 import { FlowEditor } from './pages/FlowEditor';
@@ -25,7 +25,7 @@ function App() {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/programs" element={<Programs />} />
+            <Route path="/flows" element={<Flows />} />
             <Route path="/controllers" element={<Controllers />} />
             <Route path="/devices" element={<Devices />} />
             <Route path="/editor" element={<FlowEditor />} />

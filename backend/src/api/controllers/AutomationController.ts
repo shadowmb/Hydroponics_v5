@@ -9,7 +9,7 @@ export class AutomationController {
         const body = AutomationStartSchema.parse(req.body);
 
         try {
-            const sessionId = await automation.loadProgram(body.programId);
+            const sessionId = await automation.loadProgram(body.programId, body.overrides);
             return reply.send({ success: true, message: 'Program loaded', sessionId });
         } catch (error: any) {
             logger.error({ error }, 'Failed to load program');

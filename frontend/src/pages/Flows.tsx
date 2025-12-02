@@ -13,29 +13,30 @@ import {
     DialogFooter,
     DialogClose,
 } from '../components/ui/dialog';
-import type { IProgram } from '../../../shared/types';
 
-export const Programs: React.FC = () => {
+import type { IFlow } from '../../../shared/types';
+
+export const Flows: React.FC = () => {
     const navigate = useNavigate();
-    const [programs, setPrograms] = useState<IProgram[]>([]);
+    const [flows, setFlows] = useState<IFlow[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchPrograms();
+        fetchFlows();
     }, []);
 
-    const fetchPrograms = async () => {
+    const fetchFlows = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/programs');
-            if (!res.ok) throw new Error('Failed to fetch programs');
+            const res = await fetch('/api/flows');
+            if (!res.ok) throw new Error('Failed to fetch flows');
             const data = await res.json();
-            setPrograms(data);
+            setFlows(data);
         } catch (error) {
             console.error(error);
-            toast.error('Failed to load programs');
+            toast.error('Failed to load flows');
         } finally {
             setLoading(false);
         }
@@ -45,35 +46,52 @@ export const Programs: React.FC = () => {
         if (!deleteId) return;
         setProcessingId(deleteId);
         try {
-            const res = await fetch(`/api/programs/${deleteId}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete program');
+            const res = await fetch(`/api/flows/${deleteId}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to delete flow');
 
-            setPrograms(programs.filter(p => p.id !== deleteId));
-            toast.success('Program deleted successfully');
+            setFlows(flows.filter(p => p.id !== deleteId));
+            toast.success('Flow deleted successfully');
             setDeleteId(null);
         } catch (error) {
             console.error(error);
-            toast.error('Failed to delete program');
+            toast.error('Failed to delete flow');
         } finally {
             setProcessingId(null);
         }
     };
 
-    const handleRun = async (programId: string) => {
-        setProcessingId(programId);
+    const handleRun = async (flowId: string) => {
+        setProcessingId(flowId);
         try {
-            const res = await fetch('/api/automation/start', {
+            // Note: We still use automation/start but now we pass programId which refers to a Flow ID for now
+            // until we fully implement the Schedule/Cycle logic.
+            // The backend loadProgram now expects a Flow ID.
+
+            // 1. Load
+            const loadRes = await fetch('/api/automation/load', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ programId })
+                body: JSON.stringify({ programId: flowId })
             });
 
-            if (!res.ok) {
-                const err = await res.json();
+            if (!loadRes.ok) {
+                const err = await loadRes.json();
                 throw new Error(err.message);
             }
 
-            toast.success('Program started');
+            // 2. Start
+            const startRes = await fetch('/api/automation/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            if (!startRes.ok) {
+                const err = await startRes.json();
+                throw new Error(err.message);
+            }
+
+            toast.success('Flow started');
             navigate('/'); // Redirect to Dashboard
         } catch (error: any) {
             console.error(error);
@@ -87,27 +105,27 @@ export const Programs: React.FC = () => {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Programs</h2>
-                    <p className="text-muted-foreground">Manage your automation programs.</p>
+                    <h2 className="text-2xl font-bold tracking-tight">Flows</h2>
+                    <p className="text-muted-foreground">Manage your automation flows.</p>
                 </div>
                 <Button onClick={() => navigate('/editor')}>
-                    <Plus className="mr-2 h-4 w-4" /> Create Program
+                    <Plus className="mr-2 h-4 w-4" /> Create Flow
                 </Button>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>All Programs</CardTitle>
-                    <CardDescription>A list of all automation programs in the system.</CardDescription>
+                    <CardTitle>All Flows</CardTitle>
+                    <CardDescription>A list of all automation flows in the system.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="flex justify-center py-12">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
-                    ) : programs.length === 0 ? (
+                    ) : flows.length === 0 ? (
                         <div className="text-center py-12 text-muted-foreground">
-                            No programs found. Create one to get started.
+                            No flows found. Create one to get started.
                         </div>
                     ) : (
                         <div className="relative w-full overflow-auto">
@@ -122,17 +140,17 @@ export const Programs: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {programs.map((program) => (
-                                        <tr key={program.id} className="hover:bg-muted/50 transition-colors">
-                                            <td className="px-4 py-3 font-medium">{program.name}</td>
-                                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{program.id}</td>
+                                    {flows.map((flow) => (
+                                        <tr key={flow.id} className="hover:bg-muted/50 transition-colors">
+                                            <td className="px-4 py-3 font-medium">{flow.name}</td>
+                                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{flow.id}</td>
                                             <td className="px-4 py-3 text-muted-foreground">
-                                                {program.createdAt ? new Date(program.createdAt).toLocaleDateString() : '-'}
+                                                {flow.createdAt ? new Date(flow.createdAt).toLocaleDateString() : '-'}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${program.isActive ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
+                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${flow.isActive ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
                                                     }`}>
-                                                    {program.isActive ? 'Active' : 'Inactive'}
+                                                    {flow.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-right">
@@ -140,11 +158,11 @@ export const Programs: React.FC = () => {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => handleRun(program.id)}
+                                                        onClick={() => handleRun(flow.id)}
                                                         disabled={!!processingId}
-                                                        title="Run Program"
+                                                        title="Run Flow"
                                                     >
-                                                        {processingId === program.id ? (
+                                                        {processingId === flow.id ? (
                                                             <Loader2 className="h-4 w-4 animate-spin" />
                                                         ) : (
                                                             <Play className="h-4 w-4 text-green-600" />
@@ -153,16 +171,16 @@ export const Programs: React.FC = () => {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => navigate(`/editor/${program.id}`)}
-                                                        title="Edit Program"
+                                                        onClick={() => navigate(`/editor/${flow.id}`)}
+                                                        title="Edit Flow"
                                                     >
                                                         <Edit className="h-4 w-4 text-blue-600" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => setDeleteId(program.id)}
-                                                        title="Delete Program"
+                                                        onClick={() => setDeleteId(flow.id)}
+                                                        title="Delete Flow"
                                                     >
                                                         <Trash2 className="h-4 w-4 text-red-600" />
                                                     </Button>
@@ -181,9 +199,9 @@ export const Programs: React.FC = () => {
             <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete Program?</DialogTitle>
+                        <DialogTitle>Delete Flow?</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete this program? This action cannot be undone.
+                            Are you sure you want to delete this flow? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

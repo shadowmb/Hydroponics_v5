@@ -3,7 +3,7 @@ import { automationMachine, AutomationContext, AutomationEvent } from './machine
 import { Block, BlockResult, IBlockExecutor, ExecutionContext, PauseError } from './interfaces';
 import { events } from '../../core/EventBusService';
 import { logger } from '../../core/LoggerService';
-import { programRepository } from '../persistence/repositories/ProgramRepository';
+import { flowRepository } from '../persistence/repositories/FlowRepository';
 import { sessionRepository } from '../persistence/repositories/SessionRepository';
 import { actionTemplateRepository } from '../persistence/repositories/ActionTemplateRepository';
 
@@ -12,7 +12,10 @@ export class AutomationEngine {
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
 
+    private instanceId = Math.random().toString(36).substring(7);
+
     constructor() {
+        console.log(`DEBUG: AutomationEngine Created: ${this.instanceId}`);
         // Define the logic for 'executeBlock'
         const executeBlockLogic = fromPromise(async ({ input, signal }: { input: { context: AutomationContext }, signal: AbortSignal }) => {
             return this.executeBlock(input.context, signal);
@@ -55,7 +58,8 @@ export class AutomationEngine {
                 state: stateValue,
                 currentBlock: snapshot.context.currentBlockId,
                 context: snapshot.context.execContext,
-                sessionId: this.currentSessionId
+                sessionId: this.currentSessionId,
+                error: snapshot.context.error
             });
         });
     }
@@ -71,42 +75,62 @@ export class AutomationEngine {
     /**
      * Load a program into memory (Idle state).
      */
-    public async loadProgram(programId: string): Promise<string> {
-        // 1. Load Program
-        const program = await programRepository.findById(programId);
-        if (!program) {
-            throw new Error(`Program not found: ${programId}`);
+    public async loadProgram(programId: string, overrides: Record<string, any> = {}): Promise<string> {
+        // 1. Load Program (Flow)
+        const flow = await flowRepository.findById(programId);
+        if (!flow) {
+            throw new Error(`Flow not found: ${programId}`);
         }
 
-        if (!program.isActive) {
-            throw new Error(`Program is not active: ${programId}`);
+        if (!flow.isActive) {
+            throw new Error(`Flow is not active: ${programId}`);
         }
 
-        // 2. Create Session
+        // 2. Resolve Inputs
+        const variables: Record<string, any> = {};
+        if (flow.inputs) {
+            for (const input of flow.inputs) {
+                if (overrides[input.name] !== undefined) {
+                    variables[input.name] = overrides[input.name];
+                } else if (input.default !== undefined) {
+                    variables[input.name] = input.default;
+                } else {
+                    // Optional: Throw error if required input is missing?
+                    // For now, let's leave it undefined or null
+                    variables[input.name] = null;
+                }
+            }
+        }
+
+        // 3. Create Session
         const session = await sessionRepository.create({
-            programId: program.id,
+            programId: flow.id,
             startTime: new Date(),
             status: 'loaded', // Initial status
             logs: [],
             context: {
-                resumeState: {}
+                resumeState: {},
+                variables: variables // Store resolved variables in context
             }
         });
         this.currentSessionId = session.id;
 
-        logger.info({ sessionId: this.currentSessionId, programId }, '📥 Loading Program Session');
+        logger.info({ sessionId: this.currentSessionId, programId, variables }, '📥 Loading Program Session');
 
-        // 3. Send LOAD event to Machine
+        // 4. Send LOAD event to Machine
         this.actor.send({
             type: 'LOAD',
-            programId: program.id,
+            programId: flow.id,
             templateId: 'default',
-            blocks: program.nodes.map((n: any) => ({
+            blocks: flow.nodes.map((n: any) => ({
                 id: n.id,
                 type: n.type,
                 params: n.params || n.data || {}
             })),
-            edges: program.edges as any[]
+            edges: flow.edges as any[],
+            execContext: { // Pass initial context to machine
+                variables
+            }
         } as any);
 
         return this.currentSessionId!;
@@ -150,6 +174,22 @@ export class AutomationEngine {
     }
 
     /**
+     * Helper to resolve variable references in params (e.g. "{{duration}}")
+     */
+    private resolveParams(params: Record<string, any>, variables: Record<string, any>): Record<string, any> {
+        const resolved: Record<string, any> = {};
+        for (const [key, value] of Object.entries(params)) {
+            if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+                const varName = value.slice(2, -2).trim();
+                resolved[key] = variables[varName] !== undefined ? variables[varName] : value;
+            } else {
+                resolved[key] = value;
+            }
+        }
+        return resolved;
+    }
+
+    /**
      * The core logic run by the XState 'invoke'.
      * Executes a single block.
      */
@@ -168,9 +208,14 @@ export class AutomationEngine {
         if (this.currentSessionId) {
             try {
                 const session = await sessionRepository.findById(this.currentSessionId);
-                if (session && session.context && session.context.resumeState) {
-                    // Update the local context object (this doesn't affect XState context permanently, which is fine)
-                    context.execContext.resumeState = session.context.resumeState;
+                if (session && session.context) {
+                    if (session.context.resumeState) {
+                        context.execContext.resumeState = session.context.resumeState;
+                    }
+                    // Also sync variables if they changed (though they are usually static per session)
+                    if (session.context.variables) {
+                        context.execContext.variables = session.context.variables;
+                    }
                 }
             } catch (err) {
                 logger.warn({ err }, 'Failed to sync session context from DB');
@@ -181,9 +226,11 @@ export class AutomationEngine {
         events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
 
         try {
-            // 2. Execute (Deterministic Step)
-            const execParams = { ...block.params, _blockId: blockId };
-            const result = await executor.execute(context.execContext, execParams, signal);
+            // 2. Resolve Params & Execute (Deterministic Step)
+            const rawParams = { ...block.params, _blockId: blockId };
+            const resolvedParams = this.resolveParams(rawParams, context.execContext.variables || {});
+
+            const result = await executor.execute(context.execContext, resolvedParams, signal);
 
             // 3. Emit Block End
             events.emit('automation:block_end', { blockId, success: result.success, output: result.output, sessionId: this.currentSessionId });
@@ -249,6 +296,7 @@ export class AutomationEngine {
                 throw error; // XState handles cancellation
             }
 
+            console.error('BLOCK EXECUTION ERROR:', error);
             logger.error({ error, blockId }, '❌ Block Execution Error');
             throw error; // Triggers onError in XState
         }

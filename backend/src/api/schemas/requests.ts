@@ -14,6 +14,7 @@ export const HardwareCommandSchema = z.object({
 export const AutomationStartSchema = z.object({
     programId: z.string().min(1),
     templateId: z.string().optional(),
+    overrides: z.record(z.any()).optional(),
     // We might accept blocks directly for testing, or load them from DB
     blocks: z.array(z.any()).optional()
 });

@@ -8,9 +8,9 @@ import { PropertiesPanel } from '../components/editor/PropertiesPanel';
 import { ActionNode } from '../components/editor/nodes/ActionNode';
 import { ConditionNode } from '../components/editor/nodes/ConditionNode';
 import { GenericBlockNode } from '../components/editor/nodes/GenericBlockNode';
-import { flowToProgram, programToFlow } from '../lib/flow-utils';
+import { reactFlowToFlow, flowToReactFlow } from '../lib/flow-utils';
 import { Button } from '../components/ui/button';
-import { SaveProgramDialog } from '../components/editor/SaveProgramDialog';
+import { SaveFlowDialog } from '../components/editor/SaveFlowDialog';
 import { toast } from 'sonner';
 import { Save } from 'lucide-react';
 
@@ -42,33 +42,34 @@ const FlowEditorContent: React.FC = () => {
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-    const [programName, setProgramName] = useState('');
-    const [programDescription, setProgramDescription] = useState('');
+    const [flowName, setFlowName] = useState('');
+    const [flowDescription, setFlowDescription] = useState('');
 
-    // Load Program Data
+    // Load Flow Data
     useEffect(() => {
         if (!id) return;
 
-        const fetchProgram = async () => {
+        const fetchFlow = async () => {
             try {
-                const res = await fetch(`/api/programs/${id}`);
-                if (!res.ok) throw new Error('Failed to load program');
+                const res = await fetch(`/api/flows/${id}`);
+                if (!res.ok) throw new Error('Failed to load flow');
 
-                const program = await res.json();
-                const { nodes: flowNodes, edges: flowEdges } = programToFlow(program);
+                const flow = await res.json();
+                // Note: flowToProgram/programToFlow helpers might need renaming later but logic is same
+                const { nodes: flowNodes, edges: flowEdges } = flowToReactFlow(flow);
 
                 setNodes(flowNodes);
                 setEdges(flowEdges);
-                setProgramName(program.name);
-                setProgramDescription(program.description || '');
-                toast.success('Program loaded');
+                setFlowName(flow.name);
+                setFlowDescription(flow.description || '');
+                toast.success('Flow loaded');
             } catch (error) {
                 console.error('Load error:', error);
-                toast.error('Failed to load program');
+                toast.error('Failed to load flow');
             }
         };
 
-        fetchProgram();
+        fetchFlow();
     }, [id, setNodes, setEdges]);
 
     const onConnect = useCallback(
@@ -133,21 +134,21 @@ const FlowEditorContent: React.FC = () => {
     };
 
     const onSave = useCallback(async (name: string, description: string) => {
-        const programData = flowToProgram(nodes, edges);
+        const flowData = reactFlowToFlow(nodes, edges);
 
-        // If editing existing program, use its ID. Otherwise generate new one.
-        const programId = id || name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        // If editing existing flow, use its ID. Otherwise generate new one.
+        const flowId = id || name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
         const payload = {
-            ...programData,
-            id: programId,
+            ...flowData,
+            id: flowId,
             name: name,
             description: description,
             isActive: true
         };
 
         const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/programs/${id}` : '/api/programs';
+        const url = id ? `/api/flows/${id}` : '/api/flows';
 
         try {
             const res = await fetch(url, {
@@ -157,7 +158,7 @@ const FlowEditorContent: React.FC = () => {
             });
 
             if (res.ok) {
-                toast.success(`Program ${id ? 'updated' : 'saved'} successfully!`);
+                toast.success(`Flow ${id ? 'updated' : 'saved'} successfully!`);
             } else {
                 const err = await res.json();
                 toast.error(`Failed to save: ${err.message}`);
@@ -165,7 +166,7 @@ const FlowEditorContent: React.FC = () => {
             }
         } catch (error: any) {
             console.error('Save error:', error);
-            toast.error('Failed to save program');
+            toast.error('Failed to save flow');
             throw error;
         }
     }, [nodes, edges, id]);
@@ -174,12 +175,12 @@ const FlowEditorContent: React.FC = () => {
         <div className="h-full w-full flex flex-col">
             <div className="h-12 border-b bg-card flex items-center px-4 justify-between">
                 <h2 className="font-semibold">Flow Editor</h2>
-                <SaveProgramDialog onSave={onSave} defaultName={programName}>
+                <SaveFlowDialog onSave={onSave} defaultName={flowName}>
                     <Button size="sm" className="gap-2">
                         <Save className="h-4 w-4" />
-                        {id ? 'Update Program' : 'Save Program'}
+                        {id ? 'Update Flow' : 'Save Flow'}
                     </Button>
-                </SaveProgramDialog>
+                </SaveFlowDialog>
             </div>
             <div className="flex-1 flex overflow-hidden">
                 <Sidebar />

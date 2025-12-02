@@ -21,7 +21,7 @@ interface BackendEdge {
     label?: string;
 }
 
-interface Program {
+interface Flow {
     id: string;
     name: string;
     nodes: Block[];
@@ -29,9 +29,9 @@ interface Program {
 }
 
 /**
- * Converts React Flow Nodes and Edges to a Backend Program structure.
+ * Converts React Flow Nodes and Edges to a Backend Flow structure.
  */
-export const flowToProgram = (nodes: Node[], edges: Edge[]): Partial<Program> => {
+export const reactFlowToFlow = (nodes: Node[], edges: Edge[]): Partial<Flow> => {
     const backendNodes: Block[] = nodes.map((node) => {
         const block: Block = {
             id: node.id,
@@ -65,15 +65,15 @@ export const flowToProgram = (nodes: Node[], edges: Edge[]): Partial<Program> =>
 };
 
 /**
- * Converts a Backend Program structure to React Flow Nodes and Edges.
+ * Converts a Backend Flow structure to React Flow Nodes and Edges.
  */
-export const programToFlow = (program: Partial<Program>): { nodes: Node[]; edges: Edge[] } => {
+export const flowToReactFlow = (flow: Partial<Flow>): { nodes: Node[]; edges: Edge[] } => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    if (!program.nodes) return { nodes, edges };
+    if (!flow.nodes) return { nodes, edges };
 
-    program.nodes.forEach((block) => {
+    flow.nodes.forEach((block) => {
         // 1. Create Node
         const isCondition = block.type === 'IF';
         const nodeType = isCondition ? 'condition' : 'generic'; // Use generic for all standard blocks
@@ -98,8 +98,8 @@ export const programToFlow = (program: Partial<Program>): { nodes: Node[]; edges
         });
     });
 
-    if (program.edges) {
-        program.edges.forEach((edge) => {
+    if (flow.edges) {
+        flow.edges.forEach((edge) => {
             edges.push({
                 id: edge.id,
                 source: edge.source,

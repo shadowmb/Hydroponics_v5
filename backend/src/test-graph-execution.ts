@@ -1,5 +1,5 @@
 import { automation } from './modules/automation/AutomationEngine';
-import { ProgramModel } from './models/Program';
+import { FlowModel } from './modules/persistence/schemas/Flow.schema';
 import mongoose from 'mongoose';
 import { logger } from './core/LoggerService';
 
@@ -15,8 +15,9 @@ async function testGraphExecution() {
         await mongoose.connect('mongodb://localhost:27017/hydroponics-v5');
         logger.info('Connected to MongoDB');
 
-        // 1. Create a Test Program with Graph
-        const program = await ProgramModel.create({
+        // 1. Create a Test Flow with Graph
+        const flow = await FlowModel.create({
+            id: 'test-flow-1', // Added ID
             name: 'Test Graph Flow',
             isActive: true,
             mode: 'SIMPLE',
@@ -31,10 +32,11 @@ async function testGraphExecution() {
             ]
         });
 
-        logger.info({ programId: program.id }, 'Created Test Program');
+        logger.info({ flowId: flow.id }, 'Created Test Flow');
 
-        // 2. Start Program
-        const sessionId = await automation.startProgram(program.id);
+        // 2. Start Program (Flow)
+        const sessionId = await automation.loadProgram(flow.id); // Changed to loadProgram
+        await automation.startProgram();
         logger.info({ sessionId }, 'Started Program Session');
 
         // 3. Monitor
@@ -46,7 +48,7 @@ async function testGraphExecution() {
         logger.info({ state: snapshot.value, context: snapshot.context }, 'Final Snapshot');
 
         // Cleanup
-        await ProgramModel.findByIdAndDelete(program.id);
+        await FlowModel.findByIdAndDelete(flow.id);
         await mongoose.disconnect();
 
     } catch (error) {

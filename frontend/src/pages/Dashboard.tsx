@@ -4,7 +4,7 @@ import { useStore } from '../core/useStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
-import { StartProgramDialog } from '../components/dashboard/StartProgramDialog';
+import { StartFlowDialog } from '../components/dashboard/StartFlowDialog';
 
 export const Dashboard: React.FC = () => {
     const { systemStatus, devices, activeSession, logs } = useStore();
@@ -209,11 +209,11 @@ export const Dashboard: React.FC = () => {
                             <p className="text-sm mt-1 max-w-sm mx-auto mb-4">Select a program to load into the automation engine.</p>
 
                             <div className="flex gap-2 justify-center">
-                                <StartProgramDialog onStart={(id) => handleControl('LOAD', id)}>
+                                <StartFlowDialog onStart={(id) => handleControl('LOAD', id)}>
                                     <Button variant="default">
-                                        Load Program
+                                        Load Flow
                                     </Button>
-                                </StartProgramDialog>
+                                </StartFlowDialog>
                                 <Button variant="outline" onClick={() => window.location.href = '/editor'}>
                                     Go to Editor
                                 </Button>
