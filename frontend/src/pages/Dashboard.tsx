@@ -7,7 +7,7 @@ import { Separator } from '../components/ui/separator';
 import { StartProgramDialog } from '../components/dashboard/StartProgramDialog';
 
 export const Dashboard: React.FC = () => {
-    const { systemStatus, devices, activeSession } = useStore();
+    const { systemStatus, devices, activeSession, logs } = useStore();
     const [uptime, setUptime] = useState<string>('00:00:00');
 
     // Mock Uptime Counter
@@ -23,15 +23,35 @@ export const Dashboard: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const handleControl = async (action: 'START' | 'PAUSE' | 'RESUME' | 'STOP', programId?: string) => {
+    // Fetch initial status on mount to ensure UI is in sync
+    useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch('/api/system/status');
+                if (res.ok) {
+                    const status = await res.json();
+                    useStore.getState().setSystemStatus(status.status);
+                    useStore.getState().setActiveSession(status.session);
+                }
+            } catch (error) {
+                console.error('Failed to fetch status:', error);
+            }
+        };
+        fetchStatus();
+    }, []);
+
+    const handleControl = async (action: 'LOAD' | 'START' | 'PAUSE' | 'RESUME' | 'STOP' | 'UNLOAD', programId?: string) => {
         try {
             let endpoint = '';
             let body = {};
 
             switch (action) {
+                case 'LOAD':
+                    endpoint = '/api/automation/load';
+                    body = { programId };
+                    break;
                 case 'START':
                     endpoint = '/api/automation/start';
-                    body = { programId };
                     break;
                 case 'PAUSE':
                     endpoint = '/api/automation/pause';
@@ -41,6 +61,9 @@ export const Dashboard: React.FC = () => {
                     break;
                 case 'STOP':
                     endpoint = '/api/automation/stop';
+                    break;
+                case 'UNLOAD':
+                    endpoint = '/api/automation/unload';
                     break;
             }
 
@@ -120,26 +143,48 @@ export const Dashboard: React.FC = () => {
                                         <span className="text-sm text-muted-foreground">Status:</span>
                                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${activeSession.status === 'running' ? 'bg-green-500/10 text-green-600' :
                                             activeSession.status === 'paused' ? 'bg-yellow-500/10 text-yellow-600' :
-                                                'bg-red-500/10 text-red-600'
+                                                activeSession.status === 'error' ? 'bg-red-500/10 text-red-600' :
+                                                    'bg-blue-500/10 text-blue-600'
                                             }`}>
                                             {activeSession.status.toUpperCase()}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
+                                    {/* LOADED or STOPPED or COMPLETED -> START (Restart) */}
+                                    {(activeSession.status === 'loaded' || activeSession.status === 'stopped' || activeSession.status === 'completed') && (
+                                        <Button onClick={() => handleControl('START')} variant="default" className="gap-2">
+                                            <Play className="h-4 w-4" /> Start
+                                        </Button>
+                                    )}
+
+                                    {/* RUNNING -> PAUSE */}
                                     {activeSession.status === 'running' && (
                                         <Button onClick={() => handleControl('PAUSE')} variant="outline" className="gap-2">
                                             <Pause className="h-4 w-4" /> Pause
                                         </Button>
                                     )}
+
+                                    {/* PAUSED -> RESUME */}
                                     {activeSession.status === 'paused' && (
                                         <Button onClick={() => handleControl('RESUME')} variant="outline" className="gap-2">
                                             <Play className="h-4 w-4" /> Resume
                                         </Button>
                                     )}
-                                    <Button onClick={() => handleControl('STOP')} variant="destructive" className="gap-2">
-                                        <Square className="h-4 w-4" /> Stop
-                                    </Button>
+
+                                    {/* RUNNING or PAUSED -> STOP */}
+                                    {(activeSession.status === 'running' || activeSession.status === 'paused') && (
+                                        <Button onClick={() => handleControl('STOP')} variant="destructive" className="gap-2">
+                                            <Square className="h-4 w-4" /> Stop
+                                        </Button>
+                                    )}
+
+                                    {/* STOPPED or COMPLETED or LOADED -> UNLOAD (Close) */}
+                                    {(activeSession.status === 'stopped' || activeSession.status === 'completed' || activeSession.status === 'loaded') && (
+                                        <Button onClick={() => handleControl('UNLOAD')} variant="ghost" className="gap-2 text-muted-foreground hover:text-destructive">
+                                            <Square className="h-4 w-4" /> Close
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
 
@@ -149,7 +194,7 @@ export const Dashboard: React.FC = () => {
                             <div className="bg-muted/50 p-4 rounded-lg border">
                                 <div className="text-sm font-medium text-muted-foreground mb-2">Current Block Execution</div>
                                 <div className="font-mono text-sm bg-background p-3 rounded border">
-                                    {activeSession.currentBlockId || 'Initializing...'}
+                                    {activeSession.currentBlockId || 'Ready to start...'}
                                 </div>
                             </div>
                         </div>
@@ -160,13 +205,13 @@ export const Dashboard: React.FC = () => {
                                     <Play className="h-6 w-6 text-muted-foreground/50" />
                                 </div>
                             </div>
-                            <h4 className="font-medium text-lg">No Program Running</h4>
-                            <p className="text-sm mt-1 max-w-sm mx-auto mb-4">Select a program to start a new automation session.</p>
+                            <h4 className="font-medium text-lg">No Program Loaded</h4>
+                            <p className="text-sm mt-1 max-w-sm mx-auto mb-4">Select a program to load into the automation engine.</p>
 
                             <div className="flex gap-2 justify-center">
-                                <StartProgramDialog onStart={(id) => handleControl('START', id)}>
+                                <StartProgramDialog onStart={(id) => handleControl('LOAD', id)}>
                                     <Button variant="default">
-                                        Start Program
+                                        Load Program
                                     </Button>
                                 </StartProgramDialog>
                                 <Button variant="outline" onClick={() => window.location.href = '/editor'}>
@@ -195,12 +240,34 @@ export const Dashboard: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="[&_tr:last-child]:border-0">
-                                {/* Empty State for now */}
-                                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                    <td colSpan={3} className="p-4 text-center text-muted-foreground h-24 align-middle">
-                                        No recent logs available
-                                    </td>
-                                </tr>
+                                {logs.length === 0 ? (
+                                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                        <td colSpan={3} className="p-4 text-center text-muted-foreground h-24 align-middle">
+                                            No recent logs available
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    logs.map((log, i) => (
+                                        <tr key={i} className="border-b transition-colors hover:bg-muted/50">
+                                            <td className="p-4 align-middle font-mono text-xs text-muted-foreground">
+                                                {new Date(log.timestamp).toLocaleTimeString()}
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${log.level === 'error' ? 'bg-red-500/10 text-red-600' : 'bg-blue-500/10 text-blue-600'}`}>
+                                                    {log.level.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle text-sm">
+                                                {log.message}
+                                                {log.data && (
+                                                    <pre className="mt-1 text-xs bg-muted p-1 rounded overflow-x-auto">
+                                                        {JSON.stringify(log.data, null, 2)}
+                                                    </pre>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

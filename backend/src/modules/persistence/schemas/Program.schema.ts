@@ -5,18 +5,20 @@ export interface IProgram extends Document, ISoftDelete {
     id: string;
     name: string;
     description?: string;
-    blocks: any[]; // Array of Block definitions
-    triggers: any[]; // Array of Trigger definitions
-    active: boolean;
+    mode: 'SIMPLE' | 'EXPERT';
+    nodes: any[];
+    edges: any[];
+    isActive: boolean;
 }
 
 export const ProgramSchema = new Schema<IProgram>({
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     description: { type: String },
-    blocks: { type: [Object], default: [] },
-    triggers: { type: [Object], default: [] },
-    active: { type: Boolean, default: true }
+    mode: { type: String, enum: ['SIMPLE', 'EXPERT'], default: 'SIMPLE' },
+    nodes: { type: [Object], default: [] },
+    edges: { type: [Object], default: [] },
+    isActive: { type: Boolean, default: true }
 }, {
     timestamps: true,
     toJSON: {

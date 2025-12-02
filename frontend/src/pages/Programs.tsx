@@ -130,9 +130,9 @@ export const Programs: React.FC = () => {
                                                 {program.createdAt ? new Date(program.createdAt).toLocaleDateString() : '-'}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${program.active ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
+                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${program.isActive ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
                                                     }`}>
-                                                    {program.active ? 'Active' : 'Inactive'}
+                                                    {program.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-right">
@@ -153,7 +153,7 @@ export const Programs: React.FC = () => {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => navigate(`/editor?programId=${program.id}`)} // TODO: Implement load in editor
+                                                        onClick={() => navigate(`/editor/${program.id}`)}
                                                         title="Edit Program"
                                                     >
                                                         <Edit className="h-4 w-4 text-blue-600" />

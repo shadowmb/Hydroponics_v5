@@ -29,6 +29,7 @@ function App() {
             <Route path="/controllers" element={<Controllers />} />
             <Route path="/devices" element={<Devices />} />
             <Route path="/editor" element={<FlowEditor />} />
+            <Route path="/editor/:id" element={<FlowEditor />} />
             <Route path="/hardware" element={<Hardware />} />
             <Route path="/history" element={<History />} />
             <Route path="/settings" element={<div>Settings Page</div>} />

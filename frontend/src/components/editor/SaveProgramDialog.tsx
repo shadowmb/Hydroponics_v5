@@ -23,6 +23,11 @@ interface SaveProgramDialogProps {
 export const SaveProgramDialog: React.FC<SaveProgramDialogProps> = ({ children, defaultName = '', onSave }) => {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState(defaultName);
+
+    // Update local state if prop changes (e.g. when loading a program)
+    React.useEffect(() => {
+        setName(defaultName);
+    }, [defaultName]);
     const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
 

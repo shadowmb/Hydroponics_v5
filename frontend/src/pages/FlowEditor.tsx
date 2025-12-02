@@ -1,12 +1,14 @@
-import React, { useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { ReactFlow, Background, Controls, useNodesState, useEdgesState, addEdge, ReactFlowProvider } from '@xyflow/react';
-import type { Node, Connection } from '@xyflow/react';
+import type { Node, Connection, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Sidebar } from '../components/editor/Sidebar';
 import { PropertiesPanel } from '../components/editor/PropertiesPanel';
 import { ActionNode } from '../components/editor/nodes/ActionNode';
 import { ConditionNode } from '../components/editor/nodes/ConditionNode';
-import { flowToProgram } from '../lib/flow-utils';
+import { GenericBlockNode } from '../components/editor/nodes/GenericBlockNode';
+import { flowToProgram, programToFlow } from '../lib/flow-utils';
 import { Button } from '../components/ui/button';
 import { SaveProgramDialog } from '../components/editor/SaveProgramDialog';
 import { toast } from 'sonner';
@@ -15,23 +17,59 @@ import { Save } from 'lucide-react';
 const nodeTypes = {
     action: ActionNode,
     condition: ConditionNode,
+    generic: GenericBlockNode,
 };
 
 const initialNodes: Node[] = [
     {
-        id: '1',
-        type: 'action',
-        position: { x: 250, y: 5 },
-        data: { label: 'Start Log', type: 'LOG', message: 'Program Started' }
+        id: 'start',
+        type: 'generic',
+        position: { x: 100, y: 100 },
+        data: { label: 'Start', type: 'START' }
+    },
+    {
+        id: 'end',
+        type: 'generic',
+        position: { x: 400, y: 100 },
+        data: { label: 'End', type: 'END' }
     },
 ];
 
 const FlowEditorContent: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+    const [programName, setProgramName] = useState('');
+    const [programDescription, setProgramDescription] = useState('');
+
+    // Load Program Data
+    useEffect(() => {
+        if (!id) return;
+
+        const fetchProgram = async () => {
+            try {
+                const res = await fetch(`/api/programs/${id}`);
+                if (!res.ok) throw new Error('Failed to load program');
+
+                const program = await res.json();
+                const { nodes: flowNodes, edges: flowEdges } = programToFlow(program);
+
+                setNodes(flowNodes);
+                setEdges(flowEdges);
+                setProgramName(program.name);
+                setProgramDescription(program.description || '');
+                toast.success('Program loaded');
+            } catch (error) {
+                console.error('Load error:', error);
+                toast.error('Failed to load program');
+            }
+        };
+
+        fetchProgram();
+    }, [id, setNodes, setEdges]);
 
     const onConnect = useCallback(
         (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -60,7 +98,7 @@ const FlowEditorContent: React.FC = () => {
             });
 
             const isCondition = type === 'IF';
-            const nodeType = isCondition ? 'condition' : 'action';
+            const nodeType = isCondition ? 'condition' : 'generic';
 
             const newNode: Node = {
                 id: `${type}_${Date.now()}`,
@@ -91,28 +129,35 @@ const FlowEditorContent: React.FC = () => {
                 return node;
             })
         );
-        setSelectedNode((prev) => prev ? { ...prev, data: newData } : null);
+        setSelectedNode((prev: Node | null) => prev ? { ...prev, data: newData } : null);
     };
 
     const onSave = useCallback(async (name: string, description: string) => {
         const programData = flowToProgram(nodes, edges);
+
+        // If editing existing program, use its ID. Otherwise generate new one.
+        const programId = id || name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
         const payload = {
             ...programData,
-            id: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'), // Better ID generation
+            id: programId,
             name: name,
             description: description,
-            active: true
+            isActive: true
         };
 
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/programs/${id}` : '/api/programs';
+
         try {
-            const res = await fetch('/api/programs', {
-                method: 'POST',
+            const res = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (res.ok) {
-                toast.success('Program saved successfully!');
+                toast.success(`Program ${id ? 'updated' : 'saved'} successfully!`);
             } else {
                 const err = await res.json();
                 toast.error(`Failed to save: ${err.message}`);
@@ -123,16 +168,16 @@ const FlowEditorContent: React.FC = () => {
             toast.error('Failed to save program');
             throw error;
         }
-    }, [nodes, edges]);
+    }, [nodes, edges, id]);
 
     return (
         <div className="h-full w-full flex flex-col">
             <div className="h-12 border-b bg-card flex items-center px-4 justify-between">
                 <h2 className="font-semibold">Flow Editor</h2>
-                <SaveProgramDialog onSave={onSave}>
+                <SaveProgramDialog onSave={onSave} defaultName={programName}>
                     <Button size="sm" className="gap-2">
                         <Save className="h-4 w-4" />
-                        Save Program
+                        {id ? 'Update Program' : 'Save Program'}
                     </Button>
                 </SaveProgramDialog>
             </div>

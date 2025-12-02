@@ -6,7 +6,7 @@ import { logger } from './core/LoggerService';
 import { db } from './core/DatabaseService';
 import { apiRoutes } from './api/routes';
 import { automation } from './modules/automation/AutomationEngine';
-import { LogBlockExecutor, WaitBlockExecutor, ActuatorSetBlockExecutor } from './modules/automation/blocks';
+import { LogBlockExecutor, WaitBlockExecutor, ActuatorSetBlockExecutor, StartBlockExecutor, EndBlockExecutor } from './modules/automation/blocks';
 import { socketService } from './core/SocketService';
 import { seedControllerTemplates } from './utils/seedTemplates';
 // import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
@@ -57,6 +57,8 @@ async function bootstrap() {
 
         automation.registerExecutor(new WaitBlockExecutor());
         automation.registerExecutor(new ActuatorSetBlockExecutor());
+        automation.registerExecutor(new StartBlockExecutor());
+        automation.registerExecutor(new EndBlockExecutor());
 
         app.get('/health', async () => ({ status: 'ok', uptime: process.uptime() }));
 

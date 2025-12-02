@@ -377,22 +377,6 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     };
 
-    const getAvailableChannels = () => {
-        if (!formData.relayId) return [];
-        const relay = relays.find(r => r._id === formData.relayId);
-        if (!relay) return [];
-
-        return relay.channels
-            .filter((c: any) => {
-                if (isEditMode && initialData?.hardware?.relayId === formData.relayId && initialData?.hardware?.channel === c.channelIndex) return true;
-                return !c.isOccupied;
-            })
-            .map((c: any) => ({
-                value: String(c.channelIndex),
-                label: `Channel ${c.channelIndex} ${c.name ? `(${c.name})` : ''}`
-            }));
-    };
-
     const isFormValid = () => {
         if (connectionType === 'relay') {
             return formData.relayId && formData.channel;

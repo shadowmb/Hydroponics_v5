@@ -59,7 +59,7 @@ class SocketService {
 
             console.log('System State:', status);
 
-            if (status.state === 'running' || status.state === 'paused') {
+            if (status.state === 'running' || status.state === 'paused' || status.state === 'loaded' || status.state === 'stopped' || status.state === 'completed') {
                 if (status.sessionId) {
                     this.fetchSession(status.sessionId);
                 }
@@ -92,16 +92,35 @@ class SocketService {
         });
 
         // Automation State Changes
+        // Automation State Changes
         this.socket.on('automation:state_change', (data: any) => {
             console.log('Automation state change:', data);
 
-            if (data.state === 'running' || data.state === 'paused') {
-                if (data.sessionId) {
-                    this.fetchSession(data.sessionId);
+            if (data.state === 'running' || data.state === 'paused' || data.state === 'error' || data.state === 'loaded' || data.state === 'stopped' || data.state === 'completed') {
+                const currentSession = useStore.getState().activeSession;
+
+                // If we have a session and it matches, update it
+                if (currentSession && currentSession.id === data.sessionId) {
+                    useStore.getState().setActiveSession({
+                        ...currentSession,
+                        status: data.state,
+                        currentBlockId: data.currentBlock,
+                        // context: data.context // Optional: update context if needed
+                    });
                 } else {
-                    this.fetchSystemState(); // Fallback
+                    // If no session or different ID, fetch full session but override status/block
+                    this.fetchSession(data.sessionId).then(() => {
+                        const freshSession = useStore.getState().activeSession;
+                        if (freshSession) {
+                            useStore.getState().setActiveSession({
+                                ...freshSession,
+                                status: data.state,
+                                currentBlockId: data.currentBlock
+                            });
+                        }
+                    });
                 }
-            } else if (data.state === 'stopped' || data.state === 'completed') {
+            } else if (data.state === 'idle') {
                 useStore.getState().setActiveSession(null);
             }
         });
@@ -121,6 +140,12 @@ class SocketService {
 
         this.socket.on('automation:block_end', (_data: { sessionId: string, blockId: string }) => {
             // console.log('Block end:', _data);
+        });
+
+        // Real-time Logs
+        this.socket.on('log', (log: any) => {
+            console.log('Log received:', log);
+            useStore.getState().addLog(log);
         });
     }
 

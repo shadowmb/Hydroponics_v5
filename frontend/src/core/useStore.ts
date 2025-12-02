@@ -10,12 +10,16 @@ interface AppState {
     setDevices: (devices: IDevice[]) => void;
     updateDevice: (device: IDevice) => void;
     setActiveSession: (session: IExecutionSession | null) => void;
+    logs: any[];
+    addLog: (log: any) => void;
+    setLogs: (logs: any[]) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
     systemStatus: 'offline',
     devices: new Map(),
     activeSession: null,
+    logs: [],
 
     setSystemStatus: (status) => set({ systemStatus: status }),
 
@@ -32,4 +36,7 @@ export const useStore = create<AppState>((set) => ({
     }),
 
     setActiveSession: (session) => set({ activeSession: session }),
+
+    addLog: (log) => set((state) => ({ logs: [log, ...state.logs].slice(0, 50) })), // Keep last 50
+    setLogs: (logs) => set({ logs }),
 }));
