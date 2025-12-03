@@ -4,7 +4,7 @@ import { Handle, Position } from '@xyflow/react';
 import { GitBranch } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
-export const ConditionNode = memo(({ selected }: NodeProps) => {
+export const ConditionNode = memo(({ data, selected }: NodeProps) => {
     return (
         <div className={cn(
             "px-4 py-2 shadow-md rounded-md bg-card border-2 min-w-[150px]",
@@ -19,6 +19,17 @@ export const ConditionNode = memo(({ selected }: NodeProps) => {
                 <div className="flex flex-col">
                     <span className="text-sm font-bold">Condition</span>
                     <span className="text-[10px] text-muted-foreground">IF / ELSE</span>
+
+                    {/* Dynamic Content Display */}
+                    {data.variable && (
+                        <div className="flex flex-col mt-1 text-[10px] font-mono">
+                            <span className="text-orange-600">{data.variable as string}</span>
+                            <div className="flex gap-1">
+                                <span className="text-muted-foreground">{data.operator as string || '=='}</span>
+                                <span className="text-blue-600">{data.value as string}</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

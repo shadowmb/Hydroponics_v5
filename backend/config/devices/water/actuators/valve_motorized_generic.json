@@ -47,6 +47,11 @@
     ],
     "uiConfig": {
         "icon": "activity",
+        "tags": [
+            "Valve",
+            "Water"
+        ],
+        "category": "Water",
         "capabilities": {
             "duration_position": {
                 "label": "Position Control",

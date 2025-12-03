@@ -3,6 +3,7 @@ import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
 import { Zap, Thermometer, Clock, FileText, Activity, Play, Square } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { useStore } from '../../../core/useStore';
 
 const getIcon = (type: string) => {
     switch (type) {
@@ -17,8 +18,15 @@ const getIcon = (type: string) => {
 };
 
 export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
+    const { devices } = useStore();
     const isStart = data.type === 'START';
     const isEnd = data.type === 'END';
+
+    // Helper to get device name
+    const getDeviceName = (id: string) => {
+        const device = devices.get(id);
+        return device ? device.name : id;
+    };
 
     return (
         <div className={cn(
@@ -41,6 +49,23 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
                 <div className="flex flex-col">
                     <span className="text-sm font-bold">{data.label as string || data.type as string}</span>
                     <span className="text-[10px] text-muted-foreground">{data.type as string}</span>
+
+                    {/* Dynamic Content Display */}
+                    {data.deviceId && (
+                        <span className="text-[10px] text-blue-600 font-mono mt-1">
+                            Device: {getDeviceName(data.deviceId as string)}
+                        </span>
+                    )}
+                    {data.variable && (
+                        <span className="text-[10px] text-orange-600 font-mono">
+                            Var: {data.variable as string}
+                        </span>
+                    )}
+                    {data.duration && (
+                        <span className="text-[10px] text-gray-500 font-mono mt-1">
+                            {data.duration as string} ms
+                        </span>
+                    )}
                 </div>
             </div>
 

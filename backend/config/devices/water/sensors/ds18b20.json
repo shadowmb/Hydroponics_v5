@@ -41,6 +41,11 @@
     },
     "uiConfig": {
         "icon": "thermometer",
+        "ta sgs": [
+            "Temperature",
+            "Water"
+        ],
+        "category": "Water",
         "capabilities": {
             "ONEWIRE_READ_TEMP": {
                 "label": "Temperature",

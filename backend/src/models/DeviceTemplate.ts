@@ -30,6 +30,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
     uiConfig?: {
         category?: string;
         icon?: string;
+        tags?: string[];
         recommendedPins?: string[];
         capabilities?: Record<string, { label: string; icon?: string; tooltip?: string }>;
     };
@@ -75,6 +76,7 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     uiConfig: {
         category: { type: String },
         icon: { type: String },
+        tags: [{ type: String }], // System tags (e.g. ['EC', 'Conductivity'])
         recommendedPins: [{ type: String }],
         capabilities: { type: Map, of: { label: String, icon: String, tooltip: String } }
     },

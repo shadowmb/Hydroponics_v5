@@ -668,12 +668,18 @@ export class HardwareController {
             }
 
             // 4. Create Device
+            // Merge tags: User tags + Template tags (deduplicated)
+            const templateTags = template.uiConfig?.tags || [];
+            const userTags = body.tags || [];
+            const mergedTags = Array.from(new Set([...userTags, ...templateTags]));
+
             const device = new DeviceModel({
                 name: body.name,
                 type: body.type,
                 hardware: body.hardware,
                 config: body.config,
-                tags: body.tags || [] // Add tags support
+                tags: mergedTags, // Add tags support
+                group: template.uiConfig?.category || 'Other' // Auto-populate group from template
             });
 
             await device.save();

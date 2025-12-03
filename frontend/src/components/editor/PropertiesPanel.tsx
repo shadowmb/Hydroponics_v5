@@ -5,20 +5,27 @@ import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
-import { useStore } from '../../core/useStore';
 
-import { FlowInputsPanel } from './FlowInputsPanel';
-import type { IFlow } from '../../../../shared/types';
+
+import { DeviceSelector } from './DeviceSelector';
+import { VariableManager } from './VariableManager';
+import { VariableSelector } from './VariableSelector';
+import type { IVariable } from '../../../../shared/types';
 
 interface PropertiesPanelProps {
     selectedNode: Node | null;
     onChange: (nodeId: string, data: any) => void;
-    inputs: NonNullable<IFlow['inputs']>;
-    onInputsChange: (inputs: NonNullable<IFlow['inputs']>) => void;
+    variables: IVariable[];
+    onVariablesChange: (vars: IVariable[]) => void;
 }
 
-export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, onChange, inputs, onInputsChange }) => {
-    const { devices } = useStore();
+export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
+    selectedNode,
+    onChange,
+    variables,
+    onVariablesChange
+}) => {
+
     const [formData, setFormData] = useState<Record<string, any>>({});
 
     useEffect(() => {
@@ -45,7 +52,32 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, 
     };
 
     if (!selectedNode) {
-        return <FlowInputsPanel inputs={inputs} onChange={onInputsChange} />;
+        return (
+            <div className="w-80 border-l bg-card flex flex-col h-full">
+                <div className="p-4 border-b">
+                    <h3 className="font-semibold">Flow Properties</h3>
+                    <p className="text-xs text-muted-foreground">Global settings for this flow.</p>
+                </div>
+                <div className="flex-1 p-4 space-y-4">
+                    <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                        Select a block to edit its properties.
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                        <Label>Variables</Label>
+                        <p className="text-xs text-muted-foreground mb-2">
+                            Manage local and global variables used in this flow.
+                        </p>
+                        <VariableManager
+                            variables={variables}
+                            onUpdateVariables={onVariablesChange}
+                        />
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     const nodeType = selectedNode.data.type as string;
@@ -90,19 +122,27 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, 
                     </Select>
                 );
             case 'device':
+                // Determine filter type based on block type
+                let filterType: 'SENSOR' | 'ACTUATOR' | undefined = undefined;
+                if (nodeType === 'SENSOR_READ') filterType = 'SENSOR';
+                else if (nodeType === 'ACTUATOR_SET') filterType = 'ACTUATOR';
+
                 return (
-                    <Select value={value || ''} onValueChange={(val: string) => handleChange(key, val)}>
-                        <SelectTrigger>
-                            <SelectValue placeholder={field.placeholder || "Select Device"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Array.from(devices.values()).map((device) => (
-                                <SelectItem key={device.id} value={device.id}>
-                                    {device.name} ({device.type})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <DeviceSelector
+                        value={value || ''}
+                        onChange={(val: string) => handleChange(key, val)}
+                        placeholder={field.placeholder}
+                        filterType={filterType}
+                    />
+                );
+            case 'variable':
+                return (
+                    <VariableSelector
+                        value={value || ''}
+                        onChange={(val: string) => handleChange(key, val)}
+                        placeholder={field.placeholder}
+                        variables={variables}
+                    />
                 );
             default:
                 return null;

@@ -13,6 +13,8 @@ import { Button } from '../components/ui/button';
 import { SaveFlowDialog } from '../components/editor/SaveFlowDialog';
 import { toast } from 'sonner';
 import { Save, Edit } from 'lucide-react';
+import { hardwareService } from '../services/hardwareService';
+import { useStore } from '../core/useStore';
 
 const nodeTypes = {
     action: ActionNode,
@@ -46,6 +48,7 @@ const FlowEditorContent: React.FC = () => {
     const [flowName, setFlowName] = useState('');
     const [flowDescription, setFlowDescription] = useState('');
     const [inputs, setInputs] = useState<any[]>([]);
+    const [variables, setVariables] = useState<any[]>([]);
 
     // Load Flow Data
     useEffect(() => {
@@ -57,7 +60,6 @@ const FlowEditorContent: React.FC = () => {
                 if (!res.ok) throw new Error('Failed to load flow');
 
                 const flow = await res.json();
-                // Note: flowToProgram/programToFlow helpers might need renaming later but logic is same
                 const { nodes: flowNodes, edges: flowEdges } = flowToReactFlow(flow);
 
                 setNodes(flowNodes);
@@ -65,6 +67,7 @@ const FlowEditorContent: React.FC = () => {
                 setFlowName(flow.name);
                 setFlowDescription(flow.description || '');
                 setInputs(flow.inputs || []);
+                setVariables(flow.variables || []);
                 toast.success('Flow loaded');
             } catch (error) {
                 console.error('Load error:', error);
@@ -74,6 +77,21 @@ const FlowEditorContent: React.FC = () => {
 
         fetchFlow();
     }, [id, setNodes, setEdges]);
+
+    // Load Devices for Selector
+    const { setDevices } = useStore();
+    useEffect(() => {
+        const loadDevices = async () => {
+            try {
+                const devices = await hardwareService.getDevices();
+                setDevices(devices);
+            } catch (error) {
+                console.error('Failed to load devices', error);
+                toast.error('Failed to load devices');
+            }
+        };
+        loadDevices();
+    }, [setDevices]);
 
     const onConnect = useCallback(
         (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -149,6 +167,7 @@ const FlowEditorContent: React.FC = () => {
             name: name,
             description: description,
             inputs: inputs,
+            variables: variables,
             isActive: true
         };
 
@@ -176,7 +195,7 @@ const FlowEditorContent: React.FC = () => {
             toast.error('Failed to save flow');
             throw error;
         }
-    }, [nodes, edges, id, inputs]);
+    }, [nodes, edges, id, inputs, variables]);
 
     const handleQuickSave = () => {
         if (!flowName) return;
@@ -245,8 +264,8 @@ const FlowEditorContent: React.FC = () => {
                 <PropertiesPanel
                     selectedNode={selectedNode}
                     onChange={onNodeUpdate}
-                    inputs={inputs}
-                    onInputsChange={setInputs}
+                    variables={variables}
+                    onVariablesChange={setVariables}
                 />
             </div>
         </div>

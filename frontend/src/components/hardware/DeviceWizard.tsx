@@ -93,7 +93,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const filteredTemplates = useMemo(() => {
         return templates.filter(t => {
             // 1. Category Filter
-            const categoryMatch = (t.uiConfig?.category || 'other') === selectedCategory;
+            const templateCategory = (t.uiConfig?.category || 'other').toLowerCase();
+            const categoryMatch = templateCategory === selectedCategory.toLowerCase();
             if (!categoryMatch) return false;
 
             // 2. Search Filter
@@ -132,7 +133,24 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     relayId: initialData.hardware?.relayId || '',
                     channel: initialData.hardware?.channel !== undefined ? String(initialData.hardware.channel) : '',
                     isEnabled: initialData.isEnabled !== undefined ? initialData.isEnabled : true,
-                    tags: initialData.tags || []
+                    tags: (() => {
+                        // Separate user tags from template tags
+                        const allTags = initialData.tags || [];
+                        // We need the template to know which tags are system tags
+                        // But selectedTemplate might not be set yet.
+                        // However, we can try to find it here or rely on the fact that
+                        // we will render system tags from the template separately.
+                        // Ideally, we filter them out here.
+
+                        // Strategy: We'll filter them in the rendering/logic, 
+                        // but for formData, we should probably keep only user tags 
+                        // IF we are sure we can identify system tags.
+
+                        // Actually, let's keep ALL tags in formData for now, 
+                        // and filter them dynamically in the UI to avoid data loss 
+                        // if the template is missing or changed.
+                        return allTags;
+                    })()
                 });
                 // Determine connection type
                 if (initialData.hardware?.relayId) {
@@ -700,15 +718,25 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                     <div className="space-y-2">
                                         <Label>Device Group / Tags</Label>
                                         <div className="flex flex-wrap gap-2 mb-2">
-                                            {formData.tags.map(tag => (
-                                                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                                            {/* 1. System Tags (Immutable) */}
+                                            {(selectedTemplate?.uiConfig?.tags || []).map((tag: string) => (
+                                                <Badge key={`sys-${tag}`} variant="secondary" className="flex items-center gap-1 bg-muted text-muted-foreground hover:bg-muted">
                                                     {tag}
-                                                    <X
-                                                        className="h-3 w-3 cursor-pointer hover:text-destructive"
-                                                        onClick={() => handleRemoveTag(tag)}
-                                                    />
                                                 </Badge>
                                             ))}
+
+                                            {/* 2. User Tags (Mutable) */}
+                                            {formData.tags
+                                                .filter(tag => !(selectedTemplate?.uiConfig?.tags || []).includes(tag)) // Hide if it's already shown as system tag
+                                                .map(tag => (
+                                                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                                                        {tag}
+                                                        <X
+                                                            className="h-3 w-3 cursor-pointer hover:text-destructive"
+                                                            onClick={() => handleRemoveTag(tag)}
+                                                        />
+                                                    </Badge>
+                                                ))}
                                         </div>
                                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                                             <PopoverTrigger asChild>

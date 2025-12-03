@@ -1,4 +1,4 @@
-export type FieldType = 'text' | 'number' | 'boolean' | 'select' | 'device';
+export type FieldType = 'text' | 'number' | 'boolean' | 'select' | 'device' | 'variable';
 
 export interface FieldDefinition {
     label: string;
@@ -76,19 +76,19 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
             },
             variable: {
                 label: 'Save to Variable',
-                type: 'text',
-                placeholder: 'e.g. current_temp',
-                description: 'Variable name to store the reading'
+                type: 'variable',
+                placeholder: 'Select variable',
+                description: 'Variable to store the reading'
             }
         }
     },
-    CONDITION: {
+    IF: {
         label: 'Condition (IF)',
         fields: {
             variable: {
                 label: 'Variable',
-                type: 'text',
-                placeholder: 'e.g. current_temp'
+                type: 'variable',
+                placeholder: 'Select variable'
             },
             operator: {
                 label: 'Operator',
