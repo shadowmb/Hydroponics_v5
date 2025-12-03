@@ -45,6 +45,11 @@
     },
     "uiConfig": {
         "icon": "activity",
+        "tags": [
+            "Distance",
+            "Water"
+        ],
+        "category": "Water",
         "capabilities": {
             "UART_READ_DISTANCE": {
                 "label": "Distance",

@@ -67,6 +67,7 @@ const DeviceTemplateSchema = z.object({
     uiConfig: z.object({
         category: z.string().optional(),
         icon: z.string().optional(),
+        tags: z.array(z.string()).optional(),
         recommendedPins: z.array(z.string()).optional(),
         capabilities: z.record(z.object({
             label: z.string(),
@@ -146,12 +147,16 @@ export class DeviceTemplateManager {
 
             // Inject inferred category if not present
             if (!raw.uiConfig) raw.uiConfig = {};
-            if (!raw.uiConfig.category) {
-                raw.uiConfig.category = inferredCategory;
-            } else {
-                // Normalize to lowercase to match frontend IDs (e.g. 'Water' -> 'water')
-                raw.uiConfig.category = raw.uiConfig.category.toLowerCase();
+
+            let finalCategory = raw.uiConfig.category || inferredCategory;
+
+            // Normalize to Title Case (e.g. 'water' -> 'Water')
+            if (finalCategory) {
+                finalCategory = finalCategory.toLowerCase();
+                finalCategory = finalCategory.charAt(0).toUpperCase() + finalCategory.slice(1);
             }
+
+            raw.uiConfig.category = finalCategory;
 
             // Validate with Zod
             const template = DeviceTemplateSchema.parse(raw);

@@ -47,6 +47,12 @@
     ],
     "uiConfig": {
         "icon": "thermometer",
+        "tags": [
+            "Temperature",
+            "Humidity",
+            "Air"
+        ],
+        "category": "Air",
         "recommendedPins": [],
         "capabilities": {
             "DHT_READ": {

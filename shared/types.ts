@@ -13,6 +13,7 @@ export interface IDevice {
     pin?: number;
     config: Record<string, any>;
     tags?: string[];
+    group?: 'Water' | 'Air' | 'Light' | 'Power' | 'Other';
     // State is runtime only, not stored here
 }
 
@@ -50,6 +51,14 @@ export interface Block {
     position?: { x: number; y: number };
 }
 
+export interface IVariable {
+    id: string;      // e.g., "var_1", "global_1"
+    name: string;    // e.g., "Tank Temperature"
+    type: 'number' | 'string' | 'boolean';
+    value?: any;     // Default/Current value
+    scope: 'local' | 'global';
+}
+
 export interface IFlow {
     id: string;
     name: string;
@@ -63,6 +72,7 @@ export interface IFlow {
         default?: any;
         description?: string;
     }[];
+    variables?: IVariable[]; // Local variables defined in this flow
     isActive: boolean;
     createdAt?: Date | string;
     updatedAt?: Date | string;

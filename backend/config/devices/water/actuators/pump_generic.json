@@ -134,6 +134,11 @@
     ],
     "uiConfig": {
         "icon": "droplet",
+        "tags": [
+            "Pump",
+            "Water"
+        ],
+        "category": "Water",
         "recommendedPins": [],
         "capabilities": {
             "DIGITAL_WRITE": {

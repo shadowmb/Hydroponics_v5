@@ -33,6 +33,7 @@ export interface IDevice extends SoftDeleteDocument {
     };
 
     tags: string[]; // New: Tags for grouping
+    group: 'Water' | 'Air' | 'Light' | 'Power' | 'Other'; // New: Strict grouping
 
     lastReading?: {
         value: number;
@@ -81,6 +82,7 @@ const DeviceSchema = new Schema<IDevice>(
         },
 
         tags: { type: [String], default: [] }, // New: Tags for grouping
+        group: { type: String, enum: ['Water', 'Air', 'Light', 'Power', 'Other'], default: 'Other' }, // New: Strict grouping
 
         lastReading: {
             value: Number,

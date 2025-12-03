@@ -52,6 +52,11 @@
     },
     "uiConfig": {
         "icon": "lightbulb",
+        "tags": [
+            "PAR",
+            "Light"
+        ],
+        "category": "Light",
         "recommendedPins": [
             "D0",
             "D1"

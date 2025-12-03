@@ -41,8 +41,17 @@
         "value": 0
     },
     "uiConfig": {
-        "icon": "activity",
-        "recommendedPins": [],
+        "category": "Water",
+        "icon": "droplet",
+        "tags": [
+            "EC",
+            "Conductivity",
+            "Water"
+        ],
+        "recommendedPins": [
+            "A1",
+            "A2"
+        ],
         "capabilities": {
             "READ": {
                 "label": "Conductivity",

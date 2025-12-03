@@ -6,6 +6,13 @@ import { logger } from '../../core/LoggerService';
 import { flowRepository } from '../persistence/repositories/FlowRepository';
 import { sessionRepository } from '../persistence/repositories/SessionRepository';
 import { actionTemplateRepository } from '../persistence/repositories/ActionTemplateRepository';
+import { SensorReadBlockExecutor } from './blocks/SensorReadBlockExecutor';
+import { IfBlockExecutor } from './blocks/IfBlockExecutor';
+import { ActuatorSetBlockExecutor } from './blocks/ActuatorSetBlockExecutor';
+import { WaitBlockExecutor } from './blocks/WaitBlockExecutor';
+import { LogBlockExecutor } from './blocks/LogBlockExecutor';
+import { StartBlockExecutor } from './blocks/StartBlockExecutor';
+import { EndBlockExecutor } from './blocks/EndBlockExecutor';
 
 export class AutomationEngine {
     private actor: Actor<any>;
@@ -16,6 +23,16 @@ export class AutomationEngine {
 
     constructor() {
         console.log(`DEBUG: AutomationEngine Created: ${this.instanceId}`);
+
+        // Register Executors
+        this.registerExecutor(new StartBlockExecutor());
+        this.registerExecutor(new EndBlockExecutor());
+        this.registerExecutor(new LogBlockExecutor());
+        this.registerExecutor(new WaitBlockExecutor());
+        this.registerExecutor(new ActuatorSetBlockExecutor());
+        this.registerExecutor(new SensorReadBlockExecutor());
+        this.registerExecutor(new IfBlockExecutor());
+
         // Define the logic for 'executeBlock'
         const executeBlockLogic = fromPromise(async ({ input, signal }: { input: { context: AutomationContext }, signal: AbortSignal }) => {
             return this.executeBlock(input.context, signal);
@@ -260,13 +277,57 @@ export class AutomationEngine {
                 throw new Error(result.error || 'Block execution failed');
             }
 
+            // 2.5. Persist State (if returned by block)
+            if (result.state && this.currentSessionId) {
+                try {
+                    const update = {
+                        [`context.resumeState.${blockId}`]: result.state
+                    };
+                    await sessionRepository.update(this.currentSessionId, update);
+                    // Update local context too so next block sees it immediately if needed?
+                    // Actually, next block is different, but re-entry to THIS block needs it.
+                    // We updated DB, but `context.execContext.resumeState` is local.
+                    if (!context.execContext.resumeState) context.execContext.resumeState = {};
+                    context.execContext.resumeState[blockId] = result.state;
+                } catch (err) {
+                    logger.error({ err }, '❌ Failed to save block state');
+                }
+            }
+
             // Determine next block using Graph Edges
             let nextBlockId: string | undefined | null = result.nextBlockId;
 
             if (nextBlockId === undefined) {
-                // Default behavior: Find the first outgoing edge
-                const edge = context.edges.find(e => e.source === blockId);
-                nextBlockId = edge ? edge.target : null;
+                // Special Handling for IF block (Conditional Routing)
+                if (block.type === 'IF' && typeof result.output === 'boolean') {
+                    // Find edge matching the boolean result (true/false)
+                    // We assume edges from IF block have sourceHandle 'true' or 'false'
+                    // OR we check edge labels/data?
+                    // The ConditionNode uses sourceHandle="true" and "false".
+                    const expectedHandle = result.output ? 'true' : 'false';
+                    const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
+
+                    if (edge) {
+                        nextBlockId = edge.target;
+                    } else {
+                        // Fallback: If no specific edge found, maybe just stop?
+                        // Or try to find a default edge?
+                        nextBlockId = null;
+                        logger.warn({ blockId, result: result.output }, '⚠️ IF block has no matching edge');
+                    }
+                }
+                // Special Handling for LOOP block
+                else if (block.type === 'LOOP' && typeof result.output === 'boolean') {
+                    // true -> body, false -> exit
+                    const expectedHandle = result.output ? 'body' : 'exit';
+                    const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
+                    nextBlockId = edge ? edge.target : null;
+                }
+                else {
+                    // Default behavior: Find the first outgoing edge
+                    const edge = context.edges.find(e => e.source === blockId);
+                    nextBlockId = edge ? edge.target : null;
+                }
             }
 
             return { nextBlockId, output: result.output };

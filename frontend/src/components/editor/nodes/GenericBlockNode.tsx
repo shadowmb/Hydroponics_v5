@@ -3,6 +3,7 @@ import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
 import { Zap, Thermometer, Clock, FileText, Activity, Play, Square } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { useStore } from '../../../core/useStore';
 
 const getIcon = (type: string) => {
     switch (type) {
@@ -17,8 +18,15 @@ const getIcon = (type: string) => {
 };
 
 export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
+    const { devices } = useStore();
     const isStart = data.type === 'START';
     const isEnd = data.type === 'END';
+
+    // Helper to get device name
+    const getDeviceName = (id: string) => {
+        const device = devices.get(id);
+        return device ? device.name : id;
+    };
 
     return (
         <div className={cn(
@@ -36,11 +44,39 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
                     isStart && "bg-green-100 text-green-700",
                     isEnd && "bg-red-100 text-red-700"
                 )}>
-                    {getIcon(data.type as string)}
+                    {getIcon(String(data.type))}
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-sm font-bold">{data.label as string || data.type as string}</span>
-                    <span className="text-[10px] text-muted-foreground">{data.type as string}</span>
+                    <span className="text-sm font-bold">{String(data.label || data.type)}</span>
+                    <span className="text-[10px] text-muted-foreground">{String(data.type)}</span>
+
+                    {/* Dynamic Content Display */}
+                    {!!data.deviceId && (
+                        <span className="text-[10px] text-blue-600 font-mono mt-1">
+                            Device: {getDeviceName(String(data.deviceId))}
+                        </span>
+                    )}
+                    {!!data.variable && (
+                        <span className="text-[10px] text-orange-600 font-mono">
+                            Var: {String(data.variable)}
+                        </span>
+                    )}
+
+                    {/* ACTUATOR_SET Specifics */}
+                    {data.type === 'ACTUATOR_SET' && !!data.action && (
+                        <span className="text-[10px] text-purple-600 font-mono mt-1">
+                            Action: {String(data.action)}
+                            {!!data.duration && ` (${String(data.duration)}ms)`}
+                            {!!data.amount && ` (${String(data.amount)}ml)`}
+                        </span>
+                    )}
+
+                    {/* WAIT Specifics */}
+                    {data.type === 'WAIT' && !!data.duration && (
+                        <span className="text-[10px] text-gray-500 font-mono mt-1">
+                            Wait: {String(data.duration)} ms
+                        </span>
+                    )}
                 </div>
             </div>
 

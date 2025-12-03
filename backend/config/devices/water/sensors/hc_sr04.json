@@ -46,6 +46,11 @@
     },
     "uiConfig": {
         "icon": "ruler",
+        "tags": [
+            "Distance",
+            "Water"
+        ],
+        "category": "Water",
         "recommendedPins": [],
         "capabilities": {
             "ULTRASONIC_TRIG_ECHO": {
