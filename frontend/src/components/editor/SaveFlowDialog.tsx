@@ -17,18 +17,20 @@ import { Input } from '../ui/input';
 interface SaveFlowDialogProps {
     children: React.ReactNode;
     defaultName?: string;
+    defaultDescription?: string;
     onSave: (name: string, description: string) => Promise<void>;
 }
 
-export const SaveFlowDialog: React.FC<SaveFlowDialogProps> = ({ children, defaultName = '', onSave }) => {
+export const SaveFlowDialog: React.FC<SaveFlowDialogProps> = ({ children, defaultName = '', defaultDescription = '', onSave }) => {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState(defaultName);
+    const [description, setDescription] = useState(defaultDescription);
 
     // Update local state if prop changes (e.g. when loading a flow)
     React.useEffect(() => {
         setName(defaultName);
-    }, [defaultName]);
-    const [description, setDescription] = useState('');
+        setDescription(defaultDescription);
+    }, [defaultName, defaultDescription]);
     const [loading, setLoading] = useState(false);
 
     const handleSave = async () => {

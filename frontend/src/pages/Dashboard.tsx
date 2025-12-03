@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, Wifi, WifiOff, Play, Pause, Square, Clock } from 'lucide-react';
+import { Activity, Wifi, WifiOff, Play, Pause, Square, Clock, Calendar } from 'lucide-react';
 import { useStore } from '../core/useStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
-import { StartFlowDialog } from '../components/dashboard/StartFlowDialog';
+
 
 export const Dashboard: React.FC = () => {
     const { systemStatus, devices, activeSession, logs } = useStore();
@@ -23,15 +23,26 @@ export const Dashboard: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const [schedulerStatus, setSchedulerStatus] = useState<any>(null);
+
     // Fetch initial status on mount to ensure UI is in sync
     useEffect(() => {
         const fetchStatus = async () => {
             try {
-                const res = await fetch('/api/system/status');
-                if (res.ok) {
-                    const status = await res.json();
+                const [sysRes, schedRes] = await Promise.all([
+                    fetch('/api/system/status'),
+                    fetch('/api/scheduler/status')
+                ]);
+
+                if (sysRes.ok) {
+                    const status = await sysRes.json();
                     useStore.getState().setSystemStatus(status.status);
                     useStore.getState().setActiveSession(status.session);
+                }
+
+                if (schedRes.ok) {
+                    const sched = await schedRes.json();
+                    setSchedulerStatus(sched);
                 }
             } catch (error) {
                 console.error('Failed to fetch status:', error);
@@ -124,17 +135,158 @@ export const Dashboard: React.FC = () => {
                 </Card>
             </div>
 
-            {/* Hero: Active Program */}
-            <Card className="overflow-hidden">
+            {/* Daily Agenda */}
+            <Card className="overflow-hidden border-l-4 border-l-blue-500">
                 <CardHeader className="bg-muted/30 border-b pb-4">
-                    <CardTitle className="flex items-center gap-2">
-                        <Play className="h-5 w-5 text-primary" />
-                        Active Program
-                    </CardTitle>
-                    <CardDescription>Manage the currently running automation program</CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-blue-500" />
+                                Daily Agenda
+                            </CardTitle>
+                            <CardDescription>
+                                {schedulerStatus?.activeProgram ? (
+                                    <span>Active Plan: <span className="font-medium text-foreground">{schedulerStatus.activeProgram.name}</span></span>
+                                ) : "No active schedule"}
+                            </CardDescription>
+                        </div>
+                        {schedulerStatus?.activeProgram && (
+                            <div className="flex gap-2">
+                                {schedulerStatus.scheduler?.state === 'STOPPED' && (
+                                    <>
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="h-8 bg-green-600 hover:bg-green-700"
+                                            onClick={async () => {
+                                                await fetch('/api/scheduler/start', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({})
+                                                });
+                                                const res = await fetch('/api/scheduler/status');
+                                                if (res.ok) setSchedulerStatus(await res.json());
+                                            }}
+                                        >
+                                            <Play className="h-3 w-3 mr-1" />
+                                            Start Now
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8"
+                                            onClick={async () => {
+                                                const delayMinutes = prompt('Enter delay in minutes (e.g., 60 for 1 hour):');
+                                                if (!delayMinutes || isNaN(Number(delayMinutes))) return;
+
+                                                const startTime = Date.now() + Number(delayMinutes) * 60 * 1000;
+                                                await fetch('/api/scheduler/start', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ startTime })
+                                                });
+                                                const res = await fetch('/api/scheduler/status');
+                                                if (res.ok) setSchedulerStatus(await res.json());
+                                            }}
+                                        >
+                                            <Clock className="h-3 w-3 mr-1" />
+                                            Delayed Start
+                                        </Button>
+                                    </>
+                                )}
+
+                                {(schedulerStatus.scheduler?.state === 'RUNNING' || schedulerStatus.scheduler?.state === 'WAITING_START') && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="h-8"
+                                        onClick={async () => {
+                                            await fetch('/api/scheduler/stop', { method: 'POST' });
+                                            const res = await fetch('/api/scheduler/status');
+                                            if (res.ok) setSchedulerStatus(await res.json());
+                                        }}
+                                    >
+                                        <Square className="h-3 w-3 mr-1" />
+                                        Stop
+                                    </Button>
+                                )}
+
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-destructive hover:text-destructive"
+                                    onClick={async () => {
+                                        if (!confirm('Are you sure you want to deactivate the current schedule?')) return;
+                                        await fetch(`/api/programs/${schedulerStatus.activeProgram.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ isActive: false })
+                                        });
+                                        window.location.reload();
+                                    }}
+                                >
+                                    <Square className="h-3 w-3 mr-1" />
+                                    Remove
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                    {activeSession ? (
+                    {schedulerStatus?.scheduler?.state === 'STOPPED' && (
+                        <div className="bg-yellow-500/10 text-yellow-600 p-3 rounded-lg mb-4 text-sm font-medium flex items-center gap-2">
+                            <Pause className="h-4 w-4" />
+                            Scheduler is STOPPED. Click "Start Now" or "Delayed Start" to begin.
+                        </div>
+                    )}
+                    {schedulerStatus?.scheduler?.state === 'WAITING_START' && (
+                        <div className="bg-blue-500/10 text-blue-600 p-3 rounded-lg mb-4 text-sm font-medium flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Waiting to start at {new Date(schedulerStatus.scheduler.startTime).toLocaleTimeString()}
+                        </div>
+                    )}
+                    {schedulerStatus?.activeProgram?.schedule ? (
+                        <div className="space-y-1">
+                            {schedulerStatus.activeProgram.schedule.map((event: any, i: number) => {
+                                const now = new Date();
+                                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                                const [h, m] = event.time.split(':').map(Number);
+                                const eventMinutes = h * 60 + m;
+                                const isPast = eventMinutes < currentMinutes;
+
+                                return (
+                                    <div key={i} className={`flex items-center justify-between p-3 rounded-lg border ${isPast ? 'bg-muted/50 opacity-60' : 'bg-card'}`}>
+                                        <div className="flex items-center gap-4">
+                                            <div className={`font-mono text-lg font-medium ${isPast ? 'text-muted-foreground' : 'text-primary'}`}>{event.time}</div>
+                                            <div className="text-sm">Cycle: <span className="font-medium">{event.cycleId}</span></div>
+                                        </div>
+                                        <div className="text-xs font-medium">
+                                            {isPast ? <span className="text-muted-foreground">COMPLETED</span> : <span className="text-blue-600">SCHEDULED</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                            <p>No active program selected.</p>
+                            <Button variant="link" onClick={() => window.location.href = '/programs'}>Go to Programs</Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Execution Engine (Only visible if running or paused) */}
+            {activeSession && (activeSession.status === 'running' || activeSession.status === 'paused' || activeSession.status === 'error') && (
+                <Card className="overflow-hidden border-l-4 border-l-green-500">
+                    <CardHeader className="bg-muted/30 border-b pb-4">
+                        <CardTitle className="flex items-center gap-2">
+                            <Play className="h-5 w-5 text-green-600" />
+                            Running Cycle
+                        </CardTitle>
+                        <CardDescription>Currently executing automation flow</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -151,13 +303,6 @@ export const Dashboard: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    {/* LOADED or STOPPED or COMPLETED -> START (Restart) */}
-                                    {(activeSession.status === 'loaded' || activeSession.status === 'stopped' || activeSession.status === 'completed') && (
-                                        <Button onClick={() => handleControl('START')} variant="default" className="gap-2">
-                                            <Play className="h-4 w-4" /> Start
-                                        </Button>
-                                    )}
-
                                     {/* RUNNING -> PAUSE */}
                                     {activeSession.status === 'running' && (
                                         <Button onClick={() => handleControl('PAUSE')} variant="outline" className="gap-2">
@@ -178,13 +323,6 @@ export const Dashboard: React.FC = () => {
                                             <Square className="h-4 w-4" /> Stop
                                         </Button>
                                     )}
-
-                                    {/* STOPPED or COMPLETED or LOADED -> UNLOAD (Close) */}
-                                    {(activeSession.status === 'stopped' || activeSession.status === 'completed' || activeSession.status === 'loaded') && (
-                                        <Button onClick={() => handleControl('UNLOAD')} variant="ghost" className="gap-2 text-muted-foreground hover:text-destructive">
-                                            <Square className="h-4 w-4" /> Close
-                                        </Button>
-                                    )}
                                 </div>
                             </div>
 
@@ -194,34 +332,13 @@ export const Dashboard: React.FC = () => {
                             <div className="bg-muted/50 p-4 rounded-lg border">
                                 <div className="text-sm font-medium text-muted-foreground mb-2">Current Block Execution</div>
                                 <div className="font-mono text-sm bg-background p-3 rounded border">
-                                    {activeSession.currentBlockId || 'Ready to start...'}
+                                    {activeSession.currentBlockId || 'Initializing...'}
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <div className="flex justify-center mb-4">
-                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                                    <Play className="h-6 w-6 text-muted-foreground/50" />
-                                </div>
-                            </div>
-                            <h4 className="font-medium text-lg">No Program Loaded</h4>
-                            <p className="text-sm mt-1 max-w-sm mx-auto mb-4">Select a program to load into the automation engine.</p>
-
-                            <div className="flex gap-2 justify-center">
-                                <StartFlowDialog onStart={(id) => handleControl('LOAD', id)}>
-                                    <Button variant="default">
-                                        Load Flow
-                                    </Button>
-                                </StartFlowDialog>
-                                <Button variant="outline" onClick={() => window.location.href = '/editor'}>
-                                    Go to Editor
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Recent Logs (Placeholder) */}
             <Card>

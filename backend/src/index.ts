@@ -75,6 +75,11 @@ async function bootstrap() {
         await app.ready(); // Ensure server is ready
         socketService.initialize(app.server);
 
+        // 7. Start Scheduler
+        console.log('Starting Scheduler...');
+        const { schedulerService } = require('./modules/scheduler/SchedulerService');
+        schedulerService.start();
+
         await app.listen({ port: config.PORT, host: '0.0.0.0' });
         console.log(`🚀 Server running on port ${config.PORT}`);
         logger.info(`🚀 Server running on port ${config.PORT}`);

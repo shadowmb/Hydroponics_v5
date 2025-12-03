@@ -7,12 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
 import { useStore } from '../../core/useStore';
 
+import { FlowInputsPanel } from './FlowInputsPanel';
+import type { IFlow } from '../../../../shared/types';
+
 interface PropertiesPanelProps {
     selectedNode: Node | null;
     onChange: (nodeId: string, data: any) => void;
+    inputs: NonNullable<IFlow['inputs']>;
+    onInputsChange: (inputs: NonNullable<IFlow['inputs']>) => void;
 }
 
-export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, onChange }) => {
+export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, onChange, inputs, onInputsChange }) => {
     const { devices } = useStore();
     const [formData, setFormData] = useState<Record<string, any>>({});
 
@@ -40,11 +45,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, 
     };
 
     if (!selectedNode) {
-        return (
-            <div className="w-80 border-l bg-card p-6 flex flex-col items-center justify-center text-center h-full text-muted-foreground">
-                <p>Select a node to edit properties.</p>
-            </div>
-        );
+        return <FlowInputsPanel inputs={inputs} onChange={onInputsChange} />;
     }
 
     const nodeType = selectedNode.data.type as string;

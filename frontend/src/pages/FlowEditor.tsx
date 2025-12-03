@@ -12,7 +12,7 @@ import { reactFlowToFlow, flowToReactFlow } from '../lib/flow-utils';
 import { Button } from '../components/ui/button';
 import { SaveFlowDialog } from '../components/editor/SaveFlowDialog';
 import { toast } from 'sonner';
-import { Save } from 'lucide-react';
+import { Save, Edit } from 'lucide-react';
 
 const nodeTypes = {
     action: ActionNode,
@@ -37,6 +37,7 @@ const initialNodes: Node[] = [
 
 const FlowEditorContent: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    console.log('FlowEditor params:', { id });
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -44,6 +45,7 @@ const FlowEditorContent: React.FC = () => {
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
     const [flowName, setFlowName] = useState('');
     const [flowDescription, setFlowDescription] = useState('');
+    const [inputs, setInputs] = useState<any[]>([]);
 
     // Load Flow Data
     useEffect(() => {
@@ -62,6 +64,7 @@ const FlowEditorContent: React.FC = () => {
                 setEdges(flowEdges);
                 setFlowName(flow.name);
                 setFlowDescription(flow.description || '');
+                setInputs(flow.inputs || []);
                 toast.success('Flow loaded');
             } catch (error) {
                 console.error('Load error:', error);
@@ -134,6 +137,7 @@ const FlowEditorContent: React.FC = () => {
     };
 
     const onSave = useCallback(async (name: string, description: string) => {
+        console.log('onSave called:', { name, id });
         const flowData = reactFlowToFlow(nodes, edges);
 
         // If editing existing flow, use its ID. Otherwise generate new one.
@@ -144,6 +148,7 @@ const FlowEditorContent: React.FC = () => {
             id: flowId,
             name: name,
             description: description,
+            inputs: inputs,
             isActive: true
         };
 
@@ -159,6 +164,8 @@ const FlowEditorContent: React.FC = () => {
 
             if (res.ok) {
                 toast.success(`Flow ${id ? 'updated' : 'saved'} successfully!`);
+                setFlowName(name);
+                setFlowDescription(description);
             } else {
                 const err = await res.json();
                 toast.error(`Failed to save: ${err.message}`);
@@ -169,18 +176,48 @@ const FlowEditorContent: React.FC = () => {
             toast.error('Failed to save flow');
             throw error;
         }
-    }, [nodes, edges, id]);
+    }, [nodes, edges, id, inputs]);
+
+    const handleQuickSave = () => {
+        if (!flowName) return;
+        onSave(flowName, flowDescription);
+    };
 
     return (
         <div className="h-full w-full flex flex-col">
             <div className="h-12 border-b bg-card flex items-center px-4 justify-between">
-                <h2 className="font-semibold">Flow Editor</h2>
-                <SaveFlowDialog onSave={onSave} defaultName={flowName}>
-                    <Button size="sm" className="gap-2">
-                        <Save className="h-4 w-4" />
-                        {id ? 'Update Flow' : 'Save Flow'}
-                    </Button>
-                </SaveFlowDialog>
+                <div className="flex items-center gap-2">
+                    <h2 className="font-semibold">Flow Editor</h2>
+                    {flowName && (
+                        <>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="font-medium">{flowName}</span>
+                        </>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {id ? (
+                        <>
+                            <SaveFlowDialog onSave={onSave} defaultName={flowName} defaultDescription={flowDescription}>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                    <Edit className="h-4 w-4" />
+                                    Properties
+                                </Button>
+                            </SaveFlowDialog>
+                            <Button size="sm" className="gap-2" onClick={handleQuickSave}>
+                                <Save className="h-4 w-4" />
+                                Update
+                            </Button>
+                        </>
+                    ) : (
+                        <SaveFlowDialog onSave={onSave} defaultName={flowName} defaultDescription={flowDescription}>
+                            <Button size="sm" className="gap-2">
+                                <Save className="h-4 w-4" />
+                                Save Flow
+                            </Button>
+                        </SaveFlowDialog>
+                    )}
+                </div>
             </div>
             <div className="flex-1 flex overflow-hidden">
                 <Sidebar />
@@ -205,7 +242,12 @@ const FlowEditorContent: React.FC = () => {
                     </ReactFlow>
                 </div>
 
-                <PropertiesPanel selectedNode={selectedNode} onChange={onNodeUpdate} />
+                <PropertiesPanel
+                    selectedNode={selectedNode}
+                    onChange={onNodeUpdate}
+                    inputs={inputs}
+                    onInputsChange={setInputs}
+                />
             </div>
         </div>
     );

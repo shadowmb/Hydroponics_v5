@@ -56,4 +56,22 @@ export class AutomationController {
             sessionId: (snapshot as any).sessionId
         });
     }
+
+    static async getSystemStatus(req: FastifyRequest, reply: FastifyReply) {
+        // TODO: check actual hardware connection status
+        const snapshot = automation.getSnapshot();
+
+        // Map XState to Session interface expected by frontend
+        const session = {
+            programId: snapshot.context.programId || '',
+            status: snapshot.value === 'idle' ? 'stopped' : snapshot.value, // map 'idle' to 'stopped' or similar
+            startTime: snapshot.context.execContext?.startTime,
+            currentBlockId: snapshot.context.currentBlockId
+        };
+
+        return reply.send({
+            status: 'online', // Backend is reachable
+            session: snapshot.context.programId ? session : null
+        });
+    }
 }

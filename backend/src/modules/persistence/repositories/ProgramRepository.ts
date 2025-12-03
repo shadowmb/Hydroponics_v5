@@ -6,6 +6,20 @@ export class ProgramRepository extends BaseRepository<IProgram> {
         super(ProgramModel);
     }
 
+    async create(data: Partial<IProgram>): Promise<IProgram> {
+        if (data.isActive) {
+            await this.model.updateMany({}, { isActive: false });
+        }
+        return super.create(data);
+    }
+
+    async update(id: string, data: Partial<IProgram>): Promise<IProgram | null> {
+        if (data.isActive) {
+            await this.model.updateMany({ id: { $ne: id } }, { isActive: false });
+        }
+        return super.update(id, data);
+    }
+
     async findActive(): Promise<IProgram | null> {
         return this.model.findOne({ isActive: true }).exec();
     }

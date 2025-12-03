@@ -3,6 +3,7 @@ import { HardwareController } from './controllers/HardwareController';
 import { AutomationController } from './controllers/AutomationController';
 import { SessionController } from './controllers/SessionController';
 import { FlowController } from './controllers/FlowController';
+import { ProgramController } from './controllers/ProgramController';
 
 export async function apiRoutes(app: FastifyInstance) {
 
@@ -61,6 +62,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/automation/pause', AutomationController.pause);
     app.post('/api/automation/resume', AutomationController.resume);
     app.get('/api/automation/status', AutomationController.getStatus);
+    app.get('/api/system/status', AutomationController.getSystemStatus);
 
     // Session Routes
     // Session Routes
@@ -77,4 +79,17 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/flows/:id', FlowController.get);
     app.put('/api/flows/:id', FlowController.update);
     app.delete('/api/flows/:id', FlowController.delete);
+
+    // Cycle Routes
+    app.register(require('./routes/cycles').cycleRoutes, { prefix: '/api/cycles' });
+
+    // Program Routes
+    app.post('/api/programs', ProgramController.create);
+    app.get('/api/programs', ProgramController.list);
+    app.get('/api/programs/:id', ProgramController.get);
+    app.put('/api/programs/:id', ProgramController.update);
+    app.delete('/api/programs/:id', ProgramController.delete);
+    app.get('/api/scheduler/status', ProgramController.getSchedulerStatus);
+    app.post('/api/scheduler/start', ProgramController.startScheduler);
+    app.post('/api/scheduler/stop', ProgramController.stopScheduler);
 }

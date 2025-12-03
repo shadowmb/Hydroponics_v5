@@ -17,6 +17,8 @@ export class SchedulerService {
     private job: CronJob;
     private queue: QueueItem[] = [];
     private lastRun: Map<string, number> = new Map(); // monitoringId -> timestamp
+    private _state: 'STOPPED' | 'RUNNING' | 'WAITING_START' = 'STOPPED';
+    private _startTime: number | null = null;
 
     constructor() {
         // Run every minute
@@ -28,6 +30,35 @@ export class SchedulerService {
         logger.info('🕒 Scheduler Service Started');
     }
 
+    public startNow() {
+        this._state = 'RUNNING';
+        this._startTime = null;
+        logger.info('▶️ Scheduler Started (Immediate)');
+    }
+
+    public startAt(timestamp: number) {
+        this._state = 'WAITING_START';
+        this._startTime = timestamp;
+        logger.info({ startAt: new Date(timestamp).toISOString() }, '⏳ Scheduler Scheduled for Delayed Start');
+    }
+
+    public stopScheduler() {
+        this._state = 'STOPPED';
+        this._startTime = null;
+        logger.info('⏹️ Scheduler Stopped');
+    }
+
+    public getState() {
+        return {
+            state: this._state,
+            startTime: this._startTime
+        };
+    }
+
+    public isPaused() {
+        return this._state !== 'RUNNING';
+    }
+
     public getAutomation() {
         return automation;
     }
@@ -37,6 +68,20 @@ export class SchedulerService {
     }
 
     private async tick() {
+        if (this._state === 'STOPPED') {
+            return;
+        }
+
+        if (this._state === 'WAITING_START') {
+            if (this._startTime && Date.now() >= this._startTime) {
+                this._state = 'RUNNING';
+                this._startTime = null;
+                logger.info('▶️ Delayed Start Triggered - Scheduler Running');
+            } else {
+                return;
+            }
+        }
+
         try {
             const now = new Date();
             const timeString = now.toTimeString().slice(0, 5); // HH:mm

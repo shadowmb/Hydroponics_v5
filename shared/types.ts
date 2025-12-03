@@ -68,6 +68,19 @@ export interface IFlow {
     updatedAt?: Date | string;
 }
 
+export interface ICycle {
+    id: string;
+    name: string;
+    description?: string;
+    steps: {
+        flowId: string;
+        overrides: Record<string, any>;
+    }[];
+    isActive: boolean;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+}
+
 export interface IProgram {
     id: string;
     name: string;
