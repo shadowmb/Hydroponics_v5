@@ -12,6 +12,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/hardware/command', HardwareController.sendCommand);
     // Device Management
     app.get('/api/hardware/device-templates', HardwareController.getDeviceTemplates);
+    app.get('/api/hardware/template-units', HardwareController.getTemplateUnits);
     app.get('/api/hardware/devices', HardwareController.getDevices);
     app.post('/api/hardware/devices', HardwareController.createDevice);
     app.put('/api/hardware/devices/:id', HardwareController.updateDevice);
@@ -92,4 +93,18 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/scheduler/status', ProgramController.getSchedulerStatus);
     app.post('/api/scheduler/start', ProgramController.startScheduler);
     app.post('/api/scheduler/stop', ProgramController.stopScheduler);
+
+    // Active Program Routes
+    const ActiveProgramController = require('./controllers/ActiveProgramController').ActiveProgramController;
+    app.get('/api/active-program', ActiveProgramController.getActive);
+    app.get('/api/active-program/variables', ActiveProgramController.getVariables);
+    app.post('/api/active-program/load', ActiveProgramController.load);
+    app.patch('/api/active-program/update', ActiveProgramController.update);
+    app.post('/api/active-program/start', ActiveProgramController.start);
+    app.post('/api/active-program/stop', ActiveProgramController.stop);
+    app.post('/api/active-program/pause', ActiveProgramController.pause);
+    app.post('/api/active-program/unload', ActiveProgramController.unload);
+    app.patch('/api/active-program/schedule/:itemId', ActiveProgramController.updateScheduleItem);
+    app.post('/api/active-program/schedule/swap', ActiveProgramController.swapCycles);
+    app.post('/api/active-program/schedule/:itemId/skip', ActiveProgramController.skipCycle);
 }

@@ -9,6 +9,7 @@ export interface IProgram extends Document, ISoftDelete {
     schedule: {
         time: string; // HH:mm
         cycleId: string; // Refers to Cycle.id
+        overrides?: Record<string, any>;
     }[];
 }
 
@@ -19,7 +20,8 @@ const ProgramSchema = new Schema<IProgram>({
     isActive: { type: Boolean, default: false },
     schedule: [{
         time: { type: String, required: true }, // Validation regex could be added
-        cycleId: { type: String, required: true }
+        cycleId: { type: String, required: true },
+        overrides: { type: Schema.Types.Mixed }
     }]
 }, {
     timestamps: true,

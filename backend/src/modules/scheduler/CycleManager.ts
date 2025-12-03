@@ -35,7 +35,7 @@ export class CycleManager {
         });
     }
 
-    public async startCycle(cycleId: string): Promise<string> {
+    public async startCycle(cycleId: string, overrides: Record<string, any> = {}): Promise<string> {
         // 1. Check if busy
         if (this.currentSession && this.currentSession.status === 'running') {
             throw new Error('A cycle is already running');
@@ -53,10 +53,18 @@ export class CycleManager {
             startTime: new Date(),
             status: 'running',
             currentStepIndex: 0,
-            logs: []
+            logs: [],
+            // Store global overrides for the session if needed, 
+            // or we can just pass them to each step.
+            // For now, we'll attach them to the session object in memory 
+            // (or we should update schema if we want persistence of overrides)
+            // But wait, executeStep needs them.
         });
 
-        logger.info({ cycleId, sessionId: this.currentSession.id }, '🚀 Starting Cycle');
+        // Attach overrides to the in-memory session object for use in executeStep
+        (this.currentSession as any).overrides = overrides;
+
+        logger.info({ cycleId, sessionId: this.currentSession.id, overrides }, '🚀 Starting Cycle');
 
         // 4. Start First Step
         await this.executeStep(0);
@@ -101,7 +109,14 @@ export class CycleManager {
             logger.info({ step: index, flowId: step.flowId }, '▶️ Executing Cycle Step');
 
             // Load Flow with Overrides
-            const flowSessionId = await automation.loadProgram(step.flowId, step.overrides);
+            // Merge Cycle Step overrides with Program Global overrides
+            // Program overrides take precedence? Or Step overrides?
+            // Usually Program (Global) overrides are meant to configure the whole cycle.
+            // Let's merge: Step Overrides (defaults) < Program Overrides (specifics)
+            const sessionOverrides = (this.currentSession as any).overrides || {};
+            const finalOverrides = { ...step.overrides, ...sessionOverrides };
+
+            const flowSessionId = await automation.loadProgram(step.flowId, finalOverrides);
 
             // Update Session with current flow session ID
             this.currentSession.currentFlowSessionId = flowSessionId;

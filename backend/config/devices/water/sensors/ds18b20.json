@@ -41,7 +41,11 @@
     },
     "uiConfig": {
         "icon": "thermometer",
-        "ta sgs": [
+        "units": [
+            "C",
+            "F"
+        ],
+        "tags": [
             "Temperature",
             "Water"
         ],

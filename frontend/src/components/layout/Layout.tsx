@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Outlet, NavLink } from "react-router-dom"
-import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Repeat, Calendar } from "lucide-react"
+import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Repeat, Calendar, Play } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { useStore } from "../../core/useStore"
@@ -42,6 +42,18 @@ function Sidebar({ className }: SidebarProps) {
                         >
                             <Calendar className="mr-2 h-4 w-4" />
                             Programs
+                        </NavLink>
+                        <NavLink
+                            to="/active-program"
+                            className={({ isActive }) =>
+                                cn(
+                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
+                                )
+                            }
+                        >
+                            <Play className="mr-2 h-4 w-4" />
+                            Active Program
                         </NavLink>
                         <NavLink
                             to="/editor"

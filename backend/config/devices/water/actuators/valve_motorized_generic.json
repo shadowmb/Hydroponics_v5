@@ -47,6 +47,12 @@
     ],
     "uiConfig": {
         "icon": "activity",
+        "units": [
+            "ms",
+            "s",
+            "min",
+            "h"
+        ],
         "tags": [
             "Valve",
             "Water"

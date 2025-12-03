@@ -128,6 +128,11 @@ export const hardwareService = {
         return response.data.data;
     },
 
+    getTemplateUnits: async (): Promise<string[]> => {
+        const response = await axios.get(`${API_URL}/hardware/template-units`);
+        return response.data.data;
+    },
+
     getDevices: async (): Promise<any[]> => {
         const response = await axios.get(`${API_URL}/hardware/devices`);
         return response.data.data;

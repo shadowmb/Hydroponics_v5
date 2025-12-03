@@ -45,6 +45,13 @@
     },
     "uiConfig": {
         "icon": "activity",
+        "units": [
+            "mm",
+            "cm",
+            "m",
+            "in",
+            "ft"
+        ],
         "tags": [
             "Distance",
             "Water"

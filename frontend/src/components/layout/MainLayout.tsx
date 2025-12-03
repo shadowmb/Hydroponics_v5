@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
-import { LayoutDashboard, Cpu, GitBranch, History, Activity, Moon, Sun, Edit } from 'lucide-react';
+import { LayoutDashboard, Cpu, GitBranch, History, Activity, Moon, Sun, Edit, Play } from 'lucide-react';
 import { useStore } from '../../core/useStore';
 import { socketService } from '../../core/SocketService';
 import { cn } from '../../lib/utils';
@@ -49,6 +49,7 @@ export const MainLayout: React.FC = () => {
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/programs', icon: GitBranch, label: 'Programs' },
+        { to: '/active-program', icon: Play, label: 'Active Program' },
         { to: '/hardware', icon: Cpu, label: 'Hardware' },
         { to: '/editor', icon: Edit, label: 'Editor' },
         { to: '/sessions', icon: History, label: 'Sessions' },

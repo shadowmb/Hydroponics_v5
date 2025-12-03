@@ -3,6 +3,7 @@ import { programRepository } from '../persistence/repositories/ProgramRepository
 import { monitoringRepository } from '../persistence/repositories/MonitoringRepository';
 import { cycleManager } from './CycleManager';
 import { automation } from '../automation/AutomationEngine';
+import { activeProgramService } from './ActiveProgramService';
 import { logger } from '../../core/LoggerService';
 
 interface QueueItem {
@@ -88,13 +89,20 @@ export class SchedulerService {
             logger.info({ time: timeString }, '🕒 Scheduler Tick');
 
             // 1. Check Active Program & Schedule
-            const activeProgram = await programRepository.findActive();
-            if (activeProgram) {
-                logger.info({ program: activeProgram.name, schedule: activeProgram.schedule }, 'Found Active Program');
-                const scheduledCycle = activeProgram.schedule.find(s => s.time === timeString);
-                if (scheduledCycle) {
-                    logger.info({ cycleId: scheduledCycle.cycleId, time: timeString }, '⏰ Scheduled Cycle Triggered');
-                    await this.handleScheduledCycle(scheduledCycle.cycleId);
+            const activeProgram = await activeProgramService.getActive();
+            if (activeProgram && activeProgram.status === 'running') {
+                const scheduledItem = activeProgram.schedule.find(s =>
+                    s.time === timeString && s.status === 'pending'
+                );
+
+                if (scheduledItem) {
+                    logger.info({ cycleId: scheduledItem.cycleId, time: timeString }, '⏰ Scheduled Cycle Triggered');
+                    await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.overrides);
+
+                    // Mark as running/completed in ActiveProgram
+                    // Note: CycleManager events will update the status to 'completed' later
+                    scheduledItem.status = 'running';
+                    await activeProgram.save();
                 }
             }
 
@@ -137,7 +145,7 @@ export class SchedulerService {
         });
     }
 
-    private async handleScheduledCycle(cycleId: string) {
+    private async handleScheduledCycle(cycleId: string, overrides: Record<string, any> = {}) {
         // Priority: Cycle > Monitoring
 
         // Check automation state.
@@ -158,7 +166,7 @@ export class SchedulerService {
         }
 
         try {
-            await cycleManager.startCycle(cycleId);
+            await cycleManager.startCycle(cycleId, overrides);
         } catch (error) {
             logger.error({ error, cycleId }, '❌ Failed to start scheduled cycle');
         }

@@ -46,6 +46,13 @@
     },
     "uiConfig": {
         "icon": "ruler",
+        "units": [
+            "mm",
+            "cm",
+            "m",
+            "in",
+            "ft"
+        ],
         "tags": [
             "Distance",
             "Water"
