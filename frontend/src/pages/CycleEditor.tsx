@@ -209,25 +209,24 @@ export const CycleEditor: React.FC = () => {
                                 </div>
                                 <Separator />
                                 <div className="space-y-4">
-                                    <Label>Input Overrides</Label>
-                                    {selectedFlow.inputs && selectedFlow.inputs.length > 0 ? (
-                                        selectedFlow.inputs.map(input => (
-                                            <div key={input.name} className="space-y-1">
-                                                <Label className="text-xs">{input.name} <span className="text-muted-foreground">({input.type})</span></Label>
+                                    <Label>Variable Overrides (Global)</Label>
+                                    {selectedFlow.variables && selectedFlow.variables.filter(v => v.scope === 'global').length > 0 ? (
+                                        selectedFlow.variables.filter(v => v.scope === 'global').map(variable => (
+                                            <div key={variable.name} className="space-y-1">
+                                                <Label className="text-xs">{variable.name} <span className="text-muted-foreground">({variable.type})</span></Label>
                                                 <Input
-                                                    value={steps[selectedStepIndex].overrides?.[input.name] ?? ''}
-                                                    placeholder={String(input.default ?? '')}
+                                                    value={steps[selectedStepIndex].overrides?.[variable.name] ?? ''}
+                                                    placeholder={String(variable.value ?? '')}
                                                     onChange={(e) => {
-                                                        const val = input.type === 'number' ? parseFloat(e.target.value) : e.target.value;
-                                                        handleOverrideChange(input.name, val);
+                                                        const val = variable.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+                                                        handleOverrideChange(variable.name, val);
                                                     }}
-                                                    type={input.type === 'number' ? 'number' : 'text'}
+                                                    type={variable.type === 'number' ? 'number' : 'text'}
                                                 />
-                                                {input.description && <p className="text-xs text-muted-foreground">{input.description}</p>}
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="text-sm text-muted-foreground">This flow has no inputs to override.</div>
+                                        <div className="text-sm text-muted-foreground">This flow has no global variables to override.</div>
                                     )}
                                 </div>
                             </div>
@@ -239,6 +238,6 @@ export const CycleEditor: React.FC = () => {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </div >
     );
 };
