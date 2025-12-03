@@ -43,6 +43,11 @@
     "uiConfig": {
         "category": "Water",
         "icon": "droplet",
+        "units": [
+            "mS/cm",
+            "µS/cm",
+            "ppm"
+        ],
         "tags": [
             "EC",
             "Conductivity",

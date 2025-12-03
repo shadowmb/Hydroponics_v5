@@ -134,6 +134,14 @@
     ],
     "uiConfig": {
         "icon": "droplet",
+        "units": [
+            "ms",
+            "s",
+            "min",
+            "ml",
+            "l",
+            "%"
+        ],
         "tags": [
             "Pump",
             "Water"

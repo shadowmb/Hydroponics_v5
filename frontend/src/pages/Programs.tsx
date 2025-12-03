@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit, Trash2, Plus, Loader2, Calendar } from 'lucide-react';
+import { Edit, Trash2, Plus, Loader2, Calendar, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -15,6 +15,7 @@ import {
 } from '../components/ui/dialog';
 
 import type { IProgram } from '../../../shared/types';
+import { activeProgramService } from '../services/activeProgramService';
 
 export const Programs: React.FC = () => {
     const navigate = useNavigate();
@@ -76,6 +77,17 @@ export const Programs: React.FC = () => {
             toast.success(`Program ${!program.isActive ? 'activated' : 'deactivated'}`);
         } catch (error) {
             toast.error('Failed to update program status');
+        }
+    };
+
+    const handleLoad = async (program: IProgram) => {
+        try {
+            await activeProgramService.load(program.id);
+            toast.success('Program loaded');
+            navigate('/active-program');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to load program');
         }
     };
 
@@ -142,6 +154,14 @@ export const Programs: React.FC = () => {
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleLoad(program)}
+                                                        title="Load Program"
+                                                    >
+                                                        <Play className="h-4 w-4 text-green-600" />
+                                                    </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"

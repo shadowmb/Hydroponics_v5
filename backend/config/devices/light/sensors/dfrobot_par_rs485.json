@@ -52,6 +52,9 @@
     },
     "uiConfig": {
         "icon": "lightbulb",
+        "units": [
+            "µmol/m²/s"
+        ],
         "tags": [
             "PAR",
             "Light"

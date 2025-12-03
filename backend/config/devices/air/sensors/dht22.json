@@ -47,6 +47,10 @@
     ],
     "uiConfig": {
         "icon": "thermometer",
+        "units": [
+            "C",
+            "F"
+        ],
         "tags": [
             "Temperature",
             "Humidity",

@@ -44,6 +44,7 @@ const VariantSchema = z.object({
     pins: z.array(PinSchema).optional(),
     uiConfig: z.object({
         icon: z.string().optional(),
+        units: z.array(z.string()).optional(),
         capabilities: z.record(z.object({
             label: z.string(),
             icon: z.string().optional(),
@@ -68,6 +69,7 @@ const DeviceTemplateSchema = z.object({
         category: z.string().optional(),
         icon: z.string().optional(),
         tags: z.array(z.string()).optional(),
+        units: z.array(z.string()).optional(),
         recommendedPins: z.array(z.string()).optional(),
         capabilities: z.record(z.object({
             label: z.string(),
@@ -243,6 +245,19 @@ export class DeviceTemplateManager {
                 return !!template.commands[cmdName];
             }
         };
+    }
+
+    /**
+     * Get all unique units defined across all device templates.
+     */
+    public getAllUnits(): string[] {
+        const units = new Set<string>();
+        this.templates.forEach(template => {
+            if (template.uiConfig?.units) {
+                template.uiConfig.units.forEach(u => units.add(u));
+            }
+        });
+        return Array.from(units).sort();
     }
 }
 

@@ -57,6 +57,7 @@ export interface IVariable {
     type: 'number' | 'string' | 'boolean';
     value?: any;     // Default/Current value
     scope: 'local' | 'global';
+    unit?: string;
 }
 
 export interface IFlow {

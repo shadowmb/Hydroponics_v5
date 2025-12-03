@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Edit2, Check, X, ChevronsUpDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -19,7 +19,22 @@ import {
     TableHeader,
     TableRow,
 } from '../ui/table';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '../ui/popover';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '../ui/command';
 import type { IVariable } from '../../../../shared/types';
+import { hardwareService } from '../../services/hardwareService';
+import { cn } from '../../lib/utils';
 
 interface VariableManagerProps {
     variables: IVariable[];
@@ -32,6 +47,13 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
 }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
+    const [editUnit, setEditUnit] = useState('');
+    const [availableUnits, setAvailableUnits] = useState<string[]>([]);
+    const [unitOpen, setUnitOpen] = useState(false);
+
+    useEffect(() => {
+        hardwareService.getTemplateUnits().then(setAvailableUnits).catch(console.error);
+    }, []);
 
     // --- Helper to generate unique ID ---
     const generateId = (prefix: string) => {
@@ -70,8 +92,8 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
     };
 
     // --- Shared Update/Delete Logic ---
-    const updateVariable = (id: string, name: string) => {
-        const updated = variables.map(v => v.id === id ? { ...v, name } : v);
+    const updateVariable = (id: string, name: string, unit?: string) => {
+        const updated = variables.map(v => v.id === id ? { ...v, name, unit } : v);
         onUpdateVariables(updated);
         setEditingId(null);
     };
@@ -91,13 +113,14 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                         <TableRow>
                             <TableHead className="w-[100px]">ID</TableHead>
                             <TableHead>Name (Readable)</TableHead>
+                            <TableHead className="w-[150px]">Unit</TableHead>
                             <TableHead className="w-[100px] text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {scopedVariables.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
                                     No {scope} variables defined.
                                 </TableCell>
                             </TableRow>
@@ -107,23 +130,80 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                                     <TableCell className="font-mono text-xs">{v.id}</TableCell>
                                     <TableCell>
                                         {editingId === v.id ? (
-                                            <div className="flex items-center gap-2">
-                                                <Input
-                                                    value={editName}
-                                                    onChange={(e) => setEditName(e.target.value)}
-                                                    className="h-8"
-                                                    autoFocus
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            updateVariable(v.id, editName);
-                                                        }
-                                                    }}
-                                                />
+                                            <Input
+                                                value={editName}
+                                                onChange={(e) => setEditName(e.target.value)}
+                                                className="h-8"
+                                                autoFocus
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        updateVariable(v.id, editName, editUnit);
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            v.name
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {editingId === v.id ? (
+                                            <Popover open={unitOpen} onOpenChange={setUnitOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={unitOpen}
+                                                        className="w-full justify-between h-8"
+                                                    >
+                                                        {editUnit || "Select unit..."}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[200px] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search unit..." onValueChange={(val) => setEditUnit(val)} />
+                                                        <CommandList>
+                                                            <CommandEmpty>
+                                                                <Button variant="ghost" className="w-full justify-start h-8" onClick={() => setUnitOpen(false)}>
+                                                                    Use "{editUnit}"
+                                                                </Button>
+                                                            </CommandEmpty>
+                                                            <CommandGroup>
+                                                                {availableUnits.map((unit) => (
+                                                                    <CommandItem
+                                                                        key={unit}
+                                                                        value={unit}
+                                                                        onSelect={(currentValue) => {
+                                                                            setEditUnit(currentValue === editUnit ? "" : currentValue);
+                                                                            setUnitOpen(false);
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                editUnit === unit ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {unit}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                        ) : (
+                                            <span className="text-muted-foreground text-sm">{v.unit || '-'}</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {editingId === v.id ? (
+                                            <div className="flex items-center justify-end gap-2">
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
                                                     className="h-8 w-8 text-green-500"
-                                                    onClick={() => updateVariable(v.id, editName)}
+                                                    onClick={() => updateVariable(v.id, editName, editUnit)}
                                                 >
                                                     <Check className="h-4 w-4" />
                                                 </Button>
@@ -137,27 +217,29 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <span className="flex items-center gap-2">
-                                                {v.name}
-                                                <Edit2
-                                                    className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-primary"
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
                                                     onClick={() => {
                                                         setEditingId(v.id);
                                                         setEditName(v.name);
+                                                        setEditUnit(v.unit || '');
                                                     }}
-                                                />
-                                            </span>
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                                    onClick={() => deleteVariable(v.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         )}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                            onClick={() => deleteVariable(v.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -175,7 +257,7 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                     Manage Variables
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[600px]">
+            <DialogContent className="max-w-[800px]">
                 <DialogHeader>
                     <DialogTitle>Variable Manager</DialogTitle>
                     <DialogDescription>

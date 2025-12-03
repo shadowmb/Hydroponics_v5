@@ -563,8 +563,18 @@ export class HardwareController {
             const templates = await DeviceTemplate.find();
             return reply.send({ success: true, data: templates });
         } catch (error) {
-            req.log.error(error);
             return reply.status(500).send({ success: false, error: 'Failed to fetch device templates' });
+        }
+    }
+
+    static async getTemplateUnits(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { templates } = await import('../../modules/hardware/DeviceTemplateManager');
+            const units = templates.getAllUnits();
+            return reply.send({ success: true, data: units });
+        } catch (error) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: 'Failed to fetch template units' });
         }
     }
 

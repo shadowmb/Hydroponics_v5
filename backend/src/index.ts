@@ -40,7 +40,7 @@ async function bootstrap() {
         console.log('Registering CORS...');
         await app.register(cors, {
             origin: '*', // Allow all for dev
-            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
         });
 
         // 3. Connect to Database

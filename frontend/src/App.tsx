@@ -14,6 +14,7 @@ import { Cycles } from './pages/Cycles';
 import { CycleEditor } from './pages/CycleEditor';
 import { Programs } from './pages/Programs';
 import { ProgramEditor } from './pages/ProgramEditor';
+import { ActiveProgramPage } from './pages/ActiveProgramPage';
 import { socketService } from './core/SocketService';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
             <Route path="/programs" element={<Programs />} />
             <Route path="/programs/new" element={<ProgramEditor />} />
             <Route path="/programs/:id" element={<ProgramEditor />} />
+            <Route path="/active-program" element={<ActiveProgramPage />} />
             <Route path="/hardware" element={<Hardware />} />
             <Route path="/history" element={<History />} />
             <Route path="/settings" element={<div>Settings Page</div>} />
