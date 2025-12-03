@@ -48,7 +48,8 @@ export class SocketService {
             'automation:block_start',
             'automation:block_end',
             'automation:state_change',
-            'command:sent'
+            'command:sent',
+            'log'
         ];
 
         eventsToForward.forEach(eventName => {

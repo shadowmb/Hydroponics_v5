@@ -1,28 +1,27 @@
+import { BaseRepository } from './BaseRepository';
 import { ProgramModel, IProgram } from '../schemas/Program.schema';
 
-export class ProgramRepository {
-    async findAll(): Promise<IProgram[]> {
-        return ProgramModel.find().exec();
-    }
-
-    async findById(id: string): Promise<IProgram | null> {
-        return ProgramModel.findOne({ id }).exec();
+export class ProgramRepository extends BaseRepository<IProgram> {
+    constructor() {
+        super(ProgramModel);
     }
 
     async create(data: Partial<IProgram>): Promise<IProgram> {
-        return ProgramModel.create(data);
+        if (data.isActive) {
+            await this.model.updateMany({}, { isActive: false });
+        }
+        return super.create(data);
     }
 
     async update(id: string, data: Partial<IProgram>): Promise<IProgram | null> {
-        return ProgramModel.findOneAndUpdate({ id }, data, { new: true }).exec();
+        if (data.isActive) {
+            await this.model.updateMany({ id: { $ne: id } }, { isActive: false });
+        }
+        return super.update(id, data);
     }
 
-    async delete(id: string): Promise<IProgram | null> {
-        const program = await ProgramModel.findOne({ id });
-        if (program) {
-            return program.softDelete();
-        }
-        return null;
+    async findActive(): Promise<IProgram | null> {
+        return this.model.findOne({ isActive: true }).exec();
     }
 }
 

@@ -21,6 +21,17 @@ export interface ExecutionContext {
     stepCount: number;
     startTime: number;
     errors: Array<{ nodeId: string; message: string; timestamp: number }>;
+
+    // State persisted across Pause/Resume for each block
+    resumeState: Record<string, any>;
+}
+
+export interface Edge {
+    id: string;
+    source: string;
+    target: string;
+    sourceHandle?: string;
+    targetHandle?: string;
 }
 
 /**
@@ -29,13 +40,13 @@ export interface ExecutionContext {
  */
 export interface Block {
     id: string;
-    type: string; // 'SENSOR_READ', 'IF', 'WAIT', etc.
-    next?: string; // ID of the next block (default path)
+    type: string;
+    // next is derived from edges during execution
 
-    // Configuration params (e.g. deviceId, duration)
+    // Configuration params (mapped from data)
     params: Record<string, any>;
 
-    // UI Metadata (for React Flow)
+    // UI Metadata
     position?: { x: number; y: number };
 }
 
@@ -56,7 +67,7 @@ export interface BlockResult {
  */
 export interface IBlockExecutor {
     type: string;
-    execute(ctx: ExecutionContext, params: any): Promise<BlockResult>;
+    execute(ctx: ExecutionContext, params: any, abortSignal?: AbortSignal): Promise<BlockResult>;
 }
 
 /**
@@ -65,7 +76,18 @@ export interface IBlockExecutor {
  */
 export interface ExecutionSession {
     id: string;
-    status: 'IDLE' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
+    status: 'idle' | 'loaded' | 'running' | 'completed' | 'failed' | 'error' | 'paused' | 'stopped';
     context: ExecutionContext;
     currentBlockId: string | null;
+}
+
+/**
+ * Error thrown when execution is paused.
+ * Carries state to be persisted.
+ */
+export class PauseError extends Error {
+    constructor(public state: any) {
+        super('Paused');
+        this.name = 'PauseError';
+    }
 }

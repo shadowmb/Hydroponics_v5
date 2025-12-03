@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { programRepository } from './modules/persistence/repositories/ProgramRepository';
+import { flowRepository } from './modules/persistence/repositories/FlowRepository';
 import { logger } from './core/LoggerService';
 import dotenv from 'dotenv';
 
@@ -13,22 +13,22 @@ async function main() {
         logger.info('Connected to MongoDB');
 
         // Cleanup
-        await mongoose.connection.collection('programs').deleteMany({ id: 'api_test_prog' });
+        await mongoose.connection.collection('flows').deleteMany({ id: 'api_test_flow' });
 
-        // Create Program
-        await programRepository.create({
-            id: 'api_test_prog',
-            name: 'API Test Program',
-            blocks: [
+        // Create Flow
+        await flowRepository.create({
+            id: 'api_test_flow',
+            name: 'API Test Flow',
+            nodes: [
                 { id: 'step1', type: 'LOG', params: { message: 'Starting API Test' }, next: 'step2' },
                 { id: 'step2', type: 'WAIT', params: { duration: 10000 }, next: 'step3' }, // Wait 10s
                 { id: 'step3', type: 'LOG', params: { message: 'Finished API Test' } }
             ],
-            triggers: [],
-            active: true
+            edges: [],
+            isActive: true
         });
 
-        logger.info('✅ API Test Program Created: api_test_prog');
+        logger.info('✅ API Test Flow Created: api_test_flow');
 
     } catch (error) {
         console.error(error);

@@ -5,18 +5,22 @@ export interface IProgram extends Document, ISoftDelete {
     id: string;
     name: string;
     description?: string;
-    blocks: any[]; // Array of Block definitions
-    triggers: any[]; // Array of Trigger definitions
-    active: boolean;
+    isActive: boolean;
+    schedule: {
+        time: string; // HH:mm
+        cycleId: string; // Refers to Cycle.id
+    }[];
 }
 
-export const ProgramSchema = new Schema<IProgram>({
+const ProgramSchema = new Schema<IProgram>({
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     description: { type: String },
-    blocks: { type: [Object], default: [] },
-    triggers: { type: [Object], default: [] },
-    active: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: false },
+    schedule: [{
+        time: { type: String, required: true }, // Validation regex could be added
+        cycleId: { type: String, required: true }
+    }]
 }, {
     timestamps: true,
     toJSON: {

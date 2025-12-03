@@ -5,7 +5,7 @@ export interface IExecutionSession extends Document, ISoftDelete {
     programId: string;
     startTime: Date;
     endTime?: Date;
-    status: 'running' | 'completed' | 'failed' | 'paused' | 'stopped';
+    status: 'idle' | 'loaded' | 'running' | 'completed' | 'failed' | 'error' | 'paused' | 'stopped';
     logs: any[];
     context: any; // Snapshot of execution context
 }
@@ -16,7 +16,7 @@ const ExecutionSessionSchema = new Schema<IExecutionSession>({
     endTime: { type: Date },
     status: {
         type: String,
-        enum: ['running', 'completed', 'failed', 'paused', 'stopped'],
+        enum: ['idle', 'loaded', 'running', 'completed', 'failed', 'error', 'paused', 'stopped'],
         required: true,
         index: true
     },

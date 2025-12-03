@@ -1,18 +1,21 @@
 import { createMachine, assign } from 'xstate';
-import { ExecutionContext, Block } from './interfaces';
+import { ExecutionContext, Block, Edge } from './interfaces';
 
 export interface AutomationContext {
     execContext: ExecutionContext;
     blocks: Map<string, Block>;
+    edges: Edge[];
     currentBlockId: string | null;
     error: string | null;
 }
 
 export type AutomationEvent =
-    | { type: 'START'; programId: string; templateId: string; blocks: Block[] }
+    | { type: 'LOAD'; programId: string; templateId: string; blocks: Block[]; edges: Edge[] }
+    | { type: 'START' }
     | { type: 'PAUSE' }
     | { type: 'RESUME' }
     | { type: 'STOP' }
+    | { type: 'UNLOAD' }
     | { type: 'BLOCK_COMPLETE'; data: { nextBlockId?: string | null; output?: any } }
     | { type: 'BLOCK_ERROR'; data: { message: string } };
 
@@ -31,30 +34,32 @@ export const automationMachine = createMachine({
             devices: {},
             stepCount: 0,
             startTime: 0,
-            errors: []
+            errors: [],
+            resumeState: {}
         },
         blocks: new Map(),
+        edges: [],
         currentBlockId: null,
         error: null
     },
     states: {
         idle: {
             on: {
-                START: {
-                    target: 'running',
+                LOAD: {
+                    target: 'loaded',
                     actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
-                        if (event.type !== 'START') return {};
                         const blockMap = new Map<string, Block>();
                         (event.blocks || []).forEach((b: Block) => blockMap.set(b.id, b));
 
                         return {
                             blocks: blockMap,
+                            edges: event.edges || [],
                             currentBlockId: event.blocks?.[0]?.id || null,
                             execContext: {
                                 ...context.execContext,
                                 programId: event.programId,
                                 actionTemplateId: event.templateId,
-                                startTime: Date.now(),
+                                startTime: 0, // Not started yet
                                 stepCount: 0,
                                 variables: {},
                                 errors: []
@@ -62,6 +67,20 @@ export const automationMachine = createMachine({
                         };
                     })
                 }
+            }
+        },
+        loaded: {
+            on: {
+                START: {
+                    target: 'running',
+                    actions: assign(({ context }: { context: AutomationContext }) => ({
+                        execContext: {
+                            ...context.execContext,
+                            startTime: Date.now()
+                        }
+                    }))
+                },
+                UNLOAD: { target: 'idle' }
             }
         },
         running: {
@@ -105,24 +124,122 @@ export const automationMachine = createMachine({
             ],
             on: {
                 PAUSE: { target: 'paused' },
-                STOP: { target: 'idle' },
+                STOP: { target: 'stopped' },
                 BLOCK_ERROR: { target: 'error' }
             }
         },
         paused: {
             on: {
                 RESUME: { target: 'running' },
-                STOP: { target: 'idle' }
+                STOP: { target: 'stopped' }
+            }
+        },
+        stopped: {
+            on: {
+                START: {
+                    target: 'running',
+                    actions: assign(({ context }: { context: AutomationContext }) => ({
+                        // Reset for restart
+                        currentBlockId: Array.from(context.blocks.values())[0]?.id || null,
+                        execContext: {
+                            ...context.execContext,
+                            startTime: Date.now(),
+                            stepCount: 0,
+                            resumeState: {} // Clear resume state on fresh start
+                        }
+                    }))
+                },
+                UNLOAD: { target: 'idle' },
+                LOAD: {
+                    target: 'loaded',
+                    actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
+                        const blockMap = new Map<string, Block>();
+                        (event.blocks || []).forEach((b: Block) => blockMap.set(b.id, b));
+
+                        return {
+                            blocks: blockMap,
+                            edges: event.edges || [],
+                            currentBlockId: event.blocks?.[0]?.id || null,
+                            execContext: {
+                                ...context.execContext,
+                                programId: event.programId,
+                                actionTemplateId: event.templateId,
+                                startTime: 0, // Not started yet
+                                stepCount: 0,
+                                variables: {},
+                                errors: []
+                            }
+                        };
+                    })
+                }
             }
         },
         error: {
             on: {
-                STOP: { target: 'idle' }
+                STOP: { target: 'stopped' },
+                UNLOAD: { target: 'idle' },
+                LOAD: {
+                    target: 'loaded',
+                    actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
+                        const blockMap = new Map<string, Block>();
+                        (event.blocks || []).forEach((b: Block) => blockMap.set(b.id, b));
+
+                        return {
+                            blocks: blockMap,
+                            edges: event.edges || [],
+                            currentBlockId: event.blocks?.[0]?.id || null,
+                            execContext: {
+                                ...context.execContext,
+                                programId: event.programId,
+                                actionTemplateId: event.templateId,
+                                startTime: 0, // Not started yet
+                                stepCount: 0,
+                                variables: {},
+                                errors: []
+                            }
+                        };
+                    })
+                }
             }
         },
         completed: {
             on: {
-                START: { target: 'running' }
+                START: {
+                    target: 'running',
+                    actions: assign(({ context }: { context: AutomationContext }) => ({
+                        // Reset for restart
+                        currentBlockId: Array.from(context.blocks.values())[0]?.id || null,
+                        execContext: {
+                            ...context.execContext,
+                            startTime: Date.now(),
+                            stepCount: 0,
+                            resumeState: {}
+                        }
+                    }))
+                },
+                UNLOAD: { target: 'idle' },
+                LOAD: {
+                    target: 'loaded',
+                    actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
+                        const blockMap = new Map<string, Block>();
+                        (event.blocks || []).forEach((b: Block) => blockMap.set(b.id, b));
+
+                        return {
+                            blocks: blockMap,
+                            edges: event.edges || [],
+                            currentBlockId: event.blocks?.[0]?.id || null,
+                            execContext: {
+                                ...context.execContext,
+                                programId: event.programId,
+                                actionTemplateId: event.templateId,
+                                startTime: 0, // Not started yet
+                                stepCount: 0,
+                                variables: {},
+                                errors: []
+                            }
+                        };
+                    })
+                }
             }
         }
     }

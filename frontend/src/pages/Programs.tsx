@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Edit, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Edit, Trash2, Plus, Loader2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -13,6 +13,7 @@ import {
     DialogFooter,
     DialogClose,
 } from '../components/ui/dialog';
+
 import type { IProgram } from '../../../shared/types';
 
 export const Programs: React.FC = () => {
@@ -59,27 +60,22 @@ export const Programs: React.FC = () => {
         }
     };
 
-    const handleRun = async (programId: string) => {
-        setProcessingId(programId);
+    const handleToggleActive = async (program: IProgram) => {
+        // TODO: Implement activation logic (ensure only one program is active?)
+        // For now just toggle the flag
         try {
-            const res = await fetch('/api/automation/start', {
-                method: 'POST',
+            const res = await fetch(`/api/programs/${program.id}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ programId })
+                body: JSON.stringify({ ...program, isActive: !program.isActive })
             });
+            if (!res.ok) throw new Error('Failed to update program');
 
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message);
-            }
-
-            toast.success('Program started');
-            navigate('/'); // Redirect to Dashboard
-        } catch (error: any) {
-            console.error(error);
-            toast.error(`Failed to start: ${error.message}`);
-        } finally {
-            setProcessingId(null);
+            // Refresh list to reflect backend side-effects (deactivating others)
+            fetchPrograms();
+            toast.success(`Program ${!program.isActive ? 'activated' : 'deactivated'}`);
+        } catch (error) {
+            toast.error('Failed to update program status');
         }
     };
 
@@ -88,9 +84,9 @@ export const Programs: React.FC = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Programs</h2>
-                    <p className="text-muted-foreground">Manage your automation programs.</p>
+                    <p className="text-muted-foreground">Manage daily schedules and automation routines.</p>
                 </div>
-                <Button onClick={() => navigate('/editor')}>
+                <Button onClick={() => navigate('/programs/new')}>
                     <Plus className="mr-2 h-4 w-4" /> Create Program
                 </Button>
             </div>
@@ -98,7 +94,7 @@ export const Programs: React.FC = () => {
             <Card>
                 <CardHeader>
                     <CardTitle>All Programs</CardTitle>
-                    <CardDescription>A list of all automation programs in the system.</CardDescription>
+                    <CardDescription>A list of all schedules in the system.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     {loading ? (
@@ -115,8 +111,8 @@ export const Programs: React.FC = () => {
                                 <thead className="bg-muted/50 text-muted-foreground [&_th]:px-4 [&_th]:py-3 [&_th]:font-medium">
                                     <tr>
                                         <th>Name</th>
-                                        <th>ID</th>
-                                        <th>Created At</th>
+                                        <th>Description</th>
+                                        <th>Events</th>
                                         <th>Status</th>
                                         <th className="text-right">Actions</th>
                                     </tr>
@@ -124,36 +120,32 @@ export const Programs: React.FC = () => {
                                 <tbody className="divide-y">
                                     {programs.map((program) => (
                                         <tr key={program.id} className="hover:bg-muted/50 transition-colors">
-                                            <td className="px-4 py-3 font-medium">{program.name}</td>
-                                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{program.id}</td>
+                                            <td className="px-4 py-3 font-medium">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                                    {program.name}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">{program.description || '-'}</td>
                                             <td className="px-4 py-3 text-muted-foreground">
-                                                {program.createdAt ? new Date(program.createdAt).toLocaleDateString() : '-'}
+                                                {program.schedule?.length || 0} cycles
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${program.active ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
-                                                    }`}>
-                                                    {program.active ? 'Active' : 'Inactive'}
-                                                </span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className={`h-6 px-2 text-xs font-medium rounded-full ${program.isActive ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20' : 'bg-gray-500/10 text-gray-600 hover:bg-gray-500/20'}`}
+                                                    onClick={() => handleToggleActive(program)}
+                                                >
+                                                    {program.isActive ? 'Active' : 'Inactive'}
+                                                </Button>
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-2">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => handleRun(program.id)}
-                                                        disabled={!!processingId}
-                                                        title="Run Program"
-                                                    >
-                                                        {processingId === program.id ? (
-                                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <Play className="h-4 w-4 text-green-600" />
-                                                        )}
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => navigate(`/editor?programId=${program.id}`)} // TODO: Implement load in editor
+                                                        onClick={() => navigate(`/programs/${program.id}`)}
                                                         title="Edit Program"
                                                     >
                                                         <Edit className="h-4 w-4 text-blue-600" />

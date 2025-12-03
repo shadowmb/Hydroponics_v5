@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, Wifi, WifiOff, Play, Pause, Square, Clock } from 'lucide-react';
+import { Activity, Wifi, WifiOff, Play, Pause, Square, Clock, Calendar } from 'lucide-react';
 import { useStore } from '../core/useStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
-import { StartProgramDialog } from '../components/dashboard/StartProgramDialog';
+
 
 export const Dashboard: React.FC = () => {
-    const { systemStatus, devices, activeSession } = useStore();
+    const { systemStatus, devices, activeSession, logs } = useStore();
     const [uptime, setUptime] = useState<string>('00:00:00');
 
     // Mock Uptime Counter
@@ -23,15 +23,46 @@ export const Dashboard: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const handleControl = async (action: 'START' | 'PAUSE' | 'RESUME' | 'STOP', programId?: string) => {
+    const [schedulerStatus, setSchedulerStatus] = useState<any>(null);
+
+    // Fetch initial status on mount to ensure UI is in sync
+    useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const [sysRes, schedRes] = await Promise.all([
+                    fetch('/api/system/status'),
+                    fetch('/api/scheduler/status')
+                ]);
+
+                if (sysRes.ok) {
+                    const status = await sysRes.json();
+                    useStore.getState().setSystemStatus(status.status);
+                    useStore.getState().setActiveSession(status.session);
+                }
+
+                if (schedRes.ok) {
+                    const sched = await schedRes.json();
+                    setSchedulerStatus(sched);
+                }
+            } catch (error) {
+                console.error('Failed to fetch status:', error);
+            }
+        };
+        fetchStatus();
+    }, []);
+
+    const handleControl = async (action: 'LOAD' | 'START' | 'PAUSE' | 'RESUME' | 'STOP' | 'UNLOAD', programId?: string) => {
         try {
             let endpoint = '';
             let body = {};
 
             switch (action) {
+                case 'LOAD':
+                    endpoint = '/api/automation/load';
+                    body = { programId };
+                    break;
                 case 'START':
                     endpoint = '/api/automation/start';
-                    body = { programId };
                     break;
                 case 'PAUSE':
                     endpoint = '/api/automation/pause';
@@ -41,6 +72,9 @@ export const Dashboard: React.FC = () => {
                     break;
                 case 'STOP':
                     endpoint = '/api/automation/stop';
+                    break;
+                case 'UNLOAD':
+                    endpoint = '/api/automation/unload';
                     break;
             }
 
@@ -101,17 +135,158 @@ export const Dashboard: React.FC = () => {
                 </Card>
             </div>
 
-            {/* Hero: Active Program */}
-            <Card className="overflow-hidden">
+            {/* Daily Agenda */}
+            <Card className="overflow-hidden border-l-4 border-l-blue-500">
                 <CardHeader className="bg-muted/30 border-b pb-4">
-                    <CardTitle className="flex items-center gap-2">
-                        <Play className="h-5 w-5 text-primary" />
-                        Active Program
-                    </CardTitle>
-                    <CardDescription>Manage the currently running automation program</CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-blue-500" />
+                                Daily Agenda
+                            </CardTitle>
+                            <CardDescription>
+                                {schedulerStatus?.activeProgram ? (
+                                    <span>Active Plan: <span className="font-medium text-foreground">{schedulerStatus.activeProgram.name}</span></span>
+                                ) : "No active schedule"}
+                            </CardDescription>
+                        </div>
+                        {schedulerStatus?.activeProgram && (
+                            <div className="flex gap-2">
+                                {schedulerStatus.scheduler?.state === 'STOPPED' && (
+                                    <>
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="h-8 bg-green-600 hover:bg-green-700"
+                                            onClick={async () => {
+                                                await fetch('/api/scheduler/start', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({})
+                                                });
+                                                const res = await fetch('/api/scheduler/status');
+                                                if (res.ok) setSchedulerStatus(await res.json());
+                                            }}
+                                        >
+                                            <Play className="h-3 w-3 mr-1" />
+                                            Start Now
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8"
+                                            onClick={async () => {
+                                                const delayMinutes = prompt('Enter delay in minutes (e.g., 60 for 1 hour):');
+                                                if (!delayMinutes || isNaN(Number(delayMinutes))) return;
+
+                                                const startTime = Date.now() + Number(delayMinutes) * 60 * 1000;
+                                                await fetch('/api/scheduler/start', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ startTime })
+                                                });
+                                                const res = await fetch('/api/scheduler/status');
+                                                if (res.ok) setSchedulerStatus(await res.json());
+                                            }}
+                                        >
+                                            <Clock className="h-3 w-3 mr-1" />
+                                            Delayed Start
+                                        </Button>
+                                    </>
+                                )}
+
+                                {(schedulerStatus.scheduler?.state === 'RUNNING' || schedulerStatus.scheduler?.state === 'WAITING_START') && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="h-8"
+                                        onClick={async () => {
+                                            await fetch('/api/scheduler/stop', { method: 'POST' });
+                                            const res = await fetch('/api/scheduler/status');
+                                            if (res.ok) setSchedulerStatus(await res.json());
+                                        }}
+                                    >
+                                        <Square className="h-3 w-3 mr-1" />
+                                        Stop
+                                    </Button>
+                                )}
+
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-destructive hover:text-destructive"
+                                    onClick={async () => {
+                                        if (!confirm('Are you sure you want to deactivate the current schedule?')) return;
+                                        await fetch(`/api/programs/${schedulerStatus.activeProgram.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ isActive: false })
+                                        });
+                                        window.location.reload();
+                                    }}
+                                >
+                                    <Square className="h-3 w-3 mr-1" />
+                                    Remove
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                    {activeSession ? (
+                    {schedulerStatus?.scheduler?.state === 'STOPPED' && (
+                        <div className="bg-yellow-500/10 text-yellow-600 p-3 rounded-lg mb-4 text-sm font-medium flex items-center gap-2">
+                            <Pause className="h-4 w-4" />
+                            Scheduler is STOPPED. Click "Start Now" or "Delayed Start" to begin.
+                        </div>
+                    )}
+                    {schedulerStatus?.scheduler?.state === 'WAITING_START' && (
+                        <div className="bg-blue-500/10 text-blue-600 p-3 rounded-lg mb-4 text-sm font-medium flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Waiting to start at {new Date(schedulerStatus.scheduler.startTime).toLocaleTimeString()}
+                        </div>
+                    )}
+                    {schedulerStatus?.activeProgram?.schedule ? (
+                        <div className="space-y-1">
+                            {schedulerStatus.activeProgram.schedule.map((event: any, i: number) => {
+                                const now = new Date();
+                                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                                const [h, m] = event.time.split(':').map(Number);
+                                const eventMinutes = h * 60 + m;
+                                const isPast = eventMinutes < currentMinutes;
+
+                                return (
+                                    <div key={i} className={`flex items-center justify-between p-3 rounded-lg border ${isPast ? 'bg-muted/50 opacity-60' : 'bg-card'}`}>
+                                        <div className="flex items-center gap-4">
+                                            <div className={`font-mono text-lg font-medium ${isPast ? 'text-muted-foreground' : 'text-primary'}`}>{event.time}</div>
+                                            <div className="text-sm">Cycle: <span className="font-medium">{event.cycleId}</span></div>
+                                        </div>
+                                        <div className="text-xs font-medium">
+                                            {isPast ? <span className="text-muted-foreground">COMPLETED</span> : <span className="text-blue-600">SCHEDULED</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                            <p>No active program selected.</p>
+                            <Button variant="link" onClick={() => window.location.href = '/programs'}>Go to Programs</Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Execution Engine (Only visible if running or paused) */}
+            {activeSession && (activeSession.status === 'running' || activeSession.status === 'paused' || activeSession.status === 'error') && (
+                <Card className="overflow-hidden border-l-4 border-l-green-500">
+                    <CardHeader className="bg-muted/30 border-b pb-4">
+                        <CardTitle className="flex items-center gap-2">
+                            <Play className="h-5 w-5 text-green-600" />
+                            Running Cycle
+                        </CardTitle>
+                        <CardDescription>Currently executing automation flow</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -120,26 +295,34 @@ export const Dashboard: React.FC = () => {
                                         <span className="text-sm text-muted-foreground">Status:</span>
                                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${activeSession.status === 'running' ? 'bg-green-500/10 text-green-600' :
                                             activeSession.status === 'paused' ? 'bg-yellow-500/10 text-yellow-600' :
-                                                'bg-red-500/10 text-red-600'
+                                                activeSession.status === 'error' ? 'bg-red-500/10 text-red-600' :
+                                                    'bg-blue-500/10 text-blue-600'
                                             }`}>
                                             {activeSession.status.toUpperCase()}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
+                                    {/* RUNNING -> PAUSE */}
                                     {activeSession.status === 'running' && (
                                         <Button onClick={() => handleControl('PAUSE')} variant="outline" className="gap-2">
                                             <Pause className="h-4 w-4" /> Pause
                                         </Button>
                                     )}
+
+                                    {/* PAUSED -> RESUME */}
                                     {activeSession.status === 'paused' && (
                                         <Button onClick={() => handleControl('RESUME')} variant="outline" className="gap-2">
                                             <Play className="h-4 w-4" /> Resume
                                         </Button>
                                     )}
-                                    <Button onClick={() => handleControl('STOP')} variant="destructive" className="gap-2">
-                                        <Square className="h-4 w-4" /> Stop
-                                    </Button>
+
+                                    {/* RUNNING or PAUSED -> STOP */}
+                                    {(activeSession.status === 'running' || activeSession.status === 'paused') && (
+                                        <Button onClick={() => handleControl('STOP')} variant="destructive" className="gap-2">
+                                            <Square className="h-4 w-4" /> Stop
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
 
@@ -153,30 +336,9 @@ export const Dashboard: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <div className="flex justify-center mb-4">
-                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                                    <Play className="h-6 w-6 text-muted-foreground/50" />
-                                </div>
-                            </div>
-                            <h4 className="font-medium text-lg">No Program Running</h4>
-                            <p className="text-sm mt-1 max-w-sm mx-auto mb-4">Select a program to start a new automation session.</p>
-
-                            <div className="flex gap-2 justify-center">
-                                <StartProgramDialog onStart={(id) => handleControl('START', id)}>
-                                    <Button variant="default">
-                                        Start Program
-                                    </Button>
-                                </StartProgramDialog>
-                                <Button variant="outline" onClick={() => window.location.href = '/editor'}>
-                                    Go to Editor
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Recent Logs (Placeholder) */}
             <Card>
@@ -195,12 +357,34 @@ export const Dashboard: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="[&_tr:last-child]:border-0">
-                                {/* Empty State for now */}
-                                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                    <td colSpan={3} className="p-4 text-center text-muted-foreground h-24 align-middle">
-                                        No recent logs available
-                                    </td>
-                                </tr>
+                                {logs.length === 0 ? (
+                                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                        <td colSpan={3} className="p-4 text-center text-muted-foreground h-24 align-middle">
+                                            No recent logs available
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    logs.map((log, i) => (
+                                        <tr key={i} className="border-b transition-colors hover:bg-muted/50">
+                                            <td className="p-4 align-middle font-mono text-xs text-muted-foreground">
+                                                {new Date(log.timestamp).toLocaleTimeString()}
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${log.level === 'error' ? 'bg-red-500/10 text-red-600' : 'bg-blue-500/10 text-blue-600'}`}>
+                                                    {log.level.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle text-sm">
+                                                {log.message}
+                                                {log.data && (
+                                                    <pre className="mt-1 text-xs bg-muted p-1 rounded overflow-x-auto">
+                                                        {JSON.stringify(log.data, null, 2)}
+                                                    </pre>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

@@ -1,9 +1,9 @@
 import { createActor, Actor, fromPromise } from 'xstate';
 import { automationMachine, AutomationContext, AutomationEvent } from './machine';
-import { Block, BlockResult, IBlockExecutor, ExecutionContext } from './interfaces';
+import { Block, BlockResult, IBlockExecutor, ExecutionContext, PauseError } from './interfaces';
 import { events } from '../../core/EventBusService';
 import { logger } from '../../core/LoggerService';
-import { programRepository } from '../persistence/repositories/ProgramRepository';
+import { flowRepository } from '../persistence/repositories/FlowRepository';
 import { sessionRepository } from '../persistence/repositories/SessionRepository';
 import { actionTemplateRepository } from '../persistence/repositories/ActionTemplateRepository';
 
@@ -12,10 +12,13 @@ export class AutomationEngine {
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
 
+    private instanceId = Math.random().toString(36).substring(7);
+
     constructor() {
+        console.log(`DEBUG: AutomationEngine Created: ${this.instanceId}`);
         // Define the logic for 'executeBlock'
-        const executeBlockLogic = fromPromise(async ({ input }: { input: { context: AutomationContext } }) => {
-            return this.executeBlock(input.context);
+        const executeBlockLogic = fromPromise(async ({ input, signal }: { input: { context: AutomationContext }, signal: AbortSignal }) => {
+            return this.executeBlock(input.context, signal);
         });
 
         // Create the actor with the machine and provided implementations
@@ -55,7 +58,8 @@ export class AutomationEngine {
                 state: stateValue,
                 currentBlock: snapshot.context.currentBlockId,
                 context: snapshot.context.execContext,
-                sessionId: this.currentSessionId
+                sessionId: this.currentSessionId,
+                error: snapshot.context.error
             });
         });
     }
@@ -68,51 +72,85 @@ export class AutomationEngine {
      * Start a program by ID.
      * Loads program from DB, creates a session, and starts the machine.
      */
-    public async startProgram(programId: string): Promise<string> {
-        // 1. Load Program
-        const program = await programRepository.findById(programId);
-        if (!program) {
-            throw new Error(`Program not found: ${programId}`);
+    /**
+     * Load a program into memory (Idle state).
+     */
+    public async loadProgram(programId: string, overrides: Record<string, any> = {}): Promise<string> {
+        // 1. Load Program (Flow)
+        const flow = await flowRepository.findById(programId);
+        if (!flow) {
+            throw new Error(`Flow not found: ${programId}`);
         }
 
-        if (!program.active) {
-            throw new Error(`Program is not active: ${programId}`);
+        if (!flow.isActive) {
+            throw new Error(`Flow is not active: ${programId}`);
         }
 
-        // 2. Create Session
+        // 2. Resolve Inputs
+        const variables: Record<string, any> = {};
+        if (flow.inputs) {
+            for (const input of flow.inputs) {
+                if (overrides[input.name] !== undefined) {
+                    variables[input.name] = overrides[input.name];
+                } else if (input.default !== undefined) {
+                    variables[input.name] = input.default;
+                } else {
+                    // Optional: Throw error if required input is missing?
+                    // For now, let's leave it undefined or null
+                    variables[input.name] = null;
+                }
+            }
+        }
+
+        // 3. Create Session
         const session = await sessionRepository.create({
-            programId: program.id,
+            programId: flow.id,
             startTime: new Date(),
-            status: 'running',
+            status: 'loaded', // Initial status
             logs: [],
-            context: {}
+            context: {
+                resumeState: {},
+                variables: variables // Store resolved variables in context
+            }
         });
-        this.currentSessionId = session.id; // Mongoose ID is usually _id, but our repo might return the doc. 
-        // Wait, our repository returns the Mongoose document. 
-        // The Schema definition has `id` as a string (UUID) maybe? 
-        // Let's check SessionRepository and Schema.
-        // ExecutionSession.schema.ts doesn't have a custom 'id' field, it uses default _id.
-        // But Program has 'id' (String).
-        // Let's assume session.id works (mongoose virtual) or use session._id.
-        // For safety, let's check if we need to map _id to id.
-        // The repository uses `new this.model(data).save()`.
-        // Let's assume we use the returned object's ID.
+        this.currentSessionId = session.id;
 
-        logger.info({ sessionId: this.currentSessionId, programId }, '🚀 Starting Program Session');
+        logger.info({ sessionId: this.currentSessionId, programId, variables }, '📥 Loading Program Session');
 
-        // 3. Start Machine
-        // We need to map the program blocks to the format expected by the machine
-        // The machine expects `blocks: Block[]`.
-        // The DB program has `blocks: [Object]`. We assume they match.
-
+        // 4. Send LOAD event to Machine
         this.actor.send({
-            type: 'START',
-            programId: program.id,
-            templateId: 'default', // TODO: remove templateId if not needed
-            blocks: program.blocks as Block[]
+            type: 'LOAD',
+            programId: flow.id,
+            templateId: 'default',
+            blocks: flow.nodes.map((n: any) => ({
+                id: n.id,
+                type: n.type,
+                params: n.params || n.data || {}
+            })),
+            edges: flow.edges as any[],
+            execContext: { // Pass initial context to machine
+                variables
+            }
         } as any);
 
         return this.currentSessionId!;
+    }
+
+    /**
+     * Start the currently loaded program.
+     */
+    public async startProgram() {
+        const snapshot = this.actor.getSnapshot();
+        if (snapshot.value !== 'loaded' && snapshot.value !== 'stopped' && snapshot.value !== 'completed') {
+            throw new Error(`Cannot start program from state: ${snapshot.value}. Must be loaded, stopped, or completed.`);
+        }
+
+        this.actor.send({ type: 'START' });
+    }
+
+    public async unloadProgram() {
+        this.actor.send({ type: 'UNLOAD' });
+        this.currentSessionId = null;
     }
 
     public stopProgram() {
@@ -136,10 +174,26 @@ export class AutomationEngine {
     }
 
     /**
+     * Helper to resolve variable references in params (e.g. "{{duration}}")
+     */
+    private resolveParams(params: Record<string, any>, variables: Record<string, any>): Record<string, any> {
+        const resolved: Record<string, any> = {};
+        for (const [key, value] of Object.entries(params)) {
+            if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+                const varName = value.slice(2, -2).trim();
+                resolved[key] = variables[varName] !== undefined ? variables[varName] : value;
+            } else {
+                resolved[key] = value;
+            }
+        }
+        return resolved;
+    }
+
+    /**
      * The core logic run by the XState 'invoke'.
      * Executes a single block.
      */
-    private async executeBlock(context: AutomationContext): Promise<any> {
+    private async executeBlock(context: AutomationContext, signal?: AbortSignal): Promise<any> {
         const blockId = context.currentBlockId;
         if (!blockId) return { nextBlockId: null };
 
@@ -149,12 +203,34 @@ export class AutomationEngine {
         const executor = this.executors.get(block.type);
         if (!executor) throw new Error(`No executor for block type: ${block.type}`);
 
+        // 0. Sync Context from DB (Critical for Resume)
+        // We need to ensure we have the latest resumeState which might have been saved during a Pause.
+        if (this.currentSessionId) {
+            try {
+                const session = await sessionRepository.findById(this.currentSessionId);
+                if (session && session.context) {
+                    if (session.context.resumeState) {
+                        context.execContext.resumeState = session.context.resumeState;
+                    }
+                    // Also sync variables if they changed (though they are usually static per session)
+                    if (session.context.variables) {
+                        context.execContext.variables = session.context.variables;
+                    }
+                }
+            } catch (err) {
+                logger.warn({ err }, 'Failed to sync session context from DB');
+            }
+        }
+
         // 1. Emit Block Start
         events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
 
         try {
-            // 2. Execute (Deterministic Step)
-            const result = await executor.execute(context.execContext, block.params);
+            // 2. Resolve Params & Execute (Deterministic Step)
+            const rawParams = { ...block.params, _blockId: blockId };
+            const resolvedParams = this.resolveParams(rawParams, context.execContext.variables || {});
+
+            const result = await executor.execute(context.execContext, resolvedParams, signal);
 
             // 3. Emit Block End
             events.emit('automation:block_end', { blockId, success: result.success, output: result.output, sessionId: this.currentSessionId });
@@ -162,13 +238,19 @@ export class AutomationEngine {
             // 4. Log to Session (Async -> Sync for consistency)
             if (this.currentSessionId) {
                 try {
-                    await sessionRepository.addLog(this.currentSessionId, {
+                    const logEntry = {
                         timestamp: new Date(),
                         level: result.success ? 'info' : 'error',
                         message: `Block ${block.type} executed`,
                         blockId,
                         data: result.output
-                    });
+                    };
+
+                    await sessionRepository.addLog(this.currentSessionId, logEntry);
+
+                    // Emit log event for real-time UI
+                    events.emit('log', { ...logEntry, sessionId: this.currentSessionId });
+
                 } catch (err) {
                     logger.error({ err }, 'Failed to save session log');
                 }
@@ -178,12 +260,43 @@ export class AutomationEngine {
                 throw new Error(result.error || 'Block execution failed');
             }
 
-            // Determine next block
-            const nextBlockId = result.nextBlockId !== undefined ? result.nextBlockId : block.next;
+            // Determine next block using Graph Edges
+            let nextBlockId: string | undefined | null = result.nextBlockId;
+
+            if (nextBlockId === undefined) {
+                // Default behavior: Find the first outgoing edge
+                const edge = context.edges.find(e => e.source === blockId);
+                nextBlockId = edge ? edge.target : null;
+            }
 
             return { nextBlockId, output: result.output };
 
         } catch (error: any) {
+            if (error.name === 'PauseError') {
+                logger.info({ blockId, state: error.state }, '⏸️ Block Paused (State Saved)');
+
+                // Save state to DB
+                if (this.currentSessionId) {
+                    try {
+                        const update = {
+                            [`context.resumeState.${blockId}`]: error.state
+                        };
+                        await sessionRepository.update(this.currentSessionId, update);
+                    } catch (err) {
+                        logger.error({ err }, '❌ Failed to save resume state');
+                    }
+                }
+
+                // Treat as aborted for XState
+                throw new Error('Aborted');
+            }
+
+            if (error.message === 'Aborted' || signal?.aborted) {
+                logger.info({ blockId }, '⏹️ Block Execution Aborted (Paused/Stopped)');
+                throw error; // XState handles cancellation
+            }
+
+            console.error('BLOCK EXECUTION ERROR:', error);
             logger.error({ error, blockId }, '❌ Block Execution Error');
             throw error; // Triggers onError in XState
         }

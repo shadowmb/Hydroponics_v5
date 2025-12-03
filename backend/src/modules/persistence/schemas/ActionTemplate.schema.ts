@@ -7,6 +7,12 @@ export interface IActionTemplate extends Document, ISoftDelete {
     type: string; // e.g., 'ACTUATOR_SET', 'WAIT'
     defaultParams: Record<string, any>;
     description?: string;
+    inputs?: {
+        name: string;
+        type: 'number' | 'string' | 'boolean';
+        default?: any;
+        description?: string;
+    }[];
 }
 
 const ActionTemplateSchema = new Schema<IActionTemplate>({
@@ -14,7 +20,13 @@ const ActionTemplateSchema = new Schema<IActionTemplate>({
     name: { type: String, required: true },
     type: { type: String, required: true },
     defaultParams: { type: Schema.Types.Mixed, default: {} },
-    description: { type: String }
+    description: { type: String },
+    inputs: [{
+        name: { type: String, required: true },
+        type: { type: String, enum: ['number', 'string', 'boolean'], required: true },
+        default: { type: Schema.Types.Mixed },
+        description: { type: String }
+    }]
 }, {
     timestamps: true,
     toJSON: {

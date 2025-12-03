@@ -5,6 +5,8 @@ export const Sidebar: React.FC = () => {
     // In a real app, we'd fetch templates from the backend or store
     // For now, we'll hardcode some common templates
     const templates = [
+        { type: 'START', label: 'Start Program', icon: 'Play' },
+        { type: 'END', label: 'End Program', icon: 'Square' },
         { type: 'SENSOR_READ', label: 'Read Sensor', icon: 'Thermometer' },
         { type: 'ACTUATOR_SET', label: 'Set Actuator', icon: 'Zap' },
         { type: 'WAIT', label: 'Wait', icon: 'Clock' },

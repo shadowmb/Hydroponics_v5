@@ -50,13 +50,46 @@ export interface Block {
     position?: { x: number; y: number };
 }
 
+export interface IFlow {
+    id: string;
+    name: string;
+    description?: string;
+    mode: 'SIMPLE' | 'EXPERT';
+    nodes: any[];
+    edges: any[];
+    inputs?: {
+        name: string;
+        type: 'number' | 'string' | 'boolean';
+        default?: any;
+        description?: string;
+    }[];
+    isActive: boolean;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+}
+
+export interface ICycle {
+    id: string;
+    name: string;
+    description?: string;
+    steps: {
+        flowId: string;
+        overrides: Record<string, any>;
+    }[];
+    isActive: boolean;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+}
+
 export interface IProgram {
     id: string;
     name: string;
     description?: string;
-    active: boolean;
-    blocks: Block[];
-    triggers?: any[]; // Define Trigger type later if needed
+    isActive: boolean;
+    schedule: {
+        time: string;
+        cycleId: string;
+    }[];
     createdAt?: Date | string;
     updatedAt?: Date | string;
 }
@@ -67,7 +100,7 @@ export interface IExecutionSession {
     programId: string;
     startTime: Date | string; // Date in backend, string in JSON
     endTime?: Date | string;
-    status: 'running' | 'completed' | 'failed' | 'paused' | 'stopped';
+    status: 'idle' | 'loaded' | 'running' | 'completed' | 'failed' | 'error' | 'paused' | 'stopped';
     logs: any[];
     context: any; // Snapshot of execution context
     currentBlockId?: string | null;
@@ -88,4 +121,5 @@ export interface SystemEvents {
     'automation:block_start': { blockId: string; type: string; sessionId?: string | null };
     'automation:block_end': { blockId: string; success: boolean; output?: any; sessionId?: string | null };
     'automation:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null };
+    'log': { timestamp: Date | string; level: string; message: string; blockId?: string; data?: any; sessionId?: string | null };
 }

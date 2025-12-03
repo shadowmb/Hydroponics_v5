@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { deviceRepository } from './modules/persistence/repositories/DeviceRepository';
 import { actionTemplateRepository } from './modules/persistence/repositories/ActionTemplateRepository';
-import { programRepository } from './modules/persistence/repositories/ProgramRepository';
+import { flowRepository } from './modules/persistence/repositories/FlowRepository';
 import { sessionRepository } from './modules/persistence/repositories/SessionRepository';
 import { logger } from './core/LoggerService';
 import dotenv from 'dotenv';
@@ -24,8 +24,8 @@ async function main() {
             type: 'ACTUATOR',
             driverId: 'relay_active_low',
             pin: 10,
-            config: { activeLow: true }
-        });
+            config: { activeLow: true } as any
+        } as any);
         logger.info({ device }, 'Created Device');
 
         const fetchedDevice = await deviceRepository.findById('test_dev_1');
@@ -42,21 +42,21 @@ async function main() {
         });
         logger.info({ template }, 'Created Template');
 
-        // 3. Test Program Repository
-        logger.info('🧪 Testing Program Repository...');
-        const program = await programRepository.create({
-            id: 'prog_test_1',
-            name: 'Test Program',
-            blocks: [{ type: 'LOG', params: { message: 'Test' } }],
-            triggers: [],
-            active: true
+        // 3. Test Flow Repository
+        logger.info('🧪 Testing Flow Repository...');
+        const flow = await flowRepository.create({
+            id: 'flow_test_1',
+            name: 'Test Flow',
+            nodes: [{ type: 'LOG', params: { message: 'Test' } }],
+            edges: [],
+            isActive: true
         });
-        logger.info({ program }, 'Created Program');
+        logger.info({ flow }, 'Created Flow');
 
         // 4. Test Session Repository
         logger.info('🧪 Testing Session Repository...');
         const session = await sessionRepository.create({
-            programId: 'prog_test_1',
+            programId: 'flow_test_1',
             startTime: new Date(),
             status: 'running',
             logs: [],
@@ -80,8 +80,8 @@ async function main() {
         // Cleanup (Optional, but good for repeated runs)
         await mongoose.connection.collection('devices').deleteMany({ id: 'test_dev_1' });
         await mongoose.connection.collection('actiontemplates').deleteMany({ id: 'tpl_log_1' });
-        await mongoose.connection.collection('programs').deleteMany({ id: 'prog_test_1' });
-        await mongoose.connection.collection('executionsessions').deleteMany({ programId: 'prog_test_1' });
+        await mongoose.connection.collection('flows').deleteMany({ id: 'flow_test_1' });
+        await mongoose.connection.collection('executionsessions').deleteMany({ programId: 'flow_test_1' });
 
     } catch (error) {
         logger.error({ error }, '❌ Test Failed');

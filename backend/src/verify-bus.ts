@@ -28,7 +28,8 @@ async function runBusVerification() {
             devices: {},
             stepCount: 0,
             startTime: Date.now(),
-            errors: []
+            errors: [],
+            resumeState: {}
         }
     });
 }
