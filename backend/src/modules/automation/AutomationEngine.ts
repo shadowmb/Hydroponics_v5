@@ -277,6 +277,23 @@ export class AutomationEngine {
                 throw new Error(result.error || 'Block execution failed');
             }
 
+            // 2.5. Persist State (if returned by block)
+            if (result.state && this.currentSessionId) {
+                try {
+                    const update = {
+                        [`context.resumeState.${blockId}`]: result.state
+                    };
+                    await sessionRepository.update(this.currentSessionId, update);
+                    // Update local context too so next block sees it immediately if needed?
+                    // Actually, next block is different, but re-entry to THIS block needs it.
+                    // We updated DB, but `context.execContext.resumeState` is local.
+                    if (!context.execContext.resumeState) context.execContext.resumeState = {};
+                    context.execContext.resumeState[blockId] = result.state;
+                } catch (err) {
+                    logger.error({ err }, '❌ Failed to save block state');
+                }
+            }
+
             // Determine next block using Graph Edges
             let nextBlockId: string | undefined | null = result.nextBlockId;
 
@@ -298,7 +315,15 @@ export class AutomationEngine {
                         nextBlockId = null;
                         logger.warn({ blockId, result: result.output }, '⚠️ IF block has no matching edge');
                     }
-                } else {
+                }
+                // Special Handling for LOOP block
+                else if (block.type === 'LOOP' && typeof result.output === 'boolean') {
+                    // true -> body, false -> exit
+                    const expectedHandle = result.output ? 'body' : 'exit';
+                    const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
+                    nextBlockId = edge ? edge.target : null;
+                }
+                else {
                     // Default behavior: Find the first outgoing edge
                     const edge = context.edges.find(e => e.source === blockId);
                     nextBlockId = edge ? edge.target : null;

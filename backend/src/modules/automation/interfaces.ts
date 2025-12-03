@@ -59,6 +59,7 @@ export interface BlockResult {
     nextBlockId?: string | null; // If null, execution stops (or follows default 'next')
     output?: any; // Result to store in variables
     error?: string;
+    state?: any; // State to persist for this block (e.g. loop iteration)
 }
 
 /**

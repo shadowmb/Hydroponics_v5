@@ -11,7 +11,15 @@ export class IfBlockExecutor implements IBlockExecutor {
         }
 
         const left = ctx.variables[variable];
-        const right = this.parseValue(value);
+
+        // Resolve 'value' if it's a variable reference
+        let right = value;
+        if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+            const varName = value.slice(2, -2);
+            right = ctx.variables[varName];
+        } else {
+            right = this.parseValue(value);
+        }
 
         let result = false;
 

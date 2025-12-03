@@ -1,27 +1,36 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
-import { GitBranch } from 'lucide-react';
+import { Repeat } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
-export const ConditionNode = memo(({ data, selected }: NodeProps) => {
+export const LoopNode = memo(({ data, selected }: NodeProps) => {
+    const loopType = data.loopType as string || 'COUNT';
+
     return (
         <div className={cn(
             "px-4 py-2 shadow-md rounded-md bg-card border-2 min-w-[150px]",
             selected ? "border-primary" : "border-border"
         )}>
+            {/* Input Handle */}
             <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
 
             <div className="flex items-center gap-2">
-                <div className="p-1 rounded bg-muted">
-                    <GitBranch className="h-4 w-4" />
+                <div className="p-1 rounded bg-yellow-100 text-yellow-700">
+                    <Repeat className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-sm font-bold">Condition</span>
-                    <span className="text-[10px] text-muted-foreground">IF / ELSE</span>
+                    <span className="text-sm font-bold">Loop</span>
+                    <span className="text-[10px] text-muted-foreground">{loopType === 'COUNT' ? 'Repeat' : 'While'}</span>
 
                     {/* Dynamic Content Display */}
-                    {!!data.variable && (
+                    {loopType === 'COUNT' && (
+                        <span className="text-[10px] text-blue-600 font-mono mt-1">
+                            {String(data.count)} times
+                        </span>
+                    )}
+
+                    {loopType === 'WHILE' && !!data.variable && (
                         <div className="flex flex-col mt-1 text-[10px] font-mono">
                             <span className="text-orange-600">{String(data.variable)}</span>
                             <div className="flex gap-1 items-center">
@@ -37,23 +46,21 @@ export const ConditionNode = memo(({ data, selected }: NodeProps) => {
                 </div>
             </div>
 
-            {/* True Path */}
-            <div className="absolute -bottom-3 left-1/3 text-[9px] font-bold text-green-600">TRUE</div>
+            {/* Body Path (Start Loop) */}
+            <div className="absolute -right-10 top-1/2 -translate-y-1/2 text-[9px] font-bold text-green-600">BODY</div>
             <Handle
                 type="source"
-                position={Position.Bottom}
-                id="true"
-                style={{ left: '30%' }}
+                position={Position.Right}
+                id="body"
                 className="w-3 h-3 bg-green-500"
             />
 
-            {/* False Path */}
-            <div className="absolute -bottom-3 right-1/3 text-[9px] font-bold text-red-600">FALSE</div>
+            {/* Exit Path (End Loop) */}
+            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[9px] font-bold text-red-600">EXIT</div>
             <Handle
                 type="source"
                 position={Position.Bottom}
-                id="false"
-                style={{ left: '70%' }}
+                id="exit"
                 className="w-3 h-3 bg-red-500"
             />
         </div>

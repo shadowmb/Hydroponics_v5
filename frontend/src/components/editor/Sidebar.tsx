@@ -11,6 +11,7 @@ export const Sidebar: React.FC = () => {
         { type: 'ACTUATOR_SET', label: 'Set Actuator', icon: 'Zap' },
         { type: 'WAIT', label: 'Wait', icon: 'Clock' },
         { type: 'IF', label: 'Condition (IF)', icon: 'GitBranch' },
+        { type: 'LOOP', label: 'Loop', icon: 'Repeat' },
         { type: 'LOG', label: 'Log Message', icon: 'FileText' },
     ];
 

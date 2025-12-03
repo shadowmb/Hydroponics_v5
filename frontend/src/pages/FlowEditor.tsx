@@ -8,6 +8,7 @@ import { PropertiesPanel } from '../components/editor/PropertiesPanel';
 import { ActionNode } from '../components/editor/nodes/ActionNode';
 import { ConditionNode } from '../components/editor/nodes/ConditionNode';
 import { GenericBlockNode } from '../components/editor/nodes/GenericBlockNode';
+import { LoopNode } from '../components/editor/nodes/LoopNode';
 import { reactFlowToFlow, flowToReactFlow } from '../lib/flow-utils';
 import { Button } from '../components/ui/button';
 import { SaveFlowDialog } from '../components/editor/SaveFlowDialog';
@@ -20,6 +21,7 @@ const nodeTypes = {
     action: ActionNode,
     condition: ConditionNode,
     generic: GenericBlockNode,
+    loop: LoopNode,
 };
 
 const initialNodes: Node[] = [
@@ -44,6 +46,7 @@ const FlowEditorContent: React.FC = () => {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+    const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
     const [flowName, setFlowName] = useState('');
     const [flowDescription, setFlowDescription] = useState('');
@@ -120,7 +123,10 @@ const FlowEditorContent: React.FC = () => {
             });
 
             const isCondition = type === 'IF';
-            const nodeType = isCondition ? 'condition' : 'generic';
+            const isLoop = type === 'LOOP';
+            let nodeType = 'generic';
+            if (isCondition) nodeType = 'condition';
+            else if (isLoop) nodeType = 'loop';
 
             const newNode: Node = {
                 id: `${type}_${Date.now()}`,
@@ -136,10 +142,17 @@ const FlowEditorContent: React.FC = () => {
 
     const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
         setSelectedNode(node);
+        setSelectedEdge(null);
+    }, []);
+
+    const onEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
+        setSelectedEdge(edge);
+        setSelectedNode(null);
     }, []);
 
     const onPaneClick = useCallback(() => {
         setSelectedNode(null);
+        setSelectedEdge(null);
     }, []);
 
     const onNodeUpdate = (nodeId: string, newData: any) => {
@@ -152,6 +165,29 @@ const FlowEditorContent: React.FC = () => {
             })
         );
         setSelectedNode((prev: Node | null) => prev ? { ...prev, data: newData } : null);
+    };
+
+    const onEdgeUpdate = (edgeId: string, newStyle: any) => {
+        setEdges((eds) =>
+            eds.map((edge) => {
+                if (edge.id === edgeId) {
+                    return { ...edge, style: { ...edge.style, ...newStyle } };
+                }
+                return edge;
+            })
+        );
+        setSelectedEdge((prev: Edge | null) => prev ? { ...prev, style: { ...prev.style, ...newStyle } } : null);
+    };
+
+    const onDeleteNode = (nodeId: string) => {
+        setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+        setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+        setSelectedNode(null);
+    };
+
+    const onDeleteEdge = (edgeId: string) => {
+        setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+        setSelectedEdge(null);
     };
 
     const onSave = useCallback(async (name: string, description: string) => {
@@ -252,6 +288,7 @@ const FlowEditorContent: React.FC = () => {
                         onDrop={onDrop}
                         onDragOver={onDragOver}
                         onNodeClick={onNodeClick}
+                        onEdgeClick={onEdgeClick}
                         onPaneClick={onPaneClick}
                         nodeTypes={nodeTypes}
                         fitView
@@ -263,7 +300,11 @@ const FlowEditorContent: React.FC = () => {
 
                 <PropertiesPanel
                     selectedNode={selectedNode}
+                    selectedEdge={selectedEdge}
                     onChange={onNodeUpdate}
+                    onEdgeChange={onEdgeUpdate}
+                    onDeleteNode={onDeleteNode}
+                    onDeleteEdge={onDeleteEdge}
                     variables={variables}
                     onVariablesChange={setVariables}
                 />
