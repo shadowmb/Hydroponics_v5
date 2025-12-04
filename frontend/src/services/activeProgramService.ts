@@ -25,8 +25,8 @@ export const activeProgramService = {
         return response.data;
     },
 
-    start: async (): Promise<IActiveProgram> => {
-        const response = await axios.post<IActiveProgram>(`${BASE_URL}/start`);
+    start: async (startTime?: Date): Promise<IActiveProgram> => {
+        const response = await axios.post<IActiveProgram>(`${BASE_URL}/start`, { startTime });
         return response.data;
     },
 
@@ -56,6 +56,11 @@ export const activeProgramService = {
 
     skipCycle: async (itemId: string, type: 'once' | 'until', untilDate?: Date): Promise<IActiveProgram> => {
         const response = await axios.post<IActiveProgram>(`${BASE_URL}/schedule/${itemId}/skip`, { type, untilDate });
+        return response.data;
+    },
+
+    restoreCycle: async (itemId: string): Promise<IActiveProgram> => {
+        const response = await axios.post<IActiveProgram>(`${BASE_URL}/schedule/${itemId}/restore`);
         return response.data;
     }
 };

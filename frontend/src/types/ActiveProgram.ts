@@ -1,4 +1,4 @@
-export type ActiveProgramStatus = 'loaded' | 'ready' | 'running' | 'paused' | 'stopped' | 'completed';
+export type ActiveProgramStatus = 'loaded' | 'ready' | 'running' | 'paused' | 'stopped' | 'completed' | 'scheduled';
 export type ScheduleItemStatus = 'pending' | 'running' | 'completed' | 'skipped' | 'failed';
 
 export interface IActiveScheduleItem {

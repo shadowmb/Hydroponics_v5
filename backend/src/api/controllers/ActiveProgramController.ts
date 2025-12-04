@@ -33,7 +33,8 @@ export class ActiveProgramController {
 
     static async start(req: FastifyRequest, reply: FastifyReply) {
         try {
-            const active = await activeProgramService.start();
+            const { startTime } = req.body as any || {};
+            const active = await activeProgramService.start(startTime);
             reply.send(active);
         } catch (error: any) {
             reply.status(500).send({ message: error.message });
@@ -93,6 +94,16 @@ export class ActiveProgramController {
             const { itemId } = req.params as any;
             const { type, untilDate } = req.body as any;
             const active = await activeProgramService.skipCycle(itemId, type, untilDate);
+            reply.send(active);
+        } catch (error: any) {
+            reply.status(500).send({ message: error.message });
+        }
+    }
+
+    static async restoreCycle(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { itemId } = req.params as any;
+            const active = await activeProgramService.restoreCycle(itemId);
             reply.send(active);
         } catch (error: any) {
             reply.status(500).send({ message: error.message });

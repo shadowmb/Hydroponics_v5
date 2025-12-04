@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type ActiveProgramStatus = 'loaded' | 'ready' | 'running' | 'paused' | 'stopped' | 'completed';
+export type ActiveProgramStatus = 'loaded' | 'ready' | 'running' | 'paused' | 'stopped' | 'completed' | 'scheduled';
 
 export interface IActiveScheduleItem {
     _id?: string;
@@ -43,7 +43,7 @@ const ActiveProgramSchema = new Schema<IActiveProgram>({
     name: { type: String, required: true },
     status: {
         type: String,
-        enum: ['loaded', 'ready', 'running', 'paused', 'stopped', 'completed'],
+        enum: ['loaded', 'ready', 'running', 'paused', 'stopped', 'completed', 'scheduled'],
         default: 'loaded'
     },
     minCycleInterval: { type: Number, default: 0 },
