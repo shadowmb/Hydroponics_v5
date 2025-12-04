@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
-import { Play, Pause, Square, Edit, SkipForward, Trash2, Plus, Minus, ChevronUp, ChevronDown, CalendarX } from 'lucide-react';
+import { Play, Pause, Square, Edit, Trash2, Plus, Minus, ChevronUp, ChevronDown, CalendarX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Label } from '../ui/label';
