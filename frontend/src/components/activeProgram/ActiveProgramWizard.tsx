@@ -6,8 +6,14 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { toast } from 'sonner';
-import { Save, ArrowUp, ArrowDown } from 'lucide-react';
+import { Save, ArrowUp, ArrowDown, HelpCircle } from 'lucide-react';
 import { TimePicker24 } from '../ui/time-picker-24';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "../ui/tooltip";
 
 interface ActiveProgramWizardProps {
     program: IActiveProgram;
@@ -148,6 +154,15 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                         toast.error(`Missing value for "${v.name}" in cycle "${item.cycleName}" (Start Time: ${item.time})`);
                         return;
                     }
+
+                    // Validate Tolerance if enabled
+                    if (v.hasTolerance) {
+                        const tol = item.overrides?.[v.name + '_tolerance'];
+                        if (tol === undefined || tol === '') {
+                            toast.error(`Missing tolerance for "${v.name}" in cycle "${item.cycleName}"`);
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -249,7 +264,15 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                 const isExpanded = expandedItems.has(index);
 
                                 // Check for missing values
-                                const missingVars = vars.some(v => item.overrides?.[v.name] === undefined || item.overrides?.[v.name] === '');
+                                const missingVars = vars.some(v => {
+                                    const valMissing = item.overrides?.[v.name] === undefined || item.overrides?.[v.name] === '';
+                                    if (valMissing) return true;
+                                    if (v.hasTolerance) {
+                                        const tolMissing = item.overrides?.[v.name + '_tolerance'] === undefined || item.overrides?.[v.name + '_tolerance'] === '';
+                                        return tolMissing;
+                                    }
+                                    return false;
+                                });
 
                                 return (
                                     <div key={item._id || index} className={`flex flex-col gap-2 p-3 rounded border ${isConflict ? 'border-red-500 bg-red-50' : 'bg-muted/50'}`}>
@@ -292,7 +315,7 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                                     onClick={() => toggleExpand(index)}
                                                     className="gap-2"
                                                 >
-                                                    {missingVars ? 'Variables Required' : 'Variables'}
+                                                    {missingVars ? 'Variables & Tolerance Required' : 'Variables'}
                                                     {isExpanded ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
                                                 </Button>
                                             )}
@@ -300,12 +323,40 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
 
                                         {/* Expanded Variables Section */}
                                         {isExpanded && hasVars && (
-                                            <div className="mt-2 p-4 bg-background rounded border grid gap-4 sm:grid-cols-2">
+                                            <div className="mt-2 p-4 bg-background rounded border grid gap-6 grid-cols-1 md:grid-cols-3">
                                                 {vars.map(variable => (
-                                                    <div key={variable.name} className="grid gap-2">
-                                                        <Label htmlFor={`var-${index}-${variable.name}`}>{variable.name}</Label>
+                                                    <div key={variable.name} className="flex flex-col gap-0.5 border border-primary/20 rounded-md p-2 bg-card/50 shadow-sm">
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div className="w-full text-center border-b border-border/30 flex items-center justify-center gap-2">
+                                                                        <Label
+                                                                            htmlFor={`var-${index}-${variable.name}`}
+                                                                            className="truncate cursor-help font-medium text-center"
+                                                                        >
+                                                                            {variable.name}
+                                                                        </Label>
+                                                                        {variable.hasTolerance && <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />}
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="font-semibold mb-1">{variable.name}</p>
+                                                                    {variable.description && <p className="text-xs text-muted-foreground mb-2">{variable.description}</p>}
+                                                                    {variable.hasTolerance && (
+                                                                        <div className="text-xs text-muted-foreground space-y-1 border-t pt-2 mt-1">
+                                                                            <p><strong>Configuration:</strong></p>
+                                                                            <p>1. Enter <strong>Value</strong> (Target)</p>
+                                                                            <p>2. Unit is displayed (e.g., {variable.unit || 'units'})</p>
+                                                                            <p>3. Enter <strong>Tolerance</strong> (± deviation)</p>
+                                                                            <p className="italic mt-1">Example: Value 10, Tol 0.5 = Range 9.5 - 10.5</p>
+                                                                        </div>
+                                                                    )}
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+
                                                         {variable.type === 'boolean' ? (
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-2 h-10 justify-center">
                                                                 <input
                                                                     type="checkbox"
                                                                     id={`var-${index}-${variable.name}`}
@@ -313,21 +364,45 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                                                     onChange={(e) => updateItemOverride(index, variable.name, e.target.checked)}
                                                                     className="h-4 w-4"
                                                                 />
-                                                                <span className="text-sm text-muted-foreground">{variable.name}</span>
+                                                                <span className="text-sm text-muted-foreground">Enabled</span>
                                                             </div>
                                                         ) : (
-                                                            <div className="flex items-center gap-2">
-                                                                <Input
-                                                                    id={`var-${index}-${variable.name}`}
-                                                                    type={variable.type === 'number' ? 'number' : 'text'}
-                                                                    value={item.overrides?.[variable.name] ?? ''}
-                                                                    onChange={(e) => updateItemOverride(index, variable.name, variable.type === 'number' ? Number(e.target.value) : e.target.value)}
-                                                                    placeholder={variable.default !== undefined ? `Default: ${variable.default}` : ''}
-                                                                />
-                                                                {variable.unit && (
-                                                                    <span className="text-sm text-muted-foreground whitespace-nowrap min-w-[3ch]">
-                                                                        {variable.unit}
-                                                                    </span>
+                                                            <div className="flex items-end gap-2">
+                                                                <div className="flex-1 flex items-center gap-2 min-w-0">
+                                                                    <Input
+                                                                        id={`var-${index}-${variable.name}`}
+                                                                        type={variable.type === 'number' ? 'number' : 'text'}
+                                                                        value={item.overrides?.[variable.name] ?? ''}
+                                                                        onChange={(e) => updateItemOverride(index, variable.name, variable.type === 'number' ? Number(e.target.value) : e.target.value)}
+                                                                        placeholder={variable.default !== undefined ? `${variable.default}` : 'Value'}
+                                                                        className="flex-1 min-w-[60px] placeholder:text-muted-foreground/30"
+                                                                    />
+                                                                    {variable.unit && (
+                                                                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                                                            {variable.unit}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                {variable.hasTolerance && (
+                                                                    <>
+                                                                        <div className="w-[1px] h-6 bg-border/40 mx-1 mb-2" />
+                                                                        <div className="flex flex-col gap-1 shrink-0">
+                                                                            <div className="flex justify-end h-[18px]">
+                                                                                {/* Spacer */}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-muted-foreground">±</span>
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    value={item.overrides?.[variable.name + '_tolerance'] ?? ''}
+                                                                                    onChange={(e) => updateItemOverride(index, variable.name + '_tolerance', Number(e.target.value))}
+                                                                                    placeholder="Tol"
+                                                                                    className="w-16 placeholder:text-muted-foreground/30"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         )}

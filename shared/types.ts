@@ -58,6 +58,8 @@ export interface IVariable {
     value?: any;     // Default/Current value
     scope: 'local' | 'global';
     unit?: string;
+    hasTolerance?: boolean;
+    description?: string;
 }
 
 export interface IFlow {

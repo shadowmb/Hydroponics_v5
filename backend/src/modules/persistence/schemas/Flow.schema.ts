@@ -21,6 +21,8 @@ export interface IFlow extends Document, ISoftDelete {
         value?: any;
         scope: 'local' | 'global';
         unit?: string;
+        hasTolerance?: boolean;
+        description?: string;
     }[];
     isActive: boolean;
 }
@@ -44,7 +46,9 @@ export const FlowSchema = new Schema<IFlow>({
         type: { type: String, enum: ['number', 'string', 'boolean'], required: true },
         value: { type: Schema.Types.Mixed },
         scope: { type: String, enum: ['local', 'global'], required: true },
-        unit: { type: String }
+        unit: { type: String },
+        hasTolerance: { type: Boolean },
+        description: { type: String }
     }],
     isActive: { type: Boolean, default: true }
 }, {

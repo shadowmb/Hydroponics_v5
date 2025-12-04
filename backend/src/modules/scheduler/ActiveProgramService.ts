@@ -109,6 +109,8 @@ export class ActiveProgramService {
                                 type: v.type,
                                 default: v.value,
                                 unit: v.unit,
+                                hasTolerance: v.hasTolerance,
+                                description: v.description,
                                 cycleId: cycleId,
                                 flowName: flow.name || 'Unknown Flow'
                             });

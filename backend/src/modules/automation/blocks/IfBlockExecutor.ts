@@ -14,9 +14,16 @@ export class IfBlockExecutor implements IBlockExecutor {
 
         // Resolve 'value' if it's a variable reference
         let right = value;
+        let tolerance = 0;
+
         if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
             const varName = value.slice(2, -2);
             right = ctx.variables[varName];
+            // Check for tolerance associated with this variable
+            const toleranceVarName = `${varName}_tolerance`;
+            if (ctx.variables[toleranceVarName] !== undefined) {
+                tolerance = Number(ctx.variables[toleranceVarName]);
+            }
         } else {
             right = this.parseValue(value);
         }
@@ -24,8 +31,20 @@ export class IfBlockExecutor implements IBlockExecutor {
         let result = false;
 
         switch (operator) {
-            case '==': result = left == right; break;
-            case '!=': result = left != right; break;
+            case '==':
+                if (tolerance > 0) {
+                    result = Math.abs(Number(left) - Number(right)) <= tolerance;
+                } else {
+                    result = left == right;
+                }
+                break;
+            case '!=':
+                if (tolerance > 0) {
+                    result = Math.abs(Number(left) - Number(right)) > tolerance;
+                } else {
+                    result = left != right;
+                }
+                break;
             case '>': result = Number(left) > Number(right); break;
             case '<': result = Number(left) < Number(right); break;
             case '>=': result = Number(left) >= Number(right); break;

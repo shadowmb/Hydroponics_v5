@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Copy } from 'lucide-react';
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
 
 
 import { Button } from '../ui/button';
 import { DeviceSelector } from './DeviceSelector';
 import { useStore } from '../../core/useStore';
-import { VariableManager } from './VariableManager';
 import { VariableSelector } from './VariableSelector';
 import type { IVariable } from '../../../../shared/types';
 
@@ -21,6 +22,7 @@ interface PropertiesPanelProps {
     onEdgeChange: (edgeId: string, style: any) => void;
     onDeleteNode: (nodeId: string) => void;
     onDeleteEdge: (edgeId: string) => void;
+    onDuplicateNode: (nodeId: string) => void;
     variables: IVariable[];
     onVariablesChange: (vars: IVariable[]) => void;
 }
@@ -32,8 +34,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     onEdgeChange,
     onDeleteNode,
     onDeleteEdge,
-    variables,
-    onVariablesChange
+    onDuplicateNode,
+    variables
 }) => {
 
     const [formData, setFormData] = useState<Record<string, any>>({});
@@ -117,16 +119,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
                     <Separator />
 
-                    <div className="space-y-2">
-                        <Label>Variables</Label>
-                        <p className="text-xs text-muted-foreground mb-2">
-                            Manage local and global variables used in this flow.
-                        </p>
-                        <VariableManager
-                            variables={variables}
-                            onUpdateVariables={onVariablesChange}
-                        />
-                    </div>
+
                 </div>
             </div>
         );
@@ -155,6 +148,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             const loopType = formData['loopType'] || 'COUNT';
             if (key === 'count') {
                 if (loopType !== 'COUNT') return null;
+            }
+            if (key === 'maxIterations') {
+                if (loopType !== 'WHILE') return null;
             }
             if (['variable', 'operator', 'value'].includes(key)) {
                 if (loopType !== 'WHILE') return null;
@@ -314,6 +310,16 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     />
                 </div>
 
+                <div className="space-y-2">
+                    <Label>Comment</Label>
+                    <Textarea
+                        value={formData.comment || ''}
+                        onChange={(e) => handleChange('comment', e.target.value)}
+                        placeholder="Add a comment for this block..."
+                        className="resize-none h-20 text-xs"
+                    />
+                </div>
+
                 <Separator />
 
                 {definition ? (
@@ -333,6 +339,15 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 )}
 
                 <Separator className="my-4" />
+
+                <Button
+                    variant="outline"
+                    className="w-full mb-2"
+                    onClick={() => onDuplicateNode(selectedNode.id)}
+                >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Duplicate Block
+                </Button>
 
                 <Button
                     variant="destructive"
