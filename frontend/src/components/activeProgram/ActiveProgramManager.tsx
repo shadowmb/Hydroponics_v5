@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
-import { Play, Pause, Square, Edit, Trash2, Plus, Minus, ChevronUp, ChevronDown, CalendarX } from 'lucide-react';
+import { Play, Pause, Square, Edit, Trash2, Plus, Minus, ChevronUp, ChevronDown, CalendarX, RotateCcw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Label } from '../ui/label';
@@ -403,6 +403,26 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
         );
     };
 
+    const handleRetry = async (itemId: string) => {
+        try {
+            await activeProgramService.retryCycle(itemId);
+            toast.success('Cycle retried');
+            onUpdate();
+        } catch (error) {
+            toast.error('Failed to retry cycle');
+        }
+    };
+
+    const handleForceStart = async (itemId: string) => {
+        try {
+            await activeProgramService.forceStartCycle(itemId);
+            toast.success('Cycle started immediately');
+            onUpdate();
+        } catch (error) {
+            toast.error('Failed to force start cycle');
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
             <Card>
@@ -536,11 +556,12 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                         {(program?.schedule || []).map((item, index) => {
                             const isConflict = conflicts.has(index);
                             return (
-                                <div key={item._id} className={`rounded border overflow-hidden ${item.status === 'running' ? 'bg-primary/5 border-primary' :
+                                <div key={item._id} className={`rounded border overflow-hidden transition-colors ${item.status === 'running' ? 'bg-green-500/10 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]' :
                                     item.status === 'completed' ? 'bg-muted opacity-60' :
-                                        item.status === 'skipped' ? 'bg-orange-500/10 border-orange-500/50' :
-                                            isConflict ? 'border-destructive/50 bg-destructive/50' :
-                                                'bg-card'
+                                        item.status === 'failed' ? 'bg-red-500/10 border-red-500' :
+                                            item.status === 'skipped' ? 'bg-orange-500/10 border-orange-500/50' :
+                                                isConflict ? 'border-destructive/50 bg-destructive/50' :
+                                                    'bg-card'
                                     }`}>
                                     <div className="flex items-center justify-between p-3">
                                         <div className="flex items-center gap-4">
@@ -559,13 +580,26 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                             <div className="font-mono text-lg font-bold w-16">{item.time}</div>
                                             <div>
                                                 <div className="font-medium">Cycle ID: {item.cycleId}</div>
-                                                <div className="text-xs text-muted-foreground uppercase">{item.status}</div>
+                                                <div className={`text-xs uppercase font-bold ${item.status === 'running' ? 'text-green-500' :
+                                                    item.status === 'failed' ? 'text-red-500' :
+                                                        item.status === 'skipped' ? 'text-orange-500' :
+                                                            'text-muted-foreground'
+                                                    }`}>{item.status}</div>
                                             </div>
                                         </div>
 
                                         <div className="flex gap-2">
                                             {item.status === 'pending' && (
                                                 <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        title="Start Now"
+                                                        className="text-green-500 hover:text-green-600 hover:bg-green-50"
+                                                        onClick={() => handleForceStart(item._id)}
+                                                    >
+                                                        <Play className="h-4 w-4" />
+                                                    </Button>
                                                     <Dialog open={editingItem?._id === item._id} onOpenChange={(open) => {
                                                         if (open) {
                                                             setEditingItem(item);
@@ -653,6 +687,17 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                                         </PopoverContent>
                                                     </Popover>
                                                 </>
+                                            )}
+                                            {item.status === 'failed' && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="gap-2 border-red-500 text-red-500 hover:bg-red-50"
+                                                    onClick={() => handleRetry(item._id)}
+                                                >
+                                                    <RotateCcw className="h-4 w-4" />
+                                                    Retry
+                                                </Button>
                                             )}
                                             {item.status === 'skipped' && (
                                                 <Popover>

@@ -71,6 +71,9 @@ export class AutomationController {
 
         return reply.send({
             status: 'online', // Backend is reachable
+            serverTime: new Date().toISOString(),
+            schedulerLastTick: require('../../modules/scheduler/SchedulerService').schedulerService.getLastTick(),
+            schedulerState: require('../../modules/scheduler/SchedulerService').schedulerService.getState(),
             session: snapshot.context.programId ? session : null
         });
     }

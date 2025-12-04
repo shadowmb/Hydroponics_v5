@@ -4,6 +4,7 @@ import { LayoutDashboard, Cpu, GitBranch, History, Activity, Moon, Sun, Edit, Pl
 import { useStore } from '../../core/useStore';
 import { socketService } from '../../core/SocketService';
 import { cn } from '../../lib/utils';
+import { ServerClock } from './ServerClock';
 
 export const MainLayout: React.FC = () => {
     const { systemStatus, setSystemStatus, devices, updateDevice } = useStore();
@@ -97,12 +98,15 @@ export const MainLayout: React.FC = () => {
             <main className="flex-1 flex flex-col overflow-hidden">
                 <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-card/50 backdrop-blur">
                     <h2 className="font-semibold text-lg">Overview</h2>
-                    <button
-                        onClick={toggleTheme}
-                        className="p-2 rounded-full hover:bg-muted transition-colors"
-                    >
-                        {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <ServerClock />
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 rounded-full hover:bg-muted transition-colors"
+                        >
+                            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                        </button>
+                    </div>
                 </header>
 
                 <div className="flex-1 overflow-auto p-6">

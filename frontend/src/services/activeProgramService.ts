@@ -62,5 +62,15 @@ export const activeProgramService = {
     restoreCycle: async (itemId: string): Promise<IActiveProgram> => {
         const response = await axios.post<IActiveProgram>(`${BASE_URL}/schedule/${itemId}/restore`);
         return response.data;
+    },
+
+    retryCycle: async (itemId: string): Promise<IActiveProgram> => {
+        const response = await axios.post<IActiveProgram>(`${BASE_URL}/schedule/${itemId}/retry`);
+        return response.data;
+    },
+
+    forceStartCycle: async (itemId: string): Promise<IActiveProgram> => {
+        const response = await axios.post<IActiveProgram>(`${BASE_URL}/schedule/${itemId}/force-start`);
+        return response.data;
     }
 };

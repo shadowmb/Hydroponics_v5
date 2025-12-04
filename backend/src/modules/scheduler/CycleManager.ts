@@ -154,6 +154,10 @@ export class CycleManager {
                 endTime: new Date()
             });
             this.currentSession = null;
+
+            // Notify ActiveProgramService
+            const activeProgramService = require('./ActiveProgramService').activeProgramService;
+            await activeProgramService.markCycleCompleted(cycle.id);
         }
     }
 
@@ -170,7 +174,13 @@ export class CycleManager {
             logs: [...this.currentSession.logs, { level: 'error', message: reason, timestamp: new Date() }]
         });
 
+        // Capture ID before nulling
+        const cycleId = this.currentSession.cycleId;
         this.currentSession = null;
+
+        // Notify ActiveProgramService
+        const activeProgramService = require('./ActiveProgramService').activeProgramService;
+        await activeProgramService.markCycleFailed(cycleId, reason);
     }
 }
 

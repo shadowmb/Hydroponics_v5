@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { useStore } from "../../core/useStore"
 import { socketService } from "../../core/SocketService"
+import { ServerClock } from "./ServerClock"
 
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -175,6 +176,7 @@ export function Layout() {
                 <header className="flex h-14 items-center gap-4 border-b bg-card px-6 justify-between">
                     <h1 className="text-lg font-semibold">Control Panel</h1>
                     <div className="flex items-center gap-4">
+                        <ServerClock />
                         <ThemeToggle />
                     </div>
                 </header>

@@ -303,6 +303,107 @@ export class ActiveProgramService {
     }
 
     /**
+     * Retry a failed cycle.
+     */
+    async retryCycle(itemId: string): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
+        if (!item) throw new Error('Schedule item not found');
+
+        if (item.status !== 'failed') {
+            throw new Error('Cannot retry a cycle that is not failed');
+        }
+
+        item.status = 'pending';
+
+        // Update time to NOW to ensure immediate pickup by Scheduler
+        const now = new Date();
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        item.time = timeString;
+
+        await active.save();
+
+        logger.info({ itemId, newTime: timeString }, '🔄 Cycle Retried (Reset to Pending & Time Updated)');
+        return active;
+    }
+
+    /**
+     * Force start a pending cycle immediately.
+     */
+    async forceStartCycle(itemId: string): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
+        if (!item) throw new Error('Schedule item not found');
+
+        if (item.status !== 'pending') {
+            throw new Error('Cannot force start a cycle that is not pending');
+        }
+
+        // Stop any currently running cycle first?
+        // For now, let's assume the user knows what they are doing.
+        // But the SchedulerService might be running something else.
+        // Ideally, we should tell the SchedulerService to run this NOW.
+
+        // Implementation:
+        // 1. Update time to NOW (so scheduler picks it up)
+        // 2. Or call cycleManager directly?
+        // Better to update time to NOW so the standard loop handles it.
+
+        const now = new Date();
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        item.time = timeString;
+        await active.save();
+
+        logger.info({ itemId, newTime: timeString }, '⚡ Cycle Force Started (Time updated to Now)');
+        return active;
+    }
+
+    /**
+     * Mark a cycle as failed in the schedule.
+     */
+    async markCycleFailed(cycleId: string, reason: string): Promise<void> {
+        const active = await this.getActive();
+        if (!active) return;
+
+        // Find the running item for this cycle
+        // We look for 'running' or 'pending' (if it failed immediately on start)
+        const item = active.schedule.find(i =>
+            i.cycleId === cycleId && (i.status === 'running' || i.status === 'pending')
+        );
+
+        if (item) {
+            item.status = 'failed';
+            // We could store the reason in overrides or a new field if schema supported it
+            // For now, just marking as failed is enough for the UI
+            await active.save();
+            logger.info({ cycleId, reason }, '❌ Active Program Cycle Marked Failed');
+        }
+    }
+
+    /**
+     * Mark a cycle as completed in the schedule.
+     */
+    async markCycleCompleted(cycleId: string): Promise<void> {
+        const active = await this.getActive();
+        if (!active) return;
+
+        const item = active.schedule.find(i =>
+            i.cycleId === cycleId && i.status === 'running'
+        );
+
+        if (item) {
+            item.status = 'completed';
+            await active.save();
+            logger.info({ cycleId }, '✅ Active Program Cycle Marked Completed');
+        }
+    }
+
+    /**
      * Get the current active program.
      */
     async getActive(): Promise<IActiveProgram | null> {

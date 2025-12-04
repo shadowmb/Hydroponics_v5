@@ -20,14 +20,20 @@ export class SchedulerService {
     private lastRun: Map<string, number> = new Map(); // monitoringId -> timestamp
     private _state: 'STOPPED' | 'RUNNING' | 'WAITING_START' = 'STOPPED';
     private _startTime: number | null = null;
+    private _lastTick: Date | null = null;
 
     constructor() {
         // Run every minute
         this.job = new CronJob('* * * * *', () => this.tick());
     }
 
+    public getLastTick(): Date | null {
+        return this._lastTick;
+    }
+
     public start() {
         this.job.start();
+        this._state = 'RUNNING';
         logger.info('🕒 Scheduler Service Started');
     }
 
@@ -69,6 +75,7 @@ export class SchedulerService {
     }
 
     private async tick() {
+        this._lastTick = new Date();
         if (this._state === 'STOPPED') {
             return;
         }
@@ -85,6 +92,7 @@ export class SchedulerService {
 
         try {
             const now = new Date();
+            this._lastTick = now;
             const timeString = now.toTimeString().slice(0, 5); // HH:mm
             logger.info({ time: timeString }, '🕒 Scheduler Tick');
 

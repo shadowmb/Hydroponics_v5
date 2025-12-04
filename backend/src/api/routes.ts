@@ -108,4 +108,6 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/active-program/schedule/swap', ActiveProgramController.swapCycles);
     app.post('/api/active-program/schedule/:itemId/skip', ActiveProgramController.skipCycle);
     app.post('/api/active-program/schedule/:itemId/restore', ActiveProgramController.restoreCycle);
+    app.post('/api/active-program/schedule/:itemId/retry', ActiveProgramController.retryCycle);
+    app.post('/api/active-program/schedule/:itemId/force-start', ActiveProgramController.forceStartCycle);
 }
