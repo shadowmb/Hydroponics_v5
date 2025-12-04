@@ -107,4 +107,5 @@ export async function apiRoutes(app: FastifyInstance) {
     app.patch('/api/active-program/schedule/:itemId', ActiveProgramController.updateScheduleItem);
     app.post('/api/active-program/schedule/swap', ActiveProgramController.swapCycles);
     app.post('/api/active-program/schedule/:itemId/skip', ActiveProgramController.skipCycle);
+    app.post('/api/active-program/schedule/:itemId/restore', ActiveProgramController.restoreCycle);
 }

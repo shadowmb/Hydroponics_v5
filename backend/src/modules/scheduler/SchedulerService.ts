@@ -90,6 +90,18 @@ export class SchedulerService {
 
             // 1. Check Active Program & Schedule
             const activeProgram = await activeProgramService.getActive();
+
+            // Check for scheduled start
+            if (activeProgram && activeProgram.status === 'scheduled') {
+                if (activeProgram.startTime && now >= new Date(activeProgram.startTime)) {
+                    logger.info('▶️ Scheduled Active Program Starting...');
+                    await activeProgramService.start();
+                    // Re-fetch to get updated status
+                    const updated = await activeProgramService.getActive();
+                    if (updated) Object.assign(activeProgram, updated);
+                }
+            }
+
             if (activeProgram && activeProgram.status === 'running') {
                 const scheduledItem = activeProgram.schedule.find(s =>
                     s.time === timeString && s.status === 'pending'

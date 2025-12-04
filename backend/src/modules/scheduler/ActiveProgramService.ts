@@ -109,7 +109,8 @@ export class ActiveProgramService {
                                 type: v.type,
                                 default: v.value,
                                 unit: v.unit,
-                                cycleId: cycleId
+                                cycleId: cycleId,
+                                flowName: flow.name || 'Unknown Flow'
                             });
                             seenVars.add(v.name);
                         }
@@ -126,24 +127,28 @@ export class ActiveProgramService {
     /**
      * Start the loaded program.
      */
-    async start(): Promise<IActiveProgram> {
+    async start(startTime?: Date): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
         if (active.status === 'running') return active;
 
-        // Allow starting from loaded or ready
-        if (active.status !== 'loaded' && active.status !== 'ready' && active.status !== 'paused') {
-            // If stopped, maybe we can restart? For now, let's assume we can only start if loaded/ready/paused.
-            // Actually, if stopped, we usually need to reload.
-            // But let's allow "Resume" from paused.
+        // Allow starting from loaded, ready, paused, or stopped
+        if (active.status !== 'loaded' && active.status !== 'ready' && active.status !== 'paused' && active.status !== 'stopped' && active.status !== 'scheduled') {
+            // Invalid status for start
         }
 
-        active.status = 'running';
-        if (!active.startTime) active.startTime = new Date(); // Only set start time if first start
-        await active.save();
+        if (startTime && new Date(startTime) > new Date()) {
+            active.status = 'scheduled';
+            active.startTime = new Date(startTime);
+            logger.info({ startTime: active.startTime }, '⏳ Active Program Scheduled');
+        } else {
+            active.status = 'running';
+            if (!active.startTime) active.startTime = new Date();
+            logger.info('▶️ Active Program Started');
+        }
 
-        logger.info('▶️ Active Program Started');
+        await active.save();
         return active;
     }
 
@@ -272,6 +277,28 @@ export class ActiveProgramService {
 
         await active.save();
         logger.info({ itemId, type }, '⏭️ Cycle Skipped');
+        return active;
+    }
+
+    /**
+     * Restore a skipped cycle to pending status.
+     */
+    async restoreCycle(itemId: string): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
+        if (!item) throw new Error('Schedule item not found');
+
+        if (item.status !== 'skipped') {
+            throw new Error('Cannot restore a cycle that is not skipped');
+        }
+
+        item.status = 'pending';
+        item.skipUntil = undefined;
+
+        await active.save();
+        logger.info({ itemId }, '⏪ Cycle Restored');
         return active;
     }
 
