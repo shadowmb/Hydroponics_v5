@@ -1,7 +1,7 @@
 import { automation } from '../automation/AutomationEngine';
 import { events } from '../../core/EventBusService';
 import { logger } from '../../core/LoggerService';
-import { cycleRepository } from '../persistence/repositories/CycleRepository';
+// import { cycleRepository } from '../persistence/repositories/CycleRepository'; // Removed
 import { cycleSessionRepository } from '../persistence/repositories/CycleSessionRepository';
 import { ICycleSession } from '../persistence/schemas/CycleSession.schema';
 
@@ -35,38 +35,28 @@ export class CycleManager {
         });
     }
 
-    public async startCycle(cycleId: string, overrides: Record<string, any> = {}): Promise<string> {
+    public async startCycle(cycleId: string, steps: { flowId: string, overrides: any }[], overrides: Record<string, any> = {}): Promise<string> {
         // 1. Check if busy
         if (this.currentSession && this.currentSession.status === 'running') {
             throw new Error('A cycle is already running');
         }
 
-        // 2. Load Cycle
-        const cycle = await cycleRepository.findById(cycleId);
-        if (!cycle) throw new Error(`Cycle not found: ${cycleId}`);
+        if (!steps || steps.length === 0) throw new Error('Cycle has no steps');
 
-        if (cycle.steps.length === 0) throw new Error('Cycle has no steps');
-
-        // 3. Create Session
+        // 2. Create Session with Embedded Steps
         this.currentSession = await cycleSessionRepository.create({
-            cycleId: cycle.id,
+            cycleId: cycleId,
             startTime: new Date(),
             status: 'running',
             currentStepIndex: 0,
             logs: [],
-            // Store global overrides for the session if needed, 
-            // or we can just pass them to each step.
-            // For now, we'll attach them to the session object in memory 
-            // (or we should update schema if we want persistence of overrides)
-            // But wait, executeStep needs them.
+            steps: steps, // Store steps in session
+            context: overrides // Store global overrides in context
         });
 
-        // Attach overrides to the in-memory session object for use in executeStep
-        (this.currentSession as any).overrides = overrides;
+        logger.info({ cycleId, sessionId: this.currentSession.id, stepsCount: steps.length }, '🚀 Starting Cycle');
 
-        logger.info({ cycleId, sessionId: this.currentSession.id, overrides }, '🚀 Starting Cycle');
-
-        // 4. Start First Step
+        // 3. Start First Step
         await this.executeStep(0);
 
         return this.currentSession.id;
@@ -93,13 +83,14 @@ export class CycleManager {
     private async executeStep(index: number) {
         if (!this.currentSession) return;
 
-        const cycle = await cycleRepository.findById(this.currentSession.cycleId);
-        if (!cycle) {
-            await this.failCycle('Cycle definition not found during execution');
+        // Use embedded steps
+        const steps = this.currentSession.steps;
+        if (!steps) {
+            await this.failCycle('Cycle session missing steps definition');
             return;
         }
 
-        const step = cycle.steps[index];
+        const step = steps[index];
         if (!step) {
             await this.failCycle(`Step ${index} not found`);
             return;
@@ -109,11 +100,13 @@ export class CycleManager {
             logger.info({ step: index, flowId: step.flowId }, '▶️ Executing Cycle Step');
 
             // Load Flow with Overrides
-            // Merge Cycle Step overrides with Program Global overrides
-            // Program overrides take precedence? Or Step overrides?
-            // Usually Program (Global) overrides are meant to configure the whole cycle.
-            // Let's merge: Step Overrides (defaults) < Program Overrides (specifics)
-            const sessionOverrides = (this.currentSession as any).overrides || {};
+            // Merge: Step Overrides < Session Context (Global Overrides)
+            // Note: In previous logic I wrote Step < Global. 
+            // Let's stick to: Step overrides are specific, Global are general.
+            // Usually specific overrides (on the step) should win? 
+            // Or Global overrides (passed at runtime) are meant to override everything?
+            // Let's assume Runtime Global Overrides > Static Step Overrides.
+            const sessionOverrides = this.currentSession.context || {};
             const finalOverrides = { ...step.overrides, ...sessionOverrides };
 
             const flowSessionId = await automation.loadProgram(step.flowId, finalOverrides);
@@ -139,9 +132,9 @@ export class CycleManager {
         if (!this.currentSession) return;
 
         const nextIndex = this.currentSession.currentStepIndex + 1;
-        const cycle = await cycleRepository.findById(this.currentSession.cycleId);
+        const steps = this.currentSession.steps;
 
-        if (cycle && nextIndex < cycle.steps.length) {
+        if (steps && nextIndex < steps.length) {
             // Execute Next Step
             await this.executeStep(nextIndex);
         } else {
@@ -153,11 +146,14 @@ export class CycleManager {
                 status: 'completed',
                 endTime: new Date()
             });
+
+            // Capture ID before nulling
+            const cycleId = this.currentSession.cycleId;
             this.currentSession = null;
 
             // Notify ActiveProgramService
             const activeProgramService = require('./ActiveProgramService').activeProgramService;
-            await activeProgramService.markCycleCompleted(cycle.id);
+            await activeProgramService.markCycleCompleted(cycleId);
         }
     }
 

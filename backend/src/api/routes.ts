@@ -81,8 +81,8 @@ export async function apiRoutes(app: FastifyInstance) {
     app.put('/api/flows/:id', FlowController.update);
     app.delete('/api/flows/:id', FlowController.delete);
 
-    // Cycle Routes
-    app.register(require('./routes/cycles').cycleRoutes, { prefix: '/api/cycles' });
+    // Cycle Routes - Removed
+    // app.register(require('./routes/cycles').cycleRoutes, { prefix: '/api/cycles' });
 
     // Program Routes
     app.post('/api/programs', ProgramController.create);

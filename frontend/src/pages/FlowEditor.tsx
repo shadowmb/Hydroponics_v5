@@ -344,6 +344,8 @@ const FlowEditorContent: React.FC = () => {
                     onDuplicateNode={onDuplicateNode}
                     variables={variables}
                     onVariablesChange={setVariables}
+                    flowDescription={flowDescription}
+                    onFlowDescriptionChange={setFlowDescription}
                 />
             </div>
         </div>

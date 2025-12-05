@@ -25,18 +25,21 @@ interface PropertiesPanelProps {
     onDuplicateNode: (nodeId: string) => void;
     variables: IVariable[];
     onVariablesChange: (vars: IVariable[]) => void;
+    flowDescription?: string;
+    onFlowDescriptionChange?: (desc: string) => void;
 }
 
-export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
-    selectedNode,
-    selectedEdge,
-    onChange,
-    onEdgeChange,
-    onDeleteNode,
-    onDeleteEdge,
-    onDuplicateNode,
-    variables
-}) => {
+export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
+    const {
+        selectedNode,
+        selectedEdge,
+        onChange,
+        onEdgeChange,
+        onDeleteNode,
+        onDeleteEdge,
+        onDuplicateNode,
+        variables
+    } = props;
 
     const [formData, setFormData] = useState<Record<string, any>>({});
 
@@ -113,13 +116,24 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     <p className="text-xs text-muted-foreground">Global settings for this flow.</p>
                 </div>
                 <div className="flex-1 p-4 space-y-4">
-                    <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                        Select a block or connection to edit its properties.
+                    <div className="space-y-2">
+                        <Label>Flow Comment</Label>
+                        <Textarea
+                            value={props.flowDescription || ''}
+                            onChange={(e) => props.onFlowDescriptionChange?.(e.target.value)}
+                            placeholder="Describe the purpose of this flow..."
+                            className="resize-none h-32"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            This comment is saved with the flow and helps identify its purpose.
+                        </p>
                     </div>
 
                     <Separator />
 
-
+                    <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                        Select a block or connection to edit its properties.
+                    </div>
                 </div>
             </div>
         );

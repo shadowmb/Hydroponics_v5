@@ -20,7 +20,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps) => {
                             <GitBranch className="h-4 w-4" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-bold">Condition</span>
+                            <span className="text-sm font-bold">{data.label as string || 'Condition'}</span>
                             <span className="text-[10px] text-muted-foreground">IF / ELSE</span>
 
                             {/* Dynamic Content Display */}

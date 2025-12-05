@@ -6,9 +6,16 @@ export interface IProgram extends Document, ISoftDelete {
     name: string;
     description?: string;
     isActive: boolean;
+    minCycleInterval: number;
     schedule: {
         time: string; // HH:mm
-        cycleId: string; // Refers to Cycle.id
+        name: string;
+        description?: string;
+        // cycleId: string; // Removed
+        steps: {
+            flowId: string;
+            overrides: Record<string, any>;
+        }[];
         overrides?: Record<string, any>;
     }[];
 }
@@ -18,10 +25,17 @@ const ProgramSchema = new Schema<IProgram>({
     name: { type: String, required: true },
     description: { type: String },
     isActive: { type: Boolean, default: false },
+    minCycleInterval: { type: Number, default: 60 },
     schedule: [{
         time: { type: String, required: true }, // Validation regex could be added
-        cycleId: { type: String, required: true },
-        overrides: { type: Schema.Types.Mixed }
+        name: { type: String, required: true, default: 'Event' },
+        description: { type: String },
+        // cycleId: { type: String, required: true }, // Removed in favor of embedded steps
+        steps: [{
+            flowId: { type: String, required: true },
+            overrides: { type: Schema.Types.Mixed, default: {} }
+        }],
+        overrides: { type: Schema.Types.Mixed, default: {} }
     }]
 }, {
     timestamps: true,

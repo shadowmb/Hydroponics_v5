@@ -80,7 +80,7 @@ function Sidebar({ className }: SidebarProps) {
                             <Workflow className="mr-2 h-4 w-4" />
                             Flows
                         </NavLink>
-                        <NavLink
+                        {/* <NavLink
                             to="/cycles"
                             className={({ isActive }) =>
                                 cn(
@@ -91,7 +91,7 @@ function Sidebar({ className }: SidebarProps) {
                         >
                             <Repeat className="mr-2 h-4 w-4" />
                             Cycles
-                        </NavLink>
+                        </NavLink> */}
                         <NavLink
                             to="/hardware"
                             className={({ isActive }) =>

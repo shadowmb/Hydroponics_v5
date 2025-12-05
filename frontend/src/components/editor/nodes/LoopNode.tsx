@@ -23,7 +23,7 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
                             <Repeat className="h-4 w-4" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-bold">Loop</span>
+                            <span className="text-sm font-bold">{data.label as string || 'Loop'}</span>
                             <span className="text-[10px] text-muted-foreground">{loopType === 'COUNT' ? 'Repeat' : 'While'}</span>
 
                             {/* Dynamic Content Display */}

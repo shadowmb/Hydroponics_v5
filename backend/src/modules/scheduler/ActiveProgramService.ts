@@ -2,7 +2,7 @@ import { ActiveProgramModel, IActiveProgram, IActiveScheduleItem } from '../pers
 import { programRepository } from '../persistence/repositories/ProgramRepository';
 import { logger } from '../../core/LoggerService';
 import { cycleManager } from './CycleManager';
-import { CycleModel } from '../persistence/schemas/Cycle.schema';
+// import { CycleModel } from '../persistence/schemas/Cycle.schema'; // Removed
 
 export class ActiveProgramService {
 
@@ -25,24 +25,30 @@ export class ActiveProgramService {
         await ActiveProgramModel.deleteMany({});
 
         // 4. Create Schedule Items
-        const scheduleItems = await Promise.all(template.schedule.map(async item => {
-            const cycle = await CycleModel.findOne({ id: item.cycleId });
+        const scheduleItems = template.schedule.map(item => {
+            // Generate a unique ID for this schedule instance if not present
+            // We use this as 'cycleId' for tracking purposes
+            const cycleId = (item as any)._id?.toString() || Math.random().toString(36).substring(7);
+
             return {
                 time: item.time,
-                cycleId: item.cycleId,
-                cycleName: cycle?.name || item.cycleId, // Fallback to ID if name not found
-                cycleDescription: cycle?.description,
+                name: item.name,
+                description: item.description,
+                cycleId: cycleId,
+                cycleName: item.name, // Use event name as cycle name for backward compat
+                cycleDescription: item.description,
+                steps: item.steps, // Copy embedded steps
                 overrides: { ...globalOverrides, ...((item as any).overrides || {}) }, // Merge global and item overrides
                 status: 'pending'
             } as IActiveScheduleItem;
-        }));
+        });
 
         // 5. Create Active Program
         const activeProgram = await ActiveProgramModel.create({
             sourceProgramId: template.id,
             name: template.name,
             status: 'loaded',
-            minCycleInterval,
+            minCycleInterval: template.minCycleInterval ?? 60,
             schedule: scheduleItems
         });
 
@@ -87,17 +93,15 @@ export class ActiveProgramService {
         if (!active) return {};
 
         const variablesByCycle: Record<string, any[]> = {};
-        const uniqueCycleIds = [...new Set(active.schedule.map(item => item.cycleId))];
 
-        for (const cycleId of uniqueCycleIds) {
-            const cycle = await CycleModel.findOne({ id: cycleId });
-            if (!cycle || !cycle.steps || cycle.steps.length === 0) continue;
+        for (const item of active.schedule) {
+            const cycleId = item.cycleId;
+            if (!item.steps || item.steps.length === 0) continue;
 
             const cycleVars: any[] = [];
             const seenVars = new Set<string>();
 
-            // Assuming single flow per cycle for now, or we check all steps
-            for (const step of cycle.steps) {
+            for (const step of item.steps) {
                 const FlowModel = require('../persistence/schemas/Flow.schema').FlowModel;
                 const flow = await FlowModel.findOne({ id: step.flowId });
 
@@ -112,7 +116,9 @@ export class ActiveProgramService {
                                 hasTolerance: v.hasTolerance,
                                 description: v.description,
                                 cycleId: cycleId,
-                                flowName: flow.name || 'Unknown Flow'
+                                flowId: flow.id,
+                                flowName: flow.name || 'Unknown Flow',
+                                flowDescription: flow.description
                             });
                             seenVars.add(v.name);
                         }

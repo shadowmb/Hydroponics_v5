@@ -103,7 +103,7 @@ export const ActiveProgramDashboard = () => {
 
                 {nextCycle ? (
                     <div className="text-sm text-muted-foreground mb-4">
-                        Next cycle at <span className="font-mono font-bold text-foreground">{nextCycle.time}</span>
+                        Next: <span className="font-semibold text-foreground">{nextCycle.name || nextCycle.cycleName}</span> at <span className="font-mono font-bold text-foreground">{nextCycle.time}</span>
                     </div>
                 ) : (
                     <div className="text-sm text-muted-foreground mb-4">

@@ -117,7 +117,7 @@ export class SchedulerService {
 
                 if (scheduledItem) {
                     logger.info({ cycleId: scheduledItem.cycleId, time: timeString }, '⏰ Scheduled Cycle Triggered');
-                    await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.overrides);
+                    await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.steps, scheduledItem.overrides);
 
                     // Mark as running/completed in ActiveProgram
                     // Note: CycleManager events will update the status to 'completed' later
@@ -165,7 +165,7 @@ export class SchedulerService {
         });
     }
 
-    private async handleScheduledCycle(cycleId: string, overrides: Record<string, any> = {}) {
+    private async handleScheduledCycle(cycleId: string, steps: any[], overrides: Record<string, any> = {}) {
         // Priority: Cycle > Monitoring
 
         // Check automation state.
@@ -186,7 +186,7 @@ export class SchedulerService {
         }
 
         try {
-            await cycleManager.startCycle(cycleId, overrides);
+            await cycleManager.startCycle(cycleId, steps, overrides);
         } catch (error) {
             logger.error({ error, cycleId }, '❌ Failed to start scheduled cycle');
         }

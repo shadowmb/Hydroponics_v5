@@ -12,7 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { TimePicker24 } from '../ui/time-picker-24';
-import { Clock } from 'lucide-react';
+import { Clock, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface ActiveProgramManagerProps {
     program: IActiveProgram;
@@ -325,20 +326,46 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2">
-                                                <Input
-                                                    id={`edit-var-${variable.name}`}
-                                                    type={variable.type === 'number' ? 'number' : 'text'}
-                                                    value={editOverrides[variable.name] ?? ''}
-                                                    onChange={(e) => setEditOverrides(prev => ({
-                                                        ...prev,
-                                                        [variable.name]: variable.type === 'number' ? Number(e.target.value) : e.target.value
-                                                    }))}
-                                                    placeholder={variable.default !== undefined ? `Default: ${variable.default}` : ''}
-                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <Input
+                                                        id={`edit-var-${variable.name}`}
+                                                        type={variable.type === 'number' ? 'number' : 'text'}
+                                                        value={editOverrides[variable.name] ?? ''}
+                                                        onChange={(e) => setEditOverrides(prev => ({
+                                                            ...prev,
+                                                            [variable.name]: variable.type === 'number' ? Number(e.target.value) : e.target.value
+                                                        }))}
+                                                        placeholder={variable.default !== undefined ? `Default: ${variable.default}` : ''}
+                                                    />
+                                                </div>
                                                 {variable.unit && (
                                                     <span className="text-sm text-muted-foreground whitespace-nowrap min-w-[3ch]">
                                                         {variable.unit}
                                                     </span>
+                                                )}
+                                                {variable.hasTolerance && (
+                                                    <>
+                                                        <div className="w-[1px] h-8 bg-border mx-1" />
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-muted-foreground text-sm">±</span>
+                                                            <Input
+                                                                type="number"
+                                                                min={0}
+                                                                className="w-20"
+                                                                value={editOverrides[variable.name + '_tolerance'] ?? ''}
+                                                                onChange={(e) => {
+                                                                    const val = Number(e.target.value);
+                                                                    if (val >= 0) {
+                                                                        setEditOverrides(prev => ({
+                                                                            ...prev,
+                                                                            [variable.name + '_tolerance']: val
+                                                                        }));
+                                                                    }
+                                                                }}
+                                                                placeholder="Tol"
+                                                            />
+                                                        </div>
+                                                    </>
                                                 )}
                                             </div>
                                         )}
@@ -378,27 +405,67 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
 
         return (
             <div className="p-4 bg-muted/30 border-t grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(varsByFlow).map(([flowName, flowVars]) => (
-                    <div key={flowName} className="space-y-2">
-                        <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b pb-1">
-                            {flowName}
-                        </h5>
-                        <div className="grid gap-1">
-                            {flowVars.map(variable => {
-                                const val = item.overrides?.[variable.name] ?? variable.default;
-                                return (
-                                    <div key={variable.name} className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">{variable.name}:</span>
-                                        <span className="font-medium">
-                                            {typeof val === 'boolean' ? (val ? 'ON' : 'OFF') : val}
-                                            {variable.unit && <span className="text-xs text-muted-foreground ml-1">{variable.unit}</span>}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                {Object.entries(varsByFlow).map(([flowName, flowVars]) => {
+                    const flowDesc = flowVars[0].flowDescription;
+                    return (
+                        <div key={flowName} className="space-y-2">
+                            <div className="border-b pb-1 flex items-center gap-2">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-help flex items-center gap-1">
+                                                {flowName}
+                                                {flowDesc && <HelpCircle className="h-3 w-3 opacity-50" />}
+                                            </h5>
+                                        </TooltipTrigger>
+                                        {flowDesc && (
+                                            <TooltipContent>
+                                                <p>{flowDesc}</p>
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                            <div className="grid gap-1">
+                                {flowVars.map(variable => {
+                                    const val = item.overrides?.[variable.name] ?? variable.default;
+                                    return (
+                                        <div key={variable.name} className="grid grid-cols-[1fr_5rem_3.5rem] gap-2 text-sm items-center">
+                                            <div className="truncate">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="text-muted-foreground cursor-help border-b border-dotted border-muted-foreground/30 hover:border-muted-foreground">
+                                                                {variable.name}:
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p className="font-semibold mb-1">{variable.name}</p>
+                                                            {variable.description && <p className="text-xs text-muted-foreground">{variable.description}</p>}
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
+
+                                            <div className="text-center font-medium truncate">
+                                                {typeof val === 'boolean' ? (val ? 'ON' : 'OFF') : val}
+                                                {variable.unit && <span className="text-xs text-muted-foreground ml-1">{variable.unit}</span>}
+                                            </div>
+
+                                            <div className="text-left text-xs text-muted-foreground truncate">
+                                                {variable.hasTolerance && (
+                                                    <span>
+                                                        ± {item.overrides?.[variable.name + '_tolerance'] ?? 0}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         );
     };
@@ -578,9 +645,23 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                                 )}
                                             </Button>
                                             <div className="font-mono text-lg font-bold w-16">{item.time}</div>
-                                            <div>
-                                                <div className="font-medium">Cycle ID: {item.cycleId}</div>
-                                                <div className={`text-xs uppercase font-bold ${item.status === 'running' ? 'text-green-500' :
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="font-medium text-lg leading-none">{item.name || item.cycleName || 'Event'}</div>
+                                                    {(item.description || item.cycleDescription) && (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <HelpCircle className="h-4 w-4 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{item.description || item.cycleDescription}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    )}
+                                                </div>
+                                                <div className={`text-xs uppercase font-bold mt-1 ${item.status === 'running' ? 'text-green-500' :
                                                     item.status === 'failed' ? 'text-red-500' :
                                                         item.status === 'skipped' ? 'text-orange-500' :
                                                             'text-muted-foreground'
