@@ -14,6 +14,14 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "../ui/tooltip";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "../ui/dialog";
 
 interface ActiveProgramWizardProps {
     program: IActiveProgram;
@@ -26,6 +34,7 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
     const [loading, setLoading] = useState(false);
     const [cycleVariables, setCycleVariables] = useState<Record<string, any[]>>({});
     const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
     const [flows, setFlows] = useState<any[]>([]);
 
@@ -224,6 +233,20 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
         };
 
         setSchedule(newSchedule);
+    };
+
+    const handleCancelConfirm = async () => {
+        try {
+            setLoading(true);
+            await activeProgramService.unload();
+            onStart(); // Go back using the provided callback
+        } catch (error) {
+            console.error('Failed to cancel program:', error);
+            toast.error('Failed to cancel program. Please try again.');
+        } finally {
+            setLoading(false);
+            setCancelDialogOpen(false);
+        }
     };
 
     return (
@@ -513,13 +536,7 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
 
                     {/* Actions */}
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="ghost" onClick={async () => {
-                            if (!confirm('Are you sure you want to cancel?')) return;
-                            try {
-                                await activeProgramService.unload();
-                                onStart();
-                            } catch (e) { }
-                        }}>
+                        <Button variant="ghost" onClick={() => setCancelDialogOpen(true)}>
                             Cancel
                         </Button>
                         <Button onClick={handleSaveAndContinue} className="gap-2" disabled={loading}>
@@ -529,6 +546,25 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Cancel Configuration?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to cancel? Any unsaved changes will be lost and the program setup will be reset.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                            Continue Configuration
+                        </Button>
+                        <Button variant="destructive" onClick={handleCancelConfirm} disabled={loading}>
+                            Yes, Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

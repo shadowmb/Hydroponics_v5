@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Save, Plus, Trash2, Clock, ArrowDown, Settings } from 'lucide-react';
+import { Save, Plus, Trash2, Clock } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { TimePicker24 } from '../components/ui/time-picker-24';
+import { slugify } from '../lib/string-utils';
 import type { IProgram, IFlow } from '../../../shared/types';
 
 export const ProgramEditor: React.FC = () => {
@@ -172,7 +173,9 @@ export const ProgramEditor: React.FC = () => {
             description,
             minCycleInterval,
             schedule,
-            isActive: true
+            isActive: true,
+            // If creating new program, generate slug ID
+            ...(id ? {} : { id: `prog_${slugify(programName)}` })
         };
 
         try {

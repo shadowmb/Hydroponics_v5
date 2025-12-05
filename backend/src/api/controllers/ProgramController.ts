@@ -21,6 +21,16 @@ export class ProgramController {
 
     static async list(req: FastifyRequest, reply: FastifyReply) {
         try {
+            const { deleted } = req.query as { deleted?: string };
+
+            if (deleted === 'true') {
+                // Return only deleted items
+                const { ProgramModel } = await import('../../modules/persistence/schemas/Program.schema');
+                // @ts-ignore
+                const programs = await ProgramModel.find({ deletedAt: { $ne: null } }).setOptions({ withDeleted: true }).sort({ createdAt: -1 });
+                return reply.send(programs);
+            }
+
             const programs = await programRepository.findAll();
             return reply.send(programs);
         } catch (error: any) {
@@ -59,10 +69,60 @@ export class ProgramController {
         try {
             const success = await programRepository.delete(id);
             if (!success) return reply.status(404).send({ message: 'Program not found' });
-            return reply.send({ success: true });
+            return reply.send({ success: true, message: 'Program moved to Recycle Bin' });
         } catch (error: any) {
             logger.error({ error }, 'Failed to delete program');
             return reply.status(500).send({ message: 'Failed to delete program' });
+        }
+    }
+
+    static async restore(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { name } = req.body as { name?: string };
+            const { ProgramModel } = await import('../../modules/persistence/schemas/Program.schema');
+
+            // @ts-ignore
+            const program = await ProgramModel.findOne({ id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+
+            if (!program) {
+                return reply.status(404).send({ success: false, message: 'Program not found in recycle bin' });
+            }
+
+            if (name) {
+                const existing = await ProgramModel.findOne({ name, id: { $ne: id } });
+                if (existing) {
+                    return reply.status(400).send({ success: false, message: 'Program name already exists' });
+                }
+                program.name = name;
+            }
+
+            await program.restore();
+            return reply.send({ success: true, message: 'Program restored' });
+        } catch (error: any) {
+            logger.error({ error }, 'Failed to restore program');
+            return reply.status(500).send({ success: false, message: error.message || 'Failed to restore program' });
+        }
+    }
+
+    static async hardDelete(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { ProgramModel } = await import('../../modules/persistence/schemas/Program.schema');
+
+            // @ts-ignore
+            const program = await ProgramModel.findOne({ id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+
+            if (!program) {
+                return reply.status(404).send({ success: false, message: 'Program not found in recycle bin' });
+            }
+
+            // @ts-ignore
+            await ProgramModel.deleteOne({ id }, { hardDelete: true });
+            return reply.send({ success: true, message: 'Program permanently deleted' });
+        } catch (error: any) {
+            logger.error({ error }, 'Failed to permanently delete program');
+            return reply.status(500).send({ success: false, message: error.message || 'Failed to permanently delete program' });
         }
     }
 

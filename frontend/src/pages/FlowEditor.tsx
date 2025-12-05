@@ -18,6 +18,7 @@ import { Save, Edit, Sliders } from 'lucide-react';
 import { hardwareService } from '../services/hardwareService';
 import { useStore } from '../core/useStore';
 import { VariableManager } from '../components/editor/VariableManager';
+import { slugify } from '../lib/string-utils';
 
 const nodeTypes = {
     action: ActionNode,
@@ -197,7 +198,7 @@ const FlowEditorContent: React.FC = () => {
         const flowData = reactFlowToFlow(nodes, edges);
 
         // If editing existing flow, use its ID. Otherwise generate new one.
-        const flowId = id || name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        const flowId = id || slugify(name);
 
         const payload = {
             ...flowData,
