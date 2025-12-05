@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { useStore } from "../../core/useStore"
 import { socketService } from "../../core/SocketService"
+import { ServerClock } from "./ServerClock"
 
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -79,7 +80,7 @@ function Sidebar({ className }: SidebarProps) {
                             <Workflow className="mr-2 h-4 w-4" />
                             Flows
                         </NavLink>
-                        <NavLink
+                        {/* <NavLink
                             to="/cycles"
                             className={({ isActive }) =>
                                 cn(
@@ -90,7 +91,7 @@ function Sidebar({ className }: SidebarProps) {
                         >
                             <Repeat className="mr-2 h-4 w-4" />
                             Cycles
-                        </NavLink>
+                        </NavLink> */}
                         <NavLink
                             to="/hardware"
                             className={({ isActive }) =>
@@ -175,6 +176,7 @@ export function Layout() {
                 <header className="flex h-14 items-center gap-4 border-b bg-card px-6 justify-between">
                     <h1 className="text-lg font-semibold">Control Panel</h1>
                     <div className="flex items-center gap-4">
+                        <ServerClock />
                         <ThemeToggle />
                     </div>
                 </header>

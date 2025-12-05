@@ -2,7 +2,7 @@ import { ActiveProgramModel, IActiveProgram, IActiveScheduleItem } from '../pers
 import { programRepository } from '../persistence/repositories/ProgramRepository';
 import { logger } from '../../core/LoggerService';
 import { cycleManager } from './CycleManager';
-import { CycleModel } from '../persistence/schemas/Cycle.schema';
+// import { CycleModel } from '../persistence/schemas/Cycle.schema'; // Removed
 
 export class ActiveProgramService {
 
@@ -25,24 +25,30 @@ export class ActiveProgramService {
         await ActiveProgramModel.deleteMany({});
 
         // 4. Create Schedule Items
-        const scheduleItems = await Promise.all(template.schedule.map(async item => {
-            const cycle = await CycleModel.findOne({ id: item.cycleId });
+        const scheduleItems = template.schedule.map(item => {
+            // Generate a unique ID for this schedule instance if not present
+            // We use this as 'cycleId' for tracking purposes
+            const cycleId = (item as any)._id?.toString() || Math.random().toString(36).substring(7);
+
             return {
                 time: item.time,
-                cycleId: item.cycleId,
-                cycleName: cycle?.name || item.cycleId, // Fallback to ID if name not found
-                cycleDescription: cycle?.description,
+                name: item.name,
+                description: item.description,
+                cycleId: cycleId,
+                cycleName: item.name, // Use event name as cycle name for backward compat
+                cycleDescription: item.description,
+                steps: item.steps, // Copy embedded steps
                 overrides: { ...globalOverrides, ...((item as any).overrides || {}) }, // Merge global and item overrides
                 status: 'pending'
             } as IActiveScheduleItem;
-        }));
+        });
 
         // 5. Create Active Program
         const activeProgram = await ActiveProgramModel.create({
             sourceProgramId: template.id,
             name: template.name,
             status: 'loaded',
-            minCycleInterval,
+            minCycleInterval: template.minCycleInterval ?? 60,
             schedule: scheduleItems
         });
 
@@ -87,17 +93,15 @@ export class ActiveProgramService {
         if (!active) return {};
 
         const variablesByCycle: Record<string, any[]> = {};
-        const uniqueCycleIds = [...new Set(active.schedule.map(item => item.cycleId))];
 
-        for (const cycleId of uniqueCycleIds) {
-            const cycle = await CycleModel.findOne({ id: cycleId });
-            if (!cycle || !cycle.steps || cycle.steps.length === 0) continue;
+        for (const item of active.schedule) {
+            const cycleId = item.cycleId;
+            if (!item.steps || item.steps.length === 0) continue;
 
             const cycleVars: any[] = [];
             const seenVars = new Set<string>();
 
-            // Assuming single flow per cycle for now, or we check all steps
-            for (const step of cycle.steps) {
+            for (const step of item.steps) {
                 const FlowModel = require('../persistence/schemas/Flow.schema').FlowModel;
                 const flow = await FlowModel.findOne({ id: step.flowId });
 
@@ -109,8 +113,12 @@ export class ActiveProgramService {
                                 type: v.type,
                                 default: v.value,
                                 unit: v.unit,
+                                hasTolerance: v.hasTolerance,
+                                description: v.description,
                                 cycleId: cycleId,
-                                flowName: flow.name || 'Unknown Flow'
+                                flowId: flow.id,
+                                flowName: flow.name || 'Unknown Flow',
+                                flowDescription: flow.description
                             });
                             seenVars.add(v.name);
                         }
@@ -300,6 +308,107 @@ export class ActiveProgramService {
         await active.save();
         logger.info({ itemId }, '⏪ Cycle Restored');
         return active;
+    }
+
+    /**
+     * Retry a failed cycle.
+     */
+    async retryCycle(itemId: string): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
+        if (!item) throw new Error('Schedule item not found');
+
+        if (item.status !== 'failed') {
+            throw new Error('Cannot retry a cycle that is not failed');
+        }
+
+        item.status = 'pending';
+
+        // Update time to NOW to ensure immediate pickup by Scheduler
+        const now = new Date();
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        item.time = timeString;
+
+        await active.save();
+
+        logger.info({ itemId, newTime: timeString }, '🔄 Cycle Retried (Reset to Pending & Time Updated)');
+        return active;
+    }
+
+    /**
+     * Force start a pending cycle immediately.
+     */
+    async forceStartCycle(itemId: string): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
+        if (!item) throw new Error('Schedule item not found');
+
+        if (item.status !== 'pending') {
+            throw new Error('Cannot force start a cycle that is not pending');
+        }
+
+        // Stop any currently running cycle first?
+        // For now, let's assume the user knows what they are doing.
+        // But the SchedulerService might be running something else.
+        // Ideally, we should tell the SchedulerService to run this NOW.
+
+        // Implementation:
+        // 1. Update time to NOW (so scheduler picks it up)
+        // 2. Or call cycleManager directly?
+        // Better to update time to NOW so the standard loop handles it.
+
+        const now = new Date();
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        item.time = timeString;
+        await active.save();
+
+        logger.info({ itemId, newTime: timeString }, '⚡ Cycle Force Started (Time updated to Now)');
+        return active;
+    }
+
+    /**
+     * Mark a cycle as failed in the schedule.
+     */
+    async markCycleFailed(cycleId: string, reason: string): Promise<void> {
+        const active = await this.getActive();
+        if (!active) return;
+
+        // Find the running item for this cycle
+        // We look for 'running' or 'pending' (if it failed immediately on start)
+        const item = active.schedule.find(i =>
+            i.cycleId === cycleId && (i.status === 'running' || i.status === 'pending')
+        );
+
+        if (item) {
+            item.status = 'failed';
+            // We could store the reason in overrides or a new field if schema supported it
+            // For now, just marking as failed is enough for the UI
+            await active.save();
+            logger.info({ cycleId, reason }, '❌ Active Program Cycle Marked Failed');
+        }
+    }
+
+    /**
+     * Mark a cycle as completed in the schedule.
+     */
+    async markCycleCompleted(cycleId: string): Promise<void> {
+        const active = await this.getActive();
+        if (!active) return;
+
+        const item = active.schedule.find(i =>
+            i.cycleId === cycleId && i.status === 'running'
+        );
+
+        if (item) {
+            item.status = 'completed';
+            await active.save();
+            logger.info({ cycleId }, '✅ Active Program Cycle Marked Completed');
+        }
     }
 
     /**

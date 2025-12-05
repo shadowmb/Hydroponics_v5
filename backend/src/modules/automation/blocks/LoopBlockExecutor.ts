@@ -24,18 +24,36 @@ export class LoopBlockExecutor implements IBlockExecutor {
 
             const left = ctx.variables[variable];
             let right = value;
+            let tolerance = 0;
 
             // Resolve variable reference in value
             if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
                 const varName = value.slice(2, -2);
                 right = ctx.variables[varName];
+                // Check for tolerance associated with this variable
+                const toleranceVarName = `${varName}_tolerance`;
+                if (ctx.variables[toleranceVarName] !== undefined) {
+                    tolerance = Number(ctx.variables[toleranceVarName]);
+                }
             } else {
                 right = this.parseValue(value);
             }
 
             switch (operator) {
-                case '==': shouldLoop = left == right; break;
-                case '!=': shouldLoop = left != right; break;
+                case '==':
+                    if (tolerance > 0) {
+                        shouldLoop = Math.abs(Number(left) - Number(right)) <= tolerance;
+                    } else {
+                        shouldLoop = left == right;
+                    }
+                    break;
+                case '!=':
+                    if (tolerance > 0) {
+                        shouldLoop = Math.abs(Number(left) - Number(right)) > tolerance;
+                    } else {
+                        shouldLoop = left != right;
+                    }
+                    break;
                 case '>': shouldLoop = Number(left) > Number(right); break;
                 case '<': shouldLoop = Number(left) < Number(right); break;
                 case '>=': shouldLoop = Number(left) >= Number(right); break;

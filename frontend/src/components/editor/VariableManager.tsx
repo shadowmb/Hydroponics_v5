@@ -47,9 +47,11 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
 }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
+    const [editDescription, setEditDescription] = useState('');
     const [editUnit, setEditUnit] = useState('');
     const [availableUnits, setAvailableUnits] = useState<string[]>([]);
     const [unitOpen, setUnitOpen] = useState(false);
+    const [editTolerance, setEditTolerance] = useState(false);
 
     useEffect(() => {
         hardwareService.getTemplateUnits().then(setAvailableUnits).catch(console.error);
@@ -86,14 +88,15 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
             id: uniqueId,
             name: `Global ${uniqueId.split('_')[1]}`,
             type: 'number',
-            scope: 'global'
+            scope: 'global',
+            hasTolerance: true
         };
         onUpdateVariables([...variables, newVar]);
     };
 
     // --- Shared Update/Delete Logic ---
-    const updateVariable = (id: string, name: string, unit?: string) => {
-        const updated = variables.map(v => v.id === id ? { ...v, name, unit } : v);
+    const updateVariable = (id: string, name: string, unit?: string, hasTolerance?: boolean, description?: string) => {
+        const updated = variables.map(v => v.id === id ? { ...v, name, unit, hasTolerance, description } : v);
         onUpdateVariables(updated);
         setEditingId(null);
     };
@@ -113,7 +116,9 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                         <TableRow>
                             <TableHead className="w-[100px]">ID</TableHead>
                             <TableHead>Name (Readable)</TableHead>
+                            {scope === 'global' && <TableHead>Description</TableHead>}
                             <TableHead className="w-[150px]">Unit</TableHead>
+                            {scope === 'global' && <TableHead className="w-[100px]">Tolerance</TableHead>}
                             <TableHead className="w-[100px] text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -137,7 +142,7 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                                                 autoFocus
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
-                                                        updateVariable(v.id, editName, editUnit);
+                                                        updateVariable(v.id, editName, editUnit, editTolerance, editDescription);
                                                     }
                                                 }}
                                             />
@@ -145,6 +150,27 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                                             v.name
                                         )}
                                     </TableCell>
+                                    {scope === 'global' && (
+                                        <TableCell>
+                                            {editingId === v.id ? (
+                                                <Input
+                                                    value={editDescription}
+                                                    onChange={(e) => setEditDescription(e.target.value)}
+                                                    className="h-8"
+                                                    placeholder="Optional description..."
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            updateVariable(v.id, editName, editUnit, editTolerance, editDescription);
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span className="text-muted-foreground text-sm truncate max-w-[200px] block" title={v.description}>
+                                                    {v.description || '-'}
+                                                </span>
+                                            )}
+                                        </TableCell>
+                                    )}
                                     <TableCell>
                                         {editingId === v.id ? (
                                             <Popover open={unitOpen} onOpenChange={setUnitOpen}>
@@ -196,6 +222,29 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                                             <span className="text-muted-foreground text-sm">{v.unit || '-'}</span>
                                         )}
                                     </TableCell>
+                                    {scope === 'global' && (
+                                        <TableCell>
+                                            {editingId === v.id ? (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={editTolerance}
+                                                        onChange={(e) => setEditTolerance(e.target.checked)}
+                                                        className="h-4 w-4"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground">Enable</span>
+                                                </div>
+                                            ) : (
+                                                v.hasTolerance ? (
+                                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300">
+                                                        Enabled
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">-</span>
+                                                )
+                                            )}
+                                        </TableCell>
+                                    )}
                                     <TableCell className="text-right">
                                         {editingId === v.id ? (
                                             <div className="flex items-center justify-end gap-2">
@@ -203,7 +252,7 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                                                     size="icon"
                                                     variant="ghost"
                                                     className="h-8 w-8 text-green-500"
-                                                    onClick={() => updateVariable(v.id, editName, editUnit)}
+                                                    onClick={() => updateVariable(v.id, editName, editUnit, editTolerance, editDescription)}
                                                 >
                                                     <Check className="h-4 w-4" />
                                                 </Button>
@@ -225,7 +274,9 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
                                                     onClick={() => {
                                                         setEditingId(v.id);
                                                         setEditName(v.name);
+                                                        setEditDescription(v.description || '');
                                                         setEditUnit(v.unit || '');
+                                                        setEditTolerance(v.hasTolerance || false);
                                                     }}
                                                 >
                                                     <Edit2 className="h-4 w-4" />

@@ -31,8 +31,8 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({
                         <div className="px-2 py-1 text-xs text-muted-foreground italic">No local variables</div>
                     ) : (
                         localVars.map(v => (
-                            <SelectItem key={v.id} value={v.id}>
-                                <span className="font-medium">{v.name}</span>
+                            <SelectItem key={v.id} value={v.id} className="pl-6">
+                                <span className="font-medium text-green-500 dark:text-green-400">{v.name}</span>
                                 <span className="ml-2 text-xs text-muted-foreground font-mono">({v.id})</span>
                             </SelectItem>
                         ))
@@ -44,8 +44,8 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({
                         <div className="px-2 py-1 text-xs text-muted-foreground italic">No global variables</div>
                     ) : (
                         globalVars.map(v => (
-                            <SelectItem key={v.id} value={v.id}>
-                                <span className="font-medium">{v.name}</span>
+                            <SelectItem key={v.id} value={v.id} className="pl-6">
+                                <span className="font-medium text-orange-500 dark:text-orange-400">{v.name}</span>
                                 <span className="ml-2 text-xs text-muted-foreground font-mono">({v.id})</span>
                             </SelectItem>
                         ))

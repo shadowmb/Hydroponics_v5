@@ -11,11 +11,13 @@ import { GenericBlockNode } from '../components/editor/nodes/GenericBlockNode';
 import { LoopNode } from '../components/editor/nodes/LoopNode';
 import { reactFlowToFlow, flowToReactFlow } from '../lib/flow-utils';
 import { Button } from '../components/ui/button';
+import { TooltipProvider } from '../components/ui/tooltip';
 import { SaveFlowDialog } from '../components/editor/SaveFlowDialog';
 import { toast } from 'sonner';
-import { Save, Edit } from 'lucide-react';
+import { Save, Edit, Sliders } from 'lucide-react';
 import { hardwareService } from '../services/hardwareService';
 import { useStore } from '../core/useStore';
+import { VariableManager } from '../components/editor/VariableManager';
 
 const nodeTypes = {
     action: ActionNode,
@@ -238,6 +240,26 @@ const FlowEditorContent: React.FC = () => {
         onSave(flowName, flowDescription);
     };
 
+    const onDuplicateNode = useCallback((nodeId: string) => {
+        const nodeToDuplicate = nodes.find(n => n.id === nodeId);
+        if (!nodeToDuplicate) return;
+
+        const newNode: Node = {
+            ...JSON.parse(JSON.stringify(nodeToDuplicate)),
+            id: `${nodeToDuplicate.type}_${Date.now()}`,
+            position: {
+                x: nodeToDuplicate.position.x + 50,
+                y: nodeToDuplicate.position.y + 50
+            },
+            selected: true
+        };
+
+        // Deselect other nodes and add new one
+        setNodes((nds) => [...nds.map(n => ({ ...n, selected: false })), newNode]);
+        setSelectedNode(newNode);
+        toast.success('Block duplicated');
+    }, [nodes, setNodes]);
+
     return (
         <div className="h-full w-full flex flex-col">
             <div className="h-12 border-b bg-card flex items-center px-4 justify-between">
@@ -251,12 +273,26 @@ const FlowEditorContent: React.FC = () => {
                     )}
                 </div>
                 <div className="flex items-center gap-2">
+                    <VariableManager
+                        variables={variables}
+                        onUpdateVariables={setVariables}
+                    />
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2"
+                        onClick={onPaneClick}
+                        title="Show Flow Properties"
+                    >
+                        <Sliders className="h-4 w-4" />
+                        Flow Props
+                    </Button>
                     {id ? (
                         <>
                             <SaveFlowDialog onSave={onSave} defaultName={flowName} defaultDescription={flowDescription}>
                                 <Button variant="outline" size="sm" className="gap-2">
                                     <Edit className="h-4 w-4" />
-                                    Properties
+                                    Edit Details
                                 </Button>
                             </SaveFlowDialog>
                             <Button size="sm" className="gap-2" onClick={handleQuickSave}>
@@ -305,8 +341,11 @@ const FlowEditorContent: React.FC = () => {
                     onEdgeChange={onEdgeUpdate}
                     onDeleteNode={onDeleteNode}
                     onDeleteEdge={onDeleteEdge}
+                    onDuplicateNode={onDuplicateNode}
                     variables={variables}
                     onVariablesChange={setVariables}
+                    flowDescription={flowDescription}
+                    onFlowDescriptionChange={setFlowDescription}
                 />
             </div>
         </div>
@@ -315,6 +354,8 @@ const FlowEditorContent: React.FC = () => {
 
 export const FlowEditor = () => (
     <ReactFlowProvider>
-        <FlowEditorContent />
+        <TooltipProvider>
+            <FlowEditorContent />
+        </TooltipProvider>
     </ReactFlowProvider>
 );

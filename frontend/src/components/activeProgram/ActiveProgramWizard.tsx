@@ -6,8 +6,14 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { toast } from 'sonner';
-import { Save, ArrowUp, ArrowDown } from 'lucide-react';
+import { Save, ArrowUp, ArrowDown, HelpCircle } from 'lucide-react';
 import { TimePicker24 } from '../ui/time-picker-24';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "../ui/tooltip";
 
 interface ActiveProgramWizardProps {
     program: IActiveProgram;
@@ -15,17 +21,24 @@ interface ActiveProgramWizardProps {
 }
 
 export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardProps) => {
-    const [minInterval, setMinInterval] = useState(program.minCycleInterval || 0);
+    const [minInterval, setMinInterval] = useState(program.minCycleInterval ?? 60);
     const [schedule, setSchedule] = useState<IActiveScheduleItem[]>(program.schedule || []);
     const [loading, setLoading] = useState(false);
     const [cycleVariables, setCycleVariables] = useState<Record<string, any[]>>({});
     const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
 
+    const [flows, setFlows] = useState<any[]>([]);
+
     useEffect(() => {
-        const loadVars = async () => {
+        const loadData = async () => {
             try {
-                const varsMap = await activeProgramService.getVariables();
+                const [varsMap, flowsRes] = await Promise.all([
+                    activeProgramService.getVariables(),
+                    fetch('/api/flows').then(res => res.json())
+                ]);
+
                 setCycleVariables(varsMap);
+                setFlows(flowsRes);
 
                 // Initialize overrides if missing
                 setSchedule(prev => prev.map(item => {
@@ -47,10 +60,10 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                 }));
 
             } catch (error) {
-                console.error('Failed to load variables', error);
+                console.error('Failed to load data', error);
             }
         };
-        loadVars();
+        loadData();
     }, []);
 
     const toggleExpand = (index: number) => {
@@ -147,6 +160,15 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                     if (val === undefined || val === '') {
                         toast.error(`Missing value for "${v.name}" in cycle "${item.cycleName}" (Start Time: ${item.time})`);
                         return;
+                    }
+
+                    // Validate Tolerance if enabled
+                    if (v.hasTolerance) {
+                        const tol = item.overrides?.[v.name + '_tolerance'];
+                        if (tol === undefined || tol === '') {
+                            toast.error(`Missing tolerance for "${v.name}" in cycle "${item.cycleName}"`);
+                            return;
+                        }
                     }
                 }
             }
@@ -249,7 +271,15 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                 const isExpanded = expandedItems.has(index);
 
                                 // Check for missing values
-                                const missingVars = vars.some(v => item.overrides?.[v.name] === undefined || item.overrides?.[v.name] === '');
+                                const missingVars = vars.some(v => {
+                                    const valMissing = item.overrides?.[v.name] === undefined || item.overrides?.[v.name] === '';
+                                    if (valMissing) return true;
+                                    if (v.hasTolerance) {
+                                        const tolMissing = item.overrides?.[v.name + '_tolerance'] === undefined || item.overrides?.[v.name + '_tolerance'] === '';
+                                        return tolMissing;
+                                    }
+                                    return false;
+                                });
 
                                 return (
                                     <div key={item._id || index} className={`flex flex-col gap-2 p-3 rounded border ${isConflict ? 'border-red-500 bg-red-50' : 'bg-muted/50'}`}>
@@ -277,12 +307,45 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                             </div>
 
                                             <div className="flex-1">
-                                                <div className="font-medium">{item.cycleName || item.cycleId}</div>
-                                                {item.cycleDescription && (
-                                                    <div className="text-sm text-muted-foreground">{item.cycleDescription}</div>
+                                                <div className="font-medium text-lg">{item.name || item.cycleName || 'Event'}</div>
+                                                {(item.description || item.cycleDescription) && (
+                                                    <div className="text-sm text-muted-foreground">{item.description || item.cycleDescription}</div>
                                                 )}
-                                                <div className="text-xs text-muted-foreground">ID: {item.cycleId}</div>
-                                                <div className="text-xs text-muted-foreground">Status: {item.status}</div>
+
+                                                {/* Display Flows instead of ID */}
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {(() => {
+                                                        const flowColors = [
+                                                            'border-blue-500/50 text-blue-600 dark:text-blue-400 bg-blue-500/10',
+                                                            'border-green-500/50 text-green-600 dark:text-green-400 bg-green-500/10',
+                                                            'border-purple-500/50 text-purple-600 dark:text-purple-400 bg-purple-500/10',
+                                                            'border-orange-500/50 text-orange-600 dark:text-orange-400 bg-orange-500/10',
+                                                            'border-pink-500/50 text-pink-600 dark:text-pink-400 bg-pink-500/10',
+                                                            'border-cyan-500/50 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10',
+                                                        ];
+
+                                                        // Re-calculate map for badges (should ideally be shared but this is safer for now)
+                                                        const uniqueFlowIds = Array.from(new Set(item.steps?.map(s => s.flowId) || []));
+                                                        const flowColorMap: Record<string, string> = {};
+                                                        uniqueFlowIds.forEach((fid, idx) => {
+                                                            flowColorMap[fid] = flowColors[idx % flowColors.length];
+                                                        });
+
+                                                        return item.steps?.map((step, i) => {
+                                                            const flow = flows.find(f => f.id === step.flowId);
+                                                            const colorClass = flowColorMap[step.flowId] || 'bg-secondary text-secondary-foreground';
+
+                                                            return (
+                                                                <span key={i} className={`text-xs px-2 py-0.5 rounded border ${colorClass}`}>
+                                                                    {flow ? flow.name : step.flowId}
+                                                                </span>
+                                                            );
+                                                        });
+                                                    })()}
+                                                    {(!item.steps || item.steps.length === 0) && (
+                                                        <span className="text-xs text-muted-foreground italic">No flows</span>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             {hasVars && (
@@ -292,7 +355,7 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                                     onClick={() => toggleExpand(index)}
                                                     className="gap-2"
                                                 >
-                                                    {missingVars ? 'Variables Required' : 'Variables'}
+                                                    {missingVars ? 'Variables & Tolerance Required' : 'Variables'}
                                                     {isExpanded ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
                                                 </Button>
                                             )}
@@ -300,39 +363,146 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
 
                                         {/* Expanded Variables Section */}
                                         {isExpanded && hasVars && (
-                                            <div className="mt-2 p-4 bg-background rounded border grid gap-4 sm:grid-cols-2">
-                                                {vars.map(variable => (
-                                                    <div key={variable.name} className="grid gap-2">
-                                                        <Label htmlFor={`var-${index}-${variable.name}`}>{variable.name}</Label>
-                                                        {variable.type === 'boolean' ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    id={`var-${index}-${variable.name}`}
-                                                                    checked={!!item.overrides?.[variable.name]}
-                                                                    onChange={(e) => updateItemOverride(index, variable.name, e.target.checked)}
-                                                                    className="h-4 w-4"
-                                                                />
-                                                                <span className="text-sm text-muted-foreground">{variable.name}</span>
+                                            <div className="mt-2 space-y-4">
+                                                {(() => {
+                                                    // Group variables by flowId
+                                                    const varsByFlow: Record<string, typeof vars> = {};
+                                                    vars.forEach(v => {
+                                                        const fid = v.flowId || 'unknown';
+                                                        if (!varsByFlow[fid]) varsByFlow[fid] = [];
+                                                        varsByFlow[fid].push(v);
+                                                    });
+
+                                                    // Assign colors to flows found in this schedule item
+                                                    const flowColors = [
+                                                        'border-blue-500/50 text-blue-600 dark:text-blue-400 bg-blue-500/10',
+                                                        'border-green-500/50 text-green-600 dark:text-green-400 bg-green-500/10',
+                                                        'border-purple-500/50 text-purple-600 dark:text-purple-400 bg-purple-500/10',
+                                                        'border-orange-500/50 text-orange-600 dark:text-orange-400 bg-orange-500/10',
+                                                        'border-pink-500/50 text-pink-600 dark:text-pink-400 bg-pink-500/10',
+                                                        'border-cyan-500/50 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10',
+                                                    ];
+
+                                                    // Map flowId to Color
+                                                    const flowColorMap: Record<string, string> = {};
+                                                    let colorIndex = 0;
+
+                                                    // Get unique flow IDs from steps to ensure consistent ordering
+                                                    const uniqueFlowIds = Array.from(new Set(item.steps?.map(s => s.flowId) || []));
+
+                                                    uniqueFlowIds.forEach(fid => {
+                                                        flowColorMap[fid] = flowColors[colorIndex % flowColors.length];
+                                                        colorIndex++;
+                                                    });
+
+                                                    // Handle variables that might belong to flows not in steps (edge case) or unknown
+                                                    Object.keys(varsByFlow).forEach(fid => {
+                                                        if (!flowColorMap[fid] && fid !== 'unknown') {
+                                                            flowColorMap[fid] = flowColors[colorIndex % flowColors.length];
+                                                            colorIndex++;
+                                                        }
+                                                    });
+
+                                                    return Object.entries(varsByFlow).map(([flowId, flowVars]) => {
+                                                        const colorClass = flowColorMap[flowId] || 'border-border text-muted-foreground bg-muted/20';
+                                                        const flowName = flowVars[0].flowName || 'Global Variables';
+                                                        const flowDescription = flowVars[0].flowDescription;
+
+                                                        return (
+                                                            <div key={flowId} className={`rounded-md border-2 p-3 ${colorClass.split(' ')[0]} ${colorClass.split(' ')[2]}`}>
+                                                                <div className={`flex items-baseline gap-2 mb-2 ${colorClass.split(' ')[1]}`}>
+                                                                    <div className="text-xs font-bold uppercase tracking-wider">
+                                                                        {flowName}
+                                                                    </div>
+                                                                    {flowDescription && (
+                                                                        <div className="text-xs opacity-75 font-normal italic truncate max-w-[300px]">
+                                                                            - {flowDescription}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                                                                    {flowVars.map(variable => (
+                                                                        <div key={variable.name} className="flex flex-col gap-0.5 border border-primary/10 rounded-md p-2 bg-background/80 shadow-sm">
+                                                                            <TooltipProvider>
+                                                                                <Tooltip>
+                                                                                    <TooltipTrigger asChild>
+                                                                                        <div className="w-full text-center border-b border-border/30 flex items-center justify-center gap-2 pb-1 mb-1">
+                                                                                            <Label
+                                                                                                htmlFor={`var-${index}-${variable.name}`}
+                                                                                                className="truncate cursor-help font-medium text-center text-xs"
+                                                                                            >
+                                                                                                {variable.name}
+                                                                                            </Label>
+                                                                                            {variable.hasTolerance && <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />}
+                                                                                        </div>
+                                                                                    </TooltipTrigger>
+                                                                                    <TooltipContent>
+                                                                                        <p className="font-semibold mb-1">{variable.name}</p>
+                                                                                        {variable.description && <p className="text-xs text-muted-foreground mb-2">{variable.description}</p>}
+                                                                                        <p className="text-xs text-muted-foreground">Flow: {flowName}</p>
+                                                                                    </TooltipContent>
+                                                                                </Tooltip>
+                                                                            </TooltipProvider>
+
+                                                                            {variable.type === 'boolean' ? (
+                                                                                <div className="flex items-center gap-2 h-8 justify-center">
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        id={`var-${index}-${variable.name}`}
+                                                                                        checked={!!item.overrides?.[variable.name]}
+                                                                                        onChange={(e) => updateItemOverride(index, variable.name, e.target.checked)}
+                                                                                        className="h-4 w-4"
+                                                                                    />
+                                                                                    <span className="text-xs text-muted-foreground">Enabled</span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="flex items-end gap-2">
+                                                                                    <div className="flex-1 flex items-center gap-2 min-w-0">
+                                                                                        <Input
+                                                                                            id={`var-${index}-${variable.name}`}
+                                                                                            type={variable.type === 'number' ? 'number' : 'text'}
+                                                                                            value={item.overrides?.[variable.name] ?? ''}
+                                                                                            onChange={(e) => updateItemOverride(index, variable.name, variable.type === 'number' ? Number(e.target.value) : e.target.value)}
+                                                                                            placeholder={variable.default !== undefined ? `${variable.default}` : 'Value'}
+                                                                                            className="w-20 h-8 text-xs placeholder:text-muted-foreground/30"
+                                                                                        />
+                                                                                        {variable.unit && (
+                                                                                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                                                {variable.unit}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+
+                                                                                    {variable.hasTolerance && (
+                                                                                        <>
+                                                                                            <div className="w-[1px] h-5 bg-border/40 mx-0.5" />
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                <span className="text-muted-foreground text-xs">±</span>
+                                                                                                <Input
+                                                                                                    type="number"
+                                                                                                    min={0}
+                                                                                                    value={item.overrides?.[variable.name + '_tolerance'] ?? ''}
+                                                                                                    onChange={(e) => {
+                                                                                                        const val = Number(e.target.value);
+                                                                                                        if (val >= 0) {
+                                                                                                            updateItemOverride(index, variable.name + '_tolerance', val);
+                                                                                                        }
+                                                                                                    }}
+                                                                                                    placeholder="Tol"
+                                                                                                    className="w-20 h-8 text-xs placeholder:text-muted-foreground/30"
+                                                                                                />
+                                                                                            </div>
+                                                                                        </>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-2">
-                                                                <Input
-                                                                    id={`var-${index}-${variable.name}`}
-                                                                    type={variable.type === 'number' ? 'number' : 'text'}
-                                                                    value={item.overrides?.[variable.name] ?? ''}
-                                                                    onChange={(e) => updateItemOverride(index, variable.name, variable.type === 'number' ? Number(e.target.value) : e.target.value)}
-                                                                    placeholder={variable.default !== undefined ? `Default: ${variable.default}` : ''}
-                                                                />
-                                                                {variable.unit && (
-                                                                    <span className="text-sm text-muted-foreground whitespace-nowrap min-w-[3ch]">
-                                                                        {variable.unit}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         )}
                                     </div>

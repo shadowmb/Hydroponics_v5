@@ -81,8 +81,8 @@ export async function apiRoutes(app: FastifyInstance) {
     app.put('/api/flows/:id', FlowController.update);
     app.delete('/api/flows/:id', FlowController.delete);
 
-    // Cycle Routes
-    app.register(require('./routes/cycles').cycleRoutes, { prefix: '/api/cycles' });
+    // Cycle Routes - Removed
+    // app.register(require('./routes/cycles').cycleRoutes, { prefix: '/api/cycles' });
 
     // Program Routes
     app.post('/api/programs', ProgramController.create);
@@ -108,4 +108,6 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/active-program/schedule/swap', ActiveProgramController.swapCycles);
     app.post('/api/active-program/schedule/:itemId/skip', ActiveProgramController.skipCycle);
     app.post('/api/active-program/schedule/:itemId/restore', ActiveProgramController.restoreCycle);
+    app.post('/api/active-program/schedule/:itemId/retry', ActiveProgramController.retryCycle);
+    app.post('/api/active-program/schedule/:itemId/force-start', ActiveProgramController.forceStartCycle);
 }

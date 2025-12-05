@@ -19,6 +19,7 @@ interface BackendEdge {
     type?: string;
     animated?: boolean;
     label?: string;
+    style?: React.CSSProperties;
 }
 
 interface Flow {
@@ -41,7 +42,6 @@ export const reactFlowToFlow = (nodes: Node[], edges: Edge[]): Partial<Flow> => 
         };
 
         // Remove internal React Flow data from params
-        delete block.params.label;
         delete block.params.type;
 
         return block;
@@ -56,6 +56,7 @@ export const reactFlowToFlow = (nodes: Node[], edges: Edge[]): Partial<Flow> => 
         type: edge.type,
         animated: edge.animated,
         label: (edge.label as string) || undefined,
+        style: edge.style,
     }));
 
     return {
@@ -76,7 +77,11 @@ export const flowToReactFlow = (flow: Partial<Flow>): { nodes: Node[]; edges: Ed
     flow.nodes.forEach((block) => {
         // 1. Create Node
         const isCondition = block.type === 'IF';
-        const nodeType = isCondition ? 'condition' : 'generic'; // Use generic for all standard blocks
+        const isLoop = block.type === 'LOOP';
+        let nodeType = 'generic';
+
+        if (isCondition) nodeType = 'condition';
+        else if (isLoop) nodeType = 'loop';
 
         // Determine Label
         let label = block.type;
@@ -109,6 +114,7 @@ export const flowToReactFlow = (flow: Partial<Flow>): { nodes: Node[]; edges: Ed
                 type: edge.type || 'smoothstep',
                 animated: edge.animated,
                 label: edge.label,
+                style: edge.style,
                 markerEnd: { type: MarkerType.ArrowClosed },
             });
         });

@@ -1,35 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Save, Plus, Trash2, Clock } from 'lucide-react';
+import { Save, Plus, Trash2, Clock, ArrowDown, Settings } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ScrollArea } from '../components/ui/scroll-area';
-import type { ICycle, IProgram } from '../../../shared/types';
+import { TimePicker24 } from '../components/ui/time-picker-24';
+import type { IProgram, IFlow } from '../../../shared/types';
 
 export const ProgramEditor: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [cycles, setCycles] = useState<ICycle[]>([]);
+    const [flows, setFlows] = useState<IFlow[]>([]);
     const [programName, setProgramName] = useState('');
     const [description, setDescription] = useState('');
+    const [minCycleInterval, setMinCycleInterval] = useState(60);
+    // Initialize schedule with empty array
     const [schedule, setSchedule] = useState<IProgram['schedule']>([]);
 
     useEffect(() => {
-        fetchCycles();
+        fetchFlows();
         if (id) fetchProgram();
     }, [id]);
 
-    const fetchCycles = async () => {
+    const fetchFlows = async () => {
         try {
-            const res = await fetch('/api/cycles');
-            if (!res.ok) throw new Error('Failed to fetch cycles');
-            setCycles(await res.json());
+            const res = await fetch('/api/flows');
+            if (!res.ok) throw new Error('Failed to fetch flows');
+            setFlows(await res.json());
         } catch (error) {
-            toast.error('Failed to load cycles');
+            toast.error('Failed to load flows');
         }
     };
 
@@ -40,6 +42,10 @@ export const ProgramEditor: React.FC = () => {
             const data = await res.json();
             setProgramName(data.name);
             setDescription(data.description || '');
+            setMinCycleInterval(data.minCycleInterval ?? 60);
+            // Ensure schedule has steps array even if backend returns old format (though backend should be updated)
+            // We might need to migrate old data or handle it gracefully.
+            // For now assume new format or empty.
             setSchedule(data.schedule || []);
         } catch (error) {
             toast.error('Failed to load program');
@@ -47,7 +53,54 @@ export const ProgramEditor: React.FC = () => {
     };
 
     const handleAddScheduleItem = () => {
-        setSchedule([...schedule, { time: '08:00', cycleId: '' }]);
+        const nextIndex = schedule.length + 1;
+        let nextTime = '08:00';
+
+        if (schedule.length > 0) {
+            const lastItem = schedule[schedule.length - 1];
+            const [hours, minutes] = lastItem.time.split(':').map(Number);
+            const date = new Date();
+            date.setHours(hours, minutes, 0, 0);
+            date.setMinutes(date.getMinutes() + minCycleInterval);
+            nextTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        }
+
+        setSchedule([...schedule, {
+            time: nextTime,
+            name: `Event ${nextIndex}`,
+            description: '',
+            steps: [],
+            overrides: {}
+        }]);
+    };
+
+    const handleAutoFix = () => {
+        if (schedule.length === 0) return;
+
+        const newSchedule = [...schedule];
+        // Sort by time first to ensure correct order? Or assume user order is correct?
+        // Let's assume user order is the intended sequence and we just fix the times.
+
+        let previousTime = new Date(`1970-01-01T${newSchedule[0].time}`);
+
+        for (let i = 1; i < newSchedule.length; i++) {
+            const expectedTime = new Date(previousTime.getTime() + minCycleInterval * 60000);
+            // const currentTime = new Date(`1970-01-01T${newSchedule[i].time}`);
+
+            // If current time is LESS than expected (overlap), fix it.
+            // Or should we ALWAYS enforce the interval?
+            // User asked: "if time between cycles is larger than current... auto fix"
+            // Let's enforce strict interval spacing for simplicity and correctness.
+
+            const hours = expectedTime.getHours().toString().padStart(2, '0');
+            const minutes = expectedTime.getMinutes().toString().padStart(2, '0');
+            newSchedule[i] = { ...newSchedule[i], time: `${hours}:${minutes}` };
+
+            previousTime = expectedTime;
+        }
+
+        setSchedule(newSchedule);
+        toast.success('Schedule times auto-adjusted');
     };
 
     const handleRemoveScheduleItem = (index: number) => {
@@ -56,20 +109,68 @@ export const ProgramEditor: React.FC = () => {
         setSchedule(newSchedule);
     };
 
-    const handleScheduleChange = (index: number, field: keyof IProgram['schedule'][0], value: string) => {
+    const handleScheduleChange = (index: number, field: keyof IProgram['schedule'][0], value: any) => {
         const newSchedule = [...schedule];
         newSchedule[index] = { ...newSchedule[index], [field]: value };
         setSchedule(newSchedule);
     };
+    const handleAddStep = (scheduleIndex: number) => {
+        const newSchedule = [...schedule];
+        newSchedule[scheduleIndex].steps.push({ flowId: '', overrides: {} });
+        setSchedule(newSchedule);
+    };
+
+    const handleRemoveStep = (scheduleIndex: number, stepIndex: number) => {
+        const newSchedule = [...schedule];
+        newSchedule[scheduleIndex].steps.splice(stepIndex, 1);
+        setSchedule(newSchedule);
+    };
+
+    const handleStepChange = (scheduleIndex: number, stepIndex: number, field: 'flowId' | 'overrides', value: any) => {
+        const newSchedule = [...schedule];
+        newSchedule[scheduleIndex].steps[stepIndex] = { ...newSchedule[scheduleIndex].steps[stepIndex], [field]: value };
+        setSchedule(newSchedule);
+    };
+
+    // Calculate conflicts based on minCycleInterval
+    const conflicts = React.useMemo(() => {
+        const indices = new Set<number>();
+        if (schedule.length < 2) return indices;
+
+        for (let i = 1; i < schedule.length; i++) {
+            const prev = schedule[i - 1];
+            const curr = schedule[i];
+            const [ph, pm] = prev.time.split(':').map(Number);
+            const [ch, cm] = curr.time.split(':').map(Number);
+
+            let diff = (ch * 60 + cm) - (ph * 60 + pm);
+            if (diff < 0) diff += 24 * 60; // Handle midnight crossing
+
+            if (diff < minCycleInterval) {
+                indices.add(i);
+            }
+        }
+        return indices;
+    }, [schedule, minCycleInterval]);
 
     const handleSave = async () => {
         if (!programName) return toast.error('Program name is required');
-        if (schedule.length === 0) return toast.error('Add at least one schedule item');
-        if (schedule.some(item => !item.cycleId)) return toast.error('All schedule items must have a cycle selected');
+        if (schedule.length === 0) return toast.error('Add at least one scheduled event');
+
+        // Validate steps
+        for (let i = 0; i < schedule.length; i++) {
+            if (schedule[i].steps.length === 0) {
+                return toast.error(`Event at ${schedule[i].time} has no steps`);
+            }
+            if (schedule[i].steps.some(s => !s.flowId)) {
+                return toast.error(`Event at ${schedule[i].time} has a step with no flow selected`);
+            }
+        }
 
         const payload = {
             name: programName,
             description,
+            minCycleInterval,
             schedule,
             isActive: true
         };
@@ -108,9 +209,28 @@ export const ProgramEditor: React.FC = () => {
                         className="w-96"
                     />
                 </div>
-                <Button onClick={handleSave}>
-                    <Save className="mr-2 h-4 w-4" /> Save Program
-                </Button>
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mr-4">
+                        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Min Interval (min):</span>
+                        <Input
+                            type="number"
+                            value={minCycleInterval}
+                            onChange={(e) => setMinCycleInterval(Number(e.target.value))}
+                            className="w-20"
+                        />
+                        <Button
+                            variant={conflicts.size > 0 ? "destructive" : "outline"}
+                            size="sm"
+                            onClick={handleAutoFix}
+                            title={conflicts.size > 0 ? "Fix detected interval conflicts" : "Auto-adjust all times based on interval"}
+                        >
+                            {conflicts.size > 0 ? "Fix Conflicts" : "Auto-Fix"}
+                        </Button>
+                    </div>
+                    <Button onClick={handleSave}>
+                        <Save className="mr-2 h-4 w-4" /> Save Program
+                    </Button>
+                </div>
             </div>
 
             <Card className="flex-1 flex flex-col">
@@ -122,45 +242,98 @@ export const ProgramEditor: React.FC = () => {
                 </CardHeader>
                 <CardContent className="flex-1 overflow-hidden p-0 bg-muted/20">
                     <ScrollArea className="h-full">
-                        <div className="p-4 space-y-2">
+                        <div className="p-4 space-y-4">
                             {schedule.map((item, index) => (
-                                <div key={index} className="p-4 border rounded-md flex items-center gap-4 bg-card">
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="h-4 w-4 text-muted-foreground" />
+                                <div key={index} className={`p-4 border rounded-md bg-card shadow-sm ${conflicts.has(index) ? 'border-destructive border-2' : ''}`}>
+                                    <div className="flex flex-col gap-3 mb-4">
+                                        {/* Row 1: Name */}
                                         <Input
-                                            type="time"
-                                            value={item.time}
-                                            onChange={(e) => handleScheduleChange(index, 'time', e.target.value)}
-                                            className="w-32"
+                                            value={item.name}
+                                            onChange={(e) => handleScheduleChange(index, 'name', e.target.value)}
+                                            placeholder="Event Name"
+                                            className="font-medium text-lg border-none px-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50"
                                         />
+
+                                        {/* Row 2: Time, Description, Controls */}
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                                <TimePicker24
+                                                    value={item.time}
+                                                    onChange={(val) => handleScheduleChange(index, 'time', val)}
+                                                />
+                                            </div>
+
+                                            <Input
+                                                value={item.description || ''}
+                                                onChange={(e) => handleScheduleChange(index, 'description', e.target.value)}
+                                                placeholder="Description (optional)"
+                                                className="flex-1 h-9"
+                                            />
+
+                                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                                {item.steps.length} steps
+                                            </span>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-destructive"
+                                                onClick={() => handleRemoveScheduleItem(index)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
 
-                                    <div className="flex-1">
-                                        <Select
-                                            value={item.cycleId}
-                                            onValueChange={(value) => handleScheduleChange(index, 'cycleId', value)}
+                                    {/* Steps List */}
+                                    <div className="space-y-2 pl-4 border-l-2 border-muted ml-2">
+                                        {item.steps.map((step, stepIndex) => (
+                                            <div key={stepIndex} className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                                                    {stepIndex + 1}
+                                                </div>
+                                                <Select
+                                                    value={step.flowId}
+                                                    onValueChange={(value) => handleStepChange(index, stepIndex, 'flowId', value)}
+                                                >
+                                                    <SelectTrigger className="w-[300px]">
+                                                        <SelectValue placeholder="Select Flow" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {flows.map(flow => (
+                                                            <SelectItem key={flow.id} value={flow.id}>
+                                                                {flow.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+
+                                                {/* Placeholder for Overrides (Future) */}
+                                                {/* <Button variant="ghost" size="icon" title="Configure Overrides">
+                                                    <Settings className="h-4 w-4" />
+                                                </Button> */}
+
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-muted-foreground hover:text-destructive"
+                                                    onClick={() => handleRemoveStep(index, stepIndex)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-muted-foreground hover:text-primary mt-2"
+                                            onClick={() => handleAddStep(index)}
                                         >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select Cycle" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {cycles.map(cycle => (
-                                                    <SelectItem key={cycle.id} value={cycle.id}>
-                                                        {cycle.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            <Plus className="h-3 w-3 mr-1" /> Add Step
+                                        </Button>
                                     </div>
-
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-destructive"
-                                        onClick={() => handleRemoveScheduleItem(index)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
                                 </div>
                             ))}
                             {schedule.length === 0 && (
@@ -175,3 +348,4 @@ export const ProgramEditor: React.FC = () => {
         </div>
     );
 };
+

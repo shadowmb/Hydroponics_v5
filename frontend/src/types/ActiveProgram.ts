@@ -4,9 +4,15 @@ export type ScheduleItemStatus = 'pending' | 'running' | 'completed' | 'skipped'
 export interface IActiveScheduleItem {
     _id: string;
     time: string;
+    name: string;
+    description?: string;
     cycleId: string;
     cycleName?: string;
     cycleDescription?: string;
+    steps?: {
+        flowId: string;
+        overrides: Record<string, any>;
+    }[];
     overrides: Record<string, any>;
     status: ScheduleItemStatus;
     skipUntil?: string; // ISO Date string

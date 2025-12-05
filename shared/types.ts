@@ -58,6 +58,8 @@ export interface IVariable {
     value?: any;     // Default/Current value
     scope: 'local' | 'global';
     unit?: string;
+    hasTolerance?: boolean;
+    description?: string;
 }
 
 export interface IFlow {
@@ -79,18 +81,8 @@ export interface IFlow {
     updatedAt?: Date | string;
 }
 
-export interface ICycle {
-    id: string;
-    name: string;
-    description?: string;
-    steps: {
-        flowId: string;
-        overrides: Record<string, any>;
-    }[];
-    isActive: boolean;
-    createdAt?: Date | string;
-    updatedAt?: Date | string;
-}
+// ICycle removed as it is now embedded in Program
+// export interface ICycle { ... }
 
 export interface IProgram {
     id: string;
@@ -99,7 +91,13 @@ export interface IProgram {
     isActive: boolean;
     schedule: {
         time: string;
-        cycleId: string;
+        name: string;
+        description?: string;
+        steps: {
+            flowId: string;
+            overrides: Record<string, any>;
+        }[];
+        overrides?: Record<string, any>;
     }[];
     createdAt?: Date | string;
     updatedAt?: Date | string;

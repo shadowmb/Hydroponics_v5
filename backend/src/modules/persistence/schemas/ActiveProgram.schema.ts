@@ -5,9 +5,15 @@ export type ActiveProgramStatus = 'loaded' | 'ready' | 'running' | 'paused' | 's
 export interface IActiveScheduleItem {
     _id?: string;
     time: string; // HH:mm
+    name: string; // Event Name
+    description?: string; // Event Description
     cycleId: string;
-    cycleName?: string; // Snapshot of cycle name
-    cycleDescription?: string; // Snapshot of cycle description
+    cycleName?: string; // Snapshot of cycle name (Legacy/Internal)
+    cycleDescription?: string; // Snapshot of cycle description (Legacy/Internal)
+    steps: {
+        flowId: string;
+        overrides: Record<string, any>;
+    }[];
     overrides: Record<string, any>; // Variable overrides for this execution
     status: 'pending' | 'running' | 'completed' | 'skipped' | 'failed';
     skipUntil?: Date; // If skipped, until when
@@ -26,9 +32,15 @@ export interface IActiveProgram extends Document {
 
 const ActiveScheduleItemSchema = new Schema<IActiveScheduleItem>({
     time: { type: String, required: true },
+    name: { type: String, required: true },
+    description: { type: String },
     cycleId: { type: String, required: true },
     cycleName: { type: String },
     cycleDescription: { type: String },
+    steps: [{
+        flowId: { type: String, required: true },
+        overrides: { type: Schema.Types.Mixed, default: {} }
+    }],
     overrides: { type: Schema.Types.Mixed, default: {} },
     status: {
         type: String,

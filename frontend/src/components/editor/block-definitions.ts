@@ -144,6 +144,13 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 defaultValue: 1,
                 description: 'Number of times to repeat'
             },
+            maxIterations: {
+                label: 'Max Iterations (Safety)',
+                type: 'number',
+                placeholder: 'e.g. 10',
+                defaultValue: 10,
+                description: 'Safety limit for WHILE loops'
+            },
             variable: {
                 label: 'Variable',
                 type: 'variable',

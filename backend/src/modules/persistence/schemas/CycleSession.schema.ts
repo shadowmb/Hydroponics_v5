@@ -9,6 +9,10 @@ export interface ICycleSession extends Document, ISoftDelete {
     status: 'running' | 'completed' | 'failed' | 'stopped' | 'paused';
     currentStepIndex: number;
     currentFlowSessionId?: string; // ID of the underlying Automation Session
+    steps: {
+        flowId: string;
+        overrides: Record<string, any>;
+    }[];
     logs: any[];
     context: any; // Snapshot of cycle context (if any)
 }
@@ -20,6 +24,10 @@ const CycleSessionSchema = new Schema<ICycleSession>({
     status: { type: String, enum: ['running', 'completed', 'failed', 'stopped', 'paused'], default: 'running' },
     currentStepIndex: { type: Number, default: 0 },
     currentFlowSessionId: { type: String },
+    steps: [{
+        flowId: { type: String, required: true },
+        overrides: { type: Schema.Types.Mixed, default: {} }
+    }],
     logs: { type: [Object], default: [] },
     context: { type: Schema.Types.Mixed, default: {} }
 }, {

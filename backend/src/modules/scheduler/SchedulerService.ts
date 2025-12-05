@@ -20,14 +20,20 @@ export class SchedulerService {
     private lastRun: Map<string, number> = new Map(); // monitoringId -> timestamp
     private _state: 'STOPPED' | 'RUNNING' | 'WAITING_START' = 'STOPPED';
     private _startTime: number | null = null;
+    private _lastTick: Date | null = null;
 
     constructor() {
         // Run every minute
         this.job = new CronJob('* * * * *', () => this.tick());
     }
 
+    public getLastTick(): Date | null {
+        return this._lastTick;
+    }
+
     public start() {
         this.job.start();
+        this._state = 'RUNNING';
         logger.info('🕒 Scheduler Service Started');
     }
 
@@ -69,6 +75,7 @@ export class SchedulerService {
     }
 
     private async tick() {
+        this._lastTick = new Date();
         if (this._state === 'STOPPED') {
             return;
         }
@@ -85,6 +92,7 @@ export class SchedulerService {
 
         try {
             const now = new Date();
+            this._lastTick = now;
             const timeString = now.toTimeString().slice(0, 5); // HH:mm
             logger.info({ time: timeString }, '🕒 Scheduler Tick');
 
@@ -109,7 +117,7 @@ export class SchedulerService {
 
                 if (scheduledItem) {
                     logger.info({ cycleId: scheduledItem.cycleId, time: timeString }, '⏰ Scheduled Cycle Triggered');
-                    await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.overrides);
+                    await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.steps, scheduledItem.overrides);
 
                     // Mark as running/completed in ActiveProgram
                     // Note: CycleManager events will update the status to 'completed' later
@@ -157,7 +165,7 @@ export class SchedulerService {
         });
     }
 
-    private async handleScheduledCycle(cycleId: string, overrides: Record<string, any> = {}) {
+    private async handleScheduledCycle(cycleId: string, steps: any[], overrides: Record<string, any> = {}) {
         // Priority: Cycle > Monitoring
 
         // Check automation state.
@@ -178,7 +186,7 @@ export class SchedulerService {
         }
 
         try {
-            await cycleManager.startCycle(cycleId, overrides);
+            await cycleManager.startCycle(cycleId, steps, overrides);
         } catch (error) {
             logger.error({ error, cycleId }, '❌ Failed to start scheduled cycle');
         }

@@ -120,4 +120,49 @@ export class ActiveProgramController {
             reply.status(500).send({ message: error.message });
         }
     }
+    static async retryCycle(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { itemId } = req.params as any;
+            const active = await activeProgramService.retryCycle(itemId);
+
+            // Force execution immediately via SchedulerService
+            const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
+            if (item) {
+                const schedulerService = require('../../modules/scheduler/SchedulerService').schedulerService;
+                // Mark as running first
+                item.status = 'running';
+                await active.save();
+
+                // Trigger execution
+                await schedulerService.handleScheduledCycle(item.cycleId, item.overrides);
+            }
+
+            reply.send(active);
+        } catch (error: any) {
+            reply.status(500).send({ message: error.message });
+        }
+    }
+
+    static async forceStartCycle(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { itemId } = req.params as any;
+            const active = await activeProgramService.forceStartCycle(itemId);
+
+            // Force execution immediately via SchedulerService
+            const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
+            if (item) {
+                const schedulerService = require('../../modules/scheduler/SchedulerService').schedulerService;
+                // Mark as running first to prevent double execution if scheduler ticks
+                item.status = 'running';
+                await active.save();
+
+                // Trigger execution
+                await schedulerService.handleScheduledCycle(item.cycleId, item.overrides);
+            }
+
+            reply.send(active);
+        } catch (error: any) {
+            reply.status(500).send({ message: error.message });
+        }
+    }
 }
