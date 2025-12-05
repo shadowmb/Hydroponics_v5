@@ -18,6 +18,15 @@ export class FlowController {
 
     static async list(req: FastifyRequest, reply: FastifyReply) {
         try {
+            const { deleted } = req.query as { deleted?: string };
+
+            if (deleted === 'true') {
+                const { FlowModel } = await import('../../modules/persistence/schemas/Flow.schema');
+                // @ts-ignore
+                const flows = await FlowModel.find({ deletedAt: { $ne: null } }).setOptions({ withDeleted: true }).sort({ createdAt: -1 });
+                return reply.send(flows);
+            }
+
             const flows = await flowRepository.findAll();
             return reply.send(flows);
         } catch (error: any) {
@@ -56,10 +65,60 @@ export class FlowController {
         try {
             const success = await flowRepository.delete(id);
             if (!success) return reply.status(404).send({ message: 'Flow not found' });
-            return reply.send({ success: true });
+            return reply.send({ success: true, message: 'Flow moved to Recycle Bin' });
         } catch (error: any) {
             logger.error({ error }, 'Failed to delete flow');
             return reply.status(500).send({ message: 'Failed to delete flow' });
+        }
+    }
+
+    static async restore(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { name } = req.body as { name?: string };
+            const { FlowModel } = await import('../../modules/persistence/schemas/Flow.schema');
+
+            // @ts-ignore
+            const flow = await FlowModel.findOne({ id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+
+            if (!flow) {
+                return reply.status(404).send({ success: false, message: 'Flow not found in recycle bin' });
+            }
+
+            if (name) {
+                const existing = await FlowModel.findOne({ name, id: { $ne: id } });
+                if (existing) {
+                    return reply.status(400).send({ success: false, message: 'Flow name already exists' });
+                }
+                flow.name = name;
+            }
+
+            await flow.restore();
+            return reply.send({ success: true, message: 'Flow restored' });
+        } catch (error: any) {
+            logger.error({ error }, 'Failed to restore flow');
+            return reply.status(500).send({ success: false, message: error.message || 'Failed to restore flow' });
+        }
+    }
+
+    static async hardDelete(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { FlowModel } = await import('../../modules/persistence/schemas/Flow.schema');
+
+            // @ts-ignore
+            const flow = await FlowModel.findOne({ id, deletedAt: { $ne: null } }).setOptions({ withDeleted: true });
+
+            if (!flow) {
+                return reply.status(404).send({ success: false, message: 'Flow not found in recycle bin' });
+            }
+
+            // @ts-ignore
+            await FlowModel.deleteOne({ id }, { hardDelete: true });
+            return reply.send({ success: true, message: 'Flow permanently deleted' });
+        } catch (error: any) {
+            logger.error({ error }, 'Failed to permanently delete flow');
+            return reply.status(500).send({ success: false, message: error.message || 'Failed to permanently delete flow' });
         }
     }
 }

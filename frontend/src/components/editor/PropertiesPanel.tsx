@@ -75,7 +75,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 </div>
                 <div className="flex-1 p-4 space-y-4">
                     <div className="space-y-2">
-                        <Label>Color</Label>
+                        <Label className="text-muted-foreground">Color</Label>
                         <Select
                             value={selectedEdge.style?.stroke || '#b1b1b7'}
                             onValueChange={(val) => onEdgeChange(selectedEdge.id, { stroke: val })}
@@ -117,7 +117,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 </div>
                 <div className="flex-1 p-4 space-y-4">
                     <div className="space-y-2">
-                        <Label>Flow Comment</Label>
+                        <Label className="text-muted-foreground">Flow Comment</Label>
                         <Textarea
                             value={props.flowDescription || ''}
                             onChange={(e) => props.onFlowDescriptionChange?.(e.target.value)}
@@ -316,7 +316,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             </div>
             <div className="p-4 space-y-4 overflow-y-auto flex-1">
                 <div className="space-y-2">
-                    <Label>Label</Label>
+                    <Label className="text-muted-foreground">Label</Label>
                     <Input
                         type="text"
                         value={formData.label || ''}
@@ -325,7 +325,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 </div>
 
                 <div className="space-y-2">
-                    <Label>Comment</Label>
+                    <Label className="text-muted-foreground">Comment</Label>
                     <Textarea
                         value={formData.comment || ''}
                         onChange={(e) => handleChange('comment', e.target.value)}
@@ -339,7 +339,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 {definition ? (
                     Object.entries(definition.fields).map(([key, field]) => (
                         <div key={key} className="space-y-2">
-                            <Label>
+                            <Label className="text-muted-foreground">
                                 {field.label}
                                 {field.description && <span className="ml-2 text-xs text-muted-foreground">({field.description})</span>}
                             </Label>

@@ -165,7 +165,7 @@ export class SchedulerService {
         });
     }
 
-    private async handleScheduledCycle(cycleId: string, steps: any[], overrides: Record<string, any> = {}) {
+    public async handleScheduledCycle(cycleId: string, steps: any[], overrides: Record<string, any> = {}) {
         // Priority: Cycle > Monitoring
 
         // Check automation state.
@@ -186,9 +186,18 @@ export class SchedulerService {
         }
 
         try {
-            await cycleManager.startCycle(cycleId, steps, overrides);
-        } catch (error) {
-            logger.error({ error, cycleId }, '❌ Failed to start scheduled cycle');
+            const sanitizedSteps = steps.map(s => ({
+                flowId: s.flowId,
+                overrides: s.overrides
+            }));
+            logger.info({ cycleId, steps: sanitizedSteps }, 'Attempting to start cycle with sanitized steps');
+
+            await cycleManager.startCycle(cycleId, sanitizedSteps, overrides);
+        } catch (error: any) {
+            logger.error({
+                err: { message: error.message, stack: error.stack, name: error.name },
+                cycleId
+            }, '❌ Failed to start scheduled cycle');
         }
     }
 

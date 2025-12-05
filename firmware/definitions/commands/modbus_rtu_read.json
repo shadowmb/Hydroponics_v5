@@ -5,7 +5,7 @@
         "*"
     ],
     "code": {
-        "includes": "#include <SoftwareSerial.h>",
+        "includes": "#include <SoftwareSerial.h>\n#include <ArduinoJson.h>",
         "globals": "SoftwareSerial* modbusSerial = nullptr;\nint modbusRxPin = -1;\nint modbusTxPin = -1;",
         "functions": "@file:commands/src/modbus_generic.cpp",
         "loop": "// Modbus loop logic if needed",

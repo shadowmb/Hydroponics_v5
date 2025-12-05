@@ -697,7 +697,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label>Device Name <span className="text-destructive">*</span></Label>
+                                            <Label className="text-muted-foreground">Device Name <span className="text-destructive">*</span></Label>
                                             <Input
                                                 value={formData.name}
                                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -705,7 +705,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>Description</Label>
+                                            <Label className="text-muted-foreground">Description</Label>
                                             <Input
                                                 value={formData.description}
                                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -716,7 +716,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
 
                                     {/* Smart Tag Combobox */}
                                     <div className="space-y-2">
-                                        <Label>Device Group / Tags</Label>
+                                        <Label className="text-muted-foreground">Device Group / Tags</Label>
                                         <div className="flex flex-wrap gap-2 mb-2">
                                             {/* 1. System Tags (Immutable) */}
                                             {(selectedTemplate?.uiConfig?.tags || []).map((tag: string) => (
@@ -870,7 +870,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                     {connectionType === 'direct' ? (
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label>Select Controller</Label>
+                                                <Label className="text-muted-foreground">Select Controller</Label>
                                                 <Select
                                                     value={formData.controllerId}
                                                     onValueChange={v => setFormData({ ...formData, controllerId: v, port: '', pins: {} })}
@@ -940,7 +940,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                         <div className="space-y-4 border p-4 rounded-md bg-muted/10">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                    <Label>Relay Module</Label>
+                                                    <Label className="text-muted-foreground">Relay Module</Label>
                                                     <Select
                                                         value={formData.relayId}
                                                         onValueChange={v => setFormData({ ...formData, relayId: v, channel: '' })}
