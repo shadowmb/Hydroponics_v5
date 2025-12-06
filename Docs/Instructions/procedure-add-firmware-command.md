@@ -40,6 +40,10 @@ String handleMyCommand(char* params) {
     int val = atoi(params);
     return "{\"ok\":1,\"val\":" + String(myHelper(val)) + "}";
 }
+
+// TIP: If your command accepts a PIN, use the global helper:
+// int pin = parsePin(String(params)); // Handles "D2", "D2_25", "A0" etc.
+// if (pin == -1) return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
 ```
 
 ### Step 2: Create JSON Definition
