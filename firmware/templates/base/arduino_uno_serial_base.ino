@@ -73,7 +73,7 @@ void loop() {
 
 // === COMMAND PARSER (v5 Delimited Text Only) ===
 String processCommand(String input) {
-  char cmdBuffer[64];
+  char cmdBuffer[120];
   strncpy(cmdBuffer, input.c_str(), sizeof(cmdBuffer) - 1);
   cmdBuffer[sizeof(cmdBuffer) - 1] = '\0';
   
@@ -87,31 +87,31 @@ String processCommand(String input) {
   // === SYSTEM COMMANDS ===
   
   if (strcmp(cmd, "PING") == 0) {
-    return "{\"ok\":1,\"pong\":1}";
+    return F("{\"ok\":1,\"pong\":1}");
   }
   
   else if (strcmp(cmd, "INFO") == 0) {
-    String response = "{\"ok\":1,\"up\":";
+    String response = F("{\"ok\":1,\"up\":");
     response += millis();
-    response += ",\"mem\":";
+    response += F(",\"mem\":");
     response += freeMemory();
-    response += ",\"ver\":\"";
+    response += F(",\"ver\":\"");
     response += FIRMWARE_VERSION;
-    response += "\",\"capabilities\":[";
+    response += F("\",\"capabilities\":[");
     for (int i = 0; i < CAPABILITIES_COUNT; i++) {
       response += "\"";
       response += CAPABILITIES[i];
       response += "\"";
       if (i < CAPABILITIES_COUNT - 1) response += ",";
     }
-    response += "]}";
+    response += F("]}");
     return response;
   }
   
   else if (strcmp(cmd, "STATUS") == 0) {
-    String response = "{\"ok\":1,\"status\":\"running\",\"up\":";
+    String response = F("{\"ok\":1,\"status\":\"running\",\"up\":");
     response += millis();
-    response += "}";
+    response += F("}");
     return response;
   }
   
@@ -125,6 +125,6 @@ String processCommand(String input) {
   // GENERATOR_DISPATCHER_PLACEHOLDER
   
   else {
-    return "{\"ok\":0,\"error\":\"ERR_INVALID_COMMAND\"}";
+    return F("{\"ok\":0,\"error\":\"ERR_INVALID_COMMAND\"}");
   }
 }

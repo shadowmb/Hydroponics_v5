@@ -13,7 +13,7 @@
     "code": {
         "includes": "#include <EEPROM.h>",
         "globals": "#define ENABLE_EEPROM_STATE_SAVE\nvoid saveState(int pin, int state);\nvoid restoreState();",
-        "setup": "EEPROM.begin(512); // For ESP\nrestoreState();",
+        "setup": "#if defined(ESP8266) || defined(ESP32)\n  EEPROM.begin(512);\n#endif\nrestoreState();",
         "functions": {
             "esp8266": [
                 "void saveState(int pin, int state) {",

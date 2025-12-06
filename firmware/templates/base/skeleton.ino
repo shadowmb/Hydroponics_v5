@@ -27,11 +27,18 @@ void loop() {
 
 // === FUNCTIONS ===
 int parsePin(String pinStr) {
-  // Handle "D5" -> 5
+  // 1. Handle Label_GPIO format (e.g. "D1_25" -> 25)
+  int underscoreIndex = pinStr.indexOf('_');
+  if (underscoreIndex != -1) {
+    return pinStr.substring(underscoreIndex + 1).toInt();
+  }
+
+  // 2. Handle "D5" -> 5
   if (pinStr.startsWith("D")) {
     return pinStr.substring(1).toInt();
   }
-  // Handle "A0" -> A0 (which is an int constant)
+
+  // 3. Handle "A0" -> A0
   if (pinStr.startsWith("A")) {
     int pin = pinStr.substring(1).toInt();
     #if defined(ESP8266)
@@ -41,7 +48,8 @@ int parsePin(String pinStr) {
       if (pin >= 0 && pin < 6) return analog_pins[pin];
     #endif
   }
-  // Handle raw number "5"
+
+  // 4. Handle raw number "5"
   return pinStr.toInt();
 }
 

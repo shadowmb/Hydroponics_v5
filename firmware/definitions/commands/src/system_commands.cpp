@@ -14,7 +14,7 @@ int freeMemory() {
 
 // === COMMAND PARSER ===
 String processCommand(String input) {
-  char cmdBuffer[64];
+  char cmdBuffer[320];
   strncpy(cmdBuffer, input.c_str(), sizeof(cmdBuffer) - 1);
   cmdBuffer[sizeof(cmdBuffer) - 1] = '\0';
   
