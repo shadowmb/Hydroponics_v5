@@ -154,7 +154,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
     const nodeType = selectedNode.data.type as string; // 'SENSOR_READ', 'ACTUATOR_SET', etc.
     const definition = BLOCK_DEFINITIONS[nodeType];
-    const isMirrorable = nodeType === 'SENSOR_READ'; // Restrict for now as requested
+    const isMirrorable = nodeType === 'SENSOR_READ' || nodeType === 'IF';
     // Fix: Treat empty string as true (Mirror Mode active but no source selected yet)
     const isMirror = formData.mirrorOf !== undefined && formData.mirrorOf !== null;
 
@@ -184,7 +184,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             if (key === 'count') {
                 if (loopType !== 'COUNT') return null;
             }
-            if (key === 'maxIterations') {
+            if (['maxIterations', 'onMaxIterations', 'errorNotification'].includes(key)) {
                 if (loopType !== 'WHILE') return null;
             }
             if (['variable', 'operator', 'value'].includes(key)) {
@@ -374,31 +374,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         }
     };
 
-    // Helper Component for Collapsible Sections
-    const CollapsibleSection = ({ title, icon: Icon, defaultOpen = false, children, className }: { title: string, icon?: any, defaultOpen?: boolean, children: React.ReactNode, className?: string }) => {
-        const [isOpen, setIsOpen] = useState(defaultOpen);
-        return (
-            <div className={cn("rounded-md border bg-card", className)}>
-                <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center justify-between w-full p-3 text-sm font-medium hover:bg-muted/50 transition-colors"
-                >
-                    <div className="flex items-center gap-2">
-                        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                        <span>{title}</span>
-                    </div>
-                    <span className={cn("text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")}>
-                        ▼
-                    </span>
-                </button>
-                {isOpen && (
-                    <div className="p-3 pt-0 border-t bg-muted/5 space-y-3">
-                        {children}
-                    </div>
-                )}
-            </div>
-        );
-    };
+    // CollapsibleSection definition moved outside
 
     return (
         <div className="w-80 border-l bg-card flex flex-col h-full">
@@ -423,11 +399,13 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 {/* 2. MIRROR CONFIGURATION (If applicable) */}
                 {isMirrorable && (
                     <CollapsibleSection
+                        key={`${selectedNode.id}-mirror`}
                         title="Mirror Configuration"
                         defaultOpen={isMirror}
                         className={isMirror ? "border-blue-200 bg-blue-50/10" : ""}
                     >
                         <div className="space-y-3 pt-3">
+                            {/* ... Content remains same ... */}
                             <div className="flex items-center justify-between">
                                 <Label className="font-semibold text-xs">Enable Mirroring</Label>
                                 <Button
@@ -481,14 +459,18 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                 {definition ? (
                     (() => {
-                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification'];
+                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations'];
                         const mainFields = Object.entries(definition.fields).filter(([key]) => !errorKeys.includes(key));
                         const errorFields = Object.entries(definition.fields).filter(([key]) => errorKeys.includes(key));
 
                         return (
                             <>
                                 {/* 3. MAIN CONFIGURATION */}
-                                <CollapsibleSection title="Configuration" defaultOpen={false}>
+                                <CollapsibleSection
+                                    key={`${selectedNode.id}-config`}
+                                    title="Configuration"
+                                    defaultOpen={false}
+                                >
                                     <div className="space-y-3 pt-3">
                                         {mainFields.map(([key, field]) => (
                                             <div key={key} className="space-y-2">
@@ -504,6 +486,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                 {/* 4. ERROR HANDLING */}
                                 {errorFields.length > 0 && !isMirror && (
                                     <CollapsibleSection
+                                        key={`${selectedNode.id}-error`}
                                         title="Error Handling"
                                         icon={AlertCircle}
                                         className="border-red-100 dark:border-red-900/50"
@@ -530,7 +513,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 )}
 
                 {/* 5. DOCUMENTATION (Bottom) */}
-                <CollapsibleSection title="Documentation">
+                <CollapsibleSection title="Documentation" key={`${selectedNode.id}-docs`}>
                     <div className="pt-3">
                         <Label className="text-muted-foreground mb-2 block">Comment</Label>
                         <Textarea
@@ -593,6 +576,39 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                     </div>
                 )}
             </div>
+        </div>
+    );
+};
+
+
+// Helper Component for Collapsible Sections
+const CollapsibleSection = ({ title, icon: Icon, defaultOpen = false, children, className }: { title: string, icon?: any, defaultOpen?: boolean, children: React.ReactNode, className?: string }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    // Sync internal state if defaultOpen changes (optional but good for reset)
+    useEffect(() => {
+        setIsOpen(defaultOpen);
+    }, [defaultOpen]);
+
+    return (
+        <div className={cn("rounded-md border bg-card", className)}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center justify-between w-full p-3 text-sm font-medium hover:bg-muted/50 transition-colors"
+            >
+                <div className="flex items-center gap-2">
+                    {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                    <span>{title}</span>
+                </div>
+                <span className={cn("text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")}>
+                    ▼
+                </span>
+            </button>
+            {isOpen && (
+                <div className="p-3 pt-0 border-t bg-muted/5 space-y-3">
+                    {children}
+                </div>
+            )}
         </div>
     );
 };

@@ -79,6 +79,36 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'number', // Can be toggled to variable in UI
                 placeholder: 'e.g. 100',
                 description: 'Quantity to dose'
+            },
+            // Error Handling Policy
+            retryCount: {
+                label: 'Retry Count',
+                type: 'number',
+                defaultValue: 3,
+                description: 'Retries before failing'
+            },
+            retryDelay: {
+                label: 'Retry Delay (ms)',
+                type: 'number',
+                defaultValue: 1000,
+                description: 'Time between retries'
+            },
+            onFailure: {
+                label: 'On Failure',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Continue (Ignore)', value: 'CONTINUE' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action if device fails'
+            },
+            errorNotification: {
+                label: 'Send Notification',
+                type: 'boolean',
+                defaultValue: false,
+                description: 'Alert on failure'
             }
         }
     },
@@ -153,6 +183,24 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 label: 'Comparison Value',
                 type: 'text', // Can be number or string, keep text for flexibility
                 placeholder: 'Value to compare against'
+            },
+            // Error Handling
+            onFailure: {
+                label: 'On Failure (Error)',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Treat as False', value: 'FALSE' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action if variable missing'
+            },
+            errorNotification: {
+                label: 'Send Notification',
+                type: 'boolean',
+                defaultValue: false,
+                description: 'Alert on error'
             }
         }
     },
@@ -175,13 +223,7 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 defaultValue: 1,
                 description: 'Number of times to repeat'
             },
-            maxIterations: {
-                label: 'Max Iterations (Safety)',
-                type: 'number',
-                placeholder: 'e.g. 10',
-                defaultValue: 10,
-                description: 'Safety limit for WHILE loops'
-            },
+
             variable: {
                 label: 'Variable',
                 type: 'variable',
@@ -204,6 +246,31 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 label: 'Comparison Value',
                 type: 'text',
                 placeholder: 'Value to compare against'
+            },
+            // Loop Safety
+            maxIterations: {
+                label: 'Max Iterations (Safety)',
+                type: 'number',
+                placeholder: 'e.g. 10',
+                defaultValue: 10,
+                description: 'Safety limit for WHILE loops'
+            },
+            onMaxIterations: {
+                label: 'On Max Iterations',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Exit Loop', value: 'CONTINUE' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action if stuck in loop'
+            },
+            errorNotification: {
+                label: 'Send Notification',
+                type: 'boolean',
+                defaultValue: false,
+                description: 'Alert on safety limit'
             }
         }
     },
