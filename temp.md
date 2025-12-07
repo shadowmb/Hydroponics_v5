@@ -1,297 +1,354 @@
-{
-  "_id": {
-    "$oid": "69313a6c8b787c26d530f648"
-  },
-  "id": "ec_ab",
-  "name": "EC AB",
-  "description": "Това е поток който мери първоначално ЕС и ако е точно, започва поливане. Ако има отклонение по голямо от толеранса и в в отрицателна посока, тогава активра помпите за разтовр А/Б до достигане на нужното количество ЕС",
-  "mode": "SIMPLE",
-  "nodes": [
-    {
-      "id": "start",
+[2025-12-07 20:43:17.648 +0200] INFO: ЁЯУе Loading Program Session
+    env: "development"
+    sessionId: "6935cac5bf17e3c5fb1495ac"
+    programId: "ec_ab"
+    variables: {}
+[2025-12-07 20:43:17.654 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "automation:state_change"
+    payload: {
+      "state": "loaded",
+      "currentBlock": "start",
+      "context": {
+        "programId": "ec_ab",
+        "actionTemplateId": "default",
+        "variables": {},
+        "devices": {},
+        "stepCount": 0,
+        "startTime": 0,
+        "errors": [],
+        "resumeState": {}
+      },
+      "sessionId": "6935cac5bf17e3c5fb1495ac",
+      "error": null
+    }
+[2025-12-07 20:43:17.666 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "automation:block_start"
+    payload: {
+      "blockId": "start",
       "type": "START",
-      "params": {
-        "label": "START",
-        "hasError": false
+      "sessionId": "6935cac5bf17e3c5fb1495ac"
+    }
+[2025-12-07 20:43:17.666 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "automation:block_end"
+    payload: {
+      "blockId": "start",
+      "success": true,
+      "output": {
+        "message": "Program Started"
       },
-      "position": {
-        "x": 70.5,
-        "y": -60
-      }
-    },
-    {
-      "id": "end",
-      "type": "END",
-      "params": {
-        "label": "END",
-        "hasError": false
+      "sessionId": "6935cac5bf17e3c5fb1495ac"
+    }
+[2025-12-07 20:43:17.674 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "automation:state_change"
+    payload: {
+      "state": "running",
+      "currentBlock": "start",
+      "context": {
+        "programId": "ec_ab",
+        "actionTemplateId": "default",
+        "variables": {},
+        "devices": {},
+        "stepCount": 0,
+        "startTime": 1765132997658,
+        "errors": [],
+        "resumeState": {}
       },
-      "position": {
-        "x": 393.5272219219886,
-        "y": 529.1450191865065
-      }
-    },
-    {
-      "id": "SENSOR_READ_1764833627709",
+      "sessionId": "6935cac5bf17e3c5fb1495ac",
+      "error": null
+    }
+[2025-12-07 20:43:17.677 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "automation:block_start"
+    payload: {
+      "blockId": "SENSOR_READ_1764833627709",
       "type": "SENSOR_READ",
-      "params": {
-        "label": "Сензор за ЕС",
-        "deviceId": "6931355c23b1320394ed43f7",
-        "comment": "Прочитане на стойнсот на EC в главен резервоар",
-        "variable": "var_1",
-        "hasError": false,
-        "mirrorOf": null
+      "sessionId": "6935cac5bf17e3c5fb1495ac"
+    }
+[2025-12-07 20:43:17.681 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "automation:state_change"
+    payload: {
+      "state": "running",
+      "currentBlock": "SENSOR_READ_1764833627709",
+      "context": {
+        "programId": "ec_ab",
+        "actionTemplateId": "default",
+        "variables": {},
+        "devices": {},
+        "stepCount": 1,
+        "startTime": 1765132997658,
+        "errors": [],
+        "resumeState": {}
       },
-      "position": {
-        "x": 230.43630857225006,
-        "y": -24.977650293224876
-      }
-    },
-    {
-      "id": "IF_1764833637197",
-      "type": "IF",
-      "params": {
-        "label": "Проверка за ЕС",
-        "operator": ">=",
-        "variable": "var_1",
-        "value": "{{global_2}}",
-        "comment": "Проверява дали желаното ЕС отговара на текущото",
-        "hasError": false
-      },
-      "position": {
-        "x": 230.4250391235958,
-        "y": 89.75218138471314
-      }
-    },
-    {
-      "id": "ACTUATOR_SET_1764833876058",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "label": "Помпа А",
-        "action": "DOSE",
-        "deviceId": "6931357223b1320394ed4416",
-        "amount": "{{global_3}}",
-        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри",
-        "hasError": false
-      },
-      "position": {
-        "x": 618.7557808037758,
-        "y": 296.5517404113317
-      }
-    },
-    {
-      "id": "LOOP_1764923284000",
-      "type": "LOOP",
-      "params": {
-        "label": "Цикъл",
-        "loopType": "WHILE",
-        "count": 1,
-        "maxIterations": 10,
-        "operator": "<",
-        "comment": "Активират се помпите за разтвор А и Б за покачване на ЕС до нужното ниво",
-        "variable": "var_1",
-        "value": "{{global_2}}",
-        "hasError": false
-      },
-      "position": {
-        "x": 409.53760994016665,
-        "y": 201.0180142002381
-      }
-    },
-    {
-      "id": "ACTUATOR_SET_1764923608057",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "label": "Помпа поливане",
-        "action": "PULSE_ON",
-        "deviceId": "6931359e23b1320394ed4482",
-        "duration": "{{global_4}}",
-        "comment": "Това е главната помпа която полива",
-        "hasError": false
-      },
-      "position": {
-        "x": 159.4908608487031,
-        "y": 371.06959620109495
-      }
-    },
-    {
-      "id": "generic_1764923612221",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "label": "Помпа Б",
-        "action": "DOSE",
-        "deviceId": "6931358123b1320394ed4437",
-        "amount": "{{global_3}}",
-        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри",
-        "hasError": false
-      },
-      "position": {
-        "x": 648.9631621421823,
-        "y": 434.9587704331156
-      }
-    },
-    {
-      "id": "FLOW_CONTROL_1765110819247",
-      "type": "FLOW_CONTROL",
-      "params": {
-        "label": "Flow Control (Jump/Label)",
-        "controlType": "LOOP_BACK",
-        "hasError": false,
-        "targetLabel": "LOOP_1764923284000"
-      },
-      "position": {
-        "x": 764.401704547758,
-        "y": 714.1383851471572
-      }
-    },
-    {
-      "id": "SENSOR_READ_1765113853780",
-      "type": "SENSOR_READ",
-      "params": {
-        "label": "Read Sensor",
-        "hasError": false,
-        "mirrorOf": "SENSOR_READ_1764833627709",
-        "deviceId": "6931354623b1320394ed43dd",
-        "variable": "var_1"
-      },
-      "position": {
-        "x": 709.6905095320806,
-        "y": 593.4401746226785
+      "sessionId": "6935cac5bf17e3c5fb1495ac",
+      "error": null
+    }
+[2025-12-07 20:43:17.690 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "command:sent"
+    payload: {
+      "deviceId": "6931355c23b1320394ed43f7",
+      "controllerId": "693134db23b1320394ed43b5",
+      "packet": {
+        "id": "dcbb1f94-d1d3-4a7c-8a74-b647d14302be",
+        "cmd": "UART_READ_DISTANCE",
+        "pins": [
+          {
+            "role": "RX",
+            "portId": "D10",
+            "gpio": 10,
+            "_id": "6931355c23b1320394ed43f8",
+            "id": "6931355c23b1320394ed43f8"
+          },
+          {
+            "role": "TX",
+            "portId": "D11",
+            "gpio": 11,
+            "_id": "6931355c23b1320394ed43f9",
+            "id": "6931355c23b1320394ed43f9"
+          }
+        ]
       }
     }
-  ],
-  "edges": [
-    {
-      "id": "xy-edge__start-SENSOR_READ_1764833627709",
-      "source": "start",
-      "target": "SENSOR_READ_1764833627709",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__SENSOR_READ_1764833627709-IF_1764833637197",
-      "source": "SENSOR_READ_1764833627709",
-      "target": "IF_1764833637197",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__IF_1764833637197false-LOOP_1764923284000",
-      "source": "IF_1764833637197",
-      "target": "LOOP_1764923284000",
-      "sourceHandle": "false",
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ef4444"
-      }
-    },
-    {
-      "id": "xy-edge__LOOP_1764923284000body-ACTUATOR_SET_1764833876058",
-      "source": "LOOP_1764923284000",
-      "target": "ACTUATOR_SET_1764833876058",
-      "sourceHandle": "body",
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#22c55e"
-      }
-    },
-    {
-      "id": "xy-edge__ACTUATOR_SET_1764833876058-generic_1764923612221",
-      "source": "ACTUATOR_SET_1764833876058",
-      "target": "generic_1764923612221",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__LOOP_1764923284000exit-ACTUATOR_SET_1764923608057",
-      "source": "LOOP_1764923284000",
-      "target": "ACTUATOR_SET_1764923608057",
-      "sourceHandle": "exit",
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ef4444"
-      }
-    },
-    {
-      "id": "xy-edge__ACTUATOR_SET_1764923608057-end",
-      "source": "ACTUATOR_SET_1764923608057",
-      "target": "end",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__IF_1764833637197true-ACTUATOR_SET_1764923608057",
-      "source": "IF_1764833637197",
-      "target": "ACTUATOR_SET_1764923608057",
-      "sourceHandle": "true",
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#22c55e"
-      }
-    },
-    {
-      "id": "xy-edge__generic_1764923612221-SENSOR_READ_1765113853780",
-      "source": "generic_1764923612221",
-      "target": "SENSOR_READ_1765113853780"
-    },
-    {
-      "id": "xy-edge__SENSOR_READ_1765113853780-FLOW_CONTROL_1765110819247",
-      "source": "SENSOR_READ_1765113853780",
-      "target": "FLOW_CONTROL_1765110819247"
+[2025-12-07 20:43:17.701 +0200] INFO: ЁЯФМ [HardwareService] Creating Serial Transport
+    env: "development"
+    controllerId: "693134db23b1320394ed43b5"
+    port: "COM3"
+[2025-12-07 20:43:17.702 +0200] INFO: ЁЯФМ [SerialTransport] Connecting...
+    env: "development"
+    path: "COM3"
+    baudRate: 9600
+[2025-12-07 20:43:17.771 +0200] INFO: тЬЕ [SerialTransport] Port Opened
+    env: "development"
+    path: "COM3"
+[2025-12-07 20:43:19.785 +0200] INFO: ЁЯФН [SerialTransport] Processing Packet
+    env: "development"
+    packet: {
+      "id": "dcbb1f94-d1d3-4a7c-8a74-b647d14302be",
+      "cmd": "UART_READ_DISTANCE",
+      "pins": [
+        {
+          "role": "RX",
+          "portId": "D10",
+          "gpio": 10,
+          "_id": "6931355c23b1320394ed43f8",
+          "id": "6931355c23b1320394ed43f8"
+        },
+        {
+          "role": "TX",
+          "portId": "D11",
+          "gpio": 11,
+          "_id": "6931355c23b1320394ed43f9",
+          "id": "6931355c23b1320394ed43f9"
+        }
+      ]
     }
-  ],
-  "inputs": [],
-  "variables": [
-    {
-      "id": "var_1",
-      "name": "ЕС local",
-      "type": "number",
-      "scope": "local",
-      "unit": "mS/cm",
-      "_id": {
-        "$oid": "69313a6c8b787c26d530f649"
-      }
-    },
-    {
-      "id": "global_2",
-      "name": "EC Need",
-      "type": "number",
-      "scope": "global",
-      "unit": "mS/cm",
-      "hasTolerance": true,
-      "description": "Стойнсот на желаното ЕС",
-      "_id": {
-        "$oid": "69313a6c8b787c26d530f64a"
-      }
-    },
-    {
-      "id": "global_3",
-      "name": "А/Б Доза",
-      "type": "number",
-      "scope": "global",
-      "unit": "ml",
-      "hasTolerance": true,
-      "description": "Каква доза да се долее от разтвори А и Б в милилитри",
-      "_id": {
-        "$oid": "69313bb98b787c26d530f764"
-      }
-    },
-    {
-      "id": "global_4",
-      "name": "Помпа поливане",
-      "type": "number",
-      "scope": "global",
-      "unit": "min",
-      "hasTolerance": true,
-      "description": "Това е помапта за поливане като се въведе време за работа в минути",
-      "_id": {
-        "$oid": "69329a157d90cb79577a5e43"
+[2025-12-07 20:43:19.785 +0200] INFO: ЁЯУд [SerialTransport] Sending Raw String (DEBUG)
+    env: "development"
+    packet: {
+      "id": "dcbb1f94-d1d3-4a7c-8a74-b647d14302be",
+      "cmd": "UART_READ_DISTANCE",
+      "pins": [
+        {
+          "role": "RX",
+          "portId": "D10",
+          "gpio": 10,
+          "_id": "6931355c23b1320394ed43f8",
+          "id": "6931355c23b1320394ed43f8"
+        },
+        {
+          "role": "TX",
+          "portId": "D11",
+          "gpio": 11,
+          "_id": "6931355c23b1320394ed43f9",
+          "id": "6931355c23b1320394ed43f9"
+        }
+      ]
+    }
+    serialized: "UART_READ_DISTANCE|D10_10|D11_11"
+[2025-12-07 20:43:20.966 +0200] WARN: Block execution failed
+    env: "development"
+    blockId: "SENSOR_READ_1764833627709"
+    attempt: 1
+    err: "ERR_SENSOR_TIMEOUT"
+[2025-12-07 20:43:21.979 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "command:sent"
+    payload: {
+      "deviceId": "6931355c23b1320394ed43f7",
+      "controllerId": "693134db23b1320394ed43b5",
+      "packet": {
+        "id": "e0d5dec3-9942-4604-848c-1395c0467e6b",
+        "cmd": "UART_READ_DISTANCE",
+        "pins": [
+          {
+            "role": "RX",
+            "portId": "D10",
+            "gpio": 10,
+            "_id": "6931355c23b1320394ed43f8",
+            "id": "6931355c23b1320394ed43f8"
+          },
+          {
+            "role": "TX",
+            "portId": "D11",
+            "gpio": 11,
+            "_id": "6931355c23b1320394ed43f9",
+            "id": "6931355c23b1320394ed43f9"
+          }
+        ]
       }
     }
-  ],
-  "isActive": true,
-  "deletedAt": null,
-  "createdAt": {
-    "$date": "2025-12-04T07:38:20.667Z"
-  },
-  "updatedAt": {
-    "$date": "2025-12-07T13:29:49.810Z"
-  },
-  "__v": 0
-}
+[2025-12-07 20:43:21.980 +0200] INFO: ЁЯФН [SerialTransport] Processing Packet
+    env: "development"
+    packet: {
+      "id": "e0d5dec3-9942-4604-848c-1395c0467e6b",
+      "cmd": "UART_READ_DISTANCE",
+      "pins": [
+        {
+          "role": "RX",
+          "portId": "D10",
+          "gpio": 10,
+          "_id": "6931355c23b1320394ed43f8",
+          "id": "6931355c23b1320394ed43f8"
+        },
+        {
+          "role": "TX",
+          "portId": "D11",
+          "gpio": 11,
+          "_id": "6931355c23b1320394ed43f9",
+          "id": "6931355c23b1320394ed43f9"
+        }
+      ]
+    }
+[2025-12-07 20:43:21.980 +0200] INFO: ЁЯУд [SerialTransport] Sending Raw String (DEBUG)
+    env: "development"
+    packet: {
+      "id": "e0d5dec3-9942-4604-848c-1395c0467e6b",
+      "cmd": "UART_READ_DISTANCE",
+      "pins": [
+        {
+          "role": "RX",
+          "portId": "D10",
+          "gpio": 10,
+          "_id": "6931355c23b1320394ed43f8",
+          "id": "6931355c23b1320394ed43f8"
+        },
+        {
+          "role": "TX",
+          "portId": "D11",
+          "gpio": 11,
+          "_id": "6931355c23b1320394ed43f9",
+          "id": "6931355c23b1320394ed43f9"
+        }
+      ]
+    }
+    serialized: "UART_READ_DISTANCE|D10_10|D11_11"
+[2025-12-07 20:43:23.060 +0200] WARN: Block execution failed
+    env: "development"
+    blockId: "SENSOR_READ_1764833627709"
+    attempt: 2
+    err: "ERR_SENSOR_TIMEOUT"
+[2025-12-07 20:43:24.075 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "command:sent"
+    payload: {
+      "deviceId": "6931355c23b1320394ed43f7",
+      "controllerId": "693134db23b1320394ed43b5",
+      "packet": {
+        "id": "1c785b2a-03f3-4a04-9366-6352e21d0d34",
+        "cmd": "UART_READ_DISTANCE",
+        "pins": [
+          {
+            "role": "RX",
+            "portId": "D10",
+            "gpio": 10,
+            "_id": "6931355c23b1320394ed43f8",
+            "id": "6931355c23b1320394ed43f8"
+          },
+          {
+            "role": "TX",
+            "portId": "D11",
+            "gpio": 11,
+            "_id": "6931355c23b1320394ed43f9",
+            "id": "6931355c23b1320394ed43f9"
+          }
+        ]
+      }
+    }
+[2025-12-07 20:43:24.076 +0200] INFO: ЁЯФН [SerialTransport] Processing Packet
+    env: "development"
+    packet: {
+      "id": "1c785b2a-03f3-4a04-9366-6352e21d0d34",
+      "cmd": "UART_READ_DISTANCE",
+      "pins": [
+        {
+          "role": "RX",
+          "portId": "D10",
+          "gpio": 10,
+          "_id": "6931355c23b1320394ed43f8",
+          "id": "6931355c23b1320394ed43f8"
+        },
+        {
+          "role": "TX",
+          "portId": "D11",
+          "gpio": 11,
+          "_id": "6931355c23b1320394ed43f9",
+          "id": "6931355c23b1320394ed43f9"
+        }
+      ]
+    }
+[2025-12-07 20:43:24.076 +0200] INFO: ЁЯУд [SerialTransport] Sending Raw String (DEBUG)
+    env: "development"
+    packet: {
+      "id": "1c785b2a-03f3-4a04-9366-6352e21d0d34",
+      "cmd": "UART_READ_DISTANCE",
+      "pins": [
+        {
+          "role": "RX",
+          "portId": "D10",
+          "gpio": 10,
+          "_id": "6931355c23b1320394ed43f8",
+          "id": "6931355c23b1320394ed43f8"
+        },
+        {
+          "role": "TX",
+          "portId": "D11",
+          "gpio": 11,
+          "_id": "6931355c23b1320394ed43f9",
+          "id": "6931355c23b1320394ed43f9"
+        }
+      ]
+    }
+    serialized: "UART_READ_DISTANCE|D10_10|D11_11"
+[2025-12-07 20:43:25.156 +0200] WARN: Block execution failed
+    env: "development"
+    blockId: "SENSOR_READ_1764833627709"
+    attempt: 3
+    err: "ERR_SENSOR_TIMEOUT"
+[2025-12-07 20:43:25.156 +0200] ERROR: All retries exhausted.
+    env: "development"
+    blockId: "SENSOR_READ_1764833627709"
+    policy: "GOTO_LABEL"
+[2025-12-07 20:43:25.160 +0200] INFO: ЁЯУб Forwarding to WebSocket
+    env: "development"
+    event: "automation:state_change"
+    payload: {
+      "state": "completed",
+      "currentBlock": null,
+      "context": {
+        "programId": "ec_ab",
+        "actionTemplateId": "default",
+        "variables": {},
+        "devices": {},
+        "stepCount": 2,
+        "startTime": 1765132997658,
+        "errors": [],
+        "resumeState": {}
+      },
+      "sessionId": "6935cac5bf17e3c5fb1495ac",
+      "error": null
+    }

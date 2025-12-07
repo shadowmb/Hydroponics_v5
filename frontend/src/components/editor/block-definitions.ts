@@ -99,10 +99,17 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 options: [
                     { label: 'Stop Flow', value: 'STOP' },
                     { label: 'Pause Flow', value: 'PAUSE' },
-                    { label: 'Continue (Ignore)', value: 'CONTINUE' }
+                    { label: 'Continue (Ignore)', value: 'CONTINUE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
                 ],
                 defaultValue: 'STOP',
                 description: 'Action if device fails'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
             },
             errorNotification: {
                 label: 'Send Notification',
@@ -145,10 +152,17 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 options: [
                     { label: 'Stop Flow', value: 'STOP' },
                     { label: 'Pause Flow', value: 'PAUSE' },
-                    { label: 'Continue (Ignore)', value: 'CONTINUE' }
+                    { label: 'Continue (Ignore)', value: 'CONTINUE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
                 ],
                 defaultValue: 'STOP',
                 description: 'Action to take if all retries fail'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
             },
             errorNotification: {
                 label: 'Send Notification',
@@ -191,10 +205,17 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 options: [
                     { label: 'Stop Flow', value: 'STOP' },
                     { label: 'Pause Flow', value: 'PAUSE' },
-                    { label: 'Treat as False', value: 'FALSE' }
+                    { label: 'Treat as False', value: 'FALSE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
                 ],
                 defaultValue: 'STOP',
                 description: 'Action if variable missing'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
             },
             errorNotification: {
                 label: 'Send Notification',
@@ -261,10 +282,17 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 options: [
                     { label: 'Stop Flow', value: 'STOP' },
                     { label: 'Pause Flow', value: 'PAUSE' },
-                    { label: 'Exit Loop', value: 'CONTINUE' }
+                    { label: 'Exit Loop', value: 'CONTINUE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
                 ],
                 defaultValue: 'STOP',
                 description: 'Action if stuck in loop'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
             },
             errorNotification: {
                 label: 'Send Notification',

@@ -202,6 +202,11 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             }
         }
 
+        if (key === 'errorTargetLabel') {
+            const onFailure = formData['onFailure'] || formData['onMaxIterations']; // Check both failure types
+            if (onFailure !== 'GOTO_LABEL') return null;
+        }
+
         // --- Dynamic Options Logic ---
         let options = field.options;
 
@@ -459,7 +464,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                 {definition ? (
                     (() => {
-                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations'];
+                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel'];
                         const mainFields = Object.entries(definition.fields).filter(([key]) => !errorKeys.includes(key));
                         const errorFields = Object.entries(definition.fields).filter(([key]) => errorKeys.includes(key));
 
@@ -492,14 +497,53 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                         className="border-red-100 dark:border-red-900/50"
                                     >
                                         <div className="space-y-3 pt-3">
-                                            {errorFields.map(([key, field]) => (
-                                                <div key={key} className="space-y-2">
-                                                    <Label className="text-muted-foreground text-xs">
-                                                        {field.label}
-                                                    </Label>
-                                                    {renderField(key, field, false)}
-                                                </div>
-                                            ))}
+                                            {errorFields.map(([key, field]) => {
+                                                // Visibility Check logic moved inside the map
+                                                if (key === 'errorTargetLabel') {
+                                                    const onFailure = formData['onFailure'] || formData['onMaxIterations'];
+                                                    if (onFailure !== 'GOTO_LABEL') return null;
+                                                }
+                                                // Reuse renderField's internal check for others (simplified here or just rely on renderField returning null? 
+                                                // If renderField returns null, we show empty label. Better to check first.)
+
+                                                const content = key === 'errorTargetLabel' ? (
+                                                    <Select
+                                                        value={formData.errorTargetLabel || ''}
+                                                        onValueChange={(val) => handleChange('errorTargetLabel', val)}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select Target Label" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {nodes.find(n => n.data.type === 'END') && (
+                                                                <SelectItem value="END">End Program</SelectItem>
+                                                            )}
+                                                            {nodes
+                                                                .filter(n => n.data.type === 'FLOW_CONTROL' && n.data.controlType === 'LABEL')
+                                                                .map(n => (
+                                                                    <SelectItem key={n.id} value={n.data.labelName as string}>
+                                                                        {String(n.data.labelName || 'Unnamed Label')}
+                                                                    </SelectItem>
+                                                                ))
+                                                            }
+                                                            {nodes.filter(n => n.data.type === 'FLOW_CONTROL' && n.data.controlType === 'LABEL').length === 0 && !nodes.find(n => n.data.type === 'END') && (
+                                                                <div className="p-2 text-xs text-muted-foreground">No Labels found</div>
+                                                            )}
+                                                        </SelectContent>
+                                                    </Select>
+                                                ) : renderField(key, field, false);
+
+                                                if (!content) return null;
+
+                                                return (
+                                                    <div key={key} className="space-y-2">
+                                                        <Label className="text-muted-foreground text-xs">
+                                                            {field.label}
+                                                        </Label>
+                                                        {content}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </CollapsibleSection>
                                 )}
