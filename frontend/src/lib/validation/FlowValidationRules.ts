@@ -1,16 +1,42 @@
 
 
+import { areUnitsCompatible } from '@shared/UnitRegistry';
+
 export interface ValidationRule {
     field: string;
     required?: boolean;
-    validate?: (value: any, context?: any) => boolean;
+    validate?: (value: any, data?: any, context?: any) => boolean;
     message: string;
 }
 
 export const BlockValidationRules: Record<string, ValidationRule[]> = {
     'SENSOR_READ': [
         { field: 'deviceId', required: true, message: 'Device is required' },
-        { field: 'variable', required: true, message: 'Output variable is required' }
+        { field: 'variable', required: true, message: 'Output variable is required' },
+        {
+            field: 'variable',
+            message: 'Incompatible Units',
+            validate: (variableId, data, context) => {
+                if (!context || !data.deviceId || !variableId) return true; // Skip if missing context
+
+                const { devices, variables, deviceTemplates } = context;
+                const device = devices.get(data.deviceId);
+                const variable = variables.find((v: any) => v.id === variableId);
+
+                if (!device || !variable || !variable.unit) return true;
+
+                const driverId = typeof device.config?.driverId === 'object' ? (device.config.driverId as any)._id : device.config?.driverId;
+                const template = deviceTemplates?.find((t: any) => t._id === driverId || t._id === device.driverId);
+                if (!template) return true;
+
+                const driverCommand = template.commands ? (Array.isArray(template.commands) ? template.commands.find((c: any) => c.label === 'Read' || c.name === 'READ') : template.commands['READ']) : null;
+                const actualSourceUnit = driverCommand?.sourceUnit || template.uiConfig?.defaultUnit;
+
+                if (!actualSourceUnit) return true;
+
+                return areUnitsCompatible(actualSourceUnit, variable.unit);
+            }
+        }
     ],
     'ACTUATOR_SET': [
         { field: 'deviceId', required: true, message: 'Device is required' },

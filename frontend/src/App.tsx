@@ -15,11 +15,21 @@ import { History } from './pages/History';
 import { Programs } from './pages/Programs';
 import { ProgramEditor } from './pages/ProgramEditor';
 import { ActiveProgramPage } from './pages/ActiveProgramPage';
+import { useStore } from './core/useStore';
+import { hardwareService } from './services/hardwareService';
 import { socketService } from './core/SocketService';
 
 function App() {
+  const setDeviceTemplates = useStore((state) => state.setDeviceTemplates);
+
   useEffect(() => {
     socketService.connect();
+
+    // Load Templates
+    hardwareService.getDeviceTemplates()
+      .then(templates => setDeviceTemplates(templates))
+      .catch(err => console.error("Failed to load templates", err));
+
     return () => socketService.disconnect();
   }, []);
 

@@ -12,7 +12,7 @@ export interface AutomationContext {
 export type AutomationEvent =
     | { type: 'LOAD'; programId: string; templateId: string; blocks: Block[]; edges: Edge[] }
     | { type: 'START' }
-    | { type: 'PAUSE' }
+    | { type: 'PAUSE'; resumeState?: any }
     | { type: 'RESUME' }
     | { type: 'STOP' }
     | { type: 'UNLOAD' }

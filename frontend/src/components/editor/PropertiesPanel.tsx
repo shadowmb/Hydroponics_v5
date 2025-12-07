@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Node, Edge } from '@xyflow/react';
+import { FlowHealthDashboard } from './FlowHealthDashboard';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
@@ -7,6 +8,7 @@ import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Copy, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { areUnitsCompatible, getUnitCategory } from '@shared/UnitRegistry';
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
 import {
     Dialog,
@@ -37,6 +39,8 @@ interface PropertiesPanelProps {
     flowDescription?: string;
     onFlowDescriptionChange?: (desc: string) => void;
     nodes: Node[];
+    edges: Edge[];
+    onSelectBlock: (nodeId: string) => void;
 }
 
 
@@ -121,33 +125,15 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         );
     }
 
-    if (!selectedNode) {
+    if (!selectedNode && !selectedEdge) {
         return (
-            <div className="w-80 border-l bg-card flex flex-col h-full">
-                <div className="p-4 border-b">
-                    <h3 className="font-semibold">Flow Properties</h3>
-                    <p className="text-xs text-muted-foreground">Global settings for this flow.</p>
-                </div>
-                <div className="flex-1 p-4 space-y-4">
-                    <div className="space-y-2">
-                        <Label className="text-muted-foreground">Flow Comment</Label>
-                        <Textarea
-                            value={props.flowDescription || ''}
-                            onChange={(e) => props.onFlowDescriptionChange?.(e.target.value)}
-                            placeholder="Describe the purpose of this flow..."
-                            className="resize-none h-32"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            This comment is saved with the flow and helps identify its purpose.
-                        </p>
-                    </div>
-
-                    <Separator />
-
-                    <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                        Select a block or connection to edit its properties.
-                    </div>
-                </div>
+            <div className="w-[350px] border-l bg-background h-full flex flex-col">
+                <FlowHealthDashboard
+                    nodes={nodes || []}
+                    edges={props.edges || []}
+                    variables={variables || []}
+                    onSelectBlock={props.onSelectBlock}
+                />
             </div>
         );
     }
@@ -483,6 +469,55 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                     {field.label}
                                                 </Label>
                                                 {renderField(key, field, isMirror)}
+
+                                                {/* UNIT VALIDATION WARNING */}
+                                                {key === 'variable' && nodeType === 'SENSOR_READ' && formData.deviceId && formData[key] && !formData[key].startsWith('{{') && (
+                                                    (() => {
+                                                        const { devices, deviceTemplates } = useStore.getState();
+                                                        const device = devices.get(formData.deviceId);
+                                                        const variable = variables.find(v => v.id === formData[key]);
+
+                                                        if (device && variable && variable.unit) {
+                                                            const driverId = typeof device.config?.driverId === 'object' ? (device.config.driverId as any)._id : device.config?.driverId;
+                                                            const template = deviceTemplates?.find(t => t._id === driverId || t._id === device.driverId);
+                                                            // Note: driverId might be in config or root depending on device version
+
+                                                            // Find Driver Config for READ command
+                                                            const driverCommand = template?.commands ? (Array.isArray(template.commands) ? template.commands.find((c: any) => c.label === 'Read' || c.name === 'READ') : template.commands['READ']) : null;
+
+                                                            const actualSourceUnit = driverCommand?.sourceUnit || template?.uiConfig?.defaultUnit;
+
+                                                            if (actualSourceUnit && variable.unit) {
+                                                                const compatible = areUnitsCompatible(actualSourceUnit, variable.unit);
+
+                                                                if (!compatible) {
+                                                                    return (
+                                                                        <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded flex flex-col gap-1">
+                                                                            <div className="flex gap-2 items-center font-semibold">
+                                                                                <AlertCircle className="h-3 w-3" />
+                                                                                <span>Incompatible Units!</span>
+                                                                            </div>
+                                                                            <span className="opacity-90 pl-5">
+                                                                                Sensor: <b className="font-mono">{actualSourceUnit}</b> ({getUnitCategory(actualSourceUnit)})<br />
+                                                                                Variable: <b className="font-mono">{variable.unit}</b> ({getUnitCategory(variable.unit)})
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                } else if (actualSourceUnit !== variable.unit) {
+                                                                    return (
+                                                                        <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 p-2 rounded flex gap-2 items-center">
+                                                                            <AlertCircle className="h-3 w-3" />
+                                                                            <span>
+                                                                                Automatic conversion: <b>{actualSourceUnit}</b> → <b>{variable.unit}</b>
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                            }
+                                                        }
+                                                        return null;
+                                                    })()
+                                                )}
                                             </div>
                                         ))}
                                     </div>

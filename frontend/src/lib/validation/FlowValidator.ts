@@ -15,7 +15,7 @@ export interface ValidationResult {
 }
 
 export class FlowValidator {
-    static validate(nodes: Node[], edges: Edge[]): ValidationResult {
+    static validate(nodes: Node[], edges: Edge[], context?: { devices: Map<string, any>, variables: any[], deviceTemplates: any[] }): ValidationResult {
         const errors: ValidationError[] = [];
         const blockErrors: Record<string, ValidationError[]> = {};
 
@@ -36,7 +36,7 @@ export class FlowValidator {
                         isValid = false;
                     }
 
-                    if (isValid && rule.validate && !rule.validate(value, node.data)) {
+                    if (isValid && rule.validate && !rule.validate(value, node.data, context)) {
                         isValid = false;
                     }
 

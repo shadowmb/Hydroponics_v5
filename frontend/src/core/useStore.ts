@@ -9,6 +9,8 @@ interface AppState {
     setSystemStatus: (status: 'online' | 'offline') => void;
     setDevices: (devices: IDevice[]) => void;
     updateDevice: (device: IDevice) => void;
+    deviceTemplates: any[];
+    setDeviceTemplates: (templates: any[]) => void;
     setActiveSession: (session: IExecutionSession | null) => void;
     logs: any[];
     addLog: (log: any) => void;
@@ -34,6 +36,9 @@ export const useStore = create<AppState>((set) => ({
         newMap.set(device.id, device);
         return { devices: newMap };
     }),
+
+    deviceTemplates: [],
+    setDeviceTemplates: (templates) => set({ deviceTemplates: templates }),
 
     setActiveSession: (session) => set({ activeSession: session }),
 
