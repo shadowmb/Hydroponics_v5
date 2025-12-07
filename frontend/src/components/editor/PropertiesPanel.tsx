@@ -5,9 +5,18 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Copy } from 'lucide-react';
+import { Copy, AlertCircle } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
-
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "../ui/dialog";
 
 import { Button } from '../ui/button';
 import { DeviceSelector } from './DeviceSelector';
@@ -30,6 +39,7 @@ interface PropertiesPanelProps {
     nodes: Node[];
 }
 
+
 export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
     const {
         selectedNode,
@@ -44,6 +54,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
     } = props;
 
     const [formData, setFormData] = useState<Record<string, any>>({});
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     useEffect(() => {
         if (selectedNode) {
@@ -363,6 +374,32 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         }
     };
 
+    // Helper Component for Collapsible Sections
+    const CollapsibleSection = ({ title, icon: Icon, defaultOpen = false, children, className }: { title: string, icon?: any, defaultOpen?: boolean, children: React.ReactNode, className?: string }) => {
+        const [isOpen, setIsOpen] = useState(defaultOpen);
+        return (
+            <div className={cn("rounded-md border bg-card", className)}>
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="flex items-center justify-between w-full p-3 text-sm font-medium hover:bg-muted/50 transition-colors"
+                >
+                    <div className="flex items-center gap-2">
+                        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                        <span>{title}</span>
+                    </div>
+                    <span className={cn("text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")}>
+                        ▼
+                    </span>
+                </button>
+                {isOpen && (
+                    <div className="p-3 pt-0 border-t bg-muted/5 space-y-3">
+                        {children}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="w-80 border-l bg-card flex flex-col h-full">
             <div className="p-4 border-b">
@@ -370,7 +407,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 <p className="text-xs text-muted-foreground">ID: {selectedNode.id}</p>
                 <p className="text-xs text-muted-foreground">Type: {nodeType}</p>
             </div>
+
             <div className="p-4 space-y-4 overflow-y-auto flex-1">
+                {/* 1. HEADER (Label) */}
                 <div className="space-y-2">
                     <Label className="text-muted-foreground">Label</Label>
                     <Input
@@ -381,131 +420,177 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                     />
                 </div>
 
-                <div className="space-y-2">
-                    <Label className="text-muted-foreground">Comment</Label>
-                    <Textarea
-                        value={formData.comment || ''}
-                        onChange={(e) => handleChange('comment', e.target.value)}
-                        placeholder="Add a comment for this block..."
-                        className="resize-none h-20 text-xs"
-                    />
-                </div>
-
-                <Separator />
-
-                {/* --- MIRROR CONFIGURATION SECTION --- */}
+                {/* 2. MIRROR CONFIGURATION (If applicable) */}
                 {isMirrorable && (
-                    <div className="rounded-md border p-3 bg-muted/20 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <Label className="font-semibold">Mode</Label>
-                            <div className="flex bg-muted rounded p-1">
+                    <CollapsibleSection
+                        title="Mirror Configuration"
+                        defaultOpen={isMirror}
+                        className={isMirror ? "border-blue-200 bg-blue-50/10" : ""}
+                    >
+                        <div className="space-y-3 pt-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="font-semibold text-xs">Enable Mirroring</Label>
                                 <Button
-                                    variant={!isMirror ? "secondary" : "ghost"}
+                                    variant={isMirror ? "default" : "outline"}
                                     size="sm"
-                                    className="h-7 text-xs"
-                                    onClick={() => handleChange('mirrorOf', null)}
+                                    className={cn("h-6 text-xs w-24 transition-all", isMirror ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-muted-foreground")}
+                                    onClick={() => handleChange('mirrorOf', isMirror ? null : '')}
                                 >
-                                    Standard
-                                </Button>
-                                <Button
-                                    variant={isMirror ? "secondary" : "ghost"}
-                                    size="sm"
-                                    className="h-7 text-xs"
-                                    onClick={() => {
-                                        // Don't set null, just switch UI state effectively, 
-                                        // but we need a valid mirrorOf to be 'true'. 
-                                        // Wait for dropdown select to set unique ID.
-                                        // For now, maybe just set empty string to indicate 'Pending Mirror'?
-                                        handleChange('mirrorOf', '');
-                                    }}
-                                >
-                                    Mirror
+                                    {isMirror ? "Active" : "Inactive"}
                                 </Button>
                             </div>
-                        </div>
 
-                        {isMirror && (
-                            <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
-                                <Label className="text-xs text-muted-foreground">Source Block</Label>
-                                <Select
-                                    value={formData.mirrorOf || ''}
-                                    onValueChange={(val) => {
-                                        handleChange('mirrorOf', val);
-                                        // TODO: Should we auto-fill current form data from the source for better UX?
-                                        // Yes, find the node and copy its data
-                                        const sourceNode = nodes.find(n => n.id === val);
-                                        if (sourceNode) {
-                                            // Copy all data EXCEPT id, position, logic fields (mirrorOf)
-                                            // Actually, we just need to copy the functional fields defined in definition
-                                            if (definition) {
-                                                const newData = { ...formData, mirrorOf: val };
+                            {isMirror && (
+                                <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                                    <Label className="text-xs text-muted-foreground">Source Block</Label>
+                                    <Select
+                                        value={formData.mirrorOf || ''}
+                                        onValueChange={(val) => {
+                                            handleChange('mirrorOf', val);
+                                            const sourceNode = nodes.find(n => n.id === val);
+                                            if (sourceNode && definition) {
+                                                const newData: Record<string, any> = { ...formData, mirrorOf: val };
                                                 Object.keys(definition.fields).forEach(fKey => {
                                                     newData[fKey] = sourceNode.data[fKey];
                                                 });
                                                 setFormData(newData);
                                                 onChange(selectedNode.id, newData);
                                             }
-                                        }
-                                    }}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Source Block" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {availableSources.length > 0 ? (
-                                            availableSources.map(src => (
-                                                <SelectItem key={src.value} value={src.value}>
-                                                    {String(src.label)}
-                                                </SelectItem>
-                                            ))
-                                        ) : (
-                                            <div className="p-2 text-xs text-muted-foreground text-center">No compatible blocks found</div>
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
-                    </div>
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Source Block" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableSources.length > 0 ? (
+                                                availableSources.map(src => (
+                                                    <SelectItem key={src.value} value={src.value}>
+                                                        {String(src.label)}
+                                                    </SelectItem>
+                                                ))
+                                            ) : (
+                                                <div className="p-2 text-xs text-muted-foreground text-center">No compatible blocks found</div>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
+                    </CollapsibleSection>
                 )}
-                {isMirrorable && <Separator />}
 
                 {definition ? (
-                    Object.entries(definition.fields).map(([key, field]) => (
-                        <div key={key} className="space-y-2">
-                            <Label className="text-muted-foreground">
-                                {field.label}
-                                {field.description && <span className="ml-2 text-xs text-muted-foreground">({field.description})</span>}
-                            </Label>
-                            {renderField(key, field, isMirror)}
-                        </div>
-                    ))
+                    (() => {
+                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification'];
+                        const mainFields = Object.entries(definition.fields).filter(([key]) => !errorKeys.includes(key));
+                        const errorFields = Object.entries(definition.fields).filter(([key]) => errorKeys.includes(key));
+
+                        return (
+                            <>
+                                {/* 3. MAIN CONFIGURATION */}
+                                <CollapsibleSection title="Configuration" defaultOpen={false}>
+                                    <div className="space-y-3 pt-3">
+                                        {mainFields.map(([key, field]) => (
+                                            <div key={key} className="space-y-2">
+                                                <Label className={cn("text-muted-foreground", isMirror && "opacity-50")}>
+                                                    {field.label}
+                                                </Label>
+                                                {renderField(key, field, isMirror)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CollapsibleSection>
+
+                                {/* 4. ERROR HANDLING */}
+                                {errorFields.length > 0 && !isMirror && (
+                                    <CollapsibleSection
+                                        title="Error Handling"
+                                        icon={AlertCircle}
+                                        className="border-red-100 dark:border-red-900/50"
+                                    >
+                                        <div className="space-y-3 pt-3">
+                                            {errorFields.map(([key, field]) => (
+                                                <div key={key} className="space-y-2">
+                                                    <Label className="text-muted-foreground text-xs">
+                                                        {field.label}
+                                                    </Label>
+                                                    {renderField(key, field, false)}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+                            </>
+                        );
+                    })()
                 ) : (
                     <div className="text-sm text-muted-foreground italic">
                         No properties definition for this block type.
                     </div>
                 )}
 
+                {/* 5. DOCUMENTATION (Bottom) */}
+                <CollapsibleSection title="Documentation">
+                    <div className="pt-3">
+                        <Label className="text-muted-foreground mb-2 block">Comment</Label>
+                        <Textarea
+                            value={formData.comment || ''}
+                            onChange={(e) => handleChange('comment', e.target.value)}
+                            placeholder="Add notes..."
+                            className="resize-none h-20 text-xs"
+                        />
+                    </div>
+                </CollapsibleSection>
+
                 <Separator className="my-4" />
 
                 {(nodeType !== 'START' && nodeType !== 'END') && (
-                    <>
+                    <div className="flex gap-2">
                         <Button
                             variant="outline"
-                            className="w-full mb-2"
+                            className="flex-1"
                             onClick={() => onDuplicateNode(selectedNode.id)}
+                            title="Duplicate Block"
                         >
-                            <Copy className="mr-2 h-4 w-4" />
-                            Duplicate Block
+                            <Copy className="h-4 w-4" />
                         </Button>
 
-                        <Button
-                            variant="destructive"
-                            className="w-full"
-                            onClick={() => onDeleteNode(selectedNode.id)}
-                        >
-                            Delete Block
-                        </Button>
-                    </>
+                        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button
+                                    variant="destructive"
+                                    className="flex-1"
+                                    title="Delete Block"
+                                >
+                                    Delete
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Delete Block?</DialogTitle>
+                                    <DialogDescription>
+                                        Are you sure you want to delete this block? This action cannot be undone.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={() => {
+                                            if (selectedNode) {
+                                                onDeleteNode(selectedNode.id);
+                                                setIsDeleteDialogOpen(false);
+                                            }
+                                        }}
+                                    >
+                                        Delete
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 )}
             </div>
         </div>

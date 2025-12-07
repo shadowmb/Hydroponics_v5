@@ -95,6 +95,36 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'variable',
                 placeholder: 'Select variable',
                 description: 'Variable to store the reading'
+            },
+            // Error Handling Policy
+            retryCount: {
+                label: 'Retry Count',
+                type: 'number',
+                defaultValue: 3,
+                description: 'Number of retries before failing'
+            },
+            retryDelay: {
+                label: 'Retry Delay (ms)',
+                type: 'number',
+                defaultValue: 1000,
+                description: 'Time between retries'
+            },
+            onFailure: {
+                label: 'On Failure',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Continue (Ignore)', value: 'CONTINUE' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action to take if all retries fail'
+            },
+            errorNotification: {
+                label: 'Send Notification',
+                type: 'boolean',
+                defaultValue: false,
+                description: 'Send alert on failure'
             }
         }
     },
