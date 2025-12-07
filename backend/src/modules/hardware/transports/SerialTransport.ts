@@ -90,7 +90,7 @@ export class SerialTransport implements IHardwareTransport {
         }
 
         // Convert Packet to Delimited String: CMD|PARAM1|PARAM2...
-        logger.info({ packet }, '🔍 [SerialTransport] Processing Packet');
+        logger.debug({ packet }, '🔍 [SerialTransport] Processing Packet');
         let message = '';
         if (packet.cmd === 'PING') {
             message = 'PING';
@@ -213,7 +213,7 @@ export class SerialTransport implements IHardwareTransport {
 
         // Add newline delimiter
         const data = message + '\n';
-        logger.info({ packet, serialized: data.trim() }, '📤 [SerialTransport] Sending Raw String (DEBUG)');
+        logger.debug({ packet, serialized: data.trim() }, '📤 [SerialTransport] Sending Raw String (DEBUG)');
 
         return new Promise((resolve, reject) => {
             this.port.write(data, (err: Error | null) => {
