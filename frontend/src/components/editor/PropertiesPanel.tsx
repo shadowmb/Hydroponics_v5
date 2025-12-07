@@ -149,7 +149,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         // --- Visibility Logic ---
         // --- Visibility Logic ---
         if (nodeType === 'ACTUATOR_SET') {
-            const action = formData['action'] || 'ON';
+            const action = formData['action']; // No default 'ON'
             if (key === 'duration') {
                 if (action !== 'PULSE_ON' && action !== 'PULSE_OFF') return null;
             }
@@ -354,22 +354,26 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                 <Separator className="my-4" />
 
-                <Button
-                    variant="outline"
-                    className="w-full mb-2"
-                    onClick={() => onDuplicateNode(selectedNode.id)}
-                >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Duplicate Block
-                </Button>
+                {(nodeType !== 'START' && nodeType !== 'END') && (
+                    <>
+                        <Button
+                            variant="outline"
+                            className="w-full mb-2"
+                            onClick={() => onDuplicateNode(selectedNode.id)}
+                        >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Duplicate Block
+                        </Button>
 
-                <Button
-                    variant="destructive"
-                    className="w-full"
-                    onClick={() => onDeleteNode(selectedNode.id)}
-                >
-                    Delete Block
-                </Button>
+                        <Button
+                            variant="destructive"
+                            className="w-full"
+                            onClick={() => onDeleteNode(selectedNode.id)}
+                        >
+                            Delete Block
+                        </Button>
+                    </>
+                )}
             </div>
         </div>
     );

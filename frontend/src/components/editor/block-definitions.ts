@@ -65,7 +65,7 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                     { label: 'Pulse OFF', value: 'PULSE_OFF' }
                     // Dynamic options like 'DOSE' will be added by PropertiesPanel
                 ],
-                defaultValue: 'ON'
+                // defaultValue: 'ON' - Removed to force manual selection
             },
             duration: {
                 label: 'Duration (ms)',

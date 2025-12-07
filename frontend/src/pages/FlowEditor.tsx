@@ -19,6 +19,8 @@ import { hardwareService } from '../services/hardwareService';
 import { useStore } from '../core/useStore';
 import { VariableManager } from '../components/editor/VariableManager';
 import { slugify } from '../lib/string-utils';
+import { FlowValidator } from '../lib/validation/FlowValidator';
+// import type { ValidationError } from '../lib/validation/FlowValidator';
 
 const nodeTypes = {
     action: ActionNode,
@@ -55,6 +57,7 @@ const FlowEditorContent: React.FC = () => {
     const [flowDescription, setFlowDescription] = useState('');
     const [inputs, setInputs] = useState<any[]>([]);
     const [variables, setVariables] = useState<any[]>([]);
+    // const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
     // Load Flow Data
     useEffect(() => {
@@ -83,6 +86,33 @@ const FlowEditorContent: React.FC = () => {
 
         fetchFlow();
     }, [id, setNodes, setEdges]);
+
+    // Validation Effect
+    useEffect(() => {
+        const result = FlowValidator.validate(nodes, edges);
+        // setValidationErrors(result.errors);
+
+        // Update nodes with error state
+        setNodes(nds => nds.map(node => {
+            const nodeErrors = result.blockErrors[node.id];
+            const hasError = !!nodeErrors;
+            const errorMsg = hasError ? nodeErrors[0].message : undefined;
+
+            // Only update if changed to avoid render loops
+            if (node.data.error !== errorMsg || node.data.hasError !== hasError) {
+                return {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        hasError: hasError,
+                        error: errorMsg
+                    }
+                };
+            }
+            return node;
+        }));
+
+    }, [nodes.map(n => JSON.stringify({ ...n.data, hasError: undefined, error: undefined })).join('|'), edges, setNodes]); // Deep compare data (excluding error fields)
 
     // Load Devices for Selector
     const { setDevices } = useStore();
@@ -183,6 +213,11 @@ const FlowEditorContent: React.FC = () => {
     };
 
     const onDeleteNode = (nodeId: string) => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (node?.data.type === 'START' || node?.data.type === 'END') {
+            toast.error('Start and End blocks cannot be deleted.');
+            return;
+        }
         setNodes((nds) => nds.filter((node) => node.id !== nodeId));
         setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
         setSelectedNode(null);
@@ -195,6 +230,14 @@ const FlowEditorContent: React.FC = () => {
 
     const onSave = useCallback(async (name: string, description: string) => {
         console.log('onSave called:', { name, id });
+
+        // Final Validation Check
+        const validationResult = FlowValidator.validate(nodes, edges);
+        if (!validationResult.isValid) {
+            toast.error(`Cannot save: ${validationResult.errors.length} errors found.`);
+            return; // Block save
+        }
+
         const flowData = reactFlowToFlow(nodes, edges);
 
         // If editing existing flow, use its ID. Otherwise generate new one.
@@ -244,6 +287,11 @@ const FlowEditorContent: React.FC = () => {
     const onDuplicateNode = useCallback((nodeId: string) => {
         const nodeToDuplicate = nodes.find(n => n.id === nodeId);
         if (!nodeToDuplicate) return;
+
+        if (nodeToDuplicate.data.type === 'START' || nodeToDuplicate.data.type === 'END') {
+            toast.error('Start and End blocks cannot be duplicated.');
+            return;
+        }
 
         const newNode: Node = {
             ...JSON.parse(JSON.stringify(nodeToDuplicate)),

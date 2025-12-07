@@ -1,93 +1,269 @@
-20:45:55.958 -> Booting...
-20:45:55.958 -> Connecting to WiFi: sunny_ad
-20:45:56.003 -> WiFi Connected!
-20:45:56.003 -> Waiting for IP.
-20:45:56.505 -> IP Address: 10.1.10.253
-20:46:19.296 -> Command received via Serial: INFO
-20:46:19.339 -> {"ok":1,"up":25352,"mem":52,"ver":"1.0-v5","capabilities":["MODBUS_RTU_READ","DIGITAL_WRITE","DIGITAL_READ","PWM_WRITE","UART_READ_DISTANCE","ANALOG","ONEWIRE_READ_TEMP"]}
-20:46:25.610 -> Command received via Serial: MODBUS_RTU_READ|{"slaveId":1,"funcCode":3,"startAddr":0,"len":1,"pins":[{"role":"RX","gpio":2},{"role":"TX","gpio":3}]}
-20:46:27.852 -> {"ok":0,"error":"TIMEOUT_OR_CRC"}
-20:46:36.226 -> Command received via Serial: MODBUS_RTU_READ|{"slaveId":1,"funcCode":3,"startAddr":0,"len":1,"pins":[{"role":"RX","gpio":2},{"role":"TX","gpio":3}]}
-20:46:36.452 -> 
-20:46:36.452 -> 
-20:46:36.452 -> Firmware name: "C:\Users\Admin\AppData\Local\arduino\sketches\7DB7A91D946CD4D92F2DB410AFAE59C5/sketch_oct29a.ino", compiled on: Nov  3 2025
-20:46:36.452 -> Fault on interrupt or bare metal(no OS) environment
-20:46:36.452 -> ===== Thread stack information =====
-20:46:36.452 ->   addr: 20007c20    data: 20002cb4
-20:46:36.487 ->   addr: 20007c24    data: 00000020
-20:46:36.487 ->   addr: 20007c28    data: 20002bfc
-20:46:36.487 ->   addr: 20007c2c    data: ffffffe9
-20:46:36.487 ->   addr: 20007c30    data: 00000001
-20:46:36.487 ->   addr: 20007c34    data: 40005040
-20:46:36.487 ->   addr: 20007c38    data: 40005040
-20:46:36.523 ->   addr: 20007c3c    data: 00000000
-20:46:36.523 ->   addr: 20007c40    data: 00000008
-20:46:36.523 ->   addr: 20007c44    data: 0000d359
-20:46:36.523 ->   addr: 20007c48    data: 00008a34
-20:46:36.523 ->   addr: 20007c4c    data: 61000000
-20:46:36.523 ->   addr: 20007c50    data: 0000a5e5
-20:46:36.523 ->   addr: 20007c54    data: 00000001
-20:46:36.523 ->   addr: 20007c58    data: 000001f4
-20:46:36.523 ->   addr: 20007c5c    data: ffffffe9
-20:46:36.523 ->   addr: 20007c60    data: 00000064
-20:46:36.523 ->   addr: 20007c64    data: 00000006
-20:46:36.523 ->   addr: 20007c68    data: 20007cf6
-20:46:36.523 ->   addr: 20007c6c    data: 0000a5e4
-20:46:36.523 ->   addr: 20007c70    data: 00002000
-20:46:36.558 ->   addr: 20007c74    data: 00010593
-20:46:36.558 ->   addr: 20007c78    data: 0001058a
-20:46:36.558 ->   addr: 20007c7c    data: 21000000
-20:46:36.558 ->   addr: 20007c80    data: 00000000
-20:46:36.558 ->   addr: 20007c84    data: 20002cc4
-20:46:36.558 ->   addr: 20007c88    data: 40040028
-20:46:36.558 ->   addr: 20007c8c    data: 20002c94
-20:46:36.558 ->   addr: 20007c90    data: 00000001
-20:46:36.558 ->   addr: 20007c94    data: 00008a2b
-20:46:36.558 ->   addr: 20007c98    data: 00008999
-...
-20:46:36.979 ->   addr: 20007e68    data: 3a226f69
-20:46:37.016 ->   addr: 20007e6c    data: 7b2c7d32
-20:46:37.017 ->   addr: 20007e70    data: 6c6f7222
-20:46:37.017 ->   addr: 20007e74    data: 223a2265
-20:46:37.017 ->   addr: 20007e78    data: 2c225854
-20:46:37.017 ->   addr: 20007e7c    data: 69706722
-20:46:37.017 ->   addr: 20007e80    data: 333a226f
-20:46:37.017 ->   addr: 20007e84    data: 007d5d7d
-20:46:37.017 ->   addr: 20007e88    data: 00000000
-20:46:37.017 ->   addr: 20007e8c    data: 00004040
-20:46:37.017 ->   addr: 20007e90    data: 0000a500
-20:46:37.017 ->   addr: 20007e94    data: ffffffff
-20:46:37.017 ->   addr: 20007e98    data: 20003064
-20:46:37.017 ->   addr: 20007e9c    data: 00007009
-20:46:37.017 ->   addr: 20007ea0    data: 20002698
-20:46:37.051 ->   addr: 20007ea4    data: 00000077
-20:46:37.051 ->   addr: 20007ea8    data: 00000077
-20:46:37.051 ->   addr: 20007eac    data: 200026e8
-20:46:37.051 ->   addr: 20007eb0    data: 00000021
-20:46:37.051 ->   addr: 20007eb4    data: 00000021
-20:46:37.051 ->   addr: 20007eb8    data: 20002618
-20:46:37.085 ->   addr: 20007ebc    data: 00000077
-20:46:37.085 ->   addr: 20007ec0    data: 00000077
-20:46:37.085 ->   addr: 20007ec4    data: 00000000
-20:46:37.085 ->   addr: 20007ec8    data: 00004040
-20:46:37.085 ->   addr: 20007ecc    data: 0000a500
-20:46:37.085 ->   addr: 20007ed0    data: 00000000
-20:46:37.085 ->   addr: 20007ed4    data: 000103fd
-20:46:37.085 ->   addr: 20007ed8    data: 000180f0
-20:46:37.085 ->   addr: 20007edc    data: 40046f00
-20:46:37.085 ->   addr: 20007ee0    data: 00000000
-20:46:37.127 ->   addr: 20007ee4    data: 0001043b
-20:46:37.127 ->   addr: 20007ee8    data: 000180f0
-20:46:37.127 ->   addr: 20007eec    data: 0000906d
-20:46:37.127 ->   addr: 20007ef0    data: 000180f0
-20:46:37.127 ->   addr: 20007ef4    data: 0000cb9b
-20:46:37.127 ->   addr: 20007ef8    data: 0000cb91
-20:46:37.127 ->   addr: 20007efc    data: 00002599
-20:46:37.127 -> ====================================
-20:46:37.127 -> =================== Registers information ====================
-20:46:37.127 ->   R0 : 00000012  R1 : 000000ca  R2 : 40006000  R3 : 28102c1c
-20:46:37.127 ->   R12: 00000008  LR : ffffffe9  PC : 0000bba2  PSR: 2100001a
-20:46:37.127 -> ==============================================================
-20:46:37.161 -> Bus fault is caused by precise data access violation
-20:46:37.161 -> The bus fault occurred address is 28102c20
-20:46:37.161 -> Show more call stack info by run: addr2line -e "C:\Users\Admin\AppData\Local\arduino\sketches\7DB7A91D946CD4D92F2DB410AFAE59C5/sketch_oct29a.ino".elf -a -f 0000bba2 0000d358 00010592 00008a2a 0000f422 000066f0 00009de4 00006cfe 00007008 000103fc 0001043a 0000906c 0000cb9a 0000cb90
+{
+  "_id": {
+    "$oid": "69313a6c8b787c26d530f648"
+  },
+  "id": "ec_ab",
+  "name": "EC AB",
+  "description": "Това е поток който мери първоначално ЕС и ако е точно, започва поливане. Ако има отклонение по голямо от толеранса и в в отрицателна посока, тогава активра помпите за разтовр А/Б до достигане на нужното количество ЕС",
+  "mode": "SIMPLE",
+  "nodes": [
+    {
+      "id": "start",
+      "type": "START",
+      "params": {
+        "label": "START"
+      },
+      "position": {
+        "x": 70.5,
+        "y": -60
+      }
+    },
+    {
+      "id": "end",
+      "type": "END",
+      "params": {
+        "label": "END"
+      },
+      "position": {
+        "x": 393.5272219219886,
+        "y": 529.1450191865065
+      }
+    },
+    {
+      "id": "SENSOR_READ_1764833627709",
+      "type": "SENSOR_READ",
+      "params": {
+        "label": "Сензор за ЕС",
+        "deviceId": "6931354623b1320394ed43dd",
+        "comment": "Прочитане на стойнсот на EC в главен резервоар",
+        "variable": "var_1"
+      },
+      "position": {
+        "x": 230.43630857225006,
+        "y": -24.977650293224876
+      }
+    },
+    {
+      "id": "IF_1764833637197",
+      "type": "IF",
+      "params": {
+        "label": "Проверка за ЕС",
+        "operator": ">=",
+        "variable": "var_1",
+        "value": "{{global_2}}",
+        "comment": "Проверява дали желаното ЕС отговара на текущото"
+      },
+      "position": {
+        "x": 230.4250391235958,
+        "y": 89.75218138471314
+      }
+    },
+    {
+      "id": "ACTUATOR_SET_1764833876058",
+      "type": "ACTUATOR_SET",
+      "params": {
+        "label": "Помпа А",
+        "action": "DOSE",
+        "deviceId": "6931357223b1320394ed4416",
+        "amount": "{{global_3}}",
+        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри"
+      },
+      "position": {
+        "x": 618.7557808037758,
+        "y": 296.5517404113317
+      }
+    },
+    {
+      "id": "LOOP_1764923284000",
+      "type": "LOOP",
+      "params": {
+        "label": "Цикъл",
+        "loopType": "WHILE",
+        "count": 1,
+        "maxIterations": 10,
+        "operator": "<",
+        "comment": "Активират се помпите за разтвор А и Б за покачване на ЕС до нужното ниво",
+        "variable": "var_1",
+        "value": "{{global_2}}"
+      },
+      "position": {
+        "x": 409.53760994016665,
+        "y": 201.0180142002381
+      }
+    },
+    {
+      "id": "generic_1764923587450",
+      "type": "SENSOR_READ",
+      "params": {
+        "label": "Сензор ЕС",
+        "deviceId": "6931354623b1320394ed43dd",
+        "comment": "Прочитане на стойнсот на EC в главен резервоар",
+        "variable": "var_1"
+      },
+      "position": {
+        "x": 687.5044990456879,
+        "y": 576.4117179209984
+      }
+    },
+    {
+      "id": "ACTUATOR_SET_1764923608057",
+      "type": "ACTUATOR_SET",
+      "params": {
+        "label": "Помпа поливане",
+        "action": "PULSE_ON",
+        "deviceId": "6931359e23b1320394ed4482",
+        "duration": "{{global_4}}",
+        "comment": "Това е главната помпа която полива"
+      },
+      "position": {
+        "x": 159.4908608487031,
+        "y": 371.06959620109495
+      }
+    },
+    {
+      "id": "generic_1764923612221",
+      "type": "ACTUATOR_SET",
+      "params": {
+        "label": "Помпа Б",
+        "action": "DOSE",
+        "deviceId": "6931358123b1320394ed4437",
+        "amount": "{{global_3}}",
+        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри"
+      },
+      "position": {
+        "x": 648.9631621421823,
+        "y": 434.9587704331156
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "xy-edge__start-SENSOR_READ_1764833627709",
+      "source": "start",
+      "target": "SENSOR_READ_1764833627709",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__SENSOR_READ_1764833627709-IF_1764833637197",
+      "source": "SENSOR_READ_1764833627709",
+      "target": "IF_1764833637197",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__IF_1764833637197false-LOOP_1764923284000",
+      "source": "IF_1764833637197",
+      "target": "LOOP_1764923284000",
+      "sourceHandle": "false",
+      "type": "smoothstep",
+      "style": {
+        "stroke": "#ef4444"
+      }
+    },
+    {
+      "id": "xy-edge__LOOP_1764923284000body-ACTUATOR_SET_1764833876058",
+      "source": "LOOP_1764923284000",
+      "target": "ACTUATOR_SET_1764833876058",
+      "sourceHandle": "body",
+      "type": "smoothstep",
+      "style": {
+        "stroke": "#22c55e"
+      }
+    },
+    {
+      "id": "xy-edge__ACTUATOR_SET_1764833876058-generic_1764923612221",
+      "source": "ACTUATOR_SET_1764833876058",
+      "target": "generic_1764923612221",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__generic_1764923612221-generic_1764923587450",
+      "source": "generic_1764923612221",
+      "target": "generic_1764923587450",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__LOOP_1764923284000exit-ACTUATOR_SET_1764923608057",
+      "source": "LOOP_1764923284000",
+      "target": "ACTUATOR_SET_1764923608057",
+      "sourceHandle": "exit",
+      "type": "smoothstep",
+      "style": {
+        "stroke": "#ef4444"
+      }
+    },
+    {
+      "id": "xy-edge__ACTUATOR_SET_1764923608057-end",
+      "source": "ACTUATOR_SET_1764923608057",
+      "target": "end",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__IF_1764833637197true-ACTUATOR_SET_1764923608057",
+      "source": "IF_1764833637197",
+      "target": "ACTUATOR_SET_1764923608057",
+      "sourceHandle": "true",
+      "type": "smoothstep",
+      "style": {
+        "stroke": "#22c55e"
+      }
+    }
+  ],
+  "inputs": [],
+  "variables": [
+    {
+      "id": "var_1",
+      "name": "ЕС local",
+      "type": "number",
+      "scope": "local",
+      "unit": "mS/cm",
+      "_id": {
+        "$oid": "69313a6c8b787c26d530f649"
+      }
+    },
+    {
+      "id": "global_2",
+      "name": "EC Need",
+      "type": "number",
+      "scope": "global",
+      "unit": "mS/cm",
+      "hasTolerance": true,
+      "description": "Стойнсот на желаното ЕС",
+      "_id": {
+        "$oid": "69313a6c8b787c26d530f64a"
+      }
+    },
+    {
+      "id": "global_3",
+      "name": "А/Б Доза",
+      "type": "number",
+      "scope": "global",
+      "unit": "ml",
+      "hasTolerance": true,
+      "description": "Каква доза да се долее от разтвори А и Б в милилитри",
+      "_id": {
+        "$oid": "69313bb98b787c26d530f764"
+      }
+    },
+    {
+      "id": "global_4",
+      "name": "Помпа поливане",
+      "type": "number",
+      "scope": "global",
+      "unit": "min",
+      "hasTolerance": true,
+      "description": "Това е помапта за поливане като се въведе време за работа в минути",
+      "_id": {
+        "$oid": "69329a157d90cb79577a5e43"
+      }
+    }
+  ],
+  "isActive": true,
+  "deletedAt": null,
+  "createdAt": {
+    "$date": "2025-12-04T07:38:20.667Z"
+  },
+  "updatedAt": {
+    "$date": "2025-12-05T09:01:42.794Z"
+  },
+  "__v": 0
+}

@@ -5,6 +5,7 @@ import { Zap, Thermometer, Clock, FileText, Activity, Play, Square } from 'lucid
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { cn } from '../../../lib/utils';
 import { useStore } from '../../../core/useStore';
+import { AlertCircle } from 'lucide-react';
 
 const getIcon = (type: string) => {
     switch (type) {
@@ -36,7 +37,8 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
                     "px-4 py-2 shadow-md rounded-md bg-card border-2 min-w-[150px]",
                     selected ? "border-primary" : "border-border",
                     isStart && "border-green-500 bg-green-50/10",
-                    isEnd && "border-red-500 bg-red-50/10"
+                    isEnd && "border-red-500 bg-red-50/10",
+                    !!data.hasError && "border-destructive bg-destructive/5"
                 )}>
                     {!isStart && (
                         <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
@@ -85,6 +87,12 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
 
                     {!isEnd && (
                         <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground" />
+                    )}
+
+                    {!!data.hasError && (
+                        <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1" title={String(data.error)}>
+                            <AlertCircle className="w-3 h-3" />
+                        </div>
                     )}
                 </div>
             </TooltipTrigger>
