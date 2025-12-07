@@ -141,14 +141,22 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         );
     }
 
-    const nodeType = selectedNode.data.type as string;
+    const nodeType = selectedNode.data.type as string; // 'SENSOR_READ', 'ACTUATOR_SET', etc.
     const definition = BLOCK_DEFINITIONS[nodeType];
+    const isMirrorable = nodeType === 'SENSOR_READ'; // Restrict for now as requested
+    // Fix: Treat empty string as true (Mirror Mode active but no source selected yet)
+    const isMirror = formData.mirrorOf !== undefined && formData.mirrorOf !== null;
+
+    // Helper to find potential mirror sources
+    const availableSources = isMirrorable ? nodes
+        .filter(n => n.id !== selectedNode.id && n.data.type === nodeType && !n.data.mirrorOf) // Must be same type, not self, and not a mirror itself (no chaining mirrors for simplicity)
+        .map(n => ({ label: n.data.label || n.id, value: n.id }))
+        : [];
 
     // Helper to render a single field based on its definition
-    const renderField = (key: string, field: FieldDefinition) => {
+    const renderField = (key: string, field: FieldDefinition, readOnly: boolean = false) => {
         const value = formData[key] !== undefined ? formData[key] : field.defaultValue;
 
-        // --- Visibility Logic ---
         // --- Visibility Logic ---
         if (nodeType === 'ACTUATOR_SET') {
             const action = formData['action']; // No default 'ON'
@@ -225,6 +233,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
             // FORCE SELECT RENDER for this field when we have dynamic options
             field = { ...field, type: 'select' };
+        }
+
+        if (readOnly) {
+            return (
+                <div className="p-2 bg-muted rounded border border-dashed text-sm text-muted-foreground">
+                    {String(value)}
+                </div>
+            );
         }
 
         switch (field.type) {
@@ -361,6 +377,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                         type="text"
                         value={formData.label || ''}
                         onChange={(e) => handleChange('label', e.target.value)}
+                        disabled={isMirror}
                     />
                 </div>
 
@@ -376,6 +393,82 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                 <Separator />
 
+                {/* --- MIRROR CONFIGURATION SECTION --- */}
+                {isMirrorable && (
+                    <div className="rounded-md border p-3 bg-muted/20 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="font-semibold">Mode</Label>
+                            <div className="flex bg-muted rounded p-1">
+                                <Button
+                                    variant={!isMirror ? "secondary" : "ghost"}
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => handleChange('mirrorOf', null)}
+                                >
+                                    Standard
+                                </Button>
+                                <Button
+                                    variant={isMirror ? "secondary" : "ghost"}
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => {
+                                        // Don't set null, just switch UI state effectively, 
+                                        // but we need a valid mirrorOf to be 'true'. 
+                                        // Wait for dropdown select to set unique ID.
+                                        // For now, maybe just set empty string to indicate 'Pending Mirror'?
+                                        handleChange('mirrorOf', '');
+                                    }}
+                                >
+                                    Mirror
+                                </Button>
+                            </div>
+                        </div>
+
+                        {isMirror && (
+                            <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                                <Label className="text-xs text-muted-foreground">Source Block</Label>
+                                <Select
+                                    value={formData.mirrorOf || ''}
+                                    onValueChange={(val) => {
+                                        handleChange('mirrorOf', val);
+                                        // TODO: Should we auto-fill current form data from the source for better UX?
+                                        // Yes, find the node and copy its data
+                                        const sourceNode = nodes.find(n => n.id === val);
+                                        if (sourceNode) {
+                                            // Copy all data EXCEPT id, position, logic fields (mirrorOf)
+                                            // Actually, we just need to copy the functional fields defined in definition
+                                            if (definition) {
+                                                const newData = { ...formData, mirrorOf: val };
+                                                Object.keys(definition.fields).forEach(fKey => {
+                                                    newData[fKey] = sourceNode.data[fKey];
+                                                });
+                                                setFormData(newData);
+                                                onChange(selectedNode.id, newData);
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Source Block" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableSources.length > 0 ? (
+                                            availableSources.map(src => (
+                                                <SelectItem key={src.value} value={src.value}>
+                                                    {String(src.label)}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <div className="p-2 text-xs text-muted-foreground text-center">No compatible blocks found</div>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {isMirrorable && <Separator />}
+
                 {definition ? (
                     Object.entries(definition.fields).map(([key, field]) => (
                         <div key={key} className="space-y-2">
@@ -383,7 +476,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                 {field.label}
                                 {field.description && <span className="ml-2 text-xs text-muted-foreground">({field.description})</span>}
                             </Label>
-                            {renderField(key, field)}
+                            {renderField(key, field, isMirror)}
                         </div>
                     ))
                 ) : (

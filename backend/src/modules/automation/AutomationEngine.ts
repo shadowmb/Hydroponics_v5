@@ -263,8 +263,26 @@ export class AutomationEngine {
         events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
 
         try {
+            // 1.5 Handle Mirrored Blocks
+            let effectiveParams = { ...block.params };
+            if (effectiveParams.mirrorOf) {
+                const sourceBlockId = effectiveParams.mirrorOf;
+                const sourceBlock = context.blocks.get(sourceBlockId);
+
+                if (!sourceBlock) {
+                    throw new Error(`Mirrored source block not found: ${sourceBlockId}`);
+                }
+
+                // Use source params, but keep mirror's specific metadata (like _blockId which we add next)
+                // We overwrite mirror's params with source's params
+                effectiveParams = { ...sourceBlock.params, ...effectiveParams };
+
+                // Log that we are using a mirror
+                logger.debug({ mirrorId: blockId, sourceId: sourceBlockId }, '🪞 Resolving Mirrored Block Params');
+            }
+
             // 2. Resolve Params & Execute (Deterministic Step)
-            const rawParams = { ...block.params, _blockId: blockId };
+            const rawParams = { ...effectiveParams, _blockId: blockId };
             const resolvedParams = this.resolveParams(rawParams, context.execContext.variables || {});
 
             const result = await executor.execute(context.execContext, resolvedParams, signal);

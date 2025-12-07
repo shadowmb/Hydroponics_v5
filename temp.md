@@ -36,10 +36,11 @@
       "type": "SENSOR_READ",
       "params": {
         "label": "Сензор за ЕС",
-        "deviceId": "6931354623b1320394ed43dd",
+        "deviceId": "6931355c23b1320394ed43f7",
         "comment": "Прочитане на стойнсот на EC в главен резервоар",
         "variable": "var_1",
-        "hasError": false
+        "hasError": false,
+        "mirrorOf": null
       },
       "position": {
         "x": 230.43630857225006,
@@ -98,21 +99,6 @@
       }
     },
     {
-      "id": "generic_1764923587450",
-      "type": "SENSOR_READ",
-      "params": {
-        "label": "Сензор ЕС",
-        "deviceId": "6931354623b1320394ed43dd",
-        "comment": "Прочитане на стойнсот на EC в главен резервоар",
-        "variable": "var_1",
-        "hasError": false
-      },
-      "position": {
-        "x": 687.5044990456879,
-        "y": 576.4117179209984
-      }
-    },
-    {
       "id": "ACTUATOR_SET_1764923608057",
       "type": "ACTUATOR_SET",
       "params": {
@@ -148,14 +134,29 @@
       "id": "FLOW_CONTROL_1765110819247",
       "type": "FLOW_CONTROL",
       "params": {
-        "controlType": "LOOP_BACK",
         "label": "Flow Control (Jump/Label)",
+        "controlType": "LOOP_BACK",
         "hasError": false,
         "targetLabel": "LOOP_1764923284000"
       },
       "position": {
         "x": 764.401704547758,
         "y": 714.1383851471572
+      }
+    },
+    {
+      "id": "SENSOR_READ_1765113853780",
+      "type": "SENSOR_READ",
+      "params": {
+        "label": "Read Sensor",
+        "hasError": false,
+        "mirrorOf": "SENSOR_READ_1764833627709",
+        "deviceId": "6931354623b1320394ed43dd",
+        "variable": "var_1"
+      },
+      "position": {
+        "x": 709.6905095320806,
+        "y": 593.4401746226785
       }
     }
   ],
@@ -199,12 +200,6 @@
       "type": "smoothstep"
     },
     {
-      "id": "xy-edge__generic_1764923612221-generic_1764923587450",
-      "source": "generic_1764923612221",
-      "target": "generic_1764923587450",
-      "type": "smoothstep"
-    },
-    {
       "id": "xy-edge__LOOP_1764923284000exit-ACTUATOR_SET_1764923608057",
       "source": "LOOP_1764923284000",
       "target": "ACTUATOR_SET_1764923608057",
@@ -231,8 +226,13 @@
       }
     },
     {
-      "id": "xy-edge__generic_1764923587450-FLOW_CONTROL_1765110819247",
-      "source": "generic_1764923587450",
+      "id": "xy-edge__generic_1764923612221-SENSOR_READ_1765113853780",
+      "source": "generic_1764923612221",
+      "target": "SENSOR_READ_1765113853780"
+    },
+    {
+      "id": "xy-edge__SENSOR_READ_1765113853780-FLOW_CONTROL_1765110819247",
+      "source": "SENSOR_READ_1765113853780",
       "target": "FLOW_CONTROL_1765110819247"
     }
   ],
@@ -291,7 +291,7 @@
     "$date": "2025-12-04T07:38:20.667Z"
   },
   "updatedAt": {
-    "$date": "2025-12-07T12:33:51.098Z"
+    "$date": "2025-12-07T13:29:49.810Z"
   },
   "__v": 0
 }
