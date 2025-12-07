@@ -11,7 +11,8 @@
       "id": "start",
       "type": "START",
       "params": {
-        "label": "START"
+        "label": "START",
+        "hasError": false
       },
       "position": {
         "x": 70.5,
@@ -22,7 +23,8 @@
       "id": "end",
       "type": "END",
       "params": {
-        "label": "END"
+        "label": "END",
+        "hasError": false
       },
       "position": {
         "x": 393.5272219219886,
@@ -36,7 +38,8 @@
         "label": "Сензор за ЕС",
         "deviceId": "6931354623b1320394ed43dd",
         "comment": "Прочитане на стойнсот на EC в главен резервоар",
-        "variable": "var_1"
+        "variable": "var_1",
+        "hasError": false
       },
       "position": {
         "x": 230.43630857225006,
@@ -51,7 +54,8 @@
         "operator": ">=",
         "variable": "var_1",
         "value": "{{global_2}}",
-        "comment": "Проверява дали желаното ЕС отговара на текущото"
+        "comment": "Проверява дали желаното ЕС отговара на текущото",
+        "hasError": false
       },
       "position": {
         "x": 230.4250391235958,
@@ -66,7 +70,8 @@
         "action": "DOSE",
         "deviceId": "6931357223b1320394ed4416",
         "amount": "{{global_3}}",
-        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри"
+        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри",
+        "hasError": false
       },
       "position": {
         "x": 618.7557808037758,
@@ -84,7 +89,8 @@
         "operator": "<",
         "comment": "Активират се помпите за разтвор А и Б за покачване на ЕС до нужното ниво",
         "variable": "var_1",
-        "value": "{{global_2}}"
+        "value": "{{global_2}}",
+        "hasError": false
       },
       "position": {
         "x": 409.53760994016665,
@@ -98,7 +104,8 @@
         "label": "Сензор ЕС",
         "deviceId": "6931354623b1320394ed43dd",
         "comment": "Прочитане на стойнсот на EC в главен резервоар",
-        "variable": "var_1"
+        "variable": "var_1",
+        "hasError": false
       },
       "position": {
         "x": 687.5044990456879,
@@ -113,7 +120,8 @@
         "action": "PULSE_ON",
         "deviceId": "6931359e23b1320394ed4482",
         "duration": "{{global_4}}",
-        "comment": "Това е главната помпа която полива"
+        "comment": "Това е главната помпа която полива",
+        "hasError": false
       },
       "position": {
         "x": 159.4908608487031,
@@ -128,11 +136,26 @@
         "action": "DOSE",
         "deviceId": "6931358123b1320394ed4437",
         "amount": "{{global_3}}",
-        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри"
+        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри",
+        "hasError": false
       },
       "position": {
         "x": 648.9631621421823,
         "y": 434.9587704331156
+      }
+    },
+    {
+      "id": "FLOW_CONTROL_1765110819247",
+      "type": "FLOW_CONTROL",
+      "params": {
+        "controlType": "LOOP_BACK",
+        "label": "Flow Control (Jump/Label)",
+        "hasError": false,
+        "targetLabel": "LOOP_1764923284000"
+      },
+      "position": {
+        "x": 764.401704547758,
+        "y": 714.1383851471572
       }
     }
   ],
@@ -206,6 +229,11 @@
       "style": {
         "stroke": "#22c55e"
       }
+    },
+    {
+      "id": "xy-edge__generic_1764923587450-FLOW_CONTROL_1765110819247",
+      "source": "generic_1764923587450",
+      "target": "FLOW_CONTROL_1765110819247"
     }
   ],
   "inputs": [],
@@ -263,7 +291,7 @@
     "$date": "2025-12-04T07:38:20.667Z"
   },
   "updatedAt": {
-    "$date": "2025-12-05T09:01:42.794Z"
+    "$date": "2025-12-07T12:33:51.098Z"
   },
   "__v": 0
 }

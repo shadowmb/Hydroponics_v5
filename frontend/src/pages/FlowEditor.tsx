@@ -9,6 +9,7 @@ import { ActionNode } from '../components/editor/nodes/ActionNode';
 import { ConditionNode } from '../components/editor/nodes/ConditionNode';
 import { GenericBlockNode } from '../components/editor/nodes/GenericBlockNode';
 import { LoopNode } from '../components/editor/nodes/LoopNode';
+import { FlowControlNode } from '../components/editor/nodes/FlowControlNode';
 import { reactFlowToFlow, flowToReactFlow } from '../lib/flow-utils';
 import { Button } from '../components/ui/button';
 import { TooltipProvider } from '../components/ui/tooltip';
@@ -20,13 +21,13 @@ import { useStore } from '../core/useStore';
 import { VariableManager } from '../components/editor/VariableManager';
 import { slugify } from '../lib/string-utils';
 import { FlowValidator } from '../lib/validation/FlowValidator';
-// import type { ValidationError } from '../lib/validation/FlowValidator';
 
 const nodeTypes = {
     action: ActionNode,
     condition: ConditionNode,
     generic: GenericBlockNode,
     loop: LoopNode,
+    flowControl: FlowControlNode
 };
 
 const initialNodes: Node[] = [
@@ -157,9 +158,12 @@ const FlowEditorContent: React.FC = () => {
 
             const isCondition = type === 'IF';
             const isLoop = type === 'LOOP';
+            const isFlowControl = type === 'FLOW_CONTROL';
+
             let nodeType = 'generic';
             if (isCondition) nodeType = 'condition';
             else if (isLoop) nodeType = 'loop';
+            else if (isFlowControl) nodeType = 'flowControl';
 
             const newNode: Node = {
                 id: `${type}_${Date.now()}`,
@@ -395,6 +399,7 @@ const FlowEditorContent: React.FC = () => {
                     onVariablesChange={setVariables}
                     flowDescription={flowDescription}
                     onFlowDescriptionChange={setFlowDescription}
+                    nodes={nodes}
                 />
             </div>
         </div>

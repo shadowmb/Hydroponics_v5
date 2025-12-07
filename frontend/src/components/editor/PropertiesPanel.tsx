@@ -27,6 +27,7 @@ interface PropertiesPanelProps {
     onVariablesChange: (vars: IVariable[]) => void;
     flowDescription?: string;
     onFlowDescriptionChange?: (desc: string) => void;
+    nodes: Node[];
 }
 
 export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
@@ -38,7 +39,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         onDeleteNode,
         onDeleteEdge,
         onDuplicateNode,
-        variables
+        variables,
+        nodes
     } = props;
 
     const [formData, setFormData] = useState<Record<string, any>>({});
@@ -171,13 +173,24 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             }
         }
 
+        if (nodeType === 'FLOW_CONTROL') {
+            const controlType = formData['controlType'] || 'LABEL';
+            if (key === 'labelName') {
+                if (controlType !== 'LABEL') return null;
+            }
+            if (key === 'targetLabel') {
+                if (controlType === 'LABEL' || controlType === 'LOOP_BREAK') return null;
+            }
+        }
+
         // --- Dynamic Options Logic ---
         let options = field.options;
+
+        // 1. ACTUATOR DOSE Check
         if (key === 'action' && nodeType === 'ACTUATOR_SET' && formData.deviceId) {
-            const { devices } = useStore.getState(); // Access store directly or via hook if inside component
+            const { devices } = useStore.getState();
             const device = devices.get(formData.deviceId);
             if (device && device.config?.calibrations?.volumetric_flow) {
-                // Check if DOSE is already in options to avoid duplicates
                 if (!options?.find(o => o.value === 'DOSE')) {
                     options = [
                         ...(options || []),
@@ -185,6 +198,33 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                     ];
                 }
             }
+        }
+
+        // 2. FLOW_CONTROL Target Label (Dynamic Dropdown)
+        if (nodeType === 'FLOW_CONTROL' && key === 'targetLabel') {
+            const controlType = formData['controlType'];
+
+            // A. If Loop Back -> Show ONLY Loop blocks (Return to start of loop)
+            if (controlType === 'LOOP_BACK') {
+                options = nodes
+                    .filter(n => n.type === 'loop')
+                    .map(n => ({
+                        label: `Loop: ${n.data.label || n.id}`,
+                        value: String(n.id)
+                    }));
+            }
+            // B. If GoTo -> Show ALL blocks (Jump anywhere)
+            else if (controlType === 'GOTO') {
+                options = nodes
+                    .filter(n => n.id !== selectedNode.id) // Avoid self-reference
+                    .map(n => ({
+                        label: `${n.data.label || n.type} (${n.id})`,
+                        value: String(n.id)
+                    }));
+            }
+
+            // FORCE SELECT RENDER for this field when we have dynamic options
+            field = { ...field, type: 'select' };
         }
 
         switch (field.type) {

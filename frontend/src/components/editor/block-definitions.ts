@@ -11,6 +11,7 @@ export interface FieldDefinition {
 
 export interface BlockDefinition {
     label: string;
+    description?: string;
     fields: Record<string, FieldDefinition>;
 }
 
@@ -173,6 +174,34 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 label: 'Comparison Value',
                 type: 'text',
                 placeholder: 'Value to compare against'
+            }
+        }
+    },
+    'FLOW_CONTROL': {
+        label: 'Flow Control',
+        description: 'Manage flow execution (Jump, Label, Break)',
+        fields: {
+            controlType: {
+                label: 'Control Type',
+                type: 'select',
+                options: [
+                    { label: 'Label (Anchor)', value: 'LABEL' },
+                    { label: 'Go To Label', value: 'GOTO' },
+                    { label: 'Loop Back (Next Iteration)', value: 'LOOP_BACK' }
+                ],
+                defaultValue: 'LABEL'
+            },
+            labelName: {
+                label: 'Label Name',
+                type: 'text',
+                placeholder: 'e.g. MyLoopStart',
+                description: 'Unique name for this anchor'
+            },
+            targetLabel: {
+                label: 'Target Label',
+                type: 'text',
+                placeholder: 'e.g. MyLoopStart',
+                description: 'Label to jump to'
             }
         }
     }

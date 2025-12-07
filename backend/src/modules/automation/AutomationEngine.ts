@@ -6,6 +6,13 @@ import { logger } from '../../core/LoggerService';
 import { flowRepository } from '../persistence/repositories/FlowRepository';
 import { sessionRepository } from '../persistence/repositories/SessionRepository';
 import { actionTemplateRepository } from '../persistence/repositories/ActionTemplateRepository';
+
+// Import Services (Singletons)
+import { historyService, HistoryService } from '../../services/HistoryService';
+import { unitConversionService, UnitConversionService } from '../../services/conversion/UnitConversionService';
+import { hardware, HardwareService } from '../hardware/HardwareService';
+
+// Import Executors
 import { SensorReadBlockExecutor } from './blocks/SensorReadBlockExecutor';
 import { IfBlockExecutor } from './blocks/IfBlockExecutor';
 import { ActuatorSetBlockExecutor } from './blocks/ActuatorSetBlockExecutor';
@@ -13,6 +20,8 @@ import { WaitBlockExecutor } from './blocks/WaitBlockExecutor';
 import { LogBlockExecutor } from './blocks/LogBlockExecutor';
 import { StartBlockExecutor } from './blocks/StartBlockExecutor';
 import { EndBlockExecutor } from './blocks/EndBlockExecutor';
+import { LoopBlockExecutor } from './blocks/LoopBlockExecutor';
+import { FlowControlBlockExecutor } from './blocks/FlowControlBlockExecutor';
 
 export class AutomationEngine {
     private actor: Actor<any>;
@@ -21,7 +30,11 @@ export class AutomationEngine {
 
     private instanceId = Math.random().toString(36).substring(7);
 
-    constructor() {
+    constructor(
+        private historyService: HistoryService,
+        private unitConversion: UnitConversionService,
+        private deviceService: HardwareService
+    ) {
         console.log(`DEBUG: AutomationEngine Created: ${this.instanceId}`);
 
         // Register Executors
@@ -29,9 +42,11 @@ export class AutomationEngine {
         this.registerExecutor(new EndBlockExecutor());
         this.registerExecutor(new LogBlockExecutor());
         this.registerExecutor(new WaitBlockExecutor());
-        this.registerExecutor(new ActuatorSetBlockExecutor());
-        this.registerExecutor(new SensorReadBlockExecutor());
+        this.registerExecutor(new ActuatorSetBlockExecutor()); // Fixed: No args
+        this.registerExecutor(new SensorReadBlockExecutor()); // Fixed: No args
         this.registerExecutor(new IfBlockExecutor());
+        this.registerExecutor(new LoopBlockExecutor());
+        this.registerExecutor(new FlowControlBlockExecutor());
 
         // Define the logic for 'executeBlock'
         const executeBlockLogic = fromPromise(async ({ input, signal }: { input: { context: AutomationContext }, signal: AbortSignal }) => {
@@ -49,10 +64,15 @@ export class AutomationEngine {
         this.actor.start();
     }
 
+    // ... rest of class ...
+
+    // ... rest of class ...
+
     private setupEventListeners() {
         this.actor.subscribe(async (snapshot) => {
             const stateValue = snapshot.value as string;
             logger.debug({ state: stateValue, block: snapshot.context.currentBlockId }, '⚙️ Automation State Transition');
+            // ... (skip purely existing code references if possible, or use larger chunks)
 
             // Sync with DB Session
             if (this.currentSessionId) {
@@ -364,4 +384,4 @@ export class AutomationEngine {
     }
 }
 
-export const automation = new AutomationEngine();
+export const automation = new AutomationEngine(historyService, unitConversionService, hardware);
