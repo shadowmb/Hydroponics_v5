@@ -139,6 +139,18 @@ export class AutomationEngine {
             }
         }
 
+        // 2a. Resolve Variable Definitions
+        const variableDefinitions: Record<string, any> = {};
+        if (flow.variables) {
+            flow.variables.forEach((v: any) => {
+                variableDefinitions[v.name] = {
+                    type: v.type,
+                    unit: v.unit,
+                    scope: v.scope
+                };
+            });
+        }
+
         // 3. Create Session
         const session = await sessionRepository.create({
             programId: flow.id,
@@ -147,7 +159,8 @@ export class AutomationEngine {
             logs: [],
             context: {
                 resumeState: {},
-                variables: variables // Store resolved variables in context
+                variables: variables, // Store resolved variables in context
+                variableDefinitions: variableDefinitions // Store metadata
             }
         });
         this.currentSessionId = session.id;
@@ -166,7 +179,8 @@ export class AutomationEngine {
             })),
             edges: flow.edges as any[],
             execContext: { // Pass initial context to machine
-                variables
+                variables,
+                variableDefinitions
             }
         } as any);
 
@@ -247,6 +261,7 @@ export class AutomationEngine {
                 if (session && session.context) {
                     if (session.context.resumeState) context.execContext.resumeState = session.context.resumeState;
                     if (session.context.variables) context.execContext.variables = session.context.variables;
+                    if (session.context.variableDefinitions) context.execContext.variableDefinitions = session.context.variableDefinitions;
                 }
             } catch (err) { /* silent */ }
         }
@@ -285,10 +300,10 @@ export class AutomationEngine {
                     if (onSafety === 'CONTINUE') {
                         // Determine 'exit' edge for loop
                         const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'exit');
-                        return { nextBlockId: edge ? edge.target : block.nextBlockId };
+                        return { nextBlockId: edge ? edge.target : null };
                     }
                     if (onSafety === 'PAUSE') {
-                        this.actor.send({ type: 'PAUSE', resumeState: { blockId } });
+                        this.actor.send({ type: 'PAUSE', resumeState: { blockId } } as any);
                         return new Promise(() => { });
                     }
                     throw new Error(`Loop Max Iterations Reached (${params.maxIterations})`);
@@ -334,7 +349,7 @@ export class AutomationEngine {
         }
 
         if (onFailure === 'PAUSE') {
-            this.actor.send({ type: 'PAUSE', resumeState: { blockId } });
+            this.actor.send({ type: 'PAUSE', resumeState: { blockId } } as any);
             return new Promise(() => { });
         }
 

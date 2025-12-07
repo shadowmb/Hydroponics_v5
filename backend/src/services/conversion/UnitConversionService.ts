@@ -14,7 +14,7 @@
  * const result = unitConversionService.convert(10, 'min', 'ms'); // Returns 600000
  */
 
-type UnitCategory = 'time' | 'volume' | 'temperature' | 'distance' | 'unknown';
+type UnitCategory = 'time' | 'volume' | 'temperature' | 'distance' | 'conductivity' | 'pressure' | 'flow' | 'light' | 'generic' | 'unknown';
 
 interface UnitDefinition {
     category: UnitCategory;
@@ -30,6 +30,11 @@ export class UnitConversionService {
         this.registerVolumeUnits();
         this.registerTemperatureUnits();
         this.registerDistanceUnits();
+        this.registerConductivityUnits();
+        this.registerPressureUnits();
+        this.registerFlowUnits();
+        this.registerLightUnits();
+        this.registerGenericUnits();
     }
 
     /**
@@ -111,6 +116,66 @@ export class UnitConversionService {
         this.units.set('m', { category, toBase: v => v * 100, fromBase: v => v / 100 });
         this.units.set('in', { category, toBase: v => v * 2.54, fromBase: v => v / 2.54 });
         this.units.set('ft', { category, toBase: v => v * 30.48, fromBase: v => v / 30.48 });
+    }
+
+    private registerConductivityUnits() {
+        // Base Unit: µS/cm (microsiemens per cm)
+        const category: UnitCategory = 'conductivity';
+
+        this.units.set('uS/cm', { category, toBase: v => v, fromBase: v => v });
+        this.units.set('uS_cm', { category, toBase: v => v, fromBase: v => v }); // Alias
+        this.units.set('µS/cm', { category, toBase: v => v, fromBase: v => v }); // Alias
+        this.units.set('mS/cm', { category, toBase: v => v * 1000, fromBase: v => v / 1000 });
+        this.units.set('ppm', { category, toBase: v => v / 0.5, fromBase: v => v * 0.5 }); // Assuming 0.5 conversion factor (Hanna/NaCl)
+    }
+
+    private registerPressureUnits() {
+        // Base Unit: psi
+        const category: UnitCategory = 'pressure';
+
+        this.units.set('psi', { category, toBase: v => v, fromBase: v => v });
+        this.units.set('bar', { category, toBase: v => v * 14.5038, fromBase: v => v / 14.5038 });
+        this.units.set('kPa', { category, toBase: v => v * 0.145038, fromBase: v => v / 0.145038 });
+        this.units.set('Pa', { category, toBase: v => v * 0.000145038, fromBase: v => v / 0.000145038 });
+    }
+
+    private registerFlowUnits() {
+        // Base Unit: l/min
+        const category: UnitCategory = 'flow';
+
+        this.units.set('l/min', { category, toBase: v => v, fromBase: v => v });
+        this.units.set('L/min', { category, toBase: v => v, fromBase: v => v }); // Alias
+        this.units.set('l/h', { category, toBase: v => v / 60, fromBase: v => v * 60 });
+        this.units.set('L/h', { category, toBase: v => v / 60, fromBase: v => v * 60 }); // Alias
+        this.units.set('ml/min', { category, toBase: v => v / 1000, fromBase: v => v * 1000 });
+        this.units.set('gpm', { category, toBase: v => v * 3.78541, fromBase: v => v / 3.78541 });
+    }
+
+    private registerLightUnits() {
+        // Base Unit: lux
+        // Note: Converting Lux (Illuminance) to PPFD (PAR) depends on Light Source Spectrum.
+        // We will enable strict conversion within same type, or approximate for generic white light (Sunlight ~0.0185, LED varies).
+        // For safe validation, we keep them as same category but might throw warning if conversion attempted?
+        // Actually, let's separate them if accurate conversion is impossible.
+        // But users might want to roughly compare. Let's keep separate for now unless requested.
+        const category: UnitCategory = 'light';
+
+        this.units.set('lux', { category, toBase: v => v, fromBase: v => v });
+        this.units.set('lx', { category, toBase: v => v, fromBase: v => v }); // Alias
+        this.units.set('klux', { category, toBase: v => v * 1000, fromBase: v => v / 1000 });
+        // PPFD
+        this.units.set('umol/m2*s', { category, toBase: v => v, fromBase: v => v }); // Treat as base if from PAR sensor? No, let's add separate 'par' category later if needed.
+        // For now, let's grouping Lux and PPFD is dangerous.
+        // Let's stick to Lux for 'light'.
+    }
+
+    private registerGenericUnits() {
+        const category: UnitCategory = 'generic';
+
+        this.units.set('%', { category, toBase: v => v, fromBase: v => v });
+        this.units.set('percent', { category, toBase: v => v, fromBase: v => v });
+        this.units.set('boolean', { category, toBase: v => v, fromBase: v => v }); // 0 or 1
+        this.units.set('on/off', { category, toBase: v => v, fromBase: v => v });
     }
 }
 

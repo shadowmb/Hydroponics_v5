@@ -89,31 +89,41 @@ const FlowEditorContent: React.FC = () => {
     }, [id, setNodes, setEdges]);
 
     // Validation Effect
+    const { devices, deviceTemplates } = useStore();
     useEffect(() => {
-        const result = FlowValidator.validate(nodes, edges);
+        const context = {
+            devices,
+            variables,
+            deviceTemplates
+        };
+        const result = FlowValidator.validate(nodes, edges, context);
         // setValidationErrors(result.errors);
 
         // Update nodes with error state
-        setNodes(nds => nds.map(node => {
-            const nodeErrors = result.blockErrors[node.id];
-            const hasError = !!nodeErrors;
-            const errorMsg = hasError ? nodeErrors[0].message : undefined;
+        setNodes((nds) => {
+            let hasChanges = false;
+            const newNodes = nds.map((node) => {
+                const nodeErrors = result.blockErrors[node.id];
+                const hasError = !!nodeErrors;
+                const errorMsg = hasError ? nodeErrors[0].message : undefined;
 
-            // Only update if changed to avoid render loops
-            if (node.data.error !== errorMsg || node.data.hasError !== hasError) {
-                return {
-                    ...node,
-                    data: {
-                        ...node.data,
-                        hasError: hasError,
-                        error: errorMsg
-                    }
-                };
-            }
-            return node;
-        }));
+                if (node.data.error !== errorMsg || node.data.hasError !== hasError) {
+                    hasChanges = true;
+                    return {
+                        ...node,
+                        data: {
+                            ...node.data,
+                            hasError: hasError,
+                            error: errorMsg,
+                        },
+                    };
+                }
+                return node;
+            });
+            return hasChanges ? newNodes : nds;
+        });
 
-    }, [nodes.map(n => JSON.stringify({ ...n.data, hasError: undefined, error: undefined })).join('|'), edges, setNodes]); // Deep compare data (excluding error fields)
+    }, [nodes.map(n => JSON.stringify({ ...n.data, hasError: undefined, error: undefined })).join('|'), edges, setNodes, devices, variables, deviceTemplates]);
 
     // Load Devices for Selector
     const { setDevices } = useStore();
@@ -236,7 +246,12 @@ const FlowEditorContent: React.FC = () => {
         console.log('onSave called:', { name, id });
 
         // Final Validation Check
-        const validationResult = FlowValidator.validate(nodes, edges);
+        const context = {
+            devices: useStore.getState().devices,
+            variables: variables,
+            deviceTemplates: useStore.getState().deviceTemplates
+        };
+        const validationResult = FlowValidator.validate(nodes, edges, context);
         if (!validationResult.isValid) {
             toast.error(`Cannot save: ${validationResult.errors.length} errors found.`);
             return; // Block save
@@ -400,6 +415,24 @@ const FlowEditorContent: React.FC = () => {
                     flowDescription={flowDescription}
                     onFlowDescriptionChange={setFlowDescription}
                     nodes={nodes}
+                    edges={edges}
+                    onSelectBlock={(nodeId) => {
+                        setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === nodeId })));
+                        setEdges((eds) => eds.map((e) => ({ ...e, selected: false })));
+
+                        // Focus on the node
+                        if (reactFlowInstance) {
+                            reactFlowInstance.fitView({
+                                nodes: [{ id: nodeId }],
+                                duration: 800,
+                                padding: 2, // Keep some distance
+                                maxZoom: 1.5
+                            });
+                            // Also update selected state immediately for PropertiesPanel
+                            const node = nodes.find(n => n.id === nodeId);
+                            if (node) setSelectedNode(node);
+                        }
+                    }}
                 />
             </div>
         </div>

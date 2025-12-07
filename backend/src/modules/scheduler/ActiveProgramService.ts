@@ -156,6 +156,14 @@ export class ActiveProgramService {
             logger.info('▶️ Active Program Started');
         }
 
+        // Reset FAILED and RUNNING items to PENDING on Start as well
+        // This ensures if we restart after a crash (without Stop), errors are cleared
+        active.schedule.forEach(item => {
+            if (item.status === 'failed' || item.status === 'running') {
+                item.status = 'pending';
+            }
+        });
+
         await active.save();
         return active;
     }
@@ -173,8 +181,16 @@ export class ActiveProgramService {
         // Stop any running cycle
         await cycleManager.stopCycle();
 
+        // Reset FAILED and RUNNING items to PENDING so they are cleared from UI errors
+        // and ready for next run (or manual interaction)
+        active.schedule.forEach(item => {
+            if (item.status === 'failed' || item.status === 'running') {
+                item.status = 'pending';
+            }
+        });
+
         await active.save();
-        logger.info('⏹️ Active Program Stopped');
+        logger.info('⏹️ Active Program Stopped (Statuses Reset)');
         return active;
     }
 

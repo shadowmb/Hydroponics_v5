@@ -10,6 +10,13 @@ export interface ExecutionContext {
     // Runtime Variables (Read/Write)
     variables: Record<string, any>;
 
+    // Variable Definitions (Read-Only Metadata)
+    variableDefinitions: Record<string, {
+        type: string;
+        unit?: string;
+        scope: 'local' | 'global';
+    }>;
+
     // Hardware State Snapshot (Read-Only)
     // Updated by the Engine before each block execution
     devices: Record<string, {

@@ -480,6 +480,29 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
         }
     };
 
+    const [isStartConfirmOpen, setIsStartConfirmOpen] = useState(false);
+
+    const handleStartRequest = () => {
+        const isCycleRunning = program.schedule.some(item => item.status === 'running');
+        if (isCycleRunning) {
+            setIsStartConfirmOpen(true);
+        } else {
+            handleResume();
+        }
+    };
+
+    const handleConfirmStart = async () => {
+        try {
+            await activeProgramService.stop(); // Stop cycle and program
+            await activeProgramService.start(); // Start program immediately
+            toast.success('Cycle stopped, Program started');
+            setIsStartConfirmOpen(false);
+            onUpdate();
+        } catch (error) {
+            toast.error('Failed to restart program');
+        }
+    };
+
     const handleForceStart = async (itemId: string) => {
         try {
             await activeProgramService.forceStartCycle(itemId);
@@ -570,7 +593,7 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-                                <Button onClick={handleResume} className="gap-2 bg-green-600 hover:bg-green-700">
+                                <Button onClick={handleStartRequest} className="gap-2 bg-green-600 hover:bg-green-700">
                                     <Play className="h-4 w-4" />
                                     Start Program
                                 </Button>
@@ -589,6 +612,7 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                             <Square className="h-4 w-4" />
                         </Button>
 
+                        {/* REMOVE PROGRAM DIALOG */}
                         <Dialog>
                             <DialogTrigger asChild>
                                 <Button variant="ghost" size="icon" title="Remove">
@@ -613,6 +637,24 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                             onUpdate();
                                         } catch (e) { toast.error('Failed to remove program'); }
                                     }}>Remove</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
+                        {/* START CONFIRMATION DIALOG */}
+                        <Dialog open={isStartConfirmOpen} onOpenChange={setIsStartConfirmOpen}>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Cycle in Progress</DialogTitle>
+                                    <DialogDescription>
+                                        A manual cycle is currently running. Starting the program will stop the active cycle.
+                                        <br /><br />
+                                        Do you want to stop the cycle and start the program?
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsStartConfirmOpen(false)}>Cancel</Button>
+                                    <Button onClick={handleConfirmStart}>Stop Cycle & Start</Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
