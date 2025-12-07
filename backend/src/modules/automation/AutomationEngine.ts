@@ -6,6 +6,13 @@ import { logger } from '../../core/LoggerService';
 import { flowRepository } from '../persistence/repositories/FlowRepository';
 import { sessionRepository } from '../persistence/repositories/SessionRepository';
 import { actionTemplateRepository } from '../persistence/repositories/ActionTemplateRepository';
+
+// Import Services (Singletons)
+import { historyService, HistoryService } from '../../services/HistoryService';
+import { unitConversionService, UnitConversionService } from '../../services/conversion/UnitConversionService';
+import { hardware, HardwareService } from '../hardware/HardwareService';
+
+// Import Executors
 import { SensorReadBlockExecutor } from './blocks/SensorReadBlockExecutor';
 import { IfBlockExecutor } from './blocks/IfBlockExecutor';
 import { ActuatorSetBlockExecutor } from './blocks/ActuatorSetBlockExecutor';
@@ -13,6 +20,8 @@ import { WaitBlockExecutor } from './blocks/WaitBlockExecutor';
 import { LogBlockExecutor } from './blocks/LogBlockExecutor';
 import { StartBlockExecutor } from './blocks/StartBlockExecutor';
 import { EndBlockExecutor } from './blocks/EndBlockExecutor';
+import { LoopBlockExecutor } from './blocks/LoopBlockExecutor';
+import { FlowControlBlockExecutor } from './blocks/FlowControlBlockExecutor';
 
 export class AutomationEngine {
     private actor: Actor<any>;
@@ -21,7 +30,11 @@ export class AutomationEngine {
 
     private instanceId = Math.random().toString(36).substring(7);
 
-    constructor() {
+    constructor(
+        private historyService: HistoryService,
+        private unitConversion: UnitConversionService,
+        private deviceService: HardwareService
+    ) {
         console.log(`DEBUG: AutomationEngine Created: ${this.instanceId}`);
 
         // Register Executors
@@ -29,9 +42,11 @@ export class AutomationEngine {
         this.registerExecutor(new EndBlockExecutor());
         this.registerExecutor(new LogBlockExecutor());
         this.registerExecutor(new WaitBlockExecutor());
-        this.registerExecutor(new ActuatorSetBlockExecutor());
-        this.registerExecutor(new SensorReadBlockExecutor());
+        this.registerExecutor(new ActuatorSetBlockExecutor()); // Fixed: No args
+        this.registerExecutor(new SensorReadBlockExecutor()); // Fixed: No args
         this.registerExecutor(new IfBlockExecutor());
+        this.registerExecutor(new LoopBlockExecutor());
+        this.registerExecutor(new FlowControlBlockExecutor());
 
         // Define the logic for 'executeBlock'
         const executeBlockLogic = fromPromise(async ({ input, signal }: { input: { context: AutomationContext }, signal: AbortSignal }) => {
@@ -49,10 +64,15 @@ export class AutomationEngine {
         this.actor.start();
     }
 
+    // ... rest of class ...
+
+    // ... rest of class ...
+
     private setupEventListeners() {
         this.actor.subscribe(async (snapshot) => {
             const stateValue = snapshot.value as string;
             logger.debug({ state: stateValue, block: snapshot.context.currentBlockId }, '⚙️ Automation State Transition');
+            // ... (skip purely existing code references if possible, or use larger chunks)
 
             // Sync with DB Session
             if (this.currentSessionId) {
@@ -208,7 +228,7 @@ export class AutomationEngine {
 
     /**
      * The core logic run by the XState 'invoke'.
-     * Executes a single block.
+     * Executes a single block with Error Handling Policy.
      */
     private async executeBlock(context: AutomationContext, signal?: AbortSignal): Promise<any> {
         const blockId = context.currentBlockId;
@@ -221,147 +241,118 @@ export class AutomationEngine {
         if (!executor) throw new Error(`No executor for block type: ${block.type}`);
 
         // 0. Sync Context from DB (Critical for Resume)
-        // We need to ensure we have the latest resumeState which might have been saved during a Pause.
         if (this.currentSessionId) {
             try {
                 const session = await sessionRepository.findById(this.currentSessionId);
                 if (session && session.context) {
-                    if (session.context.resumeState) {
-                        context.execContext.resumeState = session.context.resumeState;
+                    if (session.context.resumeState) context.execContext.resumeState = session.context.resumeState;
+                    if (session.context.variables) context.execContext.variables = session.context.variables;
+                }
+            } catch (err) { /* silent */ }
+        }
+
+        // --- ERROR HANDLING & RETRY LOGIC ---
+        let params = { ...block.params };
+        if (params.mirrorOf) {
+            const sourceBlock = context.blocks.get(params.mirrorOf);
+            if (sourceBlock) params = { ...sourceBlock.params, ...params, _mirrorId: blockId };
+        }
+
+        const retryCount = Number(params.retryCount) || 0;
+        const retryDelay = Number(params.retryDelay) || 1000;
+        const onFailure = params.onFailure || 'STOP';
+
+        let attempts = 0;
+        let lastError: Error | null = null;
+
+        while (attempts <= retryCount) {
+            if (signal?.aborted) throw new Error('Aborted');
+
+            try {
+                if (attempts === 0) events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
+
+                const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
+                const result = await executor.execute(context.execContext, resolvedParams, signal);
+
+                if (!result.success) throw new Error(result.error || 'Block execution returned failure');
+
+                // Success!
+                events.emit('automation:block_end', { blockId, success: true, output: result.output, sessionId: this.currentSessionId });
+
+                // Loop Safety Check
+                if (result.output && result.output.status === 'MAX_ITERATIONS') {
+                    const onSafety = params.onMaxIterations || 'STOP';
+                    if (onSafety === 'CONTINUE') {
+                        // Determine 'exit' edge for loop
+                        const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'exit');
+                        return { nextBlockId: edge ? edge.target : block.nextBlockId };
                     }
-                    // Also sync variables if they changed (though they are usually static per session)
-                    if (session.context.variables) {
-                        context.execContext.variables = session.context.variables;
+                    if (onSafety === 'PAUSE') {
+                        this.actor.send({ type: 'PAUSE', resumeState: { blockId } });
+                        return new Promise(() => { });
+                    }
+                    throw new Error(`Loop Max Iterations Reached (${params.maxIterations})`);
+                }
+
+                // --- GRAPH NAVIGATION LOGIC ---
+                let nextBlockId: string | undefined | null = result.nextBlockId;
+                if (nextBlockId === undefined) {
+                    if (block.type === 'IF' && typeof result.output === 'boolean') {
+                        const expectedHandle = result.output ? 'true' : 'false';
+                        const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
+                        nextBlockId = edge ? edge.target : null;
+                        if (!nextBlockId) logger.warn({ blockId, result: result.output }, '⚠️ IF block has no matching edge');
+                    }
+                    else if (block.type === 'LOOP' && typeof result.output === 'boolean') {
+                        const expectedHandle = result.output ? 'body' : 'exit';
+                        const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
+                        nextBlockId = edge ? edge.target : null;
+                    }
+                    else {
+                        const edge = context.edges.find(e => e.source === blockId);
+                        nextBlockId = edge ? edge.target : null;
                     }
                 }
-            } catch (err) {
-                logger.warn({ err }, 'Failed to sync session context from DB');
+
+                return { nextBlockId, output: result.output };
+
+            } catch (err: any) {
+                lastError = err;
+                attempts++;
+                logger.warn({ blockId, attempt: attempts, err: err.message }, `Block execution failed`);
+                if (attempts <= retryCount) await new Promise(r => setTimeout(r, retryDelay));
             }
         }
 
-        // 1. Emit Block Start
-        events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
+        // FAILURE HANDLING
+        logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');
 
-        try {
-            // 2. Resolve Params & Execute (Deterministic Step)
-            const rawParams = { ...block.params, _blockId: blockId };
-            const resolvedParams = this.resolveParams(rawParams, context.execContext.variables || {});
-
-            const result = await executor.execute(context.execContext, resolvedParams, signal);
-
-            // 3. Emit Block End
-            events.emit('automation:block_end', { blockId, success: result.success, output: result.output, sessionId: this.currentSessionId });
-
-            // 4. Log to Session (Async -> Sync for consistency)
-            if (this.currentSessionId) {
-                try {
-                    const logEntry = {
-                        timestamp: new Date(),
-                        level: result.success ? 'info' : 'error',
-                        message: `Block ${block.type} executed`,
-                        blockId,
-                        data: result.output
-                    };
-
-                    await sessionRepository.addLog(this.currentSessionId, logEntry);
-
-                    // Emit log event for real-time UI
-                    events.emit('log', { ...logEntry, sessionId: this.currentSessionId });
-
-                } catch (err) {
-                    logger.error({ err }, 'Failed to save session log');
-                }
-            }
-
-            if (!result.success) {
-                throw new Error(result.error || 'Block execution failed');
-            }
-
-            // 2.5. Persist State (if returned by block)
-            if (result.state && this.currentSessionId) {
-                try {
-                    const update = {
-                        [`context.resumeState.${blockId}`]: result.state
-                    };
-                    await sessionRepository.update(this.currentSessionId, update);
-                    // Update local context too so next block sees it immediately if needed?
-                    // Actually, next block is different, but re-entry to THIS block needs it.
-                    // We updated DB, but `context.execContext.resumeState` is local.
-                    if (!context.execContext.resumeState) context.execContext.resumeState = {};
-                    context.execContext.resumeState[blockId] = result.state;
-                } catch (err) {
-                    logger.error({ err }, '❌ Failed to save block state');
-                }
-            }
-
-            // Determine next block using Graph Edges
-            let nextBlockId: string | undefined | null = result.nextBlockId;
-
-            if (nextBlockId === undefined) {
-                // Special Handling for IF block (Conditional Routing)
-                if (block.type === 'IF' && typeof result.output === 'boolean') {
-                    // Find edge matching the boolean result (true/false)
-                    // We assume edges from IF block have sourceHandle 'true' or 'false'
-                    // OR we check edge labels/data?
-                    // The ConditionNode uses sourceHandle="true" and "false".
-                    const expectedHandle = result.output ? 'true' : 'false';
-                    const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
-
-                    if (edge) {
-                        nextBlockId = edge.target;
-                    } else {
-                        // Fallback: If no specific edge found, maybe just stop?
-                        // Or try to find a default edge?
-                        nextBlockId = null;
-                        logger.warn({ blockId, result: result.output }, '⚠️ IF block has no matching edge');
-                    }
-                }
-                // Special Handling for LOOP block
-                else if (block.type === 'LOOP' && typeof result.output === 'boolean') {
-                    // true -> body, false -> exit
-                    const expectedHandle = result.output ? 'body' : 'exit';
-                    const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
-                    nextBlockId = edge ? edge.target : null;
-                }
-                else {
-                    // Default behavior: Find the first outgoing edge
-                    const edge = context.edges.find(e => e.source === blockId);
-                    nextBlockId = edge ? edge.target : null;
-                }
-            }
-
-            return { nextBlockId, output: result.output };
-
-        } catch (error: any) {
-            if (error.name === 'PauseError') {
-                logger.info({ blockId, state: error.state }, '⏸️ Block Paused (State Saved)');
-
-                // Save state to DB
-                if (this.currentSessionId) {
-                    try {
-                        const update = {
-                            [`context.resumeState.${blockId}`]: error.state
-                        };
-                        await sessionRepository.update(this.currentSessionId, update);
-                    } catch (err) {
-                        logger.error({ err }, '❌ Failed to save resume state');
-                    }
-                }
-
-                // Treat as aborted for XState
-                throw new Error('Aborted');
-            }
-
-            if (error.message === 'Aborted' || signal?.aborted) {
-                logger.info({ blockId }, '⏹️ Block Execution Aborted (Paused/Stopped)');
-                throw error; // XState handles cancellation
-            }
-
-            console.error('BLOCK EXECUTION ERROR:', error);
-            logger.error({ error, blockId }, '❌ Block Execution Error');
-            throw error; // Triggers onError in XState
+        if (onFailure === 'CONTINUE') {
+            // Try to find a default outgoing edge to continue
+            const edge = context.edges.find(e => e.source === blockId);
+            return { nextBlockId: edge ? edge.target : null };
         }
+
+        if (onFailure === 'PAUSE') {
+            this.actor.send({ type: 'PAUSE', resumeState: { blockId } });
+            return new Promise(() => { });
+        }
+
+        if (onFailure === 'GOTO_LABEL') {
+            const targetLabelName = params.errorTargetLabel;
+            if (targetLabelName) {
+                if (targetLabelName === 'END') return { nextBlockId: null };
+
+                for (const [id, b] of context.blocks) {
+                    if (b.type === 'FLOW_CONTROL' && b.params.controlType === 'LABEL' && b.params.labelName === targetLabelName) {
+                        return { nextBlockId: id };
+                    }
+                }
+            }
+        }
+
+        throw lastError || new Error('Block failed after retries');
     }
 }
 
-export const automation = new AutomationEngine();
+export const automation = new AutomationEngine(historyService, unitConversionService, hardware);

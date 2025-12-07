@@ -54,7 +54,7 @@ export class SocketService {
 
         eventsToForward.forEach(eventName => {
             events.on(eventName, (payload) => {
-                logger.info({ event: eventName, payload }, '📡 Forwarding to WebSocket');
+                logger.debug({ event: eventName, payload }, '📡 Forwarding to WebSocket');
                 this.io?.emit(eventName, payload);
             });
         });

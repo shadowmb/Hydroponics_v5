@@ -11,6 +11,7 @@ export interface FieldDefinition {
 
 export interface BlockDefinition {
     label: string;
+    description?: string;
     fields: Record<string, FieldDefinition>;
 }
 
@@ -65,7 +66,7 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                     { label: 'Pulse OFF', value: 'PULSE_OFF' }
                     // Dynamic options like 'DOSE' will be added by PropertiesPanel
                 ],
-                defaultValue: 'ON'
+                // defaultValue: 'ON' - Removed to force manual selection
             },
             duration: {
                 label: 'Duration (ms)',
@@ -78,6 +79,43 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'number', // Can be toggled to variable in UI
                 placeholder: 'e.g. 100',
                 description: 'Quantity to dose'
+            },
+            // Error Handling Policy
+            retryCount: {
+                label: 'Retry Count',
+                type: 'number',
+                defaultValue: 3,
+                description: 'Retries before failing'
+            },
+            retryDelay: {
+                label: 'Retry Delay (ms)',
+                type: 'number',
+                defaultValue: 1000,
+                description: 'Time between retries'
+            },
+            onFailure: {
+                label: 'On Failure',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Continue (Ignore)', value: 'CONTINUE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action if device fails'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
+            },
+            errorNotification: {
+                label: 'Send Notification',
+                type: 'boolean',
+                defaultValue: false,
+                description: 'Alert on failure'
             }
         }
     },
@@ -94,6 +132,43 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'variable',
                 placeholder: 'Select variable',
                 description: 'Variable to store the reading'
+            },
+            // Error Handling Policy
+            retryCount: {
+                label: 'Retry Count',
+                type: 'number',
+                defaultValue: 3,
+                description: 'Number of retries before failing'
+            },
+            retryDelay: {
+                label: 'Retry Delay (ms)',
+                type: 'number',
+                defaultValue: 1000,
+                description: 'Time between retries'
+            },
+            onFailure: {
+                label: 'On Failure',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Continue (Ignore)', value: 'CONTINUE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action to take if all retries fail'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
+            },
+            errorNotification: {
+                label: 'Send Notification',
+                type: 'boolean',
+                defaultValue: false,
+                description: 'Send alert on failure'
             }
         }
     },
@@ -122,6 +197,31 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 label: 'Comparison Value',
                 type: 'text', // Can be number or string, keep text for flexibility
                 placeholder: 'Value to compare against'
+            },
+            // Error Handling
+            onFailure: {
+                label: 'On Failure (Error)',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Treat as False', value: 'FALSE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action if variable missing'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
+            },
+            errorNotification: {
+                label: 'Send Notification',
+                type: 'boolean',
+                defaultValue: false,
+                description: 'Alert on error'
             }
         }
     },
@@ -144,13 +244,7 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 defaultValue: 1,
                 description: 'Number of times to repeat'
             },
-            maxIterations: {
-                label: 'Max Iterations (Safety)',
-                type: 'number',
-                placeholder: 'e.g. 10',
-                defaultValue: 10,
-                description: 'Safety limit for WHILE loops'
-            },
+
             variable: {
                 label: 'Variable',
                 type: 'variable',
@@ -173,6 +267,66 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 label: 'Comparison Value',
                 type: 'text',
                 placeholder: 'Value to compare against'
+            },
+            // Loop Safety
+            maxIterations: {
+                label: 'Max Iterations (Safety)',
+                type: 'number',
+                placeholder: 'e.g. 10',
+                defaultValue: 10,
+                description: 'Safety limit for WHILE loops'
+            },
+            onMaxIterations: {
+                label: 'On Max Iterations',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Exit Loop', value: 'CONTINUE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action if stuck in loop'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
+            },
+            errorNotification: {
+                label: 'Send Notification',
+                type: 'boolean',
+                defaultValue: false,
+                description: 'Alert on safety limit'
+            }
+        }
+    },
+    'FLOW_CONTROL': {
+        label: 'Flow Control',
+        description: 'Manage flow execution (Jump, Label, Break)',
+        fields: {
+            controlType: {
+                label: 'Control Type',
+                type: 'select',
+                options: [
+                    { label: 'Label (Anchor)', value: 'LABEL' },
+                    { label: 'Go To Label', value: 'GOTO' },
+                    { label: 'Loop Back (Next Iteration)', value: 'LOOP_BACK' }
+                ],
+                defaultValue: 'LABEL'
+            },
+            labelName: {
+                label: 'Label Name',
+                type: 'text',
+                placeholder: 'e.g. MyLoopStart',
+                description: 'Unique name for this anchor'
+            },
+            targetLabel: {
+                label: 'Target Label',
+                type: 'text',
+                placeholder: 'e.g. MyLoopStart',
+                description: 'Label to jump to'
             }
         }
     }

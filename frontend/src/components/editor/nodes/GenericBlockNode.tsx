@@ -1,12 +1,14 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
-import { Handle, Position } from '@xyflow/react';
-import { Zap, Thermometer, Clock, FileText, Activity, Play, Square } from 'lucide-react';
+import { Handle, Position, useNodes } from '@xyflow/react';
+import { Zap, Thermometer, Clock, FileText, Activity, Play, Square, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { cn } from '../../../lib/utils';
 import { useStore } from '../../../core/useStore';
 
-const getIcon = (type: string) => {
+const getIcon = (type: string, isMirror: boolean) => {
+    if (isMirror) return <LinkIcon className="h-4 w-4" />;
+
     switch (type) {
         case 'START': return <Play className="h-4 w-4" />;
         case 'END': return <Square className="h-4 w-4" />;
@@ -22,6 +24,18 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
     const { devices } = useStore();
     const isStart = data.type === 'START';
     const isEnd = data.type === 'END';
+    const nodes = useNodes(); // Access all nodes to find mirror source
+
+    // Resolve Mirror Logic: If this is a mirror, try to find the source node and use its data for display
+    let displayData = data;
+    const isMirror = !!data.mirrorOf;
+
+    if (isMirror && data.mirrorOf) {
+        const sourceNode = nodes.find(n => n.id === data.mirrorOf);
+        if (sourceNode) {
+            displayData = { ...sourceNode.data, mirrorOf: data.mirrorOf, type: data.type };
+        }
+    }
 
     // Helper to get device name
     const getDeviceName = (id: string) => {
@@ -36,7 +50,9 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
                     "px-4 py-2 shadow-md rounded-md bg-card border-2 min-w-[150px]",
                     selected ? "border-primary" : "border-border",
                     isStart && "border-green-500 bg-green-50/10",
-                    isEnd && "border-red-500 bg-red-50/10"
+                    isEnd && "border-red-500 bg-red-50/10",
+                    isMirror && "border-dashed border-blue-400 bg-blue-50/5",
+                    !!displayData.hasError && "border-destructive bg-destructive/5"
                 )}>
                     {!isStart && (
                         <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
@@ -45,39 +61,45 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
                     <div className="flex items-center gap-2">
                         <div className={cn("p-1 rounded bg-muted",
                             isStart && "bg-green-100 text-green-700",
-                            isEnd && "bg-red-100 text-red-700"
+                            isEnd && "bg-red-100 text-red-700",
+                            isMirror && "bg-blue-100 text-blue-700"
                         )}>
-                            {getIcon(String(data.type))}
+                            {getIcon(String(displayData.type), isMirror)}
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-bold">{String(data.label || data.type)}</span>
-                            <span className="text-[10px] text-muted-foreground">{String(data.type)}</span>
+                            <span className="text-sm font-bold truncate max-w-[150px]">
+                                {String(displayData.label || displayData.type)}
+                            </span>
+                            <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-muted-foreground">{String(displayData.type)}</span>
+                                {isMirror && <span className="text-[10px] bg-blue-100 text-blue-700 px-1 rounded-sm">Linked</span>}
+                            </div>
 
                             {/* Dynamic Content Display */}
-                            {!!data.deviceId && (
+                            {!!displayData.deviceId && (
                                 <span className="text-[10px] text-blue-600 font-mono mt-1">
-                                    Device: {getDeviceName(String(data.deviceId))}
+                                    Device: {getDeviceName(String(displayData.deviceId))}
                                 </span>
                             )}
-                            {!!data.variable && (
+                            {!!displayData.variable && (
                                 <span className="text-[10px] text-orange-600 font-mono">
-                                    Var: {String(data.variable)}
+                                    Var: {String(displayData.variable)}
                                 </span>
                             )}
 
                             {/* ACTUATOR_SET Specifics */}
-                            {data.type === 'ACTUATOR_SET' && !!data.action && (
+                            {displayData.type === 'ACTUATOR_SET' && !!displayData.action && (
                                 <span className="text-[10px] text-purple-600 font-mono mt-1">
-                                    Action: {String(data.action)}
-                                    {!!data.duration && ` (${String(data.duration)}ms)`}
-                                    {!!data.amount && ` (${String(data.amount)}ml)`}
+                                    Action: {String(displayData.action)}
+                                    {!!displayData.duration && ` (${String(displayData.duration)}ms)`}
+                                    {!!displayData.amount && ` (${String(displayData.amount)}ml)`}
                                 </span>
                             )}
 
                             {/* WAIT Specifics */}
-                            {data.type === 'WAIT' && !!data.duration && (
+                            {displayData.type === 'WAIT' && !!displayData.duration && (
                                 <span className="text-[10px] text-gray-500 font-mono mt-1">
-                                    Wait: {String(data.duration)} ms
+                                    Wait: {String(displayData.duration)} ms
                                 </span>
                             )}
                         </div>
@@ -86,11 +108,17 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
                     {!isEnd && (
                         <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground" />
                     )}
+
+                    {!!displayData.hasError && (
+                        <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1" title={String(displayData.error)}>
+                            <AlertCircle className="w-3 h-3" />
+                        </div>
+                    )}
                 </div>
             </TooltipTrigger>
-            {!!data.comment && (
+            {!!displayData.comment && (
                 <TooltipContent className="max-w-[200px] text-xs">
-                    <p>{data.comment as string}</p>
+                    <p>{displayData.comment as string}</p>
                 </TooltipContent>
             )}
         </Tooltip>
