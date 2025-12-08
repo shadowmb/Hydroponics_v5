@@ -170,7 +170,7 @@ export const resolveStrategyOutputUnit = (
     let outputUnit = strategy.outputUnit;
 
     if (outputUnit === 'any' && deviceContext) {
-        const { device, template } = deviceContext;
+        const { template } = deviceContext;
         const driverCommand = template?.commands ? (Array.isArray(template.commands) ? template.commands.find((c: any) => c.label === 'Read' || c.name === 'READ') : template.commands['READ']) : null;
         const nativeUnit = driverCommand?.sourceUnit || template?.uiConfig?.defaultUnit;
 
