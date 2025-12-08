@@ -255,6 +255,41 @@ export class HardwareService {
         // @ts-ignore - sourceUnit is new, might not be in interface yet
         let sourceUnit = driverDoc.commands?.READ?.sourceUnit;
 
+        // --- Strategy Output Unit Resolution ---
+        // If a strategy transforms the unit (e.g. Distance -> Volume), we must track it
+        const activeStrategy = strategyOverride || device.config.conversionStrategy;
+        if (activeStrategy && activeStrategy !== 'linear' && activeStrategy !== 'raw') {
+            try {
+                // Dynamic import to avoid path issues (consistent with UnitRegistry usage below)
+                const strategyRegPath = require('path').resolve(__dirname, '../../../../shared/strategies/StrategyRegistry');
+                const { StrategyRegistry } = require(strategyRegPath);
+
+                // We access the static map directly or via a getter if available. 
+                // StrategyRegistry export is usually a class with static methods or a const object.
+                // Based on previous tasks, StrategyRegistry.STRATEGIES might be exposed or getStrategy().
+                // Let's assume standardized access: StrategyRegistry.strategies or similar.
+                // CHECK: shared/strategies/StrategyRegistry.ts was defined as "export class StrategyRegistry".
+                // I'll assume `get(id)` or `STRATEGIES[id]`.
+                // Safer: Just try to get the definition.
+                const strategyDef = StrategyRegistry.get ? StrategyRegistry.get(activeStrategy) : (StrategyRegistry.STRATEGIES ? StrategyRegistry.STRATEGIES[activeStrategy] : undefined);
+
+                if (strategyDef && strategyDef.outputUnit && strategyDef.outputUnit !== 'any') {
+                    // Start Log
+                    logger.info({
+                        deviceId,
+                        strategy: activeStrategy,
+                        driverUnit: sourceUnit,
+                        newUnit: strategyDef.outputUnit
+                    }, '🔄 [HardwareService] Strategy Changed Output Unit');
+
+                    sourceUnit = strategyDef.outputUnit;
+                }
+            } catch (regErr) {
+                logger.warn({ err: regErr, activeStrategy }, '⚠️ [HardwareService] Failed to resolve Strategy Unit');
+            }
+        }
+        // ---------------------------------------
+
         logger.info({
             deviceId,
             driverId: device.config.driverId,

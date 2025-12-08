@@ -1,7 +1,7 @@
 # Unified Unit System & Metric Keys Reference
 
 ## 1. Overview
-This document serves as the **Single Source of Truth** for the Hydroponics v5 Unit System and Metric Keys. It defines how physical units are handled, stored, and visualized across the entire stack (Firmware -> Backend -> Database -> Frontend).
+This document serves as the **Single Source of Truth** for the Hydroponics v5 Unit System and Metric Keys. It defines how physical units are handled, stored, and visualized across the entire stack, incorporating the **Strategy Registry** for complex transformations.
 
 ## 2. Core Architecture
 
@@ -11,62 +11,82 @@ The `UnitRegistry` is the central authority. It defines:
 2.  **Base Units:** The **immutable** unit used for database storage.
 3.  **Allowed Keys:** The specific metric keys (e.g., `distance`, `temp`) that belong to each family.
 
-### 2.2. Data Flow & Normalization
-| Component | Role | Example State |
+### 2.2. The "Transformation Layer" (`shared/strategies/StrategyRegistry.ts`)
+The `StrategyRegistry` mediates between raw hardware units and high-level logical units.
+1.  **Strategies:** Define `inputUnit` (requirement) and `outputUnit` (result).
+2.  **Validation:** Ensures hardware capabilities match flow requirements.
+3.  **Calibration:** Defines strictly typed transformation rules (e.g. `cm` -> `l`).
+
+---
+
+## 3. Data Flow & Normalization
+
+### 3.1. Standard Flow (Linear/Passthrough)
+| Component | Role | State |
 | :--- | :--- | :--- |
 | **Sensor** | Measures raw physical phenomenon | `1662` (cm) |
-| **Driver** | Defines `sourceUnit` and `key` | `sourceUnit: "cm"`, `key: "distance"` |
+| **Driver** | Defines `sourceUnit` | `sourceUnit: "cm"` |
+| **Strategy** | `linear` (Input: `any`, Output: `any`) | Passthrough (`cm`) |
 | **Backend** | Normalizes to **Base Unit** | `1662 cm` -> `16620 mm` |
-| **Database** | Stores normalized value | `{ distance: 16620 }` (Implicitly mm) |
-| **Frontend** | Visualizes based on `MetricConfig` | Displays `16620 mm` |
+| **Database** | Stores normalized value | `{ distance: 16620 }` |
 
-## 3. Unit Definitions
+### 3.2. Transformed Flow (e.g. Tank Volume)
+| Component | Role | State |
+| :--- | :--- | :--- |
+| **Sensor** | Measures raw distance | `50` (cm) |
+| **Strategy** | `tank_volume` (Input: `cm`, Output: `l`) | Transforming... |
+| **Calibration** | Lookup Table | `50cm` -> `120 Liters` |
+| **Backend** | Normalizes Output Unit | `120 l` -> `120000 ml` (if 'ml' is base) |
+| **Database** | Stores mapped value | `{ volume: 120000 }` |
 
-### 3.1. DISTANCE
+---
+
+## 4. Unit Definitions (Base Units)
+
+### 4.1. DISTANCE
 *   **Base Unit:** `mm` (Millimeters)
 *   **Allowed Keys:** `distance`, `depth`, `height`, `level`
-*   **Derived Units:** `cm`, `m`, `inch`, `ft`
 
-### 3.2. TEMP (Temperature)
+### 4.2. TEMP (Temperature)
 *   **Base Unit:** `C` (Celsius)
 *   **Allowed Keys:** `temp`, `water_temp`, `soil_temp`, `air_temp`
-*   **Derived Units:** `F`, `K`
 
-### 3.3. EC (Electrical Conductivity)
-*   **Base Unit:** `uS_cm` (Microsiemens per cm)
-*   **Allowed Keys:** `ec`
-*   **Derived Units:** `mS_cm`
+### 4.3. VOLUME (Liquid)
+*   **Base Unit:** `ml` (Milliliters) - *pending conf.*
+*   **Allowed Keys:** `volume`, `tank_level`
 
-### 3.4. HUMIDITY
-*   **Base Unit:** `pct` (%)
-*   **Allowed Keys:** `humidity`, `soil_moisture`
-*   **Derived Units:** None
+### 4.4. DURATION (Time)
+*   **Base Unit:** `ms` (Milliseconds)
+*   **Allowed Keys:** `duration`, `interval`
 
-### 3.5. PH
-*   **Base Unit:** `ph`
-*   **Allowed Keys:** `ph`
-*   **Derived Units:** None
+---
 
-### 3.6. LIGHT (PAR)
-*   **Base Unit:** `umol_m2_s` (µmol/m²/s)
-*   **Allowed Keys:** `par`
-*   **Derived Units:** None
+## 5. Strategy Implementation Rules
 
-## 4. Implementation Rules
+### 5.1. Strategy Definition (`StrategyDefinition`)
+| Property | Description | Rules |
+| :--- | :--- | :--- |
+| `inputUnit` | Hardware requirement | `any` (accepts whatever driver gives) or Specific (`cm`). |
+| `outputUnit` | Logical result | `any` (mirrors input) or Specific (`l`). |
 
-### 4.1. Adding a New Sensor
-When creating a device driver (`.json`):
-1.  **Select a Key:** Must be one of the **Allowed Keys** from `UnitRegistry` (e.g., `water_temp`).
-2.  **Define Source Unit:** Must specify the unit the hardware returns (e.g., `"sourceUnit": "F"`).
-3.  **Do NOT** invent new keys (e.g., `temp_f` is forbidden).
+### 5.2. Validation Logic (`validateBlockStrategy`)
+When connecting a Block to a Variable:
+1.  **Resolve Strategy Output:**
+    *   If `outputUnit !== 'any'`, use it.
+    *   If `outputUnit === 'any'`, use `Device.template.commands.READ.sourceUnit`.
+2.  **Compare:** Check `areUnitsCompatible(StrategyOutput, VariableUnit)`.
+3.  **Result:**
+    *   **Mismatch:** Block Error (Red Border). Save Blocked.
+    *   **Match:** Allowed. Auto-conversion handles storage.
 
-### 4.2. Frontend Visualization
-*   **`MetricConfig.ts`** defines the default display unit.
-*   It must align with the **Base Unit** unless client-side conversion is implemented.
-*   **Example:** `distance` key -> `unit: 'mm'`.
+### 5.3. Frontend Logic (`PropertiesPanel`)
+*   **Listing:** All supported strategies from `DeviceTemplate` are shown.
+*   **Availability:** Strategies requiring calibration (e.g. `tank_volume`) are **selectable** but trigger a "Missing Calibration" warning if config is absent.
+*   **Disabling:** Strategies are only functionally disabled if hardware lacks prerequisite capabilities (e.g. wrong interface), though currently implemented as always visible for supported lists.
 
-## 5. Database Storage Contract
-*   The Database **ALWAYS** stores values in the **Base Unit**.
-*   The Database **NEVER** stores unit metadata per record (for efficiency).
-*   To interpret a value, check the key in `UnitRegistry`.
-    *   *Example:* `distance: 500` -> Check Registry -> DISTANCE Base is `mm` -> Value is 500mm.
+---
+
+## 6. Database Storage Contract
+*   The Database **ALWAYS** stores values in the **Base Unit** of the resulting key.
+*   The Database **NEVER** stores unit metadata per record.
+*   **Interpretation:** Value -> Key -> UnitRegistry -> Base Unit.

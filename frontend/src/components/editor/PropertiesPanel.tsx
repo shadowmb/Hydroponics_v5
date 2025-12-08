@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Copy, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { areUnitsCompatible, getUnitCategory } from '@shared/UnitRegistry';
-import { StrategyRegistry, resolveStrategyOutputUnit } from '@shared/strategies/StrategyRegistry'; // Import Registry
+import { StrategyRegistry, resolveStrategyOutputUnit, validateBlockStrategy, validateStrategyCalibration } from '@shared/strategies/StrategyRegistry'; // Import Registry
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
 import {
     Dialog,
@@ -211,7 +211,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             if (key === 'duration') {
                 if (action !== 'PULSE_ON' && action !== 'PULSE_OFF') return null;
             }
-            if (key === 'amount') {
+            if (key === 'amount' || key === 'amountUnit') {
                 if (action !== 'DOSE') return null;
             }
         }
@@ -616,60 +616,50 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                             const driverId = typeof device.config?.driverId === 'object' ? (device.config.driverId as any)._id : device.config?.driverId;
                                                             const template = deviceTemplates?.find(t => t._id === driverId || t._id === device.driverId);
 
-                                                            // Use Centralized Logic to resolve output unit
-                                                            // Legacy fallback: if readingType is missing, assume 'linear' (default)
-                                                            const actualSourceUnit = resolveStrategyOutputUnit(formData.readingType || 'linear', { device, template });
+                                                            // NEW: Centralized Unit Check
+                                                            const check = validateBlockStrategy(formData.readingType || 'linear', variable.unit, { device, template });
 
-                                                            if (actualSourceUnit && variable.unit) {
-                                                                const compatible = areUnitsCompatible(actualSourceUnit, variable.unit);
-                                                                if (!compatible) {
-                                                                    return (
-                                                                        <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded flex flex-col gap-1">
-                                                                            <div className="flex gap-2 items-center font-semibold">
-                                                                                <AlertCircle className="h-3 w-3" />
-                                                                                <span>Incompatible Units!</span>
-                                                                            </div>
-                                                                            <span className="opacity-90 pl-5">
-                                                                                Sensor: <b className="font-mono">{actualSourceUnit}</b> ({getUnitCategory(actualSourceUnit)})<br />
-                                                                                Variable: <b className="font-mono">{variable.unit}</b> ({getUnitCategory(variable.unit)})
-                                                                            </span>
-                                                                        </div>
-                                                                    );
-                                                                } else if (actualSourceUnit !== variable.unit) {
-                                                                    return (
-                                                                        <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 p-2 rounded flex gap-2 items-center">
+                                                            if (!check.isValid) {
+                                                                return (
+                                                                    <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded flex flex-col gap-1">
+                                                                        <div className="flex gap-2 items-center font-semibold">
                                                                             <AlertCircle className="h-3 w-3" />
-                                                                            <span>
-                                                                                Automatic conversion: <b>{actualSourceUnit}</b> → <b>{variable.unit}</b>
-                                                                            </span>
+                                                                            <span>Incompatible Units!</span>
                                                                         </div>
-                                                                    );
-                                                                }
+                                                                        <span className="opacity-90 pl-5">
+                                                                            {check.error || 'Strategy output unit does not match variable unit.'}
+                                                                        </span>
+                                                                    </div>
+                                                                );
                                                             }
                                                         }
                                                         return null;
                                                     })()
                                                 )}
 
-                                                {/* MISSING CALIBRATION WARNING */}
-                                                {key === 'readingType' && formData[key] === 'tank_volume' && formData.deviceId && (
+                                                {/* MISSING CALIBRATION WARNING (Generic) */}
+                                                {(key === 'readingType' || key === 'strategy') && formData.deviceId && (
                                                     (() => {
                                                         const { devices } = useStore.getState();
                                                         const device = devices.get(formData.deviceId);
-                                                        const hasCalib = device?.config?.calibrations?.tank_volume;
+                                                        const strategyId = formData[key] || 'linear'; // default to linear
 
-                                                        if (device && !hasCalib) {
-                                                            return (
-                                                                <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 p-2 rounded flex flex-col gap-1 mt-1">
-                                                                    <div className="flex gap-2 items-center font-semibold">
-                                                                        <AlertCircle className="h-3 w-3" />
-                                                                        <span>Missing Calibration</span>
+                                                        if (device) {
+                                                            // NEW: Centralized Calibration Check
+                                                            const check = validateStrategyCalibration(strategyId, device.config);
+                                                            if (!check.isValid) {
+                                                                return (
+                                                                    <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 p-2 rounded flex flex-col gap-1 mt-1">
+                                                                        <div className="flex gap-2 items-center font-semibold">
+                                                                            <AlertCircle className="h-3 w-3" />
+                                                                            <span>Calibration Required</span>
+                                                                        </div>
+                                                                        <span className="opacity-90 pl-5">
+                                                                            {check.error}
+                                                                        </span>
                                                                     </div>
-                                                                    <span className="opacity-90 pl-5">
-                                                                        Device needs 'Tank Volume' calibration to return accurate Liter values.
-                                                                    </span>
-                                                                </div>
-                                                            );
+                                                                );
+                                                            }
                                                         }
                                                         return null;
                                                     })()

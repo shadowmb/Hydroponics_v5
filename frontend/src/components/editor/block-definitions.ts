@@ -84,6 +84,17 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 placeholder: 'e.g. 100',
                 description: 'Quantity to dose'
             },
+            amountUnit: {
+                label: 'Unit',
+                type: 'select',
+                options: [
+                    { label: 'Milliliters (ml)', value: 'ml' },
+                    { label: 'Liters (l)', value: 'l' },
+                    { label: 'Gallons (gal)', value: 'gal' }
+                ],
+                defaultValue: 'ml',
+                description: 'Unit of measurement'
+            },
             // Error Handling Policy
             retryCount: {
                 label: 'Retry Count',

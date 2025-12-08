@@ -215,3 +215,28 @@ export const validateBlockStrategy = (
 
     return { isValid: true };
 };
+
+/**
+ * Validates if the selected device has the necessary calibration for the chosen strategy.
+ */
+export const validateStrategyCalibration = (
+    strategyId: string | undefined,
+    deviceConfig: any
+): { isValid: boolean, error?: string } => {
+    if (!strategyId) return { isValid: true };
+    const strategy = StrategyRegistry.get(strategyId);
+    if (!strategy) return { isValid: true }; // Unknown strategy, assume valid or let other checks fail
+
+    if (strategy.calibration) {
+        const calKey = strategy.calibration.calibrationKey;
+        const hasCal = deviceConfig?.calibrations && deviceConfig.calibrations[calKey];
+
+        if (!hasCal) {
+            return {
+                isValid: false,
+                error: `Missing Calibration: '${strategy.label}' requires '${calKey}' calibration.`
+            };
+        }
+    }
+    return { isValid: true };
+};
