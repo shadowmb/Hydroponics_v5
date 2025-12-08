@@ -56,6 +56,12 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'device',
                 placeholder: 'Select a device'
             },
+            strategy: {
+                label: 'Control Strategy',
+                type: 'select',
+                options: [], // populated dynamically
+                defaultValue: 'actuator_manual'
+            },
             action: {
                 label: 'Action',
                 type: 'select',
@@ -64,9 +70,7 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                     { label: 'Turn OFF', value: 'OFF' },
                     { label: 'Pulse ON', value: 'PULSE_ON' },
                     { label: 'Pulse OFF', value: 'PULSE_OFF' }
-                    // Dynamic options like 'DOSE' will be added by PropertiesPanel
                 ],
-                // defaultValue: 'ON' - Removed to force manual selection
             },
             duration: {
                 label: 'Duration (ms)',
@@ -132,7 +136,7 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'select',
                 options: [], // populated dynamically
                 placeholder: 'Default (Distance)',
-                defaultValue: 'raw'
+                defaultValue: 'linear'
             },
             variable: {
                 label: 'Save to Variable',

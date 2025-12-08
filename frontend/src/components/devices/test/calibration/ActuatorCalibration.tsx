@@ -226,7 +226,7 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
                         </div>
                     ) : (
                         <DynamicWizard
-                            config={selectedStrategy.wizard}
+                            strategyId={selectedStrategy.id}
                             onSave={handleSave}
                             onRunCommand={handleRunCommand}
                         />

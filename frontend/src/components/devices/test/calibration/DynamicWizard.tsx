@@ -15,21 +15,84 @@ import {
 import type { WizardStep } from '../../../../types/Calibration';
 import { Play, Check, ArrowRight } from 'lucide-react';
 
+import { StrategyRegistry } from '../../../../../../shared/strategies/StrategyRegistry';
+
 interface DynamicWizardProps {
-    config: {
-        component: string;
-        steps: WizardStep[];
-        formula?: string;
-    };
+    strategyId: string;
     onSave: (data: any) => void;
     onRunCommand?: (cmd: string, params: any) => Promise<any>;
 }
 
-export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, onRunCommand }) => {
+// Helper to generate steps based on Strategy Calibration Config
+// TODO: This could be moved to a separate file or within StrategyRegistry if it gets too large
+const generateSteps = (strategyId: string): { steps: WizardStep[], formula?: string } | null => {
+    const strategy = StrategyRegistry.get(strategyId);
+    if (!strategy || !strategy.calibration) return null;
+
+    const { component, xLabel, yLabel } = strategy.calibration;
+
+    // Template: Multi-Point Table (e.g. Tank Volume)
+    if (component === 'MultiPointTable') {
+        return {
+            steps: [
+                {
+                    label: 'Multi-Point Calibration',
+                    instructions: `Add points to map ${xLabel || 'Input'} to ${yLabel || 'Output'}.`,
+                    type: 'points_table',
+                    key: 'data', // Standard key for table data
+                    headers: [
+                        { label: xLabel || 'Raw Input' },
+                        { label: yLabel || 'Calibrated Value' }
+                    ]
+                }
+            ]
+        };
+    }
+
+    if (component === 'TwoPointLinear') {
+        return {
+            steps: [
+                {
+                    label: 'Test Parameters',
+                    instructions: 'Enter the duration to run the pump for calibration.',
+                    type: 'input',
+                    key: 'duration',
+                    unit: 'seconds',
+                    default: 10
+                },
+                {
+                    label: 'Flow Rate Calibration',
+                    instructions: 'Run the pump for the specified duration to measure output.',
+                    type: 'action',
+                    command: 'TEST_DOSING',
+                    params: { duration: 'input_duration' }, // 'input_duration' maps to formData.duration? No, logic maps input_KEY to formData[KEY]. So 'input_duration' maps to formData['duration'].
+                    label: 'Run Pump'
+                },
+                {
+                    label: 'Enter Measurement',
+                    instructions: `Enter the volume (${yLabel || 'ml'}) dispensed during the test.`,
+                    type: 'input',
+                    key: 'measuredValue',
+                    unit: yLabel || 'ml'
+                }
+            ]
+        };
+    }
+
+    return null;
+};
+
+export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave, onRunCommand }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [errorDialogOpen, setErrorDialogOpen] = useState(false);
     const [errorDialogMessage, setErrorDialogMessage] = useState("");
+
+    const config = generateSteps(strategyId);
+
+    if (!config || !config.steps || config.steps.length === 0) {
+        return <div className="p-4 text-red-500">Error: No wizard configuration found for strategy '{strategyId}'</div>;
+    }
 
     const step = config.steps[currentStep];
     const isLastStep = currentStep === config.steps.length - 1;
