@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Copy, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { areUnitsCompatible, getUnitCategory } from '@shared/UnitRegistry';
+import { StrategyRegistry, resolveStrategyOutputUnit, validateBlockStrategy, validateStrategyCalibration } from '@shared/strategies/StrategyRegistry'; // Import Registry
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
 import {
     Dialog,
@@ -59,6 +60,10 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const { devices, deviceTemplates } = useStore();
+
+    // --- VISUAL DEBUGGER REMOVED ---
+
 
     useEffect(() => {
         if (selectedNode) {
@@ -125,7 +130,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         );
     }
 
-    if (!selectedNode && !selectedEdge) {
+    if (!selectedNode) {
         return (
             <div className="w-[350px] border-l bg-background h-full flex flex-col">
                 <FlowHealthDashboard
@@ -150,6 +155,52 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         .map(n => ({ label: n.data.label || n.id, value: n.id }))
         : [];
 
+    // Resolve Device and Template at Component Level
+    const targetDeviceId = formData.deviceId;
+
+    // Explicitly track source
+    let deviceSource = "NONE";
+    let device: any = undefined;
+
+    if (targetDeviceId) {
+        // CONSOLE DEBUGGING
+        console.group('PropertiesPanel Resolution Debug');
+        console.log('Target Device ID:', targetDeviceId);
+        console.log('Devices Store Keys:', devices ? Array.from(devices.keys()) : 'NULL');
+        console.log('Templates Store Length:', deviceTemplates?.length);
+
+        if (devices && devices.has(targetDeviceId)) {
+            device = devices.get(targetDeviceId);
+            deviceSource = "STORE (Live)";
+            console.log('✅ Device Found in Store:', device);
+            console.log('   Driver ID from Config:', device.config?.driverId);
+            console.log('   Driver ID (Root):', device.driverId);
+        } else {
+            deviceSource = "STORE_MISSING";
+            console.warn('❌ Device NOT found in Store!');
+        }
+    }
+
+    let template: any = undefined;
+    if (device) {
+        // Handle both simple ID string and populated object
+        const driverId = device.driverId || device.config?.driverId;
+        const driverIdStr = typeof driverId === 'string' ? driverId : (driverId as any)?._id;
+
+        console.log('Raw Driver ID:', driverId);
+        console.log('Resolved Driver ID String:', driverIdStr);
+
+        if (driverIdStr && deviceTemplates) {
+            template = deviceTemplates.find(t => t._id === driverIdStr || t.id === driverIdStr);
+            console.log('Resolved Template:', template);
+        } else {
+            console.warn('Cannot resolve template: Missing ID or Templates Store empty');
+        }
+        console.groupEnd();
+    } else if (targetDeviceId) {
+        console.groupEnd();
+    }
+
     // Helper to render a single field based on its definition
     const renderField = (key: string, field: FieldDefinition, readOnly: boolean = false) => {
         const value = formData[key] !== undefined ? formData[key] : field.defaultValue;
@@ -160,7 +211,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             if (key === 'duration') {
                 if (action !== 'PULSE_ON' && action !== 'PULSE_OFF') return null;
             }
-            if (key === 'amount') {
+            if (key === 'amount' || key === 'amountUnit') {
                 if (action !== 'DOSE') return null;
             }
         }
@@ -196,21 +247,78 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         // --- Dynamic Options Logic ---
         let options = field.options;
 
-        // 1. ACTUATOR DOSE Check
-        if (key === 'action' && nodeType === 'ACTUATOR_SET' && formData.deviceId) {
-            const { devices } = useStore.getState();
-            const device = devices.get(formData.deviceId);
-            if (device && device.config?.calibrations?.volumetric_flow) {
-                if (!options?.find(o => o.value === 'DOSE')) {
-                    options = [
-                        ...(options || []),
-                        { label: 'Dose Volume (ml)', value: 'DOSE' }
-                    ];
+        // 1. ACTUATOR CONTROL STRATEGY SELECTOR
+        if (key === 'strategy' && nodeType === 'ACTUATOR_SET' && formData.deviceId) {
+            if (device) {
+                // Use outer 'template' (already resolved correctly)
+
+
+                // Fetch compatible strategies
+                const allStrategies = StrategyRegistry.getForType('ACTUATOR');
+                const supported = template?.supportedStrategies;
+
+                let available = allStrategies;
+                if (supported && Array.isArray(supported) && supported.length > 0) {
+                    available = allStrategies.filter(s => supported.includes(s.id));
+                }
+
+                // Map to Options
+                options = available.map(strategy => {
+                    const isAvailable = StrategyRegistry.isStrategyAvailable(strategy.id, device.config);
+                    return {
+                        label: strategy.label,
+                        value: strategy.id,
+                        disabled: !isAvailable
+                    };
+                });
+
+                // Auto-select Default if empty/invalid
+                // We can't use useEffect here directly inside renderField, but we can check value match
+                // actually, we can't emit side effects during render.
+                // Correct approach: Display valid value, but don't force change state yet?
+                // Be careful. For now, rely on User to select, but ensure the "correct" default is used for "new" blocks.
+                // We fixed block-definitions, so new blocks are fine.
+                // For existing blocks, show Placeholder.
+
+                // If the current value is NOT in options (and options exist), maybe warn?
+                const isValueValid = options.some(o => o.value === value);
+                if (value && !isValueValid && options.length > 0) {
+                    // Current value is invalid (e.g. 'raw' but only 'linear' exists)
+                    // Using a ref or effect at component level is cleaner, but complex here.
+                    // We will rely on the user to fix it, but show Warning?
+                }
+
+                if (options.length === 0) {
+                    options = [{ label: 'Manual (On/Off)', value: 'actuator_manual' }];
                 }
             }
         }
 
-        // 2. FLOW_CONTROL Target Label (Dynamic Dropdown)
+        // 2. ACTUATOR ACTION SELECTOR (Dependent on Strategy)
+        if (key === 'action' && nodeType === 'ACTUATOR_SET') {
+            const strategyId = formData.strategy || 'actuator_manual';
+
+            if (strategyId === 'actuator_manual') {
+                options = [
+                    { label: 'Turn ON', value: 'ON' },
+                    { label: 'Turn OFF', value: 'OFF' },
+                    { label: 'Pulse ON', value: 'PULSE_ON' },
+                    { label: 'Pulse OFF', value: 'PULSE_OFF' }
+                ];
+            } else if (strategyId === 'volumetric_flow' || strategyId === 'actuator_dose') {
+                options = [
+                    { label: 'Dose Volume', value: 'DOSE' }
+                ];
+            } else {
+                // Fallback for unknown strategies
+                options = [
+                    { label: 'Turn ON', value: 'ON' },
+                    { label: 'Turn OFF', value: 'OFF' }
+                ];
+            }
+        }
+
+        // 3. FLOW_CONTROL Target Label (Dynamic Dropdown)
         if (nodeType === 'FLOW_CONTROL' && key === 'targetLabel') {
             const controlType = formData['controlType'];
 
@@ -235,6 +343,33 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
             // FORCE SELECT RENDER for this field when we have dynamic options
             field = { ...field, type: 'select' };
+        }
+
+        // 3. SENSOR READ - Strategy Selector (Read As)
+        if (key === 'readingType' && nodeType === 'SENSOR_READ' && formData.deviceId) {
+            if (device) {
+                // Use outer 'template' (already resolved correctly)
+
+
+                const allStrategies = StrategyRegistry.getForType('SENSOR');
+                const supported = template?.supportedStrategies;
+
+                let available = allStrategies;
+                if (supported && Array.isArray(supported) && supported.length > 0) {
+                    available = allStrategies.filter(s => supported.includes(s.id));
+                }
+
+                options = available.map(strategy => {
+                    const isAvailable = StrategyRegistry.isStrategyAvailable(strategy.id, device.config);
+                    return {
+                        label: strategy.label,
+                        value: strategy.id,
+                        disabled: !isAvailable
+                    };
+                });
+            } else {
+                return null;
+            }
         }
 
         if (readOnly) {
@@ -330,7 +465,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                         </SelectTrigger>
                         <SelectContent>
                             {options?.map((opt) => (
-                                <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                                <SelectItem key={String(opt.value)} value={String(opt.value)} disabled={(opt as any).disabled}>
                                     {opt.label}
                                 </SelectItem>
                             ))}
@@ -480,39 +615,50 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                         if (device && variable && variable.unit) {
                                                             const driverId = typeof device.config?.driverId === 'object' ? (device.config.driverId as any)._id : device.config?.driverId;
                                                             const template = deviceTemplates?.find(t => t._id === driverId || t._id === device.driverId);
-                                                            // Note: driverId might be in config or root depending on device version
 
-                                                            // Find Driver Config for READ command
-                                                            const driverCommand = template?.commands ? (Array.isArray(template.commands) ? template.commands.find((c: any) => c.label === 'Read' || c.name === 'READ') : template.commands['READ']) : null;
+                                                            // NEW: Centralized Unit Check
+                                                            const check = validateBlockStrategy(formData.readingType || 'linear', variable.unit, { device, template });
 
-                                                            const actualSourceUnit = driverCommand?.sourceUnit || template?.uiConfig?.defaultUnit;
-
-                                                            if (actualSourceUnit && variable.unit) {
-                                                                const compatible = areUnitsCompatible(actualSourceUnit, variable.unit);
-
-                                                                if (!compatible) {
-                                                                    return (
-                                                                        <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded flex flex-col gap-1">
-                                                                            <div className="flex gap-2 items-center font-semibold">
-                                                                                <AlertCircle className="h-3 w-3" />
-                                                                                <span>Incompatible Units!</span>
-                                                                            </div>
-                                                                            <span className="opacity-90 pl-5">
-                                                                                Sensor: <b className="font-mono">{actualSourceUnit}</b> ({getUnitCategory(actualSourceUnit)})<br />
-                                                                                Variable: <b className="font-mono">{variable.unit}</b> ({getUnitCategory(variable.unit)})
-                                                                            </span>
-                                                                        </div>
-                                                                    );
-                                                                } else if (actualSourceUnit !== variable.unit) {
-                                                                    return (
-                                                                        <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 p-2 rounded flex gap-2 items-center">
+                                                            if (!check.isValid) {
+                                                                return (
+                                                                    <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded flex flex-col gap-1">
+                                                                        <div className="flex gap-2 items-center font-semibold">
                                                                             <AlertCircle className="h-3 w-3" />
-                                                                            <span>
-                                                                                Automatic conversion: <b>{actualSourceUnit}</b> → <b>{variable.unit}</b>
-                                                                            </span>
+                                                                            <span>Incompatible Units!</span>
                                                                         </div>
-                                                                    );
-                                                                }
+                                                                        <span className="opacity-90 pl-5">
+                                                                            {check.error || 'Strategy output unit does not match variable unit.'}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                        }
+                                                        return null;
+                                                    })()
+                                                )}
+
+                                                {/* MISSING CALIBRATION WARNING (Generic) */}
+                                                {(key === 'readingType' || key === 'strategy') && formData.deviceId && (
+                                                    (() => {
+                                                        const { devices } = useStore.getState();
+                                                        const device = devices.get(formData.deviceId);
+                                                        const strategyId = formData[key] || 'linear'; // default to linear
+
+                                                        if (device) {
+                                                            // NEW: Centralized Calibration Check
+                                                            const check = validateStrategyCalibration(strategyId, device.config);
+                                                            if (!check.isValid) {
+                                                                return (
+                                                                    <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 p-2 rounded flex flex-col gap-1 mt-1">
+                                                                        <div className="flex gap-2 items-center font-semibold">
+                                                                            <AlertCircle className="h-3 w-3" />
+                                                                            <span>Calibration Required</span>
+                                                                        </div>
+                                                                        <span className="opacity-90 pl-5">
+                                                                            {check.error}
+                                                                        </span>
+                                                                    </div>
+                                                                );
                                                             }
                                                         }
                                                         return null;
@@ -691,4 +837,3 @@ const CollapsibleSection = ({ title, icon: Icon, defaultOpen = false, children, 
         </div>
     );
 };
-

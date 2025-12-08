@@ -304,5 +304,61 @@
                 }
             ]
         }
+    },
+    {
+        "id": "tank_volume",
+        "name": "Tank Volume (Multi-Point)",
+        "description": "Convert distance (mm) to volume (L) using a custom lookup table. Ideal for tanks with irregular shapes.",
+        "category": "SENSOR",
+        "compatibility": [
+            "ultrasonic",
+            "distance",
+            "analog"
+        ],
+        "storageSchema": {
+            "points": {
+                "type": "array",
+                "required": true,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "raw": {
+                            "type": "number"
+                        },
+                        "value": {
+                            "type": "number"
+                        }
+                    }
+                }
+            },
+            "unit": {
+                "type": "string",
+                "default": "L"
+            }
+        },
+        "wizard": {
+            "component": "TableWizard",
+            "steps": [
+                {
+                    "type": "points_table",
+                    "label": "Calibration Table",
+                    "instructions": "Add at least 2 points to define the relationship between Distance and Volume. Use 'Get Reading' to capture the current sensor value.",
+                    "key": "points",
+                    "headers": [
+                        {
+                            "label": "Distance (mm)",
+                            "key": "raw",
+                            "readOnly": false,
+                            "action": "READ"
+                        },
+                        {
+                            "label": "Volume (L)",
+                            "key": "value",
+                            "readOnly": false
+                        }
+                    ]
+                }
+            ]
+        }
     }
 ]

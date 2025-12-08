@@ -14,7 +14,9 @@ export interface ExecutionStep {
     duration?: number;      // Total duration in ms (for Delay/RunFor)
     timestamp: number;      // Start time
     params?: any;
-    cycleId?: string; // Optional: If backend provides it
+    cycleId?: string;
+    output?: any;           // Result of execution (e.g. sensor value)
+    error?: string;
 }
 
 interface CycleGroup {
@@ -60,43 +62,57 @@ export const LiveExecutionMonitor: React.FC<LiveExecutionMonitorProps> = ({ prog
                 const newGroups = [...prevGroups];
                 let currentGroup = newGroups.length > 0 ? newGroups[newGroups.length - 1] : null;
 
-                // Logic: A "Cycle" usually starts with a "Start" block or "Loop" block
-                // For now, if we see a generic 'START' or if there are no groups, we make a new one.
-                // NOTE: Ideally backend sends 'cycle_start', but we infer for now.
-                // Use a heuristic: If block label contains "Cycle" or name matches program schedule, it's a start.
-                // Simple heuristic: If type is 'START', create new group.
-
                 const isStart = step.type === 'START' || step.type === 'program_start';
 
                 if (isStart || !currentGroup) {
-                    // Create new group
                     const newGroup: CycleGroup = {
                         id: `group_${step.timestamp}`,
-                        label: isStart ? step.label : 'Execution Sequence', // Use step label as group header
+                        label: isStart ? step.label : 'Execution Sequence',
                         startTime: step.timestamp,
                         steps: [step],
                         isActive: true
                     };
-
-                    // Mark previous group as inactive
                     if (currentGroup) currentGroup.isActive = false;
-
-                    return [...newGroups, newGroup].slice(-10); // Keep last 10 groups to avoid memory issues
+                    return [...newGroups, newGroup].slice(-10);
                 } else {
-                    // Append to current group
-                    // Check for duplicates
                     if (currentGroup.steps.some(s => s.id === step.id)) return prevGroups;
-
                     currentGroup.steps.push(step);
                     return [...newGroups];
                 }
             });
         };
 
+        const handleBlockEnd = (data: any) => {
+            // Find the most recent step with matching blockId and update it
+            setCycleGroups(prevGroups => {
+                // Clone groups deeply enough to mutate check
+                const newGroups = [...prevGroups];
+                const currentGroup = newGroups.length > 0 ? newGroups[newGroups.length - 1] : null;
+
+                if (currentGroup) {
+                    // Search backwards in the current group
+                    for (let i = currentGroup.steps.length - 1; i >= 0; i--) {
+                        if (currentGroup.steps[i].blockId === data.blockId && !currentGroup.steps[i].output && !currentGroup.steps[i].error) {
+                            // Update this step
+                            currentGroup.steps[i] = {
+                                ...currentGroup.steps[i],
+                                output: data.output,
+                                error: data.success ? undefined : (data.error || 'Failed')
+                            };
+                            return newGroups; // Return updated state
+                        }
+                    }
+                }
+                return prevGroups; // No match found
+            });
+        };
+
         socketService.on('automation:execution_step', handleExecutionStep);
+        socketService.on('automation:block_end', handleBlockEnd);
 
         return () => {
             socketService.off('automation:execution_step', handleExecutionStep);
+            socketService.off('automation:block_end', handleBlockEnd);
         };
     }, [programId, isActive]);
 
@@ -133,14 +149,13 @@ export const LiveExecutionMonitor: React.FC<LiveExecutionMonitorProps> = ({ prog
                             {/* Steps List */}
                             <div className="space-y-2">
                                 {group.steps.map((step) => {
-                                    // Don't show the Header step again if it's just a "Start" block with no visual value
                                     if (step.type === 'START') return null;
 
                                     return (
                                         <div key={step.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
                                             <ExecutionCard
                                                 step={step}
-                                                state={group.isActive && step === group.steps[group.steps.length - 1] ? 'active' : 'history'}
+                                                state={group.isActive && step === group.steps[group.steps.length - 1] && !step.output ? 'active' : 'history'}
                                             />
                                         </div>
                                     );

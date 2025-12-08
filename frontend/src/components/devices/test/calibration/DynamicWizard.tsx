@@ -15,21 +15,84 @@ import {
 import type { WizardStep } from '../../../../types/Calibration';
 import { Play, Check, ArrowRight } from 'lucide-react';
 
+import { StrategyRegistry } from '../../../../../../shared/strategies/StrategyRegistry';
+
 interface DynamicWizardProps {
-    config: {
-        component: string;
-        steps: WizardStep[];
-        formula?: string;
-    };
+    strategyId: string;
     onSave: (data: any) => void;
     onRunCommand?: (cmd: string, params: any) => Promise<any>;
 }
 
-export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, onRunCommand }) => {
+// Helper to generate steps based on Strategy Calibration Config
+// TODO: This could be moved to a separate file or within StrategyRegistry if it gets too large
+const generateSteps = (strategyId: string): { steps: WizardStep[], formula?: string } | null => {
+    const strategy = StrategyRegistry.get(strategyId);
+    if (!strategy || !strategy.calibration) return null;
+
+    const { component, xLabel, yLabel } = strategy.calibration;
+
+    // Template: Multi-Point Table (e.g. Tank Volume)
+    if (component === 'MultiPointTable') {
+        return {
+            steps: [
+                {
+                    label: 'Multi-Point Calibration',
+                    instructions: `Add points to map ${xLabel || 'Input'} to ${yLabel || 'Output'}.`,
+                    type: 'points_table',
+                    key: 'data', // Standard key for table data
+                    headers: [
+                        { label: xLabel || 'Raw Input' },
+                        { label: yLabel || 'Calibrated Value' }
+                    ]
+                }
+            ]
+        };
+    }
+
+    if (component === 'TwoPointLinear') {
+        return {
+            steps: [
+                {
+                    label: 'Test Parameters',
+                    instructions: 'Enter the duration to run the pump for calibration.',
+                    type: 'input',
+                    key: 'duration',
+                    unit: 'seconds',
+                    default: 10
+                },
+                {
+                    label: 'Flow Rate Calibration',
+                    instructions: 'Run the pump for the specified duration to measure output.',
+                    type: 'action',
+                    command: 'TEST_DOSING',
+                    params: { duration: 'input_duration' }, // 'input_duration' maps to formData.duration? No, logic maps input_KEY to formData[KEY]. So 'input_duration' maps to formData['duration'].
+                    label: 'Run Pump'
+                },
+                {
+                    label: 'Enter Measurement',
+                    instructions: `Enter the volume (${yLabel || 'ml'}) dispensed during the test.`,
+                    type: 'input',
+                    key: 'measuredValue',
+                    unit: yLabel || 'ml'
+                }
+            ]
+        };
+    }
+
+    return null;
+};
+
+export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave, onRunCommand }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [errorDialogOpen, setErrorDialogOpen] = useState(false);
     const [errorDialogMessage, setErrorDialogMessage] = useState("");
+
+    const config = generateSteps(strategyId);
+
+    if (!config || !config.steps || config.steps.length === 0) {
+        return <div className="p-4 text-red-500">Error: No wizard configuration found for strategy '{strategyId}'</div>;
+    }
 
     const step = config.steps[currentStep];
     const isLastStep = currentStep === config.steps.length - 1;
@@ -484,8 +547,110 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ config, onSave, on
                     </div>
                 );
 
-            default:
-                return <div>Unknown step type: {step.type}</div>;
+            case 'points_table':
+                const points = (formData[step.key!] as any[]) || [];
+
+                const addPoint = () => {
+                    // Sort by raw (distance) automatically? Or just append.
+                    // Let's just append for now.
+                    const newPoint = { raw: 0, value: 0 };
+                    handleInputChange(step.key!, [...points, newPoint]);
+                };
+
+                const updatePoint = (index: number, field: string, value: number) => {
+                    const newPoints = [...points];
+                    newPoints[index] = { ...newPoints[index], [field]: value };
+                    handleInputChange(step.key!, newPoints);
+                };
+
+                const removePoint = (index: number) => {
+                    const newPoints = points.filter((_, i) => i !== index);
+                    handleInputChange(step.key!, newPoints);
+                };
+
+                const captureReading = async (index: number) => {
+                    if (onRunCommand) {
+                        try {
+                            const result = await onRunCommand('READ', {});
+                            // Support various return formats: scalar or object with value/val
+                            let reading = 0;
+                            if (typeof result === 'number') reading = result;
+                            else if (result && typeof result.value === 'number') reading = result.value;
+                            else if (result && typeof result.val === 'number') reading = result.val;
+                            else if (result && typeof result.distance === 'number') reading = result.distance; // HC-SR04 specific
+
+                            updatePoint(index, 'raw', reading);
+                        } catch (err) {
+                            console.error("Failed to capture reading", err);
+                            setErrorDialogMessage("Failed to read sensor value.");
+                            setErrorDialogOpen(true);
+                        }
+                    }
+                };
+
+                return (
+                    <div className="space-y-4">
+                        <div className="p-4 bg-muted rounded-md text-sm">
+                            {step.instructions}
+                        </div>
+
+                        <div className="border rounded-md overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead className="bg-muted">
+                                    <tr>
+                                        {step.headers?.map((h: any) => (
+                                            <th key={h.label} className="p-2 text-left font-medium">{h.label}</th>
+                                        ))}
+                                        <th className="p-2 w-[50px]"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {points.map((point: any, idx: number) => (
+                                        <tr key={idx} className="border-t">
+                                            <td className="p-2">
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        value={point.raw}
+                                                        onChange={(e) => updatePoint(idx, 'raw', parseFloat(e.target.value))}
+                                                        className="w-full"
+                                                    />
+                                                    <Button variant="outline" size="icon" onClick={() => captureReading(idx)} title="Get Reading">
+                                                        <ArrowRight className="h-3 w-3" /> {/* Reusing icon for 'Fetch' */}
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                            <td className="p-2">
+                                                <Input
+                                                    type="number"
+                                                    value={point.value}
+                                                    onChange={(e) => updatePoint(idx, 'value', parseFloat(e.target.value))}
+                                                />
+                                            </td>
+                                            <td className="p-2 text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => removePoint(idx)} className="text-destructive hover:text-destructive">
+                                                    <span className="sr-only">Delete</span>
+                                                    &times;
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {points.length === 0 && (
+                                        <tr>
+                                            <td colSpan={3} className="p-4 text-center text-muted-foreground">
+                                                No points defined. Click "Add Point" to start.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <Button onClick={addPoint} variant="secondary" className="w-full">
+                            + Add Point
+                        </Button>
+                    </div>
+                );
         }
     };
 

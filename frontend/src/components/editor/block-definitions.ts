@@ -56,6 +56,12 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'device',
                 placeholder: 'Select a device'
             },
+            strategy: {
+                label: 'Control Strategy',
+                type: 'select',
+                options: [], // populated dynamically
+                defaultValue: 'actuator_manual'
+            },
             action: {
                 label: 'Action',
                 type: 'select',
@@ -64,9 +70,7 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                     { label: 'Turn OFF', value: 'OFF' },
                     { label: 'Pulse ON', value: 'PULSE_ON' },
                     { label: 'Pulse OFF', value: 'PULSE_OFF' }
-                    // Dynamic options like 'DOSE' will be added by PropertiesPanel
                 ],
-                // defaultValue: 'ON' - Removed to force manual selection
             },
             duration: {
                 label: 'Duration (ms)',
@@ -79,6 +83,17 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'number', // Can be toggled to variable in UI
                 placeholder: 'e.g. 100',
                 description: 'Quantity to dose'
+            },
+            amountUnit: {
+                label: 'Unit',
+                type: 'select',
+                options: [
+                    { label: 'Milliliters (ml)', value: 'ml' },
+                    { label: 'Liters (l)', value: 'l' },
+                    { label: 'Gallons (gal)', value: 'gal' }
+                ],
+                defaultValue: 'ml',
+                description: 'Unit of measurement'
             },
             // Error Handling Policy
             retryCount: {
@@ -126,6 +141,13 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 label: 'Sensor',
                 type: 'device',
                 placeholder: 'Select a sensor'
+            },
+            readingType: {
+                label: 'Read As',
+                type: 'select',
+                options: [], // populated dynamically
+                placeholder: 'Default (Distance)',
+                defaultValue: 'linear'
             },
             variable: {
                 label: 'Save to Variable',

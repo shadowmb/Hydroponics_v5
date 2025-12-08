@@ -12,21 +12,24 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
         }
 
         try {
-            // 1. Read Sensor Value
-            const result = await hardware.readSensorValue(deviceId);
+            // 1. Read Sensor Value (with optional Strategy Override)
+            const strategyOverride = params.readingType === 'raw' ? undefined : params.readingType;
+            // If explicit RAW is requested, we might need a way to bypass default strategy. 
+            // For now, let's assume 'readingType' IS the strategy name (e.g. 'tank_volume') OR 'raw'.
+
+            // NOTE: If 'raw' is passed, HardwareService currently doesn't inherently support "skip conversion" via this arg alone 
+            // unless we handle it here or in HardwareService. 
+            // However, the requirement is mainly to switch between "Distance" (Linear/Raw) and "Volume" (Tank).
+            // If user selects 'tank_volume', we pass it.
+            // If user selects 'distance', we might just want default behavior OR specific 'linear' strategy.
+
+            const result = await hardware.readSensorValue(deviceId, strategyOverride);
+            let valueToSave = result.value;
 
             // 2. Save to Variable (if configured)
             if (variable) {
-                let valueToSave = result.value;
-
                 // --- UNIT CONVERSION LOGIC ---
                 const varDef = ctx.variableDefinitions ? ctx.variableDefinitions[variable] : undefined;
-
-                if (!ctx.variableDefinitions) {
-                    console.warn(`[SensorRead] WARN: ctx.variableDefinitions is MISSING for variable ${variable}`);
-                } else if (!varDef) {
-                    console.warn(`[SensorRead] WARN: Definition for variable '${variable}' NOT FOUND in context. Keys: ${Object.keys(ctx.variableDefinitions).join(', ')}`);
-                }
 
                 if (varDef && varDef.unit) {
                     // Use the unit returned by HardwareService (normalized base unit)
@@ -36,12 +39,9 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
                         const { unitConversionService } = await import('../../../services/conversion/UnitConversionService');
                         try {
                             const converted = unitConversionService.convert(valueToSave, sourceUnit, varDef.unit);
-                            // FORCE LOG for DEBUGGING
-                            console.log(`[SensorRead] DEBUG: Variable '${variable}' Unit: '${varDef.unit}', Source Unit: '${sourceUnit}', Value: ${valueToSave}, Converted: ${converted}`);
-
                             // Check if conversion actually happened (different values)
                             if (Math.abs(converted - valueToSave) > 0.0001) {
-                                console.log(`[SensorRead] Converted ${valueToSave} ${sourceUnit} -> ${converted} ${varDef.unit}`);
+                                // Silent success
                             }
                             valueToSave = converted;
                         } catch (convErr: any) {
@@ -51,12 +51,18 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
                 }
                 // -----------------------------
 
+                // Ensure ctx.variables is initialized (it should be)
+                if (!ctx.variables) ctx.variables = {};
                 ctx.variables[variable] = valueToSave;
+
+                // LOG THE FINAL RESULT FOR USER VISIBILITY
+                const finalUnit = (varDef && varDef.unit) ? varDef.unit : (result.unit || '');
+                console.log(`[SensorRead] ✔️ Saved to '${variable}': ${valueToSave} ${finalUnit}`);
             }
 
             return {
                 success: true,
-                output: result.value
+                output: valueToSave // Return the FINAL (possibly converted) value as output
             };
         } catch (error: any) {
             return { success: false, error: error.message };

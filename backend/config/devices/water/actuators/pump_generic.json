@@ -4,6 +4,7 @@
     "category": "ACTUATOR",
     "description": "Standard water pump (Relay or PWM control)",
     "supportedStrategies": [
+        "actuator_manual",
         "volumetric_flow",
         "range_linear"
     ],

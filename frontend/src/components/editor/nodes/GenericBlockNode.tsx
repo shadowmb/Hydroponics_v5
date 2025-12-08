@@ -91,8 +91,10 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
                             {displayData.type === 'ACTUATOR_SET' && !!displayData.action && (
                                 <span className="text-[10px] text-purple-600 font-mono mt-1">
                                     Action: {String(displayData.action)}
-                                    {!!displayData.duration && ` (${String(displayData.duration)}ms)`}
-                                    {!!displayData.amount && ` (${String(displayData.amount)}ml)`}
+                                    {/* Show Duration only for Pulse actions */}
+                                    {(String(displayData.action) === 'PULSE_ON' || String(displayData.action) === 'PULSE_OFF') && !!displayData.duration && ` (${String(displayData.duration)}ms)`}
+                                    {/* Show Amount only for Dose action, with correct unit */}
+                                    {String(displayData.action) === 'DOSE' && !!displayData.amount && ` (${String(displayData.amount)}${displayData.amountUnit || 'ml'})`}
                                 </span>
                             )}
 

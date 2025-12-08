@@ -8,7 +8,7 @@ export interface WizardAction {
 }
 
 export interface WizardStep {
-    type: 'input' | 'measure' | 'action' | 'set_limit' | 'select';
+    type: 'input' | 'measure' | 'action' | 'set_limit' | 'select' | 'points_table';
     key?: string;
     label: string;
     default?: any;
@@ -19,6 +19,7 @@ export interface WizardStep {
     instructions?: string;
     options?: string[];
     fields?: { key: string; label: string; default?: any; unit?: string }[];
+    headers?: { label: string; key: string; readOnly?: boolean; action?: string }[];
     optionalAction?: WizardAction;
     actions?: WizardAction[];
 }

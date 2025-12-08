@@ -1,68 +1,66 @@
-[2025-12-08 10:40:18.867 +0200] INFO: тЦ╢я╕П Active Program Started
-    env: "development"
-[SensorRead] WARN: Definition for variable 'var_1' NOT FOUND in context. Keys: Дистаниця
-[2025-12-08 10:40:20.040 +0200] INFO: тЪб Cycle Force Started (Time updated to Now)
-    env: "development"
-    itemId: "69368eef1a0a6d766acbb2ba"
-    newTime: "10:40"
-[2025-12-08 10:40:20.047 +0200] INFO: Attempting to start cycle with sanitized steps
-    env: "development"
-    cycleId: "6932af5ccb81d56e0343a76b"
-    steps: [
-      {
-        "flowId": "test_distanitsiya",
-        "overrides": {}
-      }
-    ]
-[2025-12-08 10:40:20.053 +0200] INFO: ЁЯЪА Starting Cycle
-    env: "development"
-    cycleId: "6932af5ccb81d56e0343a76b"
-    sessionId: "69368ef41a0a6d766acbb2f0"
-    stepsCount: 1
-[2025-12-08 10:40:20.053 +0200] INFO: тЦ╢я╕П Executing Cycle Step
-    env: "development"
-    step: 0
-    flowId: "test_distanitsiya"
-[2025-12-08 10:40:20.068 +0200] INFO: ЁЯУе Loading Program Session
-    env: "development"
-    sessionId: "69368ef41a0a6d766acbb2f5"
-    programId: "test_distanitsiya"
-    variables: {}
-[2025-12-08 10:40:20.133 +0200] INFO: ЁЯФМ [HardwareService] Creating UDP Transport
-    env: "development"
-    controllerId: "6932a965cb81d56e0343a42c"
-    ip: "10.1.10.253"
-[2025-12-08 10:40:20.134 +0200] INFO: ЁЯФМ [UdpTransport] Initializing...
-    env: "development"
-    ip: "10.1.10.253"
-    port: 8888
-[2025-12-08 10:40:20.135 +0200] INFO: тЬЕ [UdpTransport] Listening
-    env: "development"
-    address: {
-      "address": "0.0.0.0",
-      "family": "IPv4",
-      "port": 52449
-    }
-[2025-12-08 10:40:20.384 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    driverId: "dfrobot_a02yyuw"
-    sourceUnit: "mm"
-    raw: 1782
-    value: 1782
-[2025-12-08 10:40:20.430 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 1782,
-      "baseUnit": "mm"
-    }
-[2025-12-08 10:40:20.451 +0200] INFO: тЬЕ Cycle Step Completed
-    env: "development"
-    cycleId: "6932af5ccb81d56e0343a76b"
-    step: 0
-[2025-12-08 10:40:20.451 +0200] INFO: ЁЯПБ Cycle Completed Successfully
-    env: "development"
-    sessionId: "69368ef41a0a6d766acbb2f0"
-[2025-12-08 10:40:20.465 +0200] INFO: тЬЕ Active Program Cycle Marked Completed
-    env: "development"
-    cycleId: "6932af5ccb81d56e0343a76b"
+FlowEditor.tsx:50 FlowEditor params: {id: undefined}
+FlowEditor.tsx:50 FlowEditor params: {id: undefined}
+PropertiesPanel.tsx:192 PropertiesPanel Resolution Debug
+PropertiesPanel.tsx:193 Target Device ID: 693695d9585420702157d812
+PropertiesPanel.tsx:194 Devices Store Keys: (6) ['6931357223b1320394ed4416', '6931358123b1320394ed4437', '6931359023b1320394ed445b', '6931359e23b1320394ed4482', '693695d9585420702157d812', '693727848b7650a8fbb69900']
+PropertiesPanel.tsx:195 Templates Store Length: 8
+PropertiesPanel.tsx:200 ✅ Device Found in Store: {hardware: {…}, config: {…}, metadata: {…}, lastReading: {…}, _id: '693695d9585420702157d812', …}
+PropertiesPanel.tsx:201    Driver ID from Config: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:202    Driver ID (Root): undefined
+PropertiesPanel.tsx:215 Raw Driver ID: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:216 Resolved Driver ID String: hc_sr04
+PropertiesPanel.tsx:220 Resolved Template: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:192 PropertiesPanel Resolution Debug
+PropertiesPanel.tsx:193 Target Device ID: 693695d9585420702157d812
+PropertiesPanel.tsx:194 Devices Store Keys: (6) ['6931357223b1320394ed4416', '6931358123b1320394ed4437', '6931359023b1320394ed445b', '6931359e23b1320394ed4482', '693695d9585420702157d812', '693727848b7650a8fbb69900']
+PropertiesPanel.tsx:195 Templates Store Length: 8
+PropertiesPanel.tsx:200 ✅ Device Found in Store: {hardware: {…}, config: {…}, metadata: {…}, lastReading: {…}, _id: '693695d9585420702157d812', …}
+PropertiesPanel.tsx:201    Driver ID from Config: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:202    Driver ID (Root): undefined
+PropertiesPanel.tsx:215 Raw Driver ID: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:216 Resolved Driver ID String: hc_sr04
+PropertiesPanel.tsx:220 Resolved Template: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+FlowEditor.tsx:50 FlowEditor params: {id: undefined}
+FlowEditor.tsx:50 FlowEditor params: {id: undefined}
+PropertiesPanel.tsx:192 PropertiesPanel Resolution Debug
+PropertiesPanel.tsx:193 Target Device ID: 693695d9585420702157d812
+PropertiesPanel.tsx:194 Devices Store Keys: (6) ['6931357223b1320394ed4416', '6931358123b1320394ed4437', '6931359023b1320394ed445b', '6931359e23b1320394ed4482', '693695d9585420702157d812', '693727848b7650a8fbb69900']
+PropertiesPanel.tsx:195 Templates Store Length: 8
+PropertiesPanel.tsx:200 ✅ Device Found in Store: {hardware: {…}, config: {…}, metadata: {…}, lastReading: {…}, _id: '693695d9585420702157d812', …}
+PropertiesPanel.tsx:201    Driver ID from Config: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:202    Driver ID (Root): undefined
+PropertiesPanel.tsx:215 Raw Driver ID: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:216 Resolved Driver ID String: hc_sr04
+PropertiesPanel.tsx:220 Resolved Template: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:192 PropertiesPanel Resolution Debug
+PropertiesPanel.tsx:193 Target Device ID: 693695d9585420702157d812
+PropertiesPanel.tsx:194 Devices Store Keys: (6) ['6931357223b1320394ed4416', '6931358123b1320394ed4437', '6931359023b1320394ed445b', '6931359e23b1320394ed4482', '693695d9585420702157d812', '693727848b7650a8fbb69900']
+PropertiesPanel.tsx:195 Templates Store Length: 8
+PropertiesPanel.tsx:200 ✅ Device Found in Store: {hardware: {…}, config: {…}, metadata: {…}, lastReading: {…}, _id: '693695d9585420702157d812', …}
+PropertiesPanel.tsx:201    Driver ID from Config: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:202    Driver ID (Root): undefined
+PropertiesPanel.tsx:215 Raw Driver ID: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:216 Resolved Driver ID String: hc_sr04
+PropertiesPanel.tsx:220 Resolved Template: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+FlowEditor.tsx:50 FlowEditor params: {id: undefined}
+FlowEditor.tsx:50 FlowEditor params: {id: undefined}
+PropertiesPanel.tsx:192 PropertiesPanel Resolution Debug
+PropertiesPanel.tsx:193 Target Device ID: 693695d9585420702157d812
+PropertiesPanel.tsx:194 Devices Store Keys: (6) ['6931357223b1320394ed4416', '6931358123b1320394ed4437', '6931359023b1320394ed445b', '6931359e23b1320394ed4482', '693695d9585420702157d812', '693727848b7650a8fbb69900']
+PropertiesPanel.tsx:195 Templates Store Length: 8
+PropertiesPanel.tsx:200 ✅ Device Found in Store: {hardware: {…}, config: {…}, metadata: {…}, lastReading: {…}, _id: '693695d9585420702157d812', …}
+PropertiesPanel.tsx:201    Driver ID from Config: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:202    Driver ID (Root): undefined
+PropertiesPanel.tsx:215 Raw Driver ID: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:216 Resolved Driver ID String: hc_sr04
+PropertiesPanel.tsx:220 Resolved Template: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:192 PropertiesPanel Resolution Debug
+PropertiesPanel.tsx:193 Target Device ID: 693695d9585420702157d812
+PropertiesPanel.tsx:194 Devices Store Keys: (6) ['6931357223b1320394ed4416', '6931358123b1320394ed4437', '6931359023b1320394ed445b', '6931359e23b1320394ed4482', '693695d9585420702157d812', '693727848b7650a8fbb69900']0: "6931357223b1320394ed4416"1: "6931358123b1320394ed4437"2: "6931359023b1320394ed445b"3: "6931359e23b1320394ed4482"4: "693695d9585420702157d812"5: "693727848b7650a8fbb69900"length: 6[[Prototype]]: Array(0)
+PropertiesPanel.tsx:195 Templates Store Length: 8
+PropertiesPanel.tsx:200 ✅ Device Found in Store: {hardware: {…}, config: {…}, metadata: {…}, lastReading: {…}, _id: '693695d9585420702157d812', …}config: {driverId: {…}, pollInterval: 5000, conversionStrategy: 'linear'}createdAt: "2025-12-08T09:09:45.033Z"deletedAt: nullgroup: "Water"hardware: {pins: Array(2), parentId: '693134db23b1320394ed43b5'}parentId: "693134db23b1320394ed43b5"pins: (2) [{…}, {…}][[Prototype]]: Objectid: "693695d9585420702157d812"isEnabled: truelastConnectionCheck: "2025-12-08T10:52:45.246Z"lastReading: {value: 591, raw: 59.1, timestamp: '2025-12-08T12:52:38.013Z'}metadata: {description: ''}name: "HC-SR04"status: "online"tags: (2) ['Distance', 'Water']type: "SENSOR"updatedAt: "2025-12-08T17:56:34.791Z"__v: 0_id: "693695d9585420702157d812"[[Prototype]]: Object
+PropertiesPanel.tsx:201    Driver ID from Config: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:202    Driver ID (Root): undefined
+PropertiesPanel.tsx:215 Raw Driver ID: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}
+PropertiesPanel.tsx:216 Resolved Driver ID String: hc_sr04
+PropertiesPanel.tsx:220 Resolved Template: {requirements: {…}, uiConfig: {…}, _id: 'hc_sr04', __v: 0, capabilities: Array(1), …}

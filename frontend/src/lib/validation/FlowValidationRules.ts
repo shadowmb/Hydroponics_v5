@@ -1,6 +1,7 @@
 
 
 import { areUnitsCompatible } from '@shared/UnitRegistry';
+import { validateBlockStrategy } from '@shared/strategies/StrategyRegistry';
 
 export interface ValidationRule {
     field: string;
@@ -17,24 +18,26 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
             field: 'variable',
             message: 'Incompatible Units',
             validate: (variableId, data, context) => {
-                if (!context || !data.deviceId || !variableId) return true; // Skip if missing context
+                if (!context || !data.deviceId || !variableId) return true;
 
                 const { devices, variables, deviceTemplates } = context;
                 const device = devices.get(data.deviceId);
                 const variable = variables.find((v: any) => v.id === variableId);
 
+                // Basic checks
                 if (!device || !variable || !variable.unit) return true;
 
+                // Prepare context for Strategy Registry to resolve 'any' strategies
+                // (e.g. linear strategy falls back to device default unit)
                 const driverId = typeof device.config?.driverId === 'object' ? (device.config.driverId as any)._id : device.config?.driverId;
                 const template = deviceTemplates?.find((t: any) => t._id === driverId || t._id === device.driverId);
-                if (!template) return true;
 
-                const driverCommand = template.commands ? (Array.isArray(template.commands) ? template.commands.find((c: any) => c.label === 'Read' || c.name === 'READ') : template.commands['READ']) : null;
-                const actualSourceUnit = driverCommand?.sourceUnit || template.uiConfig?.defaultUnit;
+                // Use Centralized Validation
+                // data.readingType holds the strategyId for SENSOR_READ
+                // If readingType is missing (legacy), passed as undefined -> validateBlockStrategy handles it
+                const result = validateBlockStrategy(data.readingType, variable.unit, { device, template });
 
-                if (!actualSourceUnit) return true;
-
-                return areUnitsCompatible(actualSourceUnit, variable.unit);
+                return result.isValid;
             }
         }
     ],
