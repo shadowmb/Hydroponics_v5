@@ -109,41 +109,25 @@ export class UdpTransport implements IHardwareTransport {
                 if (pinStr) message += `|${pinStr}`;
                 if (packet.angle !== undefined) message += `|${packet.angle}`;
             }
-            // MODBUS RTU (Hybrid Format: CMD|RX|TX|JSON)
+            // MODBUS RTU (JSON Format: CMD|JSON)
             else if (packet.cmd === 'MODBUS_RTU_READ') {
-                let rxStr: string | undefined;
-                let txStr: string | undefined;
-
-                // 1. Try to get from 'pins' array (New Format)
-                if (packet.pins && Array.isArray(packet.pins)) {
-                    const rxPin = packet.pins.find((p: any) => p.role === 'RX');
-                    const txPin = packet.pins.find((p: any) => p.role === 'TX');
-                    if (rxPin) rxStr = `${rxPin.portId}_${rxPin.gpio}`;
-                    if (txPin) txStr = `${txPin.portId}_${txPin.gpio}`;
-                }
-
-                // 2. Fallback to packet properties (Legacy/Direct)
-                if (!rxStr && packet.rx !== undefined) rxStr = String(packet.rx);
-                if (!txStr && packet.tx !== undefined) txStr = String(packet.tx);
-
-                // 3. Ensure 'D' prefix for legacy digital pins if they are just numbers
-                // (Only if we didn't get a Label_GPIO string)
-                if (rxStr && !rxStr.includes('_') && /^\d+$/.test(rxStr)) rxStr = `D${rxStr}`;
-                if (txStr && !txStr.includes('_') && /^\d+$/.test(txStr)) txStr = `D${txStr}`;
-
-                if (!rxStr || !txStr) {
-                    throw new Error('MODBUS_RTU_READ requires RX and TX pins');
-                }
-
-                message += `|${rxStr}|${txStr}`;
-
-                // Add JSON params
-                const jsonParams = {
-                    addr: packet.addr,
-                    func: packet.func,
-                    reg: packet.reg,
-                    count: packet.count
+                // Construct parameters matching firmware generic implementation
+                const jsonParams: any = {
+                    slaveId: packet.slaveId ?? packet.addr ?? 1,
+                    funcCode: packet.funcCode ?? packet.func ?? 3,
+                    startAddr: packet.startAddr ?? packet.reg ?? 0,
+                    len: packet.len ?? packet.count ?? 1,
+                    baudRate: packet.baudRate ?? 9600
                 };
+
+                // Add pins if available (Firmware handles 'pins' array or rxPin/txPin)
+                if (packet.pins && Array.isArray(packet.pins)) {
+                    jsonParams.pins = packet.pins;
+                } else if (packet.rx !== undefined && packet.tx !== undefined) {
+                    jsonParams.rxPin = packet.rx;
+                    jsonParams.txPin = packet.tx;
+                }
+
                 message += `|${JSON.stringify(jsonParams)}`;
             }
             // I2C READ (Format: I2C_READ|ADDR|COUNT)

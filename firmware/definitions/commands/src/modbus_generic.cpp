@@ -37,7 +37,7 @@ uint8_t readN(uint8_t *buf, size_t len, unsigned long timeout) {
 }
 
 String handleModbusRtuRead(const char* params) {
-  DynamicJsonDocument doc(300);
+  DynamicJsonDocument doc(1024);
   DeserializationError error = deserializeJson(doc, params);
 
   if (error) {
@@ -72,10 +72,12 @@ String handleModbusRtuRead(const char* params) {
   // Check if configuration changed
   if (modbusStream == nullptr || modbusRxPin != rxPin || modbusTxPin != txPin) {
      // Cleanup old
+     #if !defined(ARDUINO_UNOR4_WIFI) && !defined(ARDUINO_UNOR4_MINIMA)
      if (modbusSoftwareSerial != nullptr) {
        delete modbusSoftwareSerial;
        modbusSoftwareSerial = nullptr;
      }
+     #endif
      modbusStream = nullptr;
 
      // Initialize New
@@ -85,10 +87,7 @@ String handleModbusRtuRead(const char* params) {
          modbusStream = &Serial1;
          modbusIsHardware = true;
        } else {
-         modbusSoftwareSerial = new SoftwareSerial(rxPin, txPin);
-         modbusSoftwareSerial->begin(baudRate);
-         modbusStream = modbusSoftwareSerial;
-         modbusIsHardware = false;
+         return F("{\"ok\":0,\"error\":\"ERR_R4_REQUIRES_HW_SERIAL_ON_0_1\"}");
        }
      #else
        // AVR / ESP fallback
@@ -133,7 +132,7 @@ String handleModbusRtuRead(const char* params) {
     modbusStream->flush(); 
     delay(100); 
 
-    size_t expectedLen = 5 + (registerCount * 2);
+    // size_t expectedLen = 5 + (registerCount * 2); -- variable unused warning
     uint8_t ch;
     
     if (readN(&ch, 1, timeout) == 1 && ch == deviceAddress) {
@@ -141,7 +140,7 @@ String handleModbusRtuRead(const char* params) {
       if (readN(&ch, 1, timeout) == 1 && ch == functionCode) {
         response[1] = ch;
         if (readN(&ch, 1, timeout) == 1) {
-          uint8_t byteCount = ch;
+          uint8_t byteCount = ch; // variable shadow warning if declared above
           response[2] = ch;
           if (readN(&response[3], byteCount + 2, timeout) == byteCount + 2) {
              uint16_t receivedCRC = response[byteCount + 4] << 8 | response[byteCount + 3]; 
@@ -156,12 +155,6 @@ String handleModbusRtuRead(const char* params) {
   }
 
   if (!success) {
-    // We do NOT delete HardwareSerial stream, nor SoftwareSerial (keep it alive)
-    // if (!modbusIsHardware && modbusSoftwareSerial != nullptr) {
-    //    delete modbusSoftwareSerial;
-    //    modbusSoftwareSerial = nullptr;
-    //    modbusStream = nullptr;
-    // }
     return F("{\"ok\":0,\"error\":\"TIMEOUT_OR_CRC\"}");
   }
 
@@ -169,7 +162,7 @@ String handleModbusRtuRead(const char* params) {
   doc["ok"] = 1;
   JsonArray regs = doc.createNestedArray("registers");
   
-  uint8_t byteCount = response[2];
+  // uint8_t byteCount = response[2]; -- unused variable
   for (int i = 0; i < registerCount; i++) {
      uint16_t val = (response[3 + i*2] << 8) | response[4 + i*2];
      regs.add(val);
@@ -177,10 +170,6 @@ String handleModbusRtuRead(const char* params) {
   
   String output;
   serializeJson(doc, output);
-  
-  // NOTE: We do NOT delete modbusSoftwareSerial here anymore. 
-  // Keeping it persistent prevents heap fragmentation and crashes on Renesas core.
-  // It will be re-used on the next call if pins match.
   
   return output;
 }

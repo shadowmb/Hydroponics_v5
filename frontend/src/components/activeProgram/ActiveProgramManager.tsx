@@ -14,6 +14,7 @@ import { Input } from '../ui/input';
 import { TimePicker24 } from '../ui/time-picker-24';
 import { Clock, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { LiveExecutionMonitor } from './LiveExecutionMonitor';
 
 interface ActiveProgramManagerProps {
     program: IActiveProgram;
@@ -665,50 +666,56 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                         {(program?.schedule || []).map((item, index) => {
                             const isConflict = conflicts.has(index);
                             return (
-                                <div key={item._id} className={`rounded border overflow-hidden transition-colors ${item.status === 'running' ? 'bg-green-500/10 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]' :
-                                    item.status === 'completed' ? 'bg-muted opacity-60' :
-                                        item.status === 'failed' ? 'bg-red-500/10 border-red-500' :
-                                            item.status === 'skipped' ? 'bg-orange-500/10 border-orange-500/50' :
-                                                isConflict ? 'border-destructive/50 bg-destructive/50' :
-                                                    'bg-card'
-                                    }`}>
-                                    <div className="flex items-center justify-between p-3">
-                                        <div className="flex items-center gap-4">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 p-0"
-                                                onClick={() => toggleExpand(item._id)}
-                                            >
-                                                {expandedItems.has(item._id) ? (
-                                                    <Minus className="h-4 w-4" />
-                                                ) : (
-                                                    <Plus className="h-4 w-4" />
+                                <div
+                                    key={item._id}
+                                    className={`
+                                            rounded border overflow-hidden transition-colors
+                                            ${item.status === 'running' ? 'bg-green-500/10 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]' :
+                                            item.status === 'completed' ? 'bg-muted opacity-60' :
+                                                item.status === 'failed' ? 'bg-red-500/10 border-red-500' :
+                                                    item.status === 'skipped' ? 'bg-orange-500/10 border-orange-500/50' :
+                                                        'bg-card border-border hover:bg-accent/50'
+                                        }
+                                        ${isConflict ? 'border-red-500 border-2' : ''}
+                                        `}
+                                >
+                                    <div className="p-3 flex items-center gap-4">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 shrink-0"
+                                            onClick={() => toggleExpand(item._id)}
+                                        >
+                                            {expandedItems.has(item._id) ? (
+                                                <Minus className="h-4 w-4" />
+                                            ) : (
+                                                <Plus className="h-4 w-4" />
+                                            )}
+                                        </Button>
+
+                                        <div className="font-mono text-lg font-bold w-16">{item.time}</div>
+
+                                        <div className="flex flex-col flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className="font-medium text-lg leading-none">{item.name || item.cycleName || 'Event'}</div>
+                                                {(item.description || item.cycleDescription) && (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <HelpCircle className="h-4 w-4 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>{item.description || item.cycleDescription}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
                                                 )}
-                                            </Button>
-                                            <div className="font-mono text-lg font-bold w-16">{item.time}</div>
-                                            <div className="flex flex-col">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="font-medium text-lg leading-none">{item.name || item.cycleName || 'Event'}</div>
-                                                    {(item.description || item.cycleDescription) && (
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <HelpCircle className="h-4 w-4 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>{item.description || item.cycleDescription}</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    )}
-                                                </div>
-                                                <div className={`text-xs uppercase font-bold mt-1 ${item.status === 'running' ? 'text-green-500' :
-                                                    item.status === 'failed' ? 'text-red-500' :
-                                                        item.status === 'skipped' ? 'text-orange-500' :
-                                                            'text-muted-foreground'
-                                                    }`}>{item.status}</div>
                                             </div>
+                                            <div className={`text-xs uppercase font-bold mt-1 ${item.status === 'running' ? 'text-green-500' :
+                                                item.status === 'failed' ? 'text-red-500' :
+                                                    item.status === 'skipped' ? 'text-orange-500' :
+                                                        'text-muted-foreground'
+                                                }`}>{item.status}</div>
                                         </div>
 
                                         <div className="flex gap-2">
@@ -723,6 +730,7 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                                     >
                                                         <Play className="h-4 w-4" />
                                                     </Button>
+
                                                     <Dialog open={editingItem?._id === item._id} onOpenChange={(open) => {
                                                         if (open) {
                                                             setEditingItem(item);
@@ -872,6 +880,12 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                             );
                         })}
                     </div>
+
+                    {/* Live Execution Monitor */}
+                    <LiveExecutionMonitor
+                        programId={program._id}
+                        isActive={program.status === 'running'}
+                    />
                 </CardContent>
             </Card>
         </div>

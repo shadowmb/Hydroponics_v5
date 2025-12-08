@@ -284,7 +284,31 @@ export class AutomationEngine {
             if (signal?.aborted) throw new Error('Aborted');
 
             try {
-                if (attempts === 0) events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
+                if (attempts === 0) {
+                    const resolvedParamsForUI = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
+
+                    // Determine meaningful label
+                    let label = resolvedParamsForUI.label || block.type;
+                    if (block.type === 'LOG') label = `Log: ${resolvedParamsForUI.message || ''}`;
+
+                    // Determine duration if applicable
+                    let duration = 0;
+                    if (block.type === 'WAIT' && resolvedParamsForUI.duration) duration = Number(resolvedParamsForUI.duration);
+                    // Add other duration blocks here if needed
+
+                    events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
+
+                    // New Rich Execution Event
+                    events.emit('automation:execution_step', {
+                        blockId,
+                        type: block.type,
+                        sessionId: this.currentSessionId,
+                        label: label,
+                        duration: duration,
+                        timestamp: Date.now(),
+                        params: resolvedParamsForUI
+                    });
+                }
 
                 const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
                 const result = await executor.execute(context.execContext, resolvedParams, signal);
