@@ -192,7 +192,7 @@ export class HardwareService {
     /**
      * Reads a sensor value, returning both RAW and Converted data.
      */
-    public async readSensorValue(deviceId: string): Promise<{ raw: number, value: number, details?: any }> {
+    public async readSensorValue(deviceId: string): Promise<{ raw: number, value: number, unit?: string, details?: any }> {
         const { DeviceModel } = await import('../../models/Device');
         const device = await DeviceModel.findById(deviceId);
         if (!device) throw new Error('Device not found');
@@ -322,7 +322,7 @@ export class HardwareService {
             logger.warn({ deviceId, error }, '⚠️ Failed to save lastReading to DB');
         }
 
-        return { raw, value, details: rawResponse };
+        return { raw, value, unit: sourceUnit, details: rawResponse };
     }
 
     /**
