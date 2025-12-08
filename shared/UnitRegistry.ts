@@ -85,4 +85,94 @@ export const areUnitsCompatible = (unitA: string, unitB: string): boolean => {
     return catA === catB;
 };
 
+// --- CONVERSION LOGIC ---
+
+// Simple linear conversion factors to BASE unit of the category
+// Base units are defined by the first item in register() calls above.
+// Time Base: 'ms'
+// Distance Base: 'mm'
+// Temperature Base: 'C'
+// Volume Base: 'ml'
+// Pressure Base: 'psi'
+// Flow Base: 'l/min' (Wait, 'l/min' is first? Let's verify)
+
+const FACTORS: Record<string, number | ((v: number) => number)> = {
+    // Time (Base: ms)
+    's': 1000,
+    'min': 60000,
+    'h': 3600000,
+
+    // Distance (Base: mm)
+    'cm': 10,
+    'm': 1000,
+    'in': 25.4,
+    'ft': 304.8,
+    'inch': 25.4,
+
+    // Volume (Base: ml)
+    'l': 1000,
+    'L': 1000,
+    'gal': 3785.41,
+
+    // Temperature (Base: C)
+    'F': (val: number) => (val - 32) * 5 / 9,
+    'K': (val: number) => val - 273.15,
+
+    // Pressure (Base: psi)
+    'bar': 14.5038,
+    'kPa': 0.145038,
+    'Pa': 0.000145038,
+
+    // Flow (Base: l/min)
+    'L/min': 1,
+    'l/h': 1 / 60,
+    'L/h': 1 / 60,
+    'ml/min': 0.001,
+    'gpm': 3.78541
+};
+
+/**
+ * Normalizes a value from a given unit to its category's BASE unit.
+ * Used by Backend HardwareService to standardize readings.
+ */
+export const normalizeValue = (value: number, unit: string): { value: number, baseUnit: string } | null => {
+    if (!unit) return null;
+    const cleanUnit = unit.trim();
+    const def = UNITS[cleanUnit];
+
+    if (!def) {
+        // Unknown unit, return null or maybe strict error?
+        // For now, null implies "cannot normalize"
+        return null;
+    }
+
+    // If already base, return as is
+    if (def.base) {
+        return { value, baseUnit: cleanUnit };
+    }
+
+    // Look for conversion factor
+    const factor = FACTORS[cleanUnit];
+    if (factor === undefined) {
+        // No conversion known, return null
+        return null;
+    }
+
+    let normalized = value;
+    if (typeof factor === 'function') {
+        normalized = factor(value);
+    } else {
+        normalized = value * factor;
+    }
+
+    // Find the base unit name for this category
+    // This is a bit inefficient (O(N)), but N is small.
+    // Optimization: Store baseUnit in UnitDefinition?
+    const baseUnit = Object.keys(UNITS).find(u => UNITS[u].category === def.category && UNITS[u].base);
+
+    if (!baseUnit) return null;
+
+    return { value: normalized, baseUnit };
+};
+
 export const getAllUnits = (): string[] => Object.keys(UNITS).sort();
