@@ -22,6 +22,12 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
                 // --- UNIT CONVERSION LOGIC ---
                 const varDef = ctx.variableDefinitions ? ctx.variableDefinitions[variable] : undefined;
 
+                if (!ctx.variableDefinitions) {
+                    console.warn(`[SensorRead] WARN: ctx.variableDefinitions is MISSING for variable ${variable}`);
+                } else if (!varDef) {
+                    console.warn(`[SensorRead] WARN: Definition for variable '${variable}' NOT FOUND in context. Keys: ${Object.keys(ctx.variableDefinitions).join(', ')}`);
+                }
+
                 if (varDef && varDef.unit) {
                     // Use the unit returned by HardwareService (normalized base unit)
                     const sourceUnit = result.unit;
@@ -30,6 +36,9 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
                         const { unitConversionService } = await import('../../../services/conversion/UnitConversionService');
                         try {
                             const converted = unitConversionService.convert(valueToSave, sourceUnit, varDef.unit);
+                            // FORCE LOG for DEBUGGING
+                            console.log(`[SensorRead] DEBUG: Variable '${variable}' Unit: '${varDef.unit}', Source Unit: '${sourceUnit}', Value: ${valueToSave}, Converted: ${converted}`);
+
                             // Check if conversion actually happened (different values)
                             if (Math.abs(converted - valueToSave) > 0.0001) {
                                 console.log(`[SensorRead] Converted ${valueToSave} ${sourceUnit} -> ${converted} ${varDef.unit}`);

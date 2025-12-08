@@ -1,304 +1,65 @@
-{
-  "_id": {
-    "$oid": "69313a6c8b787c26d530f648"
-  },
-  "id": "ec_ab",
-  "name": "EC AB",
-  "description": "Това е поток който мери първоначално ЕС и ако е точно, започва поливане. Ако има отклонение по голямо от толеранса и в в отрицателна посока, тогава активра помпите за разтовр А/Б до достигане на нужното количество ЕС",
-  "mode": "SIMPLE",
-  "nodes": [
-    {
-      "id": "start",
-      "type": "START",
-      "params": {
-        "label": "START",
-        "hasError": false
-      },
-      "position": {
-        "x": 70.5,
-        "y": -60
+[2025-12-08 10:35:39.762 +0200] INFO: тЪб Cycle Force Started (Time updated to Now)
+    env: "development"
+    itemId: "69368dd3a6d43b57f20babbf"
+    newTime: "10:35"
+[2025-12-08 10:35:39.768 +0200] INFO: Attempting to start cycle with sanitized steps
+    env: "development"
+    cycleId: "6932af5ccb81d56e0343a76b"
+    steps: [
+      {
+        "flowId": "test_distanitsiya",
+        "overrides": {}
       }
-    },
-    {
-      "id": "end",
-      "type": "END",
-      "params": {
-        "label": "END",
-        "hasError": false
-      },
-      "position": {
-        "x": 393.5272219219886,
-        "y": 529.1450191865065
-      }
-    },
-    {
-      "id": "SENSOR_READ_1764833627709",
-      "type": "SENSOR_READ",
-      "params": {
-        "retryCount": 2,
-        "retryDelay": 1000,
-        "onFailure": "GOTO_LABEL",
-        "errorNotification": false,
-        "label": "Сензор за ЕС",
-        "deviceId": "6931355c23b1320394ed43f7",
-        "comment": "Прочитане на стойнсот на EC в главен резервоар",
-        "variable": "var_1",
-        "hasError": false,
-        "mirrorOf": null,
-        "errorTargetLabel": "END"
-      },
-      "position": {
-        "x": 230.43630857225006,
-        "y": -24.977650293224876
-      }
-    },
-    {
-      "id": "IF_1764833637197",
-      "type": "IF",
-      "params": {
-        "label": "Проверка за ЕС",
-        "operator": ">=",
-        "variable": "var_1",
-        "value": "{{global_2}}",
-        "comment": "Проверява дали желаното ЕС отговара на текущото",
-        "hasError": false
-      },
-      "position": {
-        "x": 230.4250391235958,
-        "y": 89.75218138471314
-      }
-    },
-    {
-      "id": "ACTUATOR_SET_1764833876058",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "label": "Помпа А",
-        "action": "DOSE",
-        "deviceId": "6931357223b1320394ed4416",
-        "amount": "{{global_3}}",
-        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри",
-        "hasError": false
-      },
-      "position": {
-        "x": 618.7557808037758,
-        "y": 296.5517404113317
-      }
-    },
-    {
-      "id": "LOOP_1764923284000",
-      "type": "LOOP",
-      "params": {
-        "label": "Цикъл",
-        "loopType": "WHILE",
-        "count": 1,
-        "maxIterations": 10,
-        "operator": "<",
-        "comment": "Активират се помпите за разтвор А и Б за покачване на ЕС до нужното ниво",
-        "variable": "var_1",
-        "value": "{{global_2}}",
-        "hasError": false
-      },
-      "position": {
-        "x": 409.53760994016665,
-        "y": 201.0180142002381
-      }
-    },
-    {
-      "id": "ACTUATOR_SET_1764923608057",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "label": "Помпа поливане",
-        "action": "PULSE_ON",
-        "deviceId": "6931359e23b1320394ed4482",
-        "duration": "{{global_4}}",
-        "comment": "Това е главната помпа която полива",
-        "hasError": false
-      },
-      "position": {
-        "x": 159.4908608487031,
-        "y": 371.06959620109495
-      }
-    },
-    {
-      "id": "generic_1764923612221",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "label": "Помпа Б",
-        "action": "DOSE",
-        "deviceId": "6931358123b1320394ed4437",
-        "amount": "{{global_3}}",
-        "comment": "Това е помпа от ратвор А за ЕС която работи по дози в милилитри",
-        "hasError": false
-      },
-      "position": {
-        "x": 648.9631621421823,
-        "y": 434.9587704331156
-      }
-    },
-    {
-      "id": "FLOW_CONTROL_1765110819247",
-      "type": "FLOW_CONTROL",
-      "params": {
-        "label": "Flow Control (Jump/Label)",
-        "controlType": "LOOP_BACK",
-        "hasError": false,
-        "targetLabel": "LOOP_1764923284000"
-      },
-      "position": {
-        "x": 764.401704547758,
-        "y": 714.1383851471572
-      }
-    },
-    {
-      "id": "SENSOR_READ_1765113853780",
-      "type": "SENSOR_READ",
-      "params": {
-        "label": "Read Sensor",
-        "hasError": false,
-        "mirrorOf": "SENSOR_READ_1764833627709",
-        "deviceId": "6931354623b1320394ed43dd",
-        "variable": "var_1"
-      },
-      "position": {
-        "x": 709.6905095320806,
-        "y": 593.4401746226785
-      }
+    ]
+[2025-12-08 10:35:39.774 +0200] INFO: ЁЯЪА Starting Cycle
+    env: "development"
+    cycleId: "6932af5ccb81d56e0343a76b"
+    sessionId: "69368ddba6d43b57f20babf8"
+    stepsCount: 1
+[2025-12-08 10:35:39.774 +0200] INFO: тЦ╢я╕П Executing Cycle Step
+    env: "development"
+    step: 0
+    flowId: "test_distanitsiya"
+[2025-12-08 10:35:39.788 +0200] INFO: ЁЯУе Loading Program Session
+    env: "development"
+    sessionId: "69368ddba6d43b57f20babfd"
+    programId: "test_distanitsiya"
+    variables: {}
+[2025-12-08 10:35:39.847 +0200] INFO: ЁЯФМ [HardwareService] Creating UDP Transport
+    env: "development"
+    controllerId: "6932a965cb81d56e0343a42c"
+    ip: "10.1.10.253"
+[2025-12-08 10:35:39.847 +0200] INFO: ЁЯФМ [UdpTransport] Initializing...
+    env: "development"
+    ip: "10.1.10.253"
+    port: 8888
+[2025-12-08 10:35:39.848 +0200] INFO: тЬЕ [UdpTransport] Listening
+    env: "development"
+    address: {
+      "address": "0.0.0.0",
+      "family": "IPv4",
+      "port": 59662
     }
-  ],
-  "edges": [
-    {
-      "id": "xy-edge__start-SENSOR_READ_1764833627709",
-      "source": "start",
-      "target": "SENSOR_READ_1764833627709",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__SENSOR_READ_1764833627709-IF_1764833637197",
-      "source": "SENSOR_READ_1764833627709",
-      "target": "IF_1764833637197",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__IF_1764833637197false-LOOP_1764923284000",
-      "source": "IF_1764833637197",
-      "target": "LOOP_1764923284000",
-      "sourceHandle": "false",
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ef4444"
-      }
-    },
-    {
-      "id": "xy-edge__LOOP_1764923284000body-ACTUATOR_SET_1764833876058",
-      "source": "LOOP_1764923284000",
-      "target": "ACTUATOR_SET_1764833876058",
-      "sourceHandle": "body",
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#22c55e"
-      }
-    },
-    {
-      "id": "xy-edge__ACTUATOR_SET_1764833876058-generic_1764923612221",
-      "source": "ACTUATOR_SET_1764833876058",
-      "target": "generic_1764923612221",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__LOOP_1764923284000exit-ACTUATOR_SET_1764923608057",
-      "source": "LOOP_1764923284000",
-      "target": "ACTUATOR_SET_1764923608057",
-      "sourceHandle": "exit",
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ef4444"
-      }
-    },
-    {
-      "id": "xy-edge__ACTUATOR_SET_1764923608057-end",
-      "source": "ACTUATOR_SET_1764923608057",
-      "target": "end",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__IF_1764833637197true-ACTUATOR_SET_1764923608057",
-      "source": "IF_1764833637197",
-      "target": "ACTUATOR_SET_1764923608057",
-      "sourceHandle": "true",
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#22c55e"
-      }
-    },
-    {
-      "id": "xy-edge__generic_1764923612221-SENSOR_READ_1765113853780",
-      "source": "generic_1764923612221",
-      "target": "SENSOR_READ_1765113853780",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__SENSOR_READ_1765113853780-FLOW_CONTROL_1765110819247",
-      "source": "SENSOR_READ_1765113853780",
-      "target": "FLOW_CONTROL_1765110819247",
-      "type": "smoothstep"
+[2025-12-08 10:35:40.226 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
+    sourceUnit: "mm"
+    raw: 29
+    value: 29
+[2025-12-08 10:35:40.255 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 29,
+      "baseUnit": "mm"
     }
-  ],
-  "inputs": [],
-  "variables": [
-    {
-      "id": "var_1",
-      "name": "ЕС local",
-      "type": "number",
-      "scope": "local",
-      "unit": "mS/cm",
-      "_id": {
-        "$oid": "69313a6c8b787c26d530f649"
-      }
-    },
-    {
-      "id": "global_2",
-      "name": "EC Need",
-      "type": "number",
-      "scope": "global",
-      "unit": "mS/cm",
-      "hasTolerance": true,
-      "description": "Стойнсот на желаното ЕС",
-      "_id": {
-        "$oid": "69313a6c8b787c26d530f64a"
-      }
-    },
-    {
-      "id": "global_3",
-      "name": "А/Б Доза",
-      "type": "number",
-      "scope": "global",
-      "unit": "ml",
-      "hasTolerance": true,
-      "description": "Каква доза да се долее от разтвори А и Б в милилитри",
-      "_id": {
-        "$oid": "69313bb98b787c26d530f764"
-      }
-    },
-    {
-      "id": "global_4",
-      "name": "Помпа поливане",
-      "type": "number",
-      "scope": "global",
-      "unit": "min",
-      "hasTolerance": true,
-      "description": "Това е помапта за поливане като се въведе време за работа в минути",
-      "_id": {
-        "$oid": "69329a157d90cb79577a5e43"
-      }
-    }
-  ],
-  "isActive": true,
-  "deletedAt": null,
-  "createdAt": {
-    "$date": "2025-12-04T07:38:20.667Z"
-  },
-  "updatedAt": {
-    "$date": "2025-12-07T18:42:51.523Z"
-  },
-  "__v": 0
-}
+[2025-12-08 10:35:40.280 +0200] INFO: тЬЕ Cycle Step Completed
+    env: "development"
+    cycleId: "6932af5ccb81d56e0343a76b"
+    step: 0
+[2025-12-08 10:35:40.281 +0200] INFO: ЁЯПБ Cycle Completed Successfully
+    env: "development"
+    sessionId: "69368ddba6d43b57f20babf8"
+[2025-12-08 10:35:40.305 +0200] INFO: тЬЕ Active Program Cycle Marked Completed
+    env: "development"
+    cycleId: "6932af5ccb81d56e0343a76b"
