@@ -253,7 +253,7 @@ export class HardwareService {
         // Check if driver has a sourceUnit and normalize if needed
         const driverDoc = templates.getDriver(device.config.driverId);
         // @ts-ignore - sourceUnit is new, might not be in interface yet
-        const sourceUnit = driverDoc.commands?.READ?.sourceUnit;
+        let sourceUnit = driverDoc.commands?.READ?.sourceUnit;
 
         logger.info({
             deviceId,
@@ -278,6 +278,9 @@ export class HardwareService {
                     if (normalized.baseUnit !== sourceUnit) {
                         logger.info({ deviceId, from: sourceUnit, to: normalized.baseUnit, original: value, normalized: normalized.value }, '📏 [HardwareService] Normalized Value');
                         value = normalized.value;
+                        // Update the sourceUnit to reflect the new Normalized Base Unit
+                        // This ensures downstream consumers (like SensorRead block) know the value is now in 'mm', not 'cm'
+                        sourceUnit = normalized.baseUnit;
                     }
                 } else {
                     logger.warn({ deviceId, sourceUnit }, '⚠️ [HardwareService] Unknown sourceUnit in driver');

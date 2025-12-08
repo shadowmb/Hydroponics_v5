@@ -14,18 +14,22 @@ import {
     Power,
     Wind,
     Sun,
-    Search
+    Search,
+    XCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Re-using the same interface from parent (or exporting it from here)
 export interface ExecutionStep {
-    id: string;             // Unique ID (blockId + timestamp)
+    id: string;
     blockId: string;
     type: string;
     label: string;
-    duration?: number;      // Total duration in ms (for Delay/RunFor)
-    timestamp: number;      // Start time
+    duration?: number;
+    timestamp: number;
     params?: any;
+    output?: any;
+    error?: string;
 }
 
 interface ExecutionCardProps {
@@ -40,7 +44,7 @@ export const ExecutionCard: React.FC<ExecutionCardProps> = ({ step, state }) => 
     // Dynamic Progress Logic
     useEffect(() => {
         if (state !== 'active' || !step.duration) {
-            if (state === 'history') setProgress(100);
+            if (state === 'history' || step.output) setProgress(100);
             return;
         }
 
@@ -59,6 +63,8 @@ export const ExecutionCard: React.FC<ExecutionCardProps> = ({ step, state }) => 
     }, [step, state]);
 
     const getIcon = () => {
+        if (step.error) return <XCircle className="h-5 w-5 text-red-500" />;
+
         switch (step.type) {
             case 'WAIT': return <Clock className="h-5 w-5 text-blue-400" />;
             case 'DIGITAL_WRITE': return <ToggleRight className="h-5 w-5 text-green-400" />;
@@ -72,45 +78,68 @@ export const ExecutionCard: React.FC<ExecutionCardProps> = ({ step, state }) => 
     const isHistory = state === 'history';
     const isActive = state === 'active';
 
+    // Format Result for Display
+    const renderResult = () => {
+        if (step.error) return <span className="text-red-400 text-xs font-mono">{step.error}</span>;
+
+        if (step.type === 'SENSOR_READ' && step.output !== undefined) {
+            // Try to format based on value
+            let formatted = step.output;
+            if (typeof step.output === 'number') {
+                formatted = step.output.toFixed(2);
+            }
+            return <Badge variant="outline" className="border-yellow-500/50 text-yellow-500 bg-yellow-500/10 font-mono text-xs">{formatted}</Badge>;
+        }
+
+        if (step.type === 'WAIT' && step.duration) {
+            return <Badge variant="outline" className="border-blue-500/50 text-blue-500 bg-blue-500/10 font-mono text-xs">{(step.duration / 1000)}s</Badge>;
+        }
+
+        if (step.type === 'LOG' && step.params?.message) {
+            return <span className="text-slate-400 text-xs italic truncate max-w-[200px]">{step.params.message}</span>
+        }
+
+        if (step.output !== undefined && typeof step.output !== 'object') {
+            return <span className="text-slate-400 text-xs font-mono">➡ {String(step.output)}</span>
+        }
+
+        return null;
+    };
+
     return (
         <Card className={cn(
-            "relative flex items-center gap-3 p-3 transition-all duration-500 min-w-[220px]",
-            isActive ? "bg-slate-900/80 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.15)] scale-105 z-10" : "bg-muted/40 border-transparent opacity-60 scale-95 grayscale-[0.8]",
-            isActive && "min-w-[300px]" // Make active card wider
+            "relative flex items-center gap-3 p-3 transition-all duration-300 w-full hover:bg-slate-900/50",
+            isActive ? "bg-slate-900/80 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.15)]" : "bg-transparent border-slate-800/50 opacity-80 hover:opacity-100",
+            step.error && "border-red-500/50 bg-red-950/10"
         )}>
-            {/* Status Pulse */}
-            {isActive && (
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                </span>
-            )}
+            {/* Active Indictor Line */}
+            {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-l-md" />}
 
-            <div className={cn("p-2 rounded-full", isActive ? "bg-slate-800" : "bg-transparent")}>
+            <div className={cn("p-2 rounded-full shrink-0", isActive ? "bg-slate-800" : "bg-slate-950/50")}>
                 {getIcon()}
             </div>
 
-            <div className="flex-1 overflow-hidden">
-                <div className="flex justify-between items-center mb-1">
-                    <h4 className={cn("font-medium text-sm truncate", isActive ? "text-white" : "text-muted-foreground")}>
+            <div className="flex-1 overflow-hidden flex items-center justify-between">
+                <div className="flex flex-col min-w-0">
+                    <h4 className={cn("font-medium text-sm truncate", isActive ? "text-white" : "text-slate-300")}>
                         {step.label}
                     </h4>
-                    {isActive && timeLeft !== null && (
-                        <span className="text-xs font-mono text-blue-300">{timeLeft}s</span>
-                    )}
+                    {/* Progress Bar for Active steps */}
+                    {isActive && step.duration ? (
+                        <div className="flex items-center gap-2 mt-1">
+                            <Progress value={progress} className="h-1 w-24 bg-slate-800" indicatorClassName="bg-green-500" />
+                            <span className="text-[10px] font-mono text-slate-500">{timeLeft}s</span>
+                        </div>
+                    ) : null}
                 </div>
 
-                {/* Subtext or params */}
-                {isActive && step.type === 'LOG' && (
-                    <p className="text-xs text-slate-400 truncate">{step.params?.message}</p>
-                )}
-
-                {/* Progress Bar */}
-                {(isActive || isHistory) && step.duration ? (
-                    <Progress value={progress} className="h-1.5 bg-slate-800" indicatorClassName={isActive ? "bg-green-500" : "bg-slate-600"} />
-                ) : (
-                    <div className="h-1.5" /> // Spacer
-                )}
+                {/* Right Side: Results & Timestamp */}
+                <div className="flex items-center gap-3 pl-4 shrink-0">
+                    {renderResult()}
+                    <span className="text-[10px] text-slate-600 font-mono tabular-nums">
+                        {new Date(step.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                </div>
             </div>
         </Card>
     );
