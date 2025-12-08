@@ -125,7 +125,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         );
     }
 
-    if (!selectedNode && !selectedEdge) {
+    if (!selectedNode) {
         return (
             <div className="w-[350px] border-l bg-background h-full flex flex-col">
                 <FlowHealthDashboard
@@ -237,6 +237,39 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             field = { ...field, type: 'select' };
         }
 
+        // 3. SENSOR READ - Conversion Strategy Selector (Read As)
+        if (key === 'readingType' && nodeType === 'SENSOR_READ' && formData.deviceId) {
+            const { devices, deviceTemplates } = useStore.getState();
+            const device = devices.get(formData.deviceId);
+
+            if (device) {
+                // Resolve Template
+                // Sometimes driverId is populated object, sometimes string. Handle both.
+                const driverId = typeof device.config?.driverId === 'object' ? (device.config.driverId as any)._id : device.config?.driverId;
+                // Fallback to device.driverId if config is missing it
+                const finalDriverId = driverId || device.driverId;
+
+                const template = deviceTemplates?.find(t => t._id === finalDriverId || t.id === finalDriverId);
+
+                // Check if template supports tank_volume
+                const supportsTankVolume = template?.supportedStrategies?.includes('tank_volume');
+
+                if (supportsTankVolume) {
+                    // Check if device actually has the calibration configured
+                    const hasTankCalibration = device.config?.calibrations?.tank_volume;
+
+                    options = [
+                        { label: 'Default (distance)', value: 'raw' },
+                        { label: 'Volume (Liters)', value: 'tank_volume', disabled: !hasTankCalibration }
+                    ];
+                } else {
+                    if (!options || options.length === 0) return null;
+                }
+            } else {
+                return null;
+            }
+        }
+
         if (readOnly) {
             return (
                 <div className="p-2 bg-muted rounded border border-dashed text-sm text-muted-foreground">
@@ -330,7 +363,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                         </SelectTrigger>
                         <SelectContent>
                             {options?.map((opt) => (
-                                <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                                <SelectItem key={String(opt.value)} value={String(opt.value)} disabled={(opt as any).disabled}>
                                     {opt.label}
                                 </SelectItem>
                             ))}
@@ -480,16 +513,13 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                         if (device && variable && variable.unit) {
                                                             const driverId = typeof device.config?.driverId === 'object' ? (device.config.driverId as any)._id : device.config?.driverId;
                                                             const template = deviceTemplates?.find(t => t._id === driverId || t._id === device.driverId);
-                                                            // Note: driverId might be in config or root depending on device version
 
                                                             // Find Driver Config for READ command
                                                             const driverCommand = template?.commands ? (Array.isArray(template.commands) ? template.commands.find((c: any) => c.label === 'Read' || c.name === 'READ') : template.commands['READ']) : null;
-
                                                             const actualSourceUnit = driverCommand?.sourceUnit || template?.uiConfig?.defaultUnit;
 
                                                             if (actualSourceUnit && variable.unit) {
                                                                 const compatible = areUnitsCompatible(actualSourceUnit, variable.unit);
-
                                                                 if (!compatible) {
                                                                     return (
                                                                         <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded flex flex-col gap-1">
@@ -514,6 +544,30 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                                     );
                                                                 }
                                                             }
+                                                        }
+                                                        return null;
+                                                    })()
+                                                )}
+
+                                                {/* MISSING CALIBRATION WARNING */}
+                                                {key === 'readingType' && formData[key] === 'tank_volume' && formData.deviceId && (
+                                                    (() => {
+                                                        const { devices } = useStore.getState();
+                                                        const device = devices.get(formData.deviceId);
+                                                        const hasCalib = device?.config?.calibrations?.tank_volume;
+
+                                                        if (device && !hasCalib) {
+                                                            return (
+                                                                <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 p-2 rounded flex flex-col gap-1 mt-1">
+                                                                    <div className="flex gap-2 items-center font-semibold">
+                                                                        <AlertCircle className="h-3 w-3" />
+                                                                        <span>Missing Calibration</span>
+                                                                    </div>
+                                                                    <span className="opacity-90 pl-5">
+                                                                        Device needs 'Tank Volume' calibration to return accurate Liter values.
+                                                                    </span>
+                                                                </div>
+                                                            );
                                                         }
                                                         return null;
                                                     })()
@@ -691,4 +745,3 @@ const CollapsibleSection = ({ title, icon: Icon, defaultOpen = false, children, 
         </div>
     );
 };
-

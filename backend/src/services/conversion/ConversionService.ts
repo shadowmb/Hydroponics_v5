@@ -19,8 +19,8 @@ export class ConversionService {
         this.strategies.set(name, strategy);
     }
 
-    convert(device: IDevice, rawValue: number): number {
-        let strategyName = device.config.conversionStrategy;
+    convert(device: IDevice, rawValue: number, strategyOverride?: string): number {
+        let strategyName = strategyOverride || device.config.conversionStrategy;
 
         // Auto-detect strategy if not explicitly set
         if (!strategyName) {

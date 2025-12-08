@@ -127,6 +127,13 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'device',
                 placeholder: 'Select a sensor'
             },
+            readingType: {
+                label: 'Read As',
+                type: 'select',
+                options: [], // populated dynamically
+                placeholder: 'Default (Distance)',
+                defaultValue: 'raw'
+            },
             variable: {
                 label: 'Save to Variable',
                 type: 'variable',

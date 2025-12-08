@@ -192,7 +192,7 @@ export class HardwareService {
     /**
      * Reads a sensor value, returning both RAW and Converted data.
      */
-    public async readSensorValue(deviceId: string): Promise<{ raw: number, value: number, unit?: string, details?: any }> {
+    public async readSensorValue(deviceId: string, strategyOverride?: string): Promise<{ raw: number, value: number, unit?: string, details?: any }> {
         const { DeviceModel } = await import('../../models/Device');
         const device = await DeviceModel.findById(deviceId);
         if (!device) throw new Error('Device not found');
@@ -247,7 +247,7 @@ export class HardwareService {
             raw = 0;
         }
 
-        let value = conversionService.convert(device, raw);
+        let value = conversionService.convert(device, raw, strategyOverride);
 
         // --- Normalization Layer ---
         // Check if driver has a sourceUnit and normalize if needed

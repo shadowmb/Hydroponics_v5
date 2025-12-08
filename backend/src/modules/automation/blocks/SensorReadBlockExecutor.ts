@@ -12,8 +12,18 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
         }
 
         try {
-            // 1. Read Sensor Value
-            const result = await hardware.readSensorValue(deviceId);
+            // 1. Read Sensor Value (with optional Strategy Override)
+            const strategyOverride = params.readingType === 'raw' ? undefined : params.readingType;
+            // If explicit RAW is requested, we might need a way to bypass default strategy. 
+            // For now, let's assume 'readingType' IS the strategy name (e.g. 'tank_volume') OR 'raw'.
+
+            // NOTE: If 'raw' is passed, HardwareService currently doesn't inherently support "skip conversion" via this arg alone 
+            // unless we handle it here or in HardwareService. 
+            // However, the requirement is mainly to switch between "Distance" (Linear/Raw) and "Volume" (Tank).
+            // If user selects 'tank_volume', we pass it.
+            // If user selects 'distance', we might just want default behavior OR specific 'linear' strategy.
+
+            const result = await hardware.readSensorValue(deviceId, strategyOverride);
             let valueToSave = result.value;
 
             // 2. Save to Variable (if configured)
