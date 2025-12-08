@@ -12,6 +12,7 @@ export class ConversionService {
         this.registerStrategy('linear', new LinearInterpolationStrategy());
         this.registerStrategy('ec-dfr-analog', new EcDfrStrategy());
         this.registerStrategy('volumetric_flow', new VolumetricFlowStrategy());
+        this.registerStrategy('tank_volume', new LinearInterpolationStrategy());
     }
 
     registerStrategy(name: string, strategy: IConversionStrategy) {

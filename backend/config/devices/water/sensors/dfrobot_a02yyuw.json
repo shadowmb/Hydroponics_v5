@@ -4,7 +4,8 @@
     "category": "SENSOR",
     "supportedStrategies": [
         "offset_only",
-        "linear"
+        "linear",
+        "tank_volume"
     ],
     "capabilities": [
         "UART_READ_DISTANCE"

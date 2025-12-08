@@ -5,7 +5,8 @@
     "category": "SENSOR",
     "supportedStrategies": [
         "offset_only",
-        "linear"
+        "linear",
+        "tank_volume"
     ],
     "capabilities": [
         "ULTRASONIC_TRIG_ECHO"
