@@ -516,7 +516,12 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                                                             // Find Driver Config for READ command
                                                             const driverCommand = template?.commands ? (Array.isArray(template.commands) ? template.commands.find((c: any) => c.label === 'Read' || c.name === 'READ') : template.commands['READ']) : null;
-                                                            const actualSourceUnit = driverCommand?.sourceUnit || template?.uiConfig?.defaultUnit;
+                                                            let actualSourceUnit = driverCommand?.sourceUnit || template?.uiConfig?.defaultUnit;
+
+                                                            // OVERRIDE: If Strategy is Tank Volume, output is Liters
+                                                            if (formData.readingType === 'tank_volume') {
+                                                                actualSourceUnit = 'l';
+                                                            }
 
                                                             if (actualSourceUnit && variable.unit) {
                                                                 const compatible = areUnitsCompatible(actualSourceUnit, variable.unit);
