@@ -143,11 +143,21 @@ export class AutomationEngine {
         const variableDefinitions: Record<string, any> = {};
         if (flow.variables) {
             flow.variables.forEach((v: any) => {
-                variableDefinitions[v.name] = {
+                // Key by ID if available (preferred), otherwise Name
+                const key = v.id || v.name;
+                variableDefinitions[key] = {
                     type: v.type,
                     unit: v.unit,
-                    scope: v.scope
+                    scope: v.scope,
+                    name: v.name // Keep name for lookup if needed
                 };
+
+                // Ensure runtime variables initialized if not present
+                // If input provided value by Name, map it to ID
+                if (v.id && variables[v.name] !== undefined) {
+                    variables[v.id] = variables[v.name];
+                    // delete variables[v.name]; // Optional: remove Name key to enforce ID usage? Safer to keep for now.
+                }
             });
         }
 
