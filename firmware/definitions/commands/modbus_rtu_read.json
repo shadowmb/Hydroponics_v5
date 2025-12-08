@@ -5,8 +5,8 @@
         "*"
     ],
     "code": {
-        "includes": "#include <SoftwareSerial.h>\n#include <ArduinoJson.h>",
-        "globals": "Stream* modbusStream = nullptr;\nSoftwareSerial* modbusSoftwareSerial = nullptr;\nint modbusRxPin = -1;\nint modbusTxPin = -1;\nbool modbusIsHardware = false;",
+        "includes": "#if !defined(ARDUINO_UNOR4_WIFI) && !defined(ARDUINO_UNOR4_MINIMA)\n#include <SoftwareSerial.h>\n#endif\n#include <ArduinoJson.h>",
+        "globals": "Stream* modbusStream = nullptr;\n#if !defined(ARDUINO_UNOR4_WIFI) && !defined(ARDUINO_UNOR4_MINIMA)\nSoftwareSerial* modbusSoftwareSerial = nullptr;\n#endif\nint modbusRxPin = -1;\nint modbusTxPin = -1;\nbool modbusIsHardware = false;",
         "functions": "@file:commands/src/modbus_generic.cpp",
         "loop": "// Modbus loop logic if needed",
         "dispatcher": "else if (strcmp(cmd, \"MODBUS_RTU_READ\") == 0) { return handleModbusRtuRead(delimiter ? delimiter + 1 : \"{}\"); }"
