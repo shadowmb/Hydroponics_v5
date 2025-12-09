@@ -15,15 +15,17 @@ export class LinearInterpolationStrategy implements IConversionStrategy {
         const calibration = device.config.calibrations?.[strategyName]?.data || (device.config as any).calibration;
 
         // 1. Basic Multiplier/Offset (Legacy/Simple support)
-        // If no points are defined, fallback to simple linear: y = mx + c
-        if (!calibration?.points || calibration.points.length === 0) {
+        // If neither 'points' nor 'data' (alias) are defined, fallback to simple linear: y = mx + c
+        const pointsArray = calibration?.points || calibration?.data;
+
+        if (!pointsArray || pointsArray.length === 0) {
             const m = calibration?.multiplier ?? 1;
             const c = calibration?.offset ?? 0;
             return (rawValue * m) + c;
         }
 
         // 2. Multi-Point Interpolation
-        const points = [...calibration.points].sort((a, b) => a.raw - b.raw);
+        const points = [...pointsArray].sort((a: any, b: any) => a.raw - b.raw);
 
         // Case A: Raw is below the first point
         if (rawValue <= points[0].raw) {
