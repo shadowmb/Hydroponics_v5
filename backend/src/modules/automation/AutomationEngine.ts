@@ -24,9 +24,10 @@ import { LoopBlockExecutor } from './blocks/LoopBlockExecutor';
 import { FlowControlBlockExecutor } from './blocks/FlowControlBlockExecutor';
 
 export class AutomationEngine {
-    private actor: Actor<any>;
+    private actor!: Actor<any>;
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
+    private executionStartTime: number = 0;
 
     private instanceId = Math.random().toString(36).substring(7);
 
@@ -48,6 +49,14 @@ export class AutomationEngine {
         this.registerExecutor(new LoopBlockExecutor());
         this.registerExecutor(new FlowControlBlockExecutor());
 
+        this.initializeActor();
+    }
+
+    private initializeActor() {
+        if (this.actor) {
+            this.actor.stop();
+        }
+
         // Define the logic for 'executeBlock'
         const executeBlockLogic = fromPromise(async ({ input, signal }: { input: { context: AutomationContext }, signal: AbortSignal }) => {
             return this.executeBlock(input.context, signal);
@@ -62,11 +71,9 @@ export class AutomationEngine {
 
         this.setupEventListeners();
         this.actor.start();
+        logger.info(`✨ AutomationEngine Actor Initialized/Reset (Session: ${this.currentSessionId || 'none'})`);
+
     }
-
-    // ... rest of class ...
-
-    // ... rest of class ...
 
     private setupEventListeners() {
         this.actor.subscribe(async (snapshot) => {
@@ -96,7 +103,9 @@ export class AutomationEngine {
                 currentBlock: snapshot.context.currentBlockId,
                 context: snapshot.context.execContext,
                 sessionId: this.currentSessionId,
-                error: snapshot.context.error
+                error: snapshot.context.error,
+                // @ts-ignore - Triggered by BlockResult properties
+                summary: (snapshot.event as any)?.output?.summary
             });
         });
     }
@@ -113,6 +122,11 @@ export class AutomationEngine {
      * Load a program into memory (Idle state).
      */
     public async loadProgram(programId: string, overrides: Record<string, any> = {}): Promise<string> {
+        // HARD RESET: Ensure clean state before loading new program
+        // This prevents 'dirty' variables from previous runs leaking into the new session.
+        this.currentSessionId = null; // Clear old session ref
+        this.initializeActor();
+
         // 1. Load Program (Flow)
         const flow = await flowRepository.findById(programId);
         if (!flow) {
@@ -209,7 +223,8 @@ export class AutomationEngine {
             edges: flow.edges as any[],
             execContext: { // Pass initial context to machine
                 variables,
-                variableDefinitions
+                variableDefinitions,
+                resumeState: {} // FORCE EMPTY STATE
             }
         } as any);
 
@@ -225,6 +240,7 @@ export class AutomationEngine {
             throw new Error(`Cannot start program from state: ${snapshot.value}. Must be loaded, stopped, or completed.`);
         }
 
+        this.executionStartTime = Date.now();
         this.actor.send({ type: 'START' });
     }
 
@@ -349,7 +365,22 @@ export class AutomationEngine {
                 if (!result.success) throw new Error(result.error || 'Block execution returned failure');
 
                 // Success!
-                events.emit('automation:block_end', { blockId, success: true, output: result.output, sessionId: this.currentSessionId });
+                // Calculate Duration if END block
+                let finalSummary = result.summary;
+                if (block.type === 'END' && this.executionStartTime > 0) {
+                    const totalMs = Date.now() - this.executionStartTime;
+                    const mins = Math.floor(totalMs / 60000);
+                    const secs = ((totalMs % 60000) / 1000).toFixed(1);
+                    finalSummary = `Total Time: ${mins}m ${secs}s`;
+                }
+
+                events.emit('automation:block_end', {
+                    blockId,
+                    success: true,
+                    output: result.output,
+                    summary: finalSummary, // Pass Summary
+                    sessionId: this.currentSessionId
+                });
 
                 // Loop Safety Check
                 if (result.output && result.output.status === 'MAX_ITERATIONS') {
@@ -391,16 +422,16 @@ export class AutomationEngine {
                     }
                 }
 
+                let currentResumeState = { ...(context.execContext.resumeState || {}) };
                 if (result.state) {
-                    if (!context.execContext.resumeState) context.execContext.resumeState = {};
-                    context.execContext.resumeState[blockId] = result.state;
+                    currentResumeState[blockId] = result.state;
                 }
 
                 return {
                     nextBlockId,
                     output: result.output,
                     variables: context.execContext.variables, // PASS UPDATED VARIABLES BACK
-                    resumeState: context.execContext.resumeState // PASS STATE BACK
+                    resumeState: currentResumeState // PASS STATE BACK WITHOUT MUTATION
                 };
             } catch (err: any) {
                 lastError = err;
@@ -411,6 +442,14 @@ export class AutomationEngine {
         }
 
         // FAILURE HANDLING
+        // EMIT BLOCK_END (Failed) so frontend knows to close any groups
+        events.emit('automation:block_end', {
+            blockId,
+            success: false,
+            error: lastError?.message || 'Block Failed',
+            sessionId: this.currentSessionId
+        });
+
         logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');
 
         if (onFailure === 'CONTINUE') {
@@ -427,7 +466,14 @@ export class AutomationEngine {
         if (onFailure === 'GOTO_LABEL') {
             const targetLabelName = params.errorTargetLabel;
             if (targetLabelName) {
-                if (targetLabelName === 'END') return { nextBlockId: null };
+                // If target is explicitly 'END', try to find an actual END block to execute it (for logging visibility)
+                if (targetLabelName === 'END') {
+                    const endBlockEntry = Array.from(context.blocks.entries()).find(([_id, b]) => b.type === 'END');
+                    if (endBlockEntry) {
+                        return { nextBlockId: endBlockEntry[0] };
+                    }
+                    return { nextBlockId: null }; // Fallback if no End block
+                }
 
                 for (const [id, b] of context.blocks) {
                     if (b.type === 'FLOW_CONTROL' && b.params.controlType === 'LABEL' && b.params.labelName === targetLabelName) {

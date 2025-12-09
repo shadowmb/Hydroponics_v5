@@ -34,7 +34,10 @@ export class WaitBlockExecutor implements IBlockExecutor {
         // I will update AutomationEngine to inject _blockId into params or context.
         // Injecting into params is easiest for now without breaking interfaces.
 
-        const duration = params?.duration || 1000;
+        let duration = params?.duration || 1; // Default 1 second
+
+        // Convert Seconds to Milliseconds for internal timer
+        duration = duration * 1000;
 
         // Logic for Resume
         // We need to know if we are resuming. 

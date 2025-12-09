@@ -4,16 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
     Activity,
-    Droplet,
-    Thermometer,
     Clock,
     ToggleRight,
     AlertCircle,
-    CheckCircle2,
-    PlayCircle,
-    Power,
-    Wind,
-    Sun,
     Search,
     XCircle
 } from "lucide-react";
@@ -30,6 +23,7 @@ export interface ExecutionStep {
     params?: any;
     output?: any;
     error?: string;
+    summary?: string;
 }
 
 interface ExecutionCardProps {
@@ -75,12 +69,21 @@ export const ExecutionCard: React.FC<ExecutionCardProps> = ({ step, state }) => 
         }
     };
 
-    const isHistory = state === 'history';
     const isActive = state === 'active';
 
     // Format Result for Display
     const renderResult = () => {
         if (step.error) return <span className="text-red-400 text-xs font-mono">{step.error}</span>;
+
+        // PRIORITIZE SUMMARY (Rich Result)
+        if (step.summary) {
+            return <Badge variant="outline" className={cn(
+                "font-mono text-xs",
+                step.error ? "border-red-500/50 text-red-500" : "border-slate-700 text-slate-300 bg-slate-900/50"
+            )}>
+                {step.summary}
+            </Badge>;
+        }
 
         if (step.type === 'SENSOR_READ' && step.output !== undefined) {
             // Try to format based on value

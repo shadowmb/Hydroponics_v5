@@ -1,10 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { socketService } from '@/core/SocketService';
 import { ExecutionCard } from './ExecutionCard';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowDown } from 'lucide-react';
 
 export interface ExecutionStep {
     id: string;             // Unique ID (blockId + timestamp)
@@ -17,13 +14,22 @@ export interface ExecutionStep {
     cycleId?: string;
     output?: any;           // Result of execution (e.g. sensor value)
     error?: string;
+    summary?: string;       // Rich result text
+}
+
+interface CycleIteration {
+    id: string;
+    headerStep: ExecutionStep;
+    steps: ExecutionStep[];
 }
 
 interface CycleGroup {
-    id: string; // Unique group ID (usually timestamp of start)
+    id: string;
+    blockId: string; // To identify if we are in the same loop node
     label: string;
     startTime: number;
-    steps: ExecutionStep[];
+    type: 'LOOP' | 'SEQUENCE';
+    iterations: CycleIteration[];
     isActive: boolean;
 }
 
@@ -31,6 +37,118 @@ interface LiveExecutionMonitorProps {
     programId: string;
     isActive: boolean;
 }
+
+
+
+const CycleGroupItem: React.FC<{ group: CycleGroup; isLast: boolean }> = ({ group }) => {
+
+
+    // Dynamic Header Logic: Use the latest iteration's summary/label
+    const iterations = group.iterations;
+    const lastIteration = iterations[iterations.length - 1];
+
+    let summaryText = lastIteration?.headerStep.summary;
+
+    // STRICT PERSISTENCE: If current summary is missing, look back until we find one
+    if (!summaryText && iterations.length > 1) {
+        // Look back through the last few iterations to find non-empty summary
+        for (let i = iterations.length - 2; i >= 0; i--) {
+            if (iterations[i].headerStep.summary) {
+                summaryText = iterations[i].headerStep.summary;
+                break;
+            }
+        }
+    }
+
+    // Clean up summary text
+    if (summaryText) {
+        if (summaryText.startsWith(`Iteration ${iterations.length}`)) {
+            summaryText = summaryText.replace(`Iteration ${iterations.length}`, '').trim();
+        }
+        // Also clean up previous iteration number if present from fallback
+        const match = summaryText.match(/Iteration \d+/);
+        if (match) {
+            summaryText = summaryText.replace(match[0], '').trim();
+        }
+
+        summaryText = summaryText.replace(' (Continuing)', '').replace(' (Done)', '').trim();
+        // Remove leading/trailing colons or dashes from cleanup
+        summaryText = summaryText.replace(/^[:\-\s]+|[:\-\s]+$/g, '');
+    }
+
+    return (
+        <div className="relative pl-6 border-l-2 border-slate-800">
+            {/* Group Header */}
+            <div
+                className="absolute -left-[9px] top-0 h-4 w-4 rounded-full border-2 border-slate-800 bg-slate-950 flex items-center justify-center z-10"
+            >
+                {group.isActive ? (
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                ) : (
+                    <div className="h-2 w-2 rounded-full bg-slate-700" />
+                )}
+            </div>
+
+            <div className="mb-2 flex items-center justify-between group/header bg-slate-900/40 p-2 rounded-md border border-slate-800/50">
+                <div className="flex items-center gap-3 overflow-hidden">
+                    <h4 className={`text-sm font-bold uppercase tracking-wider whitespace-nowrap ${group.isActive ? 'text-green-400' : 'text-slate-500'}`}>
+                        {group.label} (ITERATION {iterations.length})
+                    </h4>
+
+                    {/* Vertical separator */}
+                    <div className="h-4 w-px bg-slate-700/50" />
+
+                    {/* Live Summary on the Right - Persistent */}
+                    <span className="text-xs font-mono text-cyan-300 truncate">
+                        {summaryText || ''}
+                    </span>
+                </div>
+
+                <span className="text-xs font-mono text-slate-600 ml-2 whitespace-nowrap">
+                    {new Date(group.startTime).toLocaleTimeString()}
+                </span>
+            </div>
+
+            {/* Body: Dashboard View of Children
+                Calculated using persistence: Show steps from the latest iteration that HAS steps.
+                This prevents the "empty box" effect when a new iteration starts but hasn't finished steps yet.
+            */}
+            {(() => {
+                let displaySteps = lastIteration?.steps || [];
+
+                // Persistence Logic for Children
+                if (displaySteps.length === 0 && iterations.length > 1) {
+                    for (let i = iterations.length - 2; i >= 0; i--) {
+                        if (iterations[i].steps.length > 0) {
+                            displaySteps = iterations[i].steps;
+                            break;
+                        }
+                    }
+                }
+
+                if (displaySteps.length === 0) return null;
+
+                return (
+                    <div className="pl-2 space-y-1 mb-4 border-l-2 border-slate-800/30 ml-2">
+                        {displaySteps.map((step) => (
+                            <div key={step.id + '_dash'} className="animate-in fade-in duration-300">
+                                <ExecutionCard
+                                    step={step}
+                                    // If this is the VERY latest iteration, it's active. If we fell back to history, it's technically 'history' but we show it as 'active' context for the dashboard.
+                                    // Actually, let's keep it 'history' style if it's old, or 'active' if it's current?
+                                    // User wants "Dashboard". Dashboards usually look "Active".
+                                    // Let's pass a special "dashboard" state or just rely on 'active' styling but maybe tone it down?
+                                    // For now, use 'active' if group is active, otherwise history.
+                                    state={group.isActive ? 'active' : 'history'}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                );
+            })()}
+        </div>
+    );
+};
 
 export const LiveExecutionMonitor: React.FC<LiveExecutionMonitorProps> = ({ programId, isActive }) => {
     const [cycleGroups, setCycleGroups] = useState<CycleGroup[]>([]);
@@ -63,47 +181,91 @@ export const LiveExecutionMonitor: React.FC<LiveExecutionMonitorProps> = ({ prog
                 let currentGroup = newGroups.length > 0 ? newGroups[newGroups.length - 1] : null;
 
                 const isStart = step.type === 'START' || step.type === 'program_start';
+                const isLoopHeader = step.type === 'LOOP';
 
-                if (isStart || !currentGroup) {
+                // Check if we are continuing the SAME loop (Nested Iteration Logic)
+                if (currentGroup && currentGroup.type === 'LOOP' && isLoopHeader && currentGroup.blockId === step.blockId) {
+                    // DEDUPLICATION: Check if this iteration ID already exists in the group
+                    const exists = currentGroup.iterations.some(iter => iter.id === `iter_${step.timestamp}`);
+                    if (exists) return prevGroups;
+
+                    // APPEND NEW ITERATION TO EXISTING GROUP
+                    currentGroup.iterations.push({
+                        id: `iter_${step.timestamp}`,
+                        headerStep: step,
+                        steps: []
+                    });
+                    return newGroups; // Mutated in place (Vue-style habit, but safe here since we cloned array) 
+                }
+
+                if (isStart || isLoopHeader || !currentGroup || !currentGroup.isActive) {
+                    // NEW GROUP
                     const newGroup: CycleGroup = {
                         id: `group_${step.timestamp}`,
-                        label: isStart ? step.label : 'Execution Sequence',
+                        blockId: step.blockId,
+                        label: isStart ? (step.label || 'Start') : step.label,
                         startTime: step.timestamp,
-                        steps: [step],
+                        type: isLoopHeader ? 'LOOP' : 'SEQUENCE',
+                        iterations: [{
+                            id: `iter_${step.timestamp}`,
+                            headerStep: step,
+                            steps: isStart ? [] : [step] // Start is weird, usually has no steps until next one?
+                        }],
                         isActive: true
                     };
+
                     if (currentGroup) currentGroup.isActive = false;
-                    return [...newGroups, newGroup].slice(-10);
+                    return [...newGroups, newGroup].slice(-20);
                 } else {
-                    if (currentGroup.steps.some(s => s.id === step.id)) return prevGroups;
-                    currentGroup.steps.push(step);
+                    // REGULAR STEP -> Append to Current Group's LAST Iteration
+                    const lastIteration = currentGroup.iterations[currentGroup.iterations.length - 1];
+                    if (lastIteration.steps.some(s => s.id === step.id)) return prevGroups; // Dedup
+
+                    lastIteration.steps.push(step);
                     return [...newGroups];
                 }
             });
         };
 
         const handleBlockEnd = (data: any) => {
-            // Find the most recent step with matching blockId and update it
             setCycleGroups(prevGroups => {
-                // Clone groups deeply enough to mutate check
                 const newGroups = [...prevGroups];
                 const currentGroup = newGroups.length > 0 ? newGroups[newGroups.length - 1] : null;
 
                 if (currentGroup) {
-                    // Search backwards in the current group
-                    for (let i = currentGroup.steps.length - 1; i >= 0; i--) {
-                        if (currentGroup.steps[i].blockId === data.blockId && !currentGroup.steps[i].output && !currentGroup.steps[i].error) {
-                            // Update this step
-                            currentGroup.steps[i] = {
-                                ...currentGroup.steps[i],
+                    const currentIteration = currentGroup.iterations[currentGroup.iterations.length - 1];
+
+                    // Check Header Step (for Loop Summary)
+                    if (currentIteration.headerStep.blockId === data.blockId) {
+                        currentIteration.headerStep = {
+                            ...currentIteration.headerStep,
+                            output: data.output,
+                            error: data.success ? undefined : (data.error || 'Failed'),
+                            summary: data.summary
+                        };
+                        // Do NOT return here. For SEQUENCE groups, the headerStep is often also in the steps array.
+                        // We must continue to update the body steps below so the UI (which renders steps) updates.
+                        // If Loop Condition is FALSE (Loop Finished) or explicitly stopped OR FAILED, mark group as inactive
+                        // This ensures subsequent blocks (like END or what follows) start a NEW group instead of nesting inside.
+                        if (data.success === false || data.output === false || (data.output && data.output.status === 'MAX_ITERATIONS')) {
+                            currentGroup.isActive = false;
+                        }
+                    }
+
+                    // Check Body Steps
+                    for (let i = currentIteration.steps.length - 1; i >= 0; i--) {
+                        if (currentIteration.steps[i].blockId === data.blockId && !currentIteration.steps[i].output && !currentIteration.steps[i].error) {
+                            currentIteration.steps[i] = {
+                                ...currentIteration.steps[i],
                                 output: data.output,
-                                error: data.success ? undefined : (data.error || 'Failed')
+                                error: data.success ? undefined : (data.error || 'Failed'),
+                                summary: data.summary
                             };
-                            return newGroups; // Return updated state
+                            return newGroups; // Now we can return after updating the body step
                         }
                     }
                 }
-                return prevGroups; // No match found
+                return prevGroups;
             });
         };
 
@@ -130,39 +292,35 @@ export const LiveExecutionMonitor: React.FC<LiveExecutionMonitorProps> = ({ prog
 
             <ScrollArea className="w-full h-[400px] rounded-md border border-slate-800/50 bg-slate-950/50 p-4">
                 <div className="space-y-6" ref={scrollRef}>
-                    {cycleGroups.map((group) => (
-                        <div key={group.id} className="relative pl-6 border-l-2 border-slate-800">
-                            {/* Group Header */}
-                            <div className="absolute -left-[9px] top-0 h-4 w-4 rounded-full border-2 border-slate-800 bg-slate-950 flex items-center justify-center">
-                                {group.isActive && <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />}
-                            </div>
+                    {cycleGroups.map((group, index) => {
+                        if (group.type === 'SEQUENCE') {
+                            // Render SEQUENCE flat, no group UI
+                            return (
+                                <div key={group.id} className="space-y-2">
+                                    {group.iterations[0].steps.map((step) => {
+                                        if (step.type === 'START') return null;
+                                        return (
+                                            <div key={step.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
+                                                <ExecutionCard
+                                                    step={step}
+                                                    state={group.isActive && step === group.iterations[0].steps[group.iterations[0].steps.length - 1] && !step.output ? 'active' : 'history'}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        }
 
-                            <div className="mb-3 flex items-center justify-between">
-                                <h4 className={`text-sm font-bold uppercase tracking-wider ${group.isActive ? 'text-green-400' : 'text-slate-500'}`}>
-                                    {group.label}
-                                </h4>
-                                <span className="text-xs font-mono text-slate-600">
-                                    {new Date(group.startTime).toLocaleTimeString()}
-                                </span>
-                            </div>
-
-                            {/* Steps List */}
-                            <div className="space-y-2">
-                                {group.steps.map((step) => {
-                                    if (step.type === 'START') return null;
-
-                                    return (
-                                        <div key={step.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
-                                            <ExecutionCard
-                                                step={step}
-                                                state={group.isActive && step === group.steps[group.steps.length - 1] && !step.output ? 'active' : 'history'}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
+                        // Render LOOP as Collapsible Group
+                        return (
+                            <CycleGroupItem
+                                key={group.id}
+                                group={group}
+                                isLast={index === cycleGroups.length - 1}
+                            />
+                        );
+                    })}
                     <div ref={bottomRef} className="h-4" />
                 </div>
             </ScrollArea>

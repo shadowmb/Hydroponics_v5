@@ -4,33 +4,43 @@ export class IfBlockExecutor implements IBlockExecutor {
     type = 'IF';
 
     async execute(ctx: ExecutionContext, params: any): Promise<BlockResult> {
-        console.log(`[IfBlockDebug] Executing IF Block`, params);
         const { variable, operator, value } = params;
 
         if (!variable) {
             return { success: false, error: 'Missing required param: variable' };
         }
 
-        const left = ctx.variables[variable];
-        console.log(`[IfBlockDebug] Left: ${left} (Type: ${typeof left}), Right: ${value} (Type: ${typeof value})`);
+        const left = this.getVariable(ctx, variable);
 
         // Resolve 'value' if it's a variable reference
-        let right = value;
+        let right: any = value;
         let tolerance = 0;
 
         if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
-            const varName = value.slice(2, -2);
-            right = ctx.variables[varName];
+            const varName = value.slice(2, -2).trim();
+            right = this.getVariable(ctx, varName);
+
+            // Debugging for specific user issue
+            if (right === undefined) {
+                console.warn(`[IfBlock] Variable '${varName}' not found in context. Keys: ${Object.keys(ctx.variables).join(', ')}`);
+            }
+
             // Check for tolerance associated with this variable
             const toleranceVarName = `${varName}_tolerance`;
-            if (ctx.variables[toleranceVarName] !== undefined) {
-                tolerance = Number(ctx.variables[toleranceVarName]);
+            const tolVal = this.getVariable(ctx, toleranceVarName);
+            if (tolVal !== undefined) {
+                tolerance = Number(tolVal);
             }
         } else {
             right = this.parseValue(value);
         }
 
         let result = false;
+
+        // Safety for NaN
+        if (left === undefined || right === undefined || isNaN(Number(left)) || isNaN(Number(right))) {
+            console.warn(`[IfBlock] Comparison involves NaN/undefined: ${left} ${operator} ${right}`);
+        }
 
         switch (operator) {
             case '==':
@@ -54,30 +64,26 @@ export class IfBlockExecutor implements IBlockExecutor {
             default: return { success: false, error: `Unknown operator: ${operator}` };
         }
 
-        // IF block has two paths: TRUE (default next) and FALSE (custom edge)
-        // In our graph, we usually have edges labeled 'true' or 'false'
-        // But standard BlockResult expects 'nextBlockId'.
-        // The AutomationEngine logic for 'nextBlockId' is:
-        // if nextBlockId is undefined, find first outgoing edge.
-        // We need to tell the engine which edge to take.
-        // Actually, the engine logic (AutomationEngine.ts:264) handles explicit nextBlockId.
-        // But we don't know the IDs of the next blocks here easily without traversing edges.
-        // Wait, the engine passes `context.edges` to `executeBlock` but NOT to `executor.execute`.
-
-        // REVISION: We need to return a result that the Engine can use to pick the path.
-        // Or we simply return `output: result` and let the Engine decide?
-        // The current Engine implementation (lines 264-270) is simple:
-        // if (nextBlockId === undefined) -> find first edge.
-
-        // We need to modify AutomationEngine to handle Conditional Edges based on `output`.
-        // OR we return the specific `nextBlockId` if we had access to edges.
-        // Since we don't have edges in `execute`, we should probably return `output: boolean`.
-        // AND we need to update `AutomationEngine.ts` to look at `output` for IF blocks.
+        // Create readable summary
+        const summary = `${Number(left).toFixed(2)} ${operator} ${Number(right).toFixed(2)} => ${result ? 'TRUE' : 'FALSE'}`;
 
         return {
             success: true,
-            output: result
+            output: result,
+            summary
         };
+    }
+
+    private getVariable(ctx: ExecutionContext, name: string): any {
+        // 1. Exact match
+        if (ctx.variables[name] !== undefined) return ctx.variables[name];
+
+        // 2. Snake_case fallback (Global 2 -> global_2)
+        const snake = name.trim().toLowerCase().replace(/\s+/g, '_');
+        if (ctx.variables[snake] !== undefined) return ctx.variables[snake];
+
+        // 3. ID lookup? (Pass ID if available) - But we usually have names here.
+        return undefined;
     }
 
     private parseValue(val: any): any {
