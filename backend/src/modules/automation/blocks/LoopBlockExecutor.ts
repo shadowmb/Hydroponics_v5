@@ -4,7 +4,6 @@ export class LoopBlockExecutor implements IBlockExecutor {
     type = 'LOOP';
 
     async execute(ctx: ExecutionContext, params: any): Promise<BlockResult> {
-        console.log(`[LoopDebug] Executing Loop Block: ${params._blockId}`, params);
         const { loopType = 'COUNT', count, variable, operator, value, _blockId, interval, limitMode = 'COUNT', timeout } = params;
 
         // Get previous state
@@ -13,6 +12,9 @@ export class LoopBlockExecutor implements IBlockExecutor {
         const loopStartTime = previousState.startTime || Date.now(); // Track when loop started
 
         // --- INTERVAL LOGIC ---
+        // DEBUG: Trace interval and iteration
+        console.log(`[LoopBlock Debug] Block: ${_blockId} | Interval: ${interval} (${typeof interval}) | Iteration: ${currentIteration} | Mode: ${limitMode}`);
+
         // If an interval is set, we wait.
         // We wait if this is NOT the very first run (so run 1 is immediate),
         // OR if you want to pace every run? 
@@ -45,57 +47,90 @@ export class LoopBlockExecutor implements IBlockExecutor {
 
         // --- 2. CHECK CONDITION (If applicable) ---
         // Unified Logic: If a variable is defined, we evaluate it regardless of loopType.
-        if (shouldLoop && variable) {
-            if (!variable) {
-                return { success: false, error: 'Missing variable for WHILE loop' };
-            }
 
-            const left = ctx.variables[variable];
-            let right = value;
-            let tolerance = 0;
+        let left: any;
+        let right: any;
 
-            console.log(`[LoopDebug] Variable: '${variable}', Left Value: ${left} (Type: ${typeof left})`);
+        if (variable) { // Should check loop condition even if limitMode time suggests looping
+            // Resolve 'left'
+            left = this.getVariable(ctx, variable);
 
-            // Resolve variable reference in value
+            // Resolve 'right'
             if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
-                const varName = value.slice(2, -2);
-                right = ctx.variables[varName];
-                console.log(`[LoopDebug] Resolving Right Value from '${varName}': ${right} (Type: ${typeof right})`);
+                const varName = value.slice(2, -2).trim();
+                right = this.getVariable(ctx, varName);
+
+                if (right === undefined) {
+                    console.warn(`[LoopBlock] Variable '${varName}' not found in context.`);
+                }
 
                 const toleranceVarName = `${varName}_tolerance`;
-                if (ctx.variables[toleranceVarName] !== undefined) {
-                    tolerance = Number(ctx.variables[toleranceVarName]);
+                if (this.getVariable(ctx, toleranceVarName) !== undefined) {
+                    // tolerance handled in tolerance check
                 }
             } else {
                 right = this.parseValue(value);
-                console.log(`[LoopDebug] Static Right Value: ${right}`);
             }
 
-            switch (operator) {
-                case '==':
-                    shouldLoop = tolerance > 0 ? Math.abs(Number(left) - Number(right)) <= tolerance : left == right;
-                    break;
-                case '!=':
-                    shouldLoop = tolerance > 0 ? Math.abs(Number(left) - Number(right)) > tolerance : left != right;
-                    break;
-                case '>':
-                    console.log(`[LoopDebug] Checking ${Number(left)} > ${Number(right)}`);
-                    shouldLoop = Number(left) > Number(right);
-                    break;
-                case '<': shouldLoop = Number(left) < Number(right); break;
-                case '>=': shouldLoop = Number(left) >= Number(right); break;
-                case '<=': shouldLoop = Number(left) <= Number(right); break;
-                default: return { success: false, error: `Unknown operator: ${operator}` };
+            // Perform check if we are still within limits OR if it's a WHILE loop behavior
+            // Note: If limitMode=TIME and time not expired, shouldLoop is true.
+            // But if condition is set (WHILE behavior), we must respect it.
+            // So: Result = (TimeOK/CountOK) AND (ConditionOK)
+
+            if (shouldLoop) {
+                let conditionResult = false;
+                // Need to re-resolve tolerance locally for switch
+                let tolerance = 0;
+                if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+                    const varName = value.slice(2, -2).trim();
+                    const toleranceVarName = `${varName}_tolerance`;
+                    const tolVal = this.getVariable(ctx, toleranceVarName);
+                    if (tolVal !== undefined) {
+                        tolerance = Number(tolVal);
+                    }
+                }
+
+                // Safety for NaN
+                if (left === undefined || right === undefined || isNaN(Number(left)) || isNaN(Number(right))) {
+                    console.warn(`[LoopBlock] Comparison involves NaN/undefined: ${left} ${operator} ${right}`);
+                }
+
+                switch (operator) {
+                    case '==':
+                        conditionResult = tolerance > 0 ? Math.abs(Number(left) - Number(right)) <= tolerance : left == right;
+                        break;
+                    case '!=':
+                        conditionResult = tolerance > 0 ? Math.abs(Number(left) - Number(right)) > tolerance : left != right;
+                        break;
+                    case '>': conditionResult = Number(left) > Number(right); break;
+                    case '<': conditionResult = Number(left) < Number(right); break;
+                    case '>=': conditionResult = Number(left) >= Number(right); break;
+                    case '<=': conditionResult = Number(left) <= Number(right); break;
+                    default: return { success: false, error: `Unknown operator: ${operator}` };
+                }
+                shouldLoop = conditionResult;
             }
         }
 
         const nextState = shouldLoop ? { iteration: currentIteration, startTime: loopStartTime } : undefined;
 
+        const summaryDetails = variable
+            ? `: ${Number(left).toFixed(2)} ${operator} ${Number(right).toFixed(2)} => ${shouldLoop ? 'TRUE' : 'FALSE'}`
+            : '';
+
         return {
             success: true,
             output: shouldLoop,
-            state: nextState
+            state: nextState,
+            summary: `Iteration ${currentIteration}${summaryDetails}` + (shouldLoop ? ' (Continuing)' : ' (Done)')
         };
+    }
+
+    private getVariable(ctx: ExecutionContext, name: string): any {
+        if (ctx.variables[name] !== undefined) return ctx.variables[name];
+        const snake = name.trim().toLowerCase().replace(/\s+/g, '_');
+        if (ctx.variables[snake] !== undefined) return ctx.variables[snake];
+        return undefined;
     }
 
     private parseValue(val: any): any {

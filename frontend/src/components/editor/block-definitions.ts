@@ -41,10 +41,10 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
         label: 'Wait / Delay',
         fields: {
             duration: {
-                label: 'Duration (ms)',
+                label: 'Duration (s)',
                 type: 'number',
-                defaultValue: 1000,
-                description: 'Time to wait in milliseconds'
+                defaultValue: 1,
+                description: 'Time to wait in seconds'
             }
         }
     },
@@ -311,11 +311,29 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
             },
 
             // Safety / Error Handling
+            onFailure: {
+                label: 'On Timeout / Error',
+                type: 'select',
+                options: [
+                    { label: 'Stop Flow', value: 'STOP' },
+                    { label: 'Pause Flow', value: 'PAUSE' },
+                    { label: 'Continue (Ignore)', value: 'CONTINUE' },
+                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
+                ],
+                defaultValue: 'STOP',
+                description: 'Action if loop times out or fails'
+            },
+            errorTargetLabel: {
+                label: 'Error Handler Label',
+                type: 'text',
+                placeholder: 'e.g. SAFE_MODE',
+                description: 'Label to jump to on failure'
+            },
             errorNotification: {
-                label: 'Notify on Limit',
+                label: 'Notify on Error',
                 type: 'boolean',
                 defaultValue: false,
-                description: 'Alert if limit reached without condition met'
+                description: 'Alert if limit reached or condition fails'
             }
         }
     },

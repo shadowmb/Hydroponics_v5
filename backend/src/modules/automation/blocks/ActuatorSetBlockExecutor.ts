@@ -123,7 +123,17 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                 console.log(`[ActuatorSet] ✔️ Set '${action}' (State: ${targetState})`);
             }
 
-            return { success: true };
+            // 4. Construct Summary
+            let summary = '';
+            if (action === 'DOSE') {
+                summary = `Dosed ${amount}${logUnit}`;
+            } else if (action === 'PULSE_ON' || action === 'PULSE_OFF') {
+                summary = `Pulsed ${action === 'PULSE_ON' ? 'ON' : 'OFF'} for ${duration || pulseDuration / 1000}s`;
+            } else {
+                summary = `Set ${action} (State: ${targetState})`;
+            }
+
+            return { success: true, summary };
         } catch (error: any) {
             // If aborted, error is caught here too. Ensure we distinguish logic errors from Abort.
             if (error.message === 'Aborted') throw error; // Let AutomationEngine handle abort

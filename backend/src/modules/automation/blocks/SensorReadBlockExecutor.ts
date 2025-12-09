@@ -55,14 +55,20 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
                 if (!ctx.variables) ctx.variables = {};
                 ctx.variables[variable] = valueToSave;
 
-                // LOG THE FINAL RESULT FOR USER VISIBILITY
-                const finalUnit = (varDef && varDef.unit) ? varDef.unit : (result.unit || '');
-                console.log(`[SensorRead] ✔️ Saved to '${variable}': ${valueToSave} ${finalUnit}`);
+                const logUnit = (varDef && varDef.unit) ? varDef.unit : (result.unit || '');
+                console.log(`[SensorRead] ✔️ Saved to '${variable}': ${valueToSave} ${logUnit}`);
+            }
+
+            // Determine unit for summary (prioritize variable unit if variable was used, otherwise sensor unit)
+            let finalUnit = result.unit || '';
+            if (variable && ctx.variableDefinitions?.[variable]?.unit) {
+                finalUnit = ctx.variableDefinitions[variable].unit;
             }
 
             return {
                 success: true,
-                output: valueToSave // Return the FINAL (possibly converted) value as output
+                output: valueToSave, // Return the FINAL (possibly converted) value as output
+                summary: `Read ${valueToSave.toFixed(typeof valueToSave === 'number' && Number.isInteger(valueToSave) ? 0 : 2)} ${finalUnit || ''}`.trim()
             };
         } catch (error: any) {
             return { success: false, error: error.message };

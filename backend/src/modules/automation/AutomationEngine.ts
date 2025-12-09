@@ -27,6 +27,7 @@ export class AutomationEngine {
     private actor: Actor<any>;
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
+    private executionStartTime: number = 0;
 
     private instanceId = Math.random().toString(36).substring(7);
 
@@ -96,7 +97,9 @@ export class AutomationEngine {
                 currentBlock: snapshot.context.currentBlockId,
                 context: snapshot.context.execContext,
                 sessionId: this.currentSessionId,
-                error: snapshot.context.error
+                error: snapshot.context.error,
+                // @ts-ignore - Triggered by BlockResult properties
+                summary: (snapshot.event as any)?.output?.summary
             });
         });
     }
@@ -225,6 +228,7 @@ export class AutomationEngine {
             throw new Error(`Cannot start program from state: ${snapshot.value}. Must be loaded, stopped, or completed.`);
         }
 
+        this.executionStartTime = Date.now();
         this.actor.send({ type: 'START' });
     }
 
@@ -349,7 +353,22 @@ export class AutomationEngine {
                 if (!result.success) throw new Error(result.error || 'Block execution returned failure');
 
                 // Success!
-                events.emit('automation:block_end', { blockId, success: true, output: result.output, sessionId: this.currentSessionId });
+                // Calculate Duration if END block
+                let finalSummary = result.summary;
+                if (block.type === 'END' && this.executionStartTime > 0) {
+                    const totalMs = Date.now() - this.executionStartTime;
+                    const mins = Math.floor(totalMs / 60000);
+                    const secs = ((totalMs % 60000) / 1000).toFixed(1);
+                    finalSummary = `Total Time: ${mins}m ${secs}s`;
+                }
+
+                events.emit('automation:block_end', {
+                    blockId,
+                    success: true,
+                    output: result.output,
+                    summary: finalSummary, // Pass Summary
+                    sessionId: this.currentSessionId
+                });
 
                 // Loop Safety Check
                 if (result.output && result.output.status === 'MAX_ITERATIONS') {
@@ -427,7 +446,14 @@ export class AutomationEngine {
         if (onFailure === 'GOTO_LABEL') {
             const targetLabelName = params.errorTargetLabel;
             if (targetLabelName) {
-                if (targetLabelName === 'END') return { nextBlockId: null };
+                // If target is explicitly 'END', try to find an actual END block to execute it (for logging visibility)
+                if (targetLabelName === 'END') {
+                    const endBlockEntry = Array.from(context.blocks.entries()).find(([_id, b]) => b.type === 'END');
+                    if (endBlockEntry) {
+                        return { nextBlockId: endBlockEntry[0] };
+                    }
+                    return { nextBlockId: null }; // Fallback if no End block
+                }
 
                 for (const [id, b] of context.blocks) {
                     if (b.type === 'FLOW_CONTROL' && b.params.controlType === 'LABEL' && b.params.labelName === targetLabelName) {
