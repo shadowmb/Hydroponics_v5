@@ -30,7 +30,7 @@ export interface IHardwareTransport {
     connect(path: string, options?: any): Promise<void>;
 
     disconnect(): Promise<void>;
-    send(packet: HardwarePacket): Promise<void>;
+    send(packet: HardwarePacket): Promise<string>;
 
     // Event handlers
     onMessage(handler: (msg: HardwareResponse | any) => void): void;

@@ -13,7 +13,7 @@ export interface SystemEvents {
     'controller:update': { id: string; status: any };
     'device:update': { id: string; status: any };
     'device:data': { deviceId: string; driverId?: string; deviceName?: string; value: any; raw?: any; readings?: Record<string, any>; details?: any; timestamp?: Date | string };
-    'command:sent': { deviceId: string; controllerId: string; packet: any };
+    'command:sent': { deviceId: string; controllerId: string; packet: any; raw?: string };
 
     // Automation Events
     'automation:block_start': { blockId: string; type: string; sessionId?: string | null };

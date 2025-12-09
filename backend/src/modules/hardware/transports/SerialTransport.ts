@@ -84,7 +84,7 @@ export class SerialTransport implements IHardwareTransport {
         }
     }
 
-    async send(packet: HardwarePacket): Promise<void> {
+    async send(packet: HardwarePacket): Promise<string> {
         if (!this.port || !this._isConnected) {
             throw new Error('Serial port not connected');
         }
@@ -126,7 +126,6 @@ export class SerialTransport implements IHardwareTransport {
                 if (pinStr) message += `|${pinStr}`;
                 if (packet.angle !== undefined) message += `|${packet.angle}`;
             }
-            // MODBUS RTU (Hybrid Format: CMD|RX|TX|JSON)
             // MODBUS RTU (JSON Format: CMD|JSON)
             else if (packet.cmd === 'MODBUS_RTU_READ') {
                 const jsonParams: any = {
@@ -205,7 +204,7 @@ export class SerialTransport implements IHardwareTransport {
         return new Promise((resolve, reject) => {
             this.port.write(data, (err: Error | null) => {
                 if (err) reject(err);
-                else resolve();
+                else resolve(message); // Return original message (without newline for display clarity, or with?) User wants 1:1. The newline is transport framing. The content is 'message'.
             });
         });
     }

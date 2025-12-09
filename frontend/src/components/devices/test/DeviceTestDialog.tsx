@@ -109,15 +109,20 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
         const handleCommandSent = (data: any) => {
             if (device && data.deviceId === device._id) {
                 // Format the command for display
-                // e.g. [SENT] ANALOG { pins: ["A0_14"] }
-                const { cmd, ...params } = data.packet;
-                // Remove ID as it's internal
-                delete params.id;
+                // Prefer RAW wire protocol if available (1:1 with Serial Monitor)
+                if (data.raw) {
+                    addLog(`[SENT] ${data.raw.trim()}`, 'info');
+                } else {
+                    // Fallback to formatted object
+                    const { cmd, ...params } = data.packet;
+                    delete params.id;
+                    delete params.deviceId; // clean up internal metadata
 
-                let paramStr = JSON.stringify(params);
-                if (paramStr === '{}') paramStr = '';
+                    let paramStr = JSON.stringify(params);
+                    if (paramStr === '{}') paramStr = '';
 
-                addLog(`[SENT] ${cmd} ${paramStr}`, 'info');
+                    addLog(`[SENT] ${cmd} ${paramStr}`, 'info');
+                }
             }
         };
 
