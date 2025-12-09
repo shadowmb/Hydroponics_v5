@@ -8,6 +8,6 @@ export interface IConversionStrategy {
      * @param raw The raw value from the sensor (e.g., voltage, ADC).
      * @param device The device configuration containing calibration data.
      */
-    convert(rawValue: number, device: IDevice): number;
-    reverseConvert?(targetValue: number, device: IDevice): number; // For actuators (Value -> Raw/Duration)
+    convert(rawValue: number, device: IDevice, strategyOverride?: string): number;
+    reverseConvert?(targetValue: number, device: IDevice, strategyOverride?: string): number; // For actuators (Value -> Raw/Duration)
 }

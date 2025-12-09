@@ -2,7 +2,7 @@ import { IDevice } from '../../../models/Device';
 import { IConversionStrategy } from './IConversionStrategy';
 
 export class VolumetricFlowStrategy implements IConversionStrategy {
-    convert(rawValue: number, device: IDevice): number {
+    convert(rawValue: number, device: IDevice, strategyOverride?: string): number {
         // Usually not needed for pumps (we don't read flow from them directly unless they have a flow meter)
         // But if we did, rawValue (ms) * flowRate (ml/ms) = Volume (ml)
         // But if we did, rawValue (ms) * flowRate (ml/ms) = Volume (ml)
@@ -15,7 +15,7 @@ export class VolumetricFlowStrategy implements IConversionStrategy {
         return (rawValue / 1000) * flowRatePerSec;
     }
 
-    reverseConvert(targetValue: number, device: IDevice): number {
+    reverseConvert(targetValue: number, device: IDevice, strategyOverride?: string): number {
         // Target: Volume (ml) -> Output: Duration (ms)
         const calibration = device.config.calibrations?.['volumetric_flow']?.data || (device.config as any).calibration || {};
         const flowRatePerSec = calibration.flowRate ?? 0;

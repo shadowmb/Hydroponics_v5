@@ -39,7 +39,7 @@ export class ConversionService {
         }
 
         try {
-            return strategy.convert(rawValue, device);
+            return strategy.convert(rawValue, device, strategyName);
         } catch (error) {
             console.error(`Error converting value for device ${device.name}:`, error);
             return rawValue;

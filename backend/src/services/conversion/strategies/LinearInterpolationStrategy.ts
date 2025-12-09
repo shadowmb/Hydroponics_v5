@@ -2,8 +2,16 @@ import { IDevice } from '../../../models/Device';
 import { IConversionStrategy } from './IConversionStrategy';
 
 export class LinearInterpolationStrategy implements IConversionStrategy {
-    convert(rawValue: number, device: IDevice): number {
-        const strategyName = device.config.conversionStrategy || 'linear';
+    convert(rawValue: number, device: IDevice, strategyOverride?: string): number {
+        // PRIORITY:
+        // 1. strategyOverride (if provided by Flow/Caller)
+        // 2. device.config.conversionStrategy (Default for device)
+        // 3. 'linear' (Fallback)
+        const strategyName = strategyOverride || device.config.conversionStrategy || 'linear';
+
+        // LOOKUP:
+        // Try to find calibration data for the resolved strategy name.
+        // Fallback to old 'calibration' field for legacy support.
         const calibration = device.config.calibrations?.[strategyName]?.data || (device.config as any).calibration;
 
         // 1. Basic Multiplier/Offset (Legacy/Simple support)
