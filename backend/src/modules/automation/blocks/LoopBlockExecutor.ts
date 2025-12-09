@@ -43,7 +43,8 @@ export class LoopBlockExecutor implements IBlockExecutor {
         }
 
         // --- 2. CHECK CONDITION (If applicable) ---
-        if (shouldLoop && loopType === 'WHILE') {
+        // Unified Logic: If a variable is defined, we evaluate it regardless of loopType.
+        if (shouldLoop && variable) {
             if (!variable) {
                 return { success: false, error: 'Missing variable for WHILE loop' };
             }
