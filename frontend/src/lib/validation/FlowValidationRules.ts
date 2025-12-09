@@ -25,7 +25,13 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
                 const variable = variables.find((v: any) => v.id === variableId);
 
                 // Basic checks
-                if (!device || !variable || !variable.unit) return true;
+                if (!device || !variable) return true;
+
+                // Strict Unit Check: If the variable has NO unit, but we are in a sensor context, fail.
+                // WE want to force the user to select a unit for the variable.
+                if (!variable.unit) {
+                    return false; // Error: Variable has no unit defined.
+                }
 
                 // Prepare context for Strategy Registry to resolve 'any' strategies
                 // (e.g. linear strategy falls back to device default unit)

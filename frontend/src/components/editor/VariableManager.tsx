@@ -76,7 +76,8 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
             id: uniqueId,
             name: `Variable ${uniqueId.split('_')[1]}`,
             type: 'number',
-            scope: 'local'
+            scope: 'local',
+            unit: '' // Force user to select
         };
         onUpdateVariables([...variables, newVar]);
     };
@@ -89,6 +90,7 @@ export const VariableManager: React.FC<VariableManagerProps> = ({
             name: `Global ${uniqueId.split('_')[1]}`,
             type: 'number',
             scope: 'global',
+            unit: '', // Force user to select
             hasTolerance: true
         };
         onUpdateVariables([...variables, newVar]);
