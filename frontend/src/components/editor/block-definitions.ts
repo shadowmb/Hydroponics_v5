@@ -250,15 +250,6 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
     LOOP: {
         label: 'Loop',
         fields: {
-            loopType: {
-                label: 'Loop Type',
-                type: 'select',
-                options: [
-                    { label: 'Repeat X Times', value: 'COUNT' },
-                    { label: 'While Condition is True', value: 'WHILE' }
-                ],
-                defaultValue: 'COUNT'
-            },
             limitMode: {
                 label: 'Limit Mode',
                 type: 'select',
@@ -267,34 +258,38 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                     { label: 'Time (Duration)', value: 'TIME' }
                 ],
                 defaultValue: 'COUNT',
-                description: 'Limit loop by count or time'
+                description: 'How to limit the loop'
             },
+            interval: {
+                label: 'Check Interval (s)',
+                type: 'number',
+                placeholder: 'e.g. 1',
+                defaultValue: 1,
+                description: 'Delay between iterations'
+            },
+
+            // Limit Parameters (Conditional)
             count: {
                 label: 'Iterations',
                 type: 'number',
                 placeholder: 'e.g. 5',
                 defaultValue: 1,
-                description: 'Number of times to repeat'
+                description: 'Stop after X iterations'
             },
             timeout: {
                 label: 'Timeout (Seconds)',
                 type: 'number',
                 placeholder: 'e.g. 60',
                 defaultValue: 60,
-                description: 'Max duration before stopping'
-            },
-            interval: {
-                label: 'Interval (Seconds)',
-                type: 'number',
-                placeholder: 'e.g. 1',
-                defaultValue: 1,
-                description: 'Wait time between checks'
+                description: 'Stop after X seconds'
             },
 
+            // Stop Condition (Optional)
             variable: {
-                label: 'Variable',
+                label: 'Stop Condition Variable (Optional)',
                 type: 'variable',
-                placeholder: 'Select variable'
+                placeholder: 'Select variable',
+                description: 'If set, loop continues WHILE true'
             },
             operator: {
                 label: 'Operator',
@@ -312,39 +307,15 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
             value: {
                 label: 'Comparison Value',
                 type: 'text',
-                placeholder: 'Value to compare against'
+                placeholder: 'Value to compare'
             },
-            // Loop Safety
-            maxIterations: {
-                label: 'Max Iterations (Safety)',
-                type: 'number',
-                placeholder: 'e.g. 10',
-                defaultValue: 10,
-                description: 'Safety limit for WHILE loops'
-            },
-            onMaxIterations: {
-                label: 'On Max Iterations',
-                type: 'select',
-                options: [
-                    { label: 'Stop Flow', value: 'STOP' },
-                    { label: 'Pause Flow', value: 'PAUSE' },
-                    { label: 'Exit Loop', value: 'CONTINUE' },
-                    { label: 'Jump to Label', value: 'GOTO_LABEL' }
-                ],
-                defaultValue: 'STOP',
-                description: 'Action if stuck in loop'
-            },
-            errorTargetLabel: {
-                label: 'Error Handler Label',
-                type: 'text',
-                placeholder: 'e.g. SAFE_MODE',
-                description: 'Label to jump to on failure'
-            },
+
+            // Safety / Error Handling
             errorNotification: {
-                label: 'Send Notification',
+                label: 'Notify on Limit',
                 type: 'boolean',
                 defaultValue: false,
-                description: 'Alert on safety limit'
+                description: 'Alert if limit reached without condition met'
             }
         }
     },
