@@ -98,7 +98,7 @@ Controls a servo motor angle.
 Reads Temperature and Humidity from DHT11/DHT22 sensors.
 *   **Usage:** DHT11, DHT22, AM2302
 *   **Returns:** Object `{ "temp": 24.5, "hum": 60.0 }`
-*   **Protocol Example:** `DHT_READ|D4_4|11` (Pin D4, GPIO 4, Type DHT11)
+*   **Protocol Example:** `DHT_READ|D4_4` (Pin D4, GPIO 4)
 *   **JSON Response Keys:** `temp`, `humidity` (Use `"outputs": [{"key": "temp"}, {"key": "humidity"}]`)
 *   **JSON Example:**
     ```json
@@ -162,10 +162,20 @@ Reads data from an I2C device.
 
 ## Planned / Missing Commands
 
+### `ULTRASONIC_TRIG_ECHO`
+Reads distance from an HC-SR04 ultrasonic sensor.
+*   **Usage:** HC-SR04
+*   **Returns:** Float (Distance in cm)
+*   **Protocol Example:** `ULTRASONIC_TRIG_ECHO|D2_2|D3_3` (Trig=D2, Echo=D3)
+*   **JSON Example:**
+    ```json
+    "commands": {
+        "READ": { "hardwareCmd": "ULTRASONIC_TRIG_ECHO" }
+    }
+    ```
+
+## Planned / Missing Commands
+
 ### `MEASURE_PULSE_RATE` (Planned)
 *   **Status:** Not yet implemented in v5 templates.
 *   **Usage:** Water Flow Meters
-
-### `ULTRASONIC_TRIG_ECHO` (Planned)
-*   **Status:** Not yet implemented in v5 templates.
-*   **Usage:** HC-SR04 (Standard Ultrasonic)

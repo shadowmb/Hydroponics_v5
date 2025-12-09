@@ -4,20 +4,46 @@ export class LoopBlockExecutor implements IBlockExecutor {
     type = 'LOOP';
 
     async execute(ctx: ExecutionContext, params: any): Promise<BlockResult> {
-        const { loopType = 'COUNT', count, variable, operator, value, _blockId } = params;
+        const { loopType = 'COUNT', count, variable, operator, value, _blockId, interval, limitMode = 'COUNT', timeout } = params;
 
-        // Get previous state (iteration count)
+        // Get previous state
         const previousState = ctx.resumeState?.[_blockId] || {};
         const currentIteration = (previousState.iteration || 0) + 1;
+        const loopStartTime = previousState.startTime || Date.now(); // Track when loop started
+
+        // --- INTERVAL LOGIC ---
+        // If an interval is set, we wait.
+        // We wait if this is NOT the very first run (so run 1 is immediate),
+        // OR if you want to pace every run? 
+        // Standard industrial practice: delay is usually cycle time.
+        // Let's simpler: If interval > 0, we delay at start of execution.
+        // Exception: logic says if we just started, maybe run immediately?
+        // Let's stick to: Delay if iteration > 1.
+        if (interval && interval > 0 && currentIteration > 1) {
+            await new Promise(resolve => setTimeout(resolve, interval * 1000));
+        }
 
         let shouldLoop = false;
+        let errorMessage: string | undefined;
 
-        if (loopType === 'COUNT') {
+        // --- 1. CHECK LIMITS (Count vs Time) ---
+        if (limitMode === 'TIME') {
+            // Time-based limit
+            const elapsedSeconds = (Date.now() - loopStartTime) / 1000;
+            if (timeout && elapsedSeconds > timeout) {
+                return { success: false, error: `Loop timed out after ${elapsedSeconds.toFixed(1)}s (Limit: ${timeout}s)` };
+            }
+            // For Time mode, we default 'shouldLoop' to TRUE (infinite until timeout),
+            // unless condition fails below.
+            shouldLoop = true;
+        } else {
+            // Count-based limit
             const maxIterations = Number(count) || 1;
-            // Loop if we haven't reached max iterations yet
-            // Note: currentIteration starts at 1 on first run
             shouldLoop = currentIteration <= maxIterations;
-        } else if (loopType === 'WHILE') {
+        }
+
+        // --- 2. CHECK CONDITION (If applicable) ---
+        if (shouldLoop && loopType === 'WHILE') {
             if (!variable) {
                 return { success: false, error: 'Missing variable for WHILE loop' };
             }
@@ -30,7 +56,6 @@ export class LoopBlockExecutor implements IBlockExecutor {
             if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
                 const varName = value.slice(2, -2);
                 right = ctx.variables[varName];
-                // Check for tolerance associated with this variable
                 const toleranceVarName = `${varName}_tolerance`;
                 if (ctx.variables[toleranceVarName] !== undefined) {
                     tolerance = Number(ctx.variables[toleranceVarName]);
@@ -41,18 +66,10 @@ export class LoopBlockExecutor implements IBlockExecutor {
 
             switch (operator) {
                 case '==':
-                    if (tolerance > 0) {
-                        shouldLoop = Math.abs(Number(left) - Number(right)) <= tolerance;
-                    } else {
-                        shouldLoop = left == right;
-                    }
+                    shouldLoop = tolerance > 0 ? Math.abs(Number(left) - Number(right)) <= tolerance : left == right;
                     break;
                 case '!=':
-                    if (tolerance > 0) {
-                        shouldLoop = Math.abs(Number(left) - Number(right)) > tolerance;
-                    } else {
-                        shouldLoop = left != right;
-                    }
+                    shouldLoop = tolerance > 0 ? Math.abs(Number(left) - Number(right)) > tolerance : left != right;
                     break;
                 case '>': shouldLoop = Number(left) > Number(right); break;
                 case '<': shouldLoop = Number(left) < Number(right); break;
@@ -62,30 +79,11 @@ export class LoopBlockExecutor implements IBlockExecutor {
             }
         }
 
-        // If loop finishes, we should probably reset the state so next time it runs fresh?
-        // Or does the engine handle that?
-        // Usually, if we exit the loop, we might re-enter it later in the same flow execution?
-        // If we re-enter, we want fresh state.
-        // But if we are looping, we want preserved state.
-
-        // Strategy:
-        // If shouldLoop is TRUE, we save state { iteration: currentIteration }.
-        // If shouldLoop is FALSE, we return NO state (or reset it), so next entry is fresh.
-        // However, 'resumeState' is typically for pausing/resuming. 
-        // For runtime state persistence within a flow, we might need a different mechanism if the Engine clears state on block completion.
-        // BUT: The engine passes `resumeState` which is loaded from DB.
-        // We need a transient runtime state for loops.
-        // `ctx.context`? No, that's global.
-
-        // Let's assume `resumeState` is the place.
-        // If we return `state`, it overwrites/updates the entry for this block.
-        // If we exit loop (false), we should probably clear it.
-
-        const nextState = shouldLoop ? { iteration: currentIteration } : undefined;
+        const nextState = shouldLoop ? { iteration: currentIteration, startTime: loopStartTime } : undefined;
 
         return {
             success: true,
-            output: shouldLoop, // Engine uses this to choose 'body' (true) or 'exit' (false)
+            output: shouldLoop,
             state: nextState
         };
     }

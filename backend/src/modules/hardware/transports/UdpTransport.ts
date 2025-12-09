@@ -75,7 +75,7 @@ export class UdpTransport implements IHardwareTransport {
         }
     }
 
-    async send(packet: HardwarePacket): Promise<void> {
+    async send(packet: HardwarePacket): Promise<string> {
         if (!this.socket) throw new Error('UDP Socket not initialized');
 
         // Convert Packet to Delimited String: CMD|PARAM1|PARAM2...
@@ -187,7 +187,7 @@ export class UdpTransport implements IHardwareTransport {
         return new Promise((resolve, reject) => {
             this.socket?.send(message, this.targetPort, this.targetIp, (err) => {
                 if (err) reject(err);
-                else resolve();
+                else resolve(message);
             });
         });
     }

@@ -188,15 +188,12 @@ export class HardwareService {
         const packet: HardwarePacket = {
             id: uuidv4(),
             cmd: packetData.cmd,
+            deviceId, // Attach deviceId for tracking in executePacket
             ...packetData
         };
 
-        // Emit 'command:sent' for debugging/logging
-        events.emit('command:sent', {
-            deviceId,
-            controllerId,
-            packet
-        });
+        // Event emission moved to executePacket to capture raw wire data
+        // events.emit('command:sent', ...); 
 
         // 3. Enqueue
         return this.enqueueCommand(controllerId, packet);
@@ -446,12 +443,22 @@ export class HardwareService {
             this.pendingRequests.set(packet.id, { resolve, reject, timeout });
             this.activeCommands.set(controllerId, packet.id); // Track active command
 
-            transport.send(packet).catch(err => {
-                clearTimeout(timeout);
-                this.pendingRequests.delete(packet.id);
-                this.activeCommands.delete(controllerId);
-                reject(err);
-            });
+            transport.send(packet)
+                .then((raw: string) => { // Capture raw string
+                    // Emit 'command:sent' with raw wire protocol data
+                    events.emit('command:sent', {
+                        deviceId: packet.deviceId || 'unknown',
+                        packet: packet,
+                        raw: raw, // The 1:1 string
+                        controllerId
+                    });
+                })
+                .catch(err => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(packet.id);
+                    this.activeCommands.delete(controllerId);
+                    reject(err);
+                });
         });
     }
 

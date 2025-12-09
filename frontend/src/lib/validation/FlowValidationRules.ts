@@ -25,7 +25,13 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
                 const variable = variables.find((v: any) => v.id === variableId);
 
                 // Basic checks
-                if (!device || !variable || !variable.unit) return true;
+                if (!device || !variable) return true;
+
+                // Strict Unit Check: If the variable has NO unit, but we are in a sensor context, fail.
+                // WE want to force the user to select a unit for the variable.
+                if (!variable.unit) {
+                    return false; // Error: Variable has no unit defined.
+                }
 
                 // Prepare context for Strategy Registry to resolve 'any' strategies
                 // (e.g. linear strategy falls back to device default unit)
@@ -77,10 +83,39 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
             message: 'Value is required for WHILE loops',
             validate: (val, data) => data?.loopType !== 'WHILE' || (val !== undefined && val !== '')
         },
+        // --- Limit Mode Validation ---
+        {
+            field: 'limitMode',
+            required: false, // Defaults to COUNT if missing
+            message: 'Limit Mode is invalid',
+            validate: (val) => !val || ['COUNT', 'TIME'].includes(val)
+        },
         {
             field: 'maxIterations',
-            validate: (val) => val > 0,
-            message: 'Max iterations must be positive'
+            message: 'Max iterations is required for Count mode',
+            validate: (val, data) => {
+                const mode = data?.limitMode || 'COUNT';
+                if (mode === 'COUNT') {
+                    return val > 0;
+                }
+                return true; // Ignore if Time mode
+            }
+        },
+        {
+            field: 'timeout',
+            message: 'Timeout is required for Time mode',
+            validate: (val, data) => {
+                const mode = data?.limitMode || 'COUNT';
+                if (mode === 'TIME') {
+                    return val > 0;
+                }
+                return true; // Ignore if Count mode
+            }
+        },
+        {
+            field: 'interval',
+            message: 'Interval must be positive',
+            validate: (val) => !val || val >= 0
         }
     ]
 };

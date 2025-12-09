@@ -77,6 +77,7 @@ export interface IFlow {
     }[];
     variables?: IVariable[]; // Local variables defined in this flow
     isActive: boolean;
+    validationStatus?: 'VALID' | 'INVALID';
     createdAt?: Date | string;
     updatedAt?: Date | string;
 }

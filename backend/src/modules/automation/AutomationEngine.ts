@@ -123,6 +123,10 @@ export class AutomationEngine {
             throw new Error(`Flow is not active: ${programId}`);
         }
 
+        if (flow.validationStatus === 'INVALID') {
+            throw new Error(`Cannot load invalid flow (Draft mode): ${programId}`);
+        }
+
         // 2. Resolve Inputs
         const variables: Record<string, any> = {};
         if (flow.inputs) {

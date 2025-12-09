@@ -213,16 +213,21 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         }
 
         if (nodeType === 'LOOP') {
-            const loopType = formData['loopType'] || 'COUNT';
-            if (key === 'count') {
-                if (loopType !== 'COUNT') return null;
+            const limitMode = formData['limitMode'] || 'COUNT';
+
+            // 1. LIMIT FIELDS (Based on Mode)
+            if (limitMode === 'COUNT') {
+                if (key === 'timeout') return null; // Hide Timeout
+            } else {
+                if (key === 'count') return null;   // Hide Iterations
             }
-            if (['maxIterations', 'onMaxIterations', 'errorNotification'].includes(key)) {
-                if (loopType !== 'WHILE') return null;
-            }
-            if (['variable', 'operator', 'value'].includes(key)) {
-                if (loopType !== 'WHILE') return null;
-            }
+
+            // 2. SAFETY/LEGACY FIELDS
+            // 'maxIterations', 'onMaxIterations' are legacies/redundant now that we have unified logic.
+            // If they appear in definition, hide them.
+            if (['maxIterations', 'onMaxIterations'].includes(key)) return null;
+
+            // 3. ALL OTHER FIELDS (Condition, Interval, etc.) -> SHOW DEFAULT
         }
 
         if (nodeType === 'FLOW_CONTROL') {
