@@ -143,6 +143,8 @@ export class AutomationEngine {
             }
         }
 
+        logger.info({ overrides, variablesResolved: variables }, '🧩 AutomationEngine: Input Resolution');
+
         // 2a. Resolve Variable Definitions
         const variableDefinitions: Record<string, any> = {};
         if (flow.variables) {

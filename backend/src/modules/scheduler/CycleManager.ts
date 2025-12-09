@@ -54,7 +54,7 @@ export class CycleManager {
             context: overrides // Store global overrides in context
         });
 
-        logger.info({ cycleId, sessionId: this.currentSession.id, stepsCount: steps.length }, '🚀 Starting Cycle');
+        logger.info({ cycleId, sessionId: this.currentSession.id, stepsCount: steps.length, overrides }, '🚀 Starting Cycle (Trace Overrides)');
 
         // 3. Start First Step
         await this.executeStep(0);
@@ -108,6 +108,8 @@ export class CycleManager {
             // Let's assume Runtime Global Overrides > Static Step Overrides.
             const sessionOverrides = this.currentSession.context || {};
             const finalOverrides = { ...step.overrides, ...sessionOverrides };
+
+            logger.info({ step: index, sessionOverrides, finalOverrides }, '🔧 Cycle Step Overrides Resolution');
 
             const flowSessionId = await automation.loadProgram(step.flowId, finalOverrides);
 
