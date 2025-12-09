@@ -134,8 +134,8 @@ Reads distance from a serial-based ultrasonic sensor.
 ### `MODBUS_RTU_READ`
 Reads registers from an RS485 Modbus device.
 *   **Usage:** Industrial Sensors (Soil NPK, PAR, CO2)
-*   **Parameters:** RX Pin, TX Pin, JSON Params
-*   **Protocol Example:** `MODBUS_RTU_READ|{"slaveId":1,"funcCode":3,"startAddr":0,"len":1,"pins":[{"role":"RX","gpio":2},{"role":"TX","gpio":3}]}`
+*   **Parameters:** `slaveId`, `funcCode`, `startAddr`, `len`, `rxPin`, `txPin`
+*   **Protocol Example:** `MODBUS_RTU_READ|{"slaveId":1,"funcCode":3,"startAddr":0,"len":1,"rxPin":0,"txPin":1}`
 *   **JSON Response Keys:** `registers` (Array). Use `"valuePath": "registers.0"` for first value.
 *   **JSON Example:**
     ```json

@@ -123,7 +123,11 @@ export class UdpTransport implements IHardwareTransport {
                 // Add pins if available (Firmware handles 'pins' array or rxPin/txPin)
                 if (packet.pins && Array.isArray(packet.pins)) {
                     jsonParams.pins = packet.pins;
+                } else if (packet.rxPin !== undefined && packet.txPin !== undefined) {
+                    jsonParams.rxPin = packet.rxPin;
+                    jsonParams.txPin = packet.txPin;
                 } else if (packet.rx !== undefined && packet.tx !== undefined) {
+                    // Fallback for legacy
                     jsonParams.rxPin = packet.rx;
                     jsonParams.txPin = packet.tx;
                 }

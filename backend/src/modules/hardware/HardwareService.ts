@@ -172,6 +172,19 @@ export class HardwareService {
 
         const packetData = driver.createPacket(command, params, finalContext);
 
+        // --- OPTIMIZATION: Flatten MODBUS_RTU_READ Payload ---
+        if (packetData.cmd === 'MODBUS_RTU_READ' && packetData.pins && Array.isArray(packetData.pins)) {
+            const rx = packetData.pins.find((p: any) => p.role === 'RX');
+            const tx = packetData.pins.find((p: any) => p.role === 'TX');
+
+            if (rx) packetData.rxPin = rx.gpio;
+            if (tx) packetData.txPin = tx.gpio;
+
+            // Remove 'pins' from packet so it doesn't get serialized
+            delete packetData.pins;
+        }
+        // -----------------------------------------------------
+
         const packet: HardwarePacket = {
             id: uuidv4(),
             cmd: packetData.cmd,
