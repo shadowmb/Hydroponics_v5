@@ -369,6 +369,9 @@ export class AutomationEngine {
                         const expectedHandle = result.output ? 'true' : 'false';
                         const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
                         nextBlockId = edge ? edge.target : null;
+
+                        logger.info({ blockId, result: result.output, expectedHandle, nextBlockId: nextBlockId || 'null' }, '❓ IF Block Navigation Trace');
+
                         if (!nextBlockId) logger.warn({ blockId, result: result.output }, '⚠️ IF block has no matching edge');
                     }
                     else if (block.type === 'LOOP' && typeof result.output === 'boolean') {
