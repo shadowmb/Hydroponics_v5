@@ -61,7 +61,8 @@ export const automationMachine = createMachine({
                                 actionTemplateId: event.templateId,
                                 startTime: 0, // Not started yet
                                 stepCount: 0,
-                                variables: {},
+                                variables: event.execContext?.variables || {},
+                                variableDefinitions: event.execContext?.variableDefinitions || {},
                                 errors: []
                             }
                         };
@@ -167,7 +168,8 @@ export const automationMachine = createMachine({
                                 actionTemplateId: event.templateId,
                                 startTime: 0, // Not started yet
                                 stepCount: 0,
-                                variables: {},
+                                variables: event.execContext?.variables || {},
+                                variableDefinitions: event.execContext?.variableDefinitions || {},
                                 errors: []
                             }
                         };
