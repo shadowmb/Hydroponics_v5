@@ -1,6 +1,6 @@
 
 
-import { areUnitsCompatible } from '@shared/UnitRegistry';
+
 import { validateBlockStrategy } from '@shared/strategies/StrategyRegistry';
 
 export interface ValidationRule {

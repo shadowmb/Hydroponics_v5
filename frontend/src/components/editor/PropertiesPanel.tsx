@@ -8,8 +8,7 @@ import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Copy, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { areUnitsCompatible, getUnitCategory } from '@shared/UnitRegistry';
-import { StrategyRegistry, resolveStrategyOutputUnit, validateBlockStrategy, validateStrategyCalibration } from '@shared/strategies/StrategyRegistry'; // Import Registry
+import { StrategyRegistry, validateBlockStrategy, validateStrategyCalibration } from '@shared/strategies/StrategyRegistry'; // Import Registry
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
 import {
     Dialog,
@@ -159,7 +158,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
     const targetDeviceId = formData.deviceId;
 
     // Explicitly track source
-    let deviceSource = "NONE";
     let device: any = undefined;
 
     if (targetDeviceId) {
@@ -171,12 +169,10 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
         if (devices && devices.has(targetDeviceId)) {
             device = devices.get(targetDeviceId);
-            deviceSource = "STORE (Live)";
             console.log('✅ Device Found in Store:', device);
             console.log('   Driver ID from Config:', device.config?.driverId);
             console.log('   Driver ID (Root):', device.driverId);
         } else {
-            deviceSource = "STORE_MISSING";
             console.warn('❌ Device NOT found in Store!');
         }
     }
