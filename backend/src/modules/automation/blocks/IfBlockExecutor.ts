@@ -12,6 +12,7 @@ export class IfBlockExecutor implements IBlockExecutor {
         }
 
         const left = ctx.variables[variable];
+        console.log(`[IfBlockDebug] Left: ${left} (Type: ${typeof left}), Right: ${value} (Type: ${typeof value})`);
 
         // Resolve 'value' if it's a variable reference
         let right = value;
