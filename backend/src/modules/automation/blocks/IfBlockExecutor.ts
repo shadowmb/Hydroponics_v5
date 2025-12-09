@@ -4,6 +4,7 @@ export class IfBlockExecutor implements IBlockExecutor {
     type = 'IF';
 
     async execute(ctx: ExecutionContext, params: any): Promise<BlockResult> {
+        console.log(`[IfBlockDebug] Executing IF Block`, params);
         const { variable, operator, value } = params;
 
         if (!variable) {
