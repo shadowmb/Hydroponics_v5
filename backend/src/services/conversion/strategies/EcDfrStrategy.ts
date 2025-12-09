@@ -2,7 +2,7 @@ import { IDevice } from '../../../models/Device';
 import { IConversionStrategy } from './IConversionStrategy';
 
 export class EcDfrStrategy implements IConversionStrategy {
-    convert(raw: number, device: IDevice): number {
+    convert(raw: number, device: IDevice, strategyOverride?: string): number {
         // 1. Convert ADC (0-1023) to Voltage (mV)
         // Assuming 5V reference and 10-bit ADC. 
         // TODO: Make reference voltage configurable
