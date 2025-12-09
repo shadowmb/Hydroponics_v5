@@ -284,6 +284,9 @@ export class AutomationEngine {
         if (!executor) throw new Error(`No executor for block type: ${block.type}`);
 
         // 0. Sync Context from DB (Critical for Resume)
+        // REMOVED: This causes stale data issues. In-memory context is the source of truth during execution.
+        // DB Sync happens via 'persistState' or on explicit Resume.
+        /*
         if (this.currentSessionId) {
             try {
                 const session = await sessionRepository.findById(this.currentSessionId);
@@ -292,8 +295,9 @@ export class AutomationEngine {
                     if (session.context.variables) context.execContext.variables = session.context.variables;
                     if (session.context.variableDefinitions) context.execContext.variableDefinitions = session.context.variableDefinitions;
                 }
-            } catch (err) { /* silent */ }
+            } catch (err) { }
         }
+        */
 
         // --- ERROR HANDLING & RETRY LOGIC ---
         let params = { ...block.params };
