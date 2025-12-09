@@ -83,10 +83,39 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
             message: 'Value is required for WHILE loops',
             validate: (val, data) => data?.loopType !== 'WHILE' || (val !== undefined && val !== '')
         },
+        // --- Limit Mode Validation ---
+        {
+            field: 'limitMode',
+            required: false, // Defaults to COUNT if missing
+            message: 'Limit Mode is invalid',
+            validate: (val) => !val || ['COUNT', 'TIME'].includes(val)
+        },
         {
             field: 'maxIterations',
-            validate: (val) => val > 0,
-            message: 'Max iterations must be positive'
+            message: 'Max iterations is required for Count mode',
+            validate: (val, data) => {
+                const mode = data?.limitMode || 'COUNT';
+                if (mode === 'COUNT') {
+                    return val > 0;
+                }
+                return true; // Ignore if Time mode
+            }
+        },
+        {
+            field: 'timeout',
+            message: 'Timeout is required for Time mode',
+            validate: (val, data) => {
+                const mode = data?.limitMode || 'COUNT';
+                if (mode === 'TIME') {
+                    return val > 0;
+                }
+                return true; // Ignore if Count mode
+            }
+        },
+        {
+            field: 'interval',
+            message: 'Interval must be positive',
+            validate: (val) => !val || val >= 0
         }
     ]
 };

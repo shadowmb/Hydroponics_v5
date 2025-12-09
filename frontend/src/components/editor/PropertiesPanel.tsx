@@ -214,14 +214,75 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
         if (nodeType === 'LOOP') {
             const loopType = formData['loopType'] || 'COUNT';
-            if (key === 'count') {
-                if (loopType !== 'COUNT') return null;
+            const limitMode = formData['limitMode'] || 'COUNT'; // Default to COUNT
+
+            // 1. CONDITIONAL LOGIC FIELDS (WHILE)
+            if (['variable', 'operator', 'value'].includes(key)) {
+                if (loopType !== 'WHILE') return null;
             }
             if (['maxIterations', 'onMaxIterations', 'errorNotification'].includes(key)) {
                 if (loopType !== 'WHILE') return null;
             }
-            if (['variable', 'operator', 'value'].includes(key)) {
-                if (loopType !== 'WHILE') return null;
+
+            // 2. LIMIT LOGIC FIELDS (COUNT)
+            if (loopType === 'COUNT') {
+                // Always show Limit Mode selector if key matches?
+                // Actually, renderField iterates over definition keys.
+                // We need to ensure 'limitMode', 'timeout', 'interval' are considered.
+
+                // HIDE 'count' if mode is TIME
+                if (key === 'count') {
+                    if (limitMode !== 'COUNT') return null;
+                }
+                // HIDE 'timeout' if mode is COUNT
+                if (key === 'timeout') {
+                    if (limitMode !== 'TIME') return null;
+                }
+
+                // 'interval' and 'limitMode' are always shown for COUNT loops
+            } else {
+                // For WHILE loops, we verify logic...
+                // Current WHILE loop logic in LoopBlockExecutor uses maxIterations (Count) safety.
+                // We haven't enabled Time/Interval for WHILE yet in this spec, but users might want it?
+                // Let's stick to COUNT only changes for now as per plan context (Loop Type: Iterate X Times / While).
+                // The request was mainly about the "Iterate X Times" block (which is Loop Type COUNT).
+
+                // If key is 'limitMode', 'timeout', 'interval' and we are in WHILE mode, maybe hide them?
+                // Or do we want to apply Interval to While loops too?
+                // User said "Loop checks sensor...". That implies WHILE loop.
+                // "If we have a loop block that checks... 10 iterations... 1 sec..."
+
+                // CRITICAL: User wants this for SENSOR CHECKS, which is usually a WHILE loop or a generic LOOP with internal check.
+                // But most simple sensor checks are "Loop 10 times" -> "Read Sensor" -> "If X Break".
+                // That's a COUNT loop.
+                // If it's a WHILE loop ("While Sensor < 50"), it needs interval too!
+
+                // Let's ENABLE Interval for WHILE loops too.
+                // Let's ENABLE Timeout for WHILE loops too (Safety!).
+
+                // So:
+                // Interval: Show for ALL loops.
+                // Limit Mode: Show for ALL loops?
+                // While loops currently use 'maxIterations' field for safety.
+                // We should probably allow switching that to Timeout.
+
+                // For now, to keep it simple and safe based on strict previous plan:
+                // The 'Count' vs 'Time' was planned for the "COUNT" loop type interactions.
+                // But logic applies to both.
+                // Let's allow 'interval' for WHILE loops.
+                // Let's allow 'limitMode' for WHILE loops? (Replacing maxIterations).
+                // Existing 'maxIterations' is error handling config.
+
+                // Implementation Decision: Apply to ALL loop types for consistency.
+
+                // HIDE old 'maxIterations' if in Time Mode
+                if (key === 'maxIterations') {
+                    if (limitMode !== 'COUNT') return null;
+                }
+
+                if (key === 'timeout') {
+                    if (limitMode !== 'TIME') return null;
+                }
             }
         }
 

@@ -29,9 +29,20 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
 
                             {/* Dynamic Content Display */}
                             {loopType === 'COUNT' && (
-                                <span className="text-[10px] text-blue-600 font-mono mt-1">
-                                    {String(data.count)} times
-                                </span>
+                                <div className="flex flex-col gap-0.5 mt-1 font-mono text-[10px]">
+                                    {data.limitMode === 'TIME' ? (
+                                        <span className="text-purple-600">Max: {String(data.timeout)}s</span>
+                                    ) : (
+                                        <span className="text-blue-600">{String(data.count)} times</span>
+                                    )}
+
+                                    {/* Interval Badge */}
+                                    {!!data.interval && Number(data.interval) > 0 && (
+                                        <span className="text-gray-500 bg-gray-100 px-1 rounded w-fit">
+                                            Every {String(data.interval)}s
+                                        </span>
+                                    )}
+                                </div>
                             )}
 
                             {loopType === 'WHILE' && !!data.variable && (

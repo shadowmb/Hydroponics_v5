@@ -259,12 +259,36 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 ],
                 defaultValue: 'COUNT'
             },
+            limitMode: {
+                label: 'Limit Mode',
+                type: 'select',
+                options: [
+                    { label: 'Count (Iterations)', value: 'COUNT' },
+                    { label: 'Time (Duration)', value: 'TIME' }
+                ],
+                defaultValue: 'COUNT',
+                description: 'Limit loop by count or time'
+            },
             count: {
                 label: 'Iterations',
                 type: 'number',
                 placeholder: 'e.g. 5',
                 defaultValue: 1,
                 description: 'Number of times to repeat'
+            },
+            timeout: {
+                label: 'Timeout (Seconds)',
+                type: 'number',
+                placeholder: 'e.g. 60',
+                defaultValue: 60,
+                description: 'Max duration before stopping'
+            },
+            interval: {
+                label: 'Interval (Seconds)',
+                type: 'number',
+                placeholder: 'e.g. 1',
+                defaultValue: 1,
+                description: 'Wait time between checks'
             },
 
             variable: {
