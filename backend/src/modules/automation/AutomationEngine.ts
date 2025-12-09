@@ -391,8 +391,11 @@ export class AutomationEngine {
                     }
                 }
 
-                return { nextBlockId, output: result.output };
-
+                return {
+                    nextBlockId,
+                    output: result.output,
+                    variables: context.execContext.variables // PASS UPDATED VARIABLES BACK
+                };
             } catch (err: any) {
                 lastError = err;
                 attempts++;
