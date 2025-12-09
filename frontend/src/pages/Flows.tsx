@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Edit, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Play, Edit, Trash2, Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -200,10 +200,18 @@ export const Flows: React.FC = () => {
                                                 {viewDeleted ? (
                                                     <span className="text-xs text-orange-600 font-medium">Deleted</span>
                                                 ) : (
-                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${flow.isActive ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
-                                                        }`}>
-                                                        {flow.isActive ? 'Active' : 'Inactive'}
-                                                    </span>
+                                                    <div className="flex flex-col gap-1">
+                                                        {flow.validationStatus === 'INVALID' && (
+                                                            <div className="flex items-center text-xs text-orange-600 font-medium" title="This flow has errors and cannot be run.">
+                                                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                                                Draft / Invalid
+                                                            </div>
+                                                        )}
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${flow.isActive ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
+                                                            }`}>
+                                                            {flow.isActive ? 'Active' : 'Inactive'}
+                                                        </span>
+                                                    </div>
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-right">
@@ -233,13 +241,13 @@ export const Flows: React.FC = () => {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => handleRun(flow.id)}
-                                                                disabled={!!processingId}
-                                                                title="Run Flow"
+                                                                disabled={!!processingId || flow.validationStatus === 'INVALID'}
+                                                                title={flow.validationStatus === 'INVALID' ? "Cannot run invalid flow" : "Run Flow"}
                                                             >
                                                                 {processingId === flow.id ? (
                                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                                 ) : (
-                                                                    <Play className="h-4 w-4 text-green-600" />
+                                                                    <Play className={`h-4 w-4 ${flow.validationStatus === 'INVALID' ? 'text-gray-300' : 'text-green-600'}`} />
                                                                 )}
                                                             </Button>
                                                             <Button

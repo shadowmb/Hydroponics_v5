@@ -14,8 +14,16 @@ import { reactFlowToFlow, flowToReactFlow } from '../lib/flow-utils';
 import { Button } from '../components/ui/button';
 import { TooltipProvider } from '../components/ui/tooltip';
 import { SaveFlowDialog } from '../components/editor/SaveFlowDialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '../components/ui/dialog';
 import { toast } from 'sonner';
-import { Save, Edit, Sliders } from 'lucide-react';
+import { Save, Edit, Sliders, AlertTriangle } from 'lucide-react';
 import { hardwareService } from '../services/hardwareService';
 import { useStore } from '../core/useStore';
 import { VariableManager } from '../components/editor/VariableManager';
@@ -59,6 +67,11 @@ const FlowEditorContent: React.FC = () => {
     const [inputs, setInputs] = useState<any[]>([]);
     const [variables, setVariables] = useState<any[]>([]);
     // const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+
+    // Draft Save State
+    const [showDraftDialog, setShowDraftDialog] = useState(false);
+    const [pendingSaveData, setPendingSaveData] = useState<{ name: string, description: string } | null>(null);
+
 
     // Load Flow Data
     useEffect(() => {
@@ -242,6 +255,38 @@ const FlowEditorContent: React.FC = () => {
         setSelectedEdge(null);
     };
 
+    const saveFlowToBackend = async (name: string, description: string, isValid: boolean) => {
+        const flowData = reactFlowToFlow(nodes, edges);
+        const flowId = id || slugify(name);
+
+        const payload = {
+            ...flowData,
+            id: flowId,
+            name: name,
+            description: description,
+            inputs: inputs,
+            variables: variables,
+            isActive: isValid, // If invalid, force inactive
+            validationStatus: isValid ? 'VALID' : 'INVALID'
+        };
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/flows/${id}` : '/api/flows';
+
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message);
+        }
+
+        return flowId;
+    };
+
     const onSave = useCallback(async (name: string, description: string) => {
         console.log('onSave called:', { name, id });
 
@@ -252,51 +297,40 @@ const FlowEditorContent: React.FC = () => {
             deviceTemplates: useStore.getState().deviceTemplates
         };
         const validationResult = FlowValidator.validate(nodes, edges, context);
+
         if (!validationResult.isValid) {
-            toast.error(`Cannot save: ${validationResult.errors.length} errors found.`);
-            return; // Block save
+            // Prompt for Draft Save
+            setPendingSaveData({ name, description });
+            setShowDraftDialog(true);
+            return;
         }
 
-        const flowData = reactFlowToFlow(nodes, edges);
-
-        // If editing existing flow, use its ID. Otherwise generate new one.
-        const flowId = id || slugify(name);
-
-        const payload = {
-            ...flowData,
-            id: flowId,
-            name: name,
-            description: description,
-            inputs: inputs,
-            variables: variables,
-            isActive: true
-        };
-
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/flows/${id}` : '/api/flows';
-
         try {
-            const res = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                toast.success(`Flow ${id ? 'updated' : 'saved'} successfully!`);
-                setFlowName(name);
-                setFlowDescription(description);
-            } else {
-                const err = await res.json();
-                toast.error(`Failed to save: ${err.message}`);
-                throw new Error(err.message); // Re-throw for dialog to handle
-            }
+            await saveFlowToBackend(name, description, true);
+            toast.success(`Flow ${id ? 'updated' : 'saved'} successfully!`);
+            setFlowName(name);
+            setFlowDescription(description);
         } catch (error: any) {
             console.error('Save error:', error);
-            toast.error('Failed to save flow');
+            toast.error(`Failed to save: ${error.message}`);
             throw error;
         }
     }, [nodes, edges, id, inputs, variables]);
+
+    const handleConfirmDraft = async () => {
+        if (!pendingSaveData) return;
+
+        try {
+            await saveFlowToBackend(pendingSaveData.name, pendingSaveData.description, false);
+            toast.success('Flow saved as Draft (Inactive)');
+            setFlowName(pendingSaveData.name);
+            setFlowDescription(pendingSaveData.description);
+            setShowDraftDialog(false);
+        } catch (error: any) {
+            toast.error(`Failed to save draft: ${error.message}`);
+        }
+    };
+
 
     const handleQuickSave = () => {
         if (!flowName) return;
@@ -435,7 +469,29 @@ const FlowEditorContent: React.FC = () => {
                     }}
                 />
             </div>
-        </div>
+
+            <Dialog open={showDraftDialog} onOpenChange={setShowDraftDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-orange-600">
+                            <AlertTriangle className="h-5 w-5" />
+                            Validation Errors Found
+                        </DialogTitle>
+                        <DialogDescription>
+                            This flow contains errors and cannot be run in its current state.
+                            <br /><br />
+                            Do you want to save it as a <strong>Draft</strong>? It will be marked as <span className="font-mono text-xs bg-muted px-1 rounded">INVALID</span> and automatically <strong>Deactivated</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDraftDialog(false)}>Cancel</Button>
+                        <Button variant="default" className="bg-orange-600 hover:bg-orange-700" onClick={handleConfirmDraft}>
+                            Save as Draft
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 };
 

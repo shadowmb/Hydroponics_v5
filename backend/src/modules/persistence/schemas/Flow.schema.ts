@@ -25,6 +25,7 @@ export interface IFlow extends Document, ISoftDelete {
         description?: string;
     }[];
     isActive: boolean;
+    validationStatus: 'VALID' | 'INVALID';
 }
 
 export const FlowSchema = new Schema<IFlow>({
@@ -50,7 +51,8 @@ export const FlowSchema = new Schema<IFlow>({
         hasTolerance: { type: Boolean },
         description: { type: String }
     }],
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    validationStatus: { type: String, enum: ['VALID', 'INVALID'], default: 'VALID' }
 }, {
     timestamps: true,
     toJSON: {
