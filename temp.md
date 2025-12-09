@@ -1,93 +1,9 @@
-Данните на сенсзора в ДБ както и стратегията с две точки, като 1685 резеровара трябва да е 0 празен , а при 41 тярвба да е 100 (литра) пълен:
 {
   "_id": {
-    "$oid": "6932a99dcb81d56e0343a46d"
+    "$oid": "6937e2eca171a54cf8810a2a"
   },
-  "name": "Ultra",
-  "type": "SENSOR",
-  "isEnabled": true,
-  "status": "online",
-  "hardware": {
-    "pins": [
-      {
-        "role": "RX",
-        "portId": "D12",
-        "gpio": 12,
-        "_id": {
-          "$oid": "69367302270c66bff89a6a02"
-        }
-      },
-      {
-        "role": "TX",
-        "portId": "D13",
-        "gpio": 13,
-        "_id": {
-          "$oid": "69367302270c66bff89a6a03"
-        }
-      }
-    ],
-    "parentId": "6932a965cb81d56e0343a42c"
-  },
-  "config": {
-    "driverId": "dfrobot_a02yyuw",
-    "pollInterval": 5000,
-    "conversionStrategy": "linear",
-    "calibrations": {
-      "tank_volume": {
-        "lastCalibrated": {
-          "$date": "2025-12-09T11:52:13.077Z"
-        },
-        "data": {
-          "data": [
-            {
-              "raw": 1685,
-              "value": 0
-            },
-            {
-              "raw": 41,
-              "value": 100
-            }
-          ]
-        }
-      }
-    }
-  },
-  "tags": [
-    "Distance",
-    "Water"
-  ],
-  "group": "Water",
-  "deletedAt": null,
-  "createdAt": {
-    "$date": "2025-12-05T09:45:01.496Z"
-  },
-  "updatedAt": {
-    "$date": "2025-12-09T11:53:16.271Z"
-  },
-  "__v": 0,
-  "lastConnectionCheck": {
-    "$date": "2025-12-08T09:21:14.911Z"
-  },
-  "lastReading": {
-    "value": 1690000,
-    "raw": 1690,
-    "timestamp": {
-      "$date": "2025-12-09T11:53:16.270Z"
-    }
-  },
-  "metadata": {
-    "description": ""
-  }
-}
-
-Това е потока който се изпълянва и искам да следата следната логика - Проверка на резервоара чрез сензор за разстоянеие, след което се преминава към проверка чрез ИФ блок, Ако текущото състояние на резервоара е празен, или по малко от зададената стойнсот чрез глобалната, пусни помпата и влез в луп където за орпеделено време през определено време тествай нивото на водата чрез сензора за разстояние. Ако нивото на резервоара доближи нивото на глобаланта излез от лупа и спри помпата. Ако в началното ниво на резерваора отговаря или е по голямно от зададеното ниво чрез глбоалната, прекрати цикъла. Това е потока който описах като логиак в ДБ:
-
-{
-  "_id": {
-    "$oid": "693682da270c66bff89a6b7d"
-  },
-  "id": "test_distanitsiya",
-  "name": "Тест Дистаниция",
+  "id": "test_gr",
+  "name": "Test GR",
   "description": "",
   "mode": "SIMPLE",
   "nodes": [
@@ -99,8 +15,8 @@
         "hasError": false
       },
       "position": {
-        "x": 104,
-        "y": 3
+        "x": 117.5,
+        "y": -41
       }
     },
     {
@@ -111,15 +27,16 @@
         "hasError": false
       },
       "position": {
-        "x": 400,
-        "y": 100
+        "x": 68.53596214862361,
+        "y": 650.6427803396564
       }
     },
     {
-      "id": "SENSOR_READ_1765180056364",
+      "id": "SENSOR_READ_1765268250648",
       "type": "SENSOR_READ",
       "params": {
-        "label": "Read Sensor",
+        "label": "Сензор за ГР",
+        "readingType": "tank_volume",
         "retryCount": 3,
         "retryDelay": 1000,
         "onFailure": "STOP",
@@ -129,21 +46,182 @@
         "variable": "var_1"
       },
       "position": {
-        "x": 197.5,
-        "y": 124.75
+        "x": 165,
+        "y": 71.25
+      }
+    },
+    {
+      "id": "IF_1765268300863",
+      "type": "IF",
+      "params": {
+        "label": "Condition (IF)",
+        "operator": ">=",
+        "onFailure": "STOP",
+        "errorNotification": false,
+        "hasError": false,
+        "variable": "var_1",
+        "value": "{{global_2}}"
+      },
+      "position": {
+        "x": 303,
+        "y": 233.75
+      }
+    },
+    {
+      "id": "ACTUATOR_SET_1765270055740",
+      "type": "ACTUATOR_SET",
+      "params": {
+        "label": "Set Actuator",
+        "strategy": "actuator_manual",
+        "amountUnit": "ml",
+        "retryCount": 3,
+        "retryDelay": 1000,
+        "onFailure": "STOP",
+        "errorNotification": false,
+        "hasError": false,
+        "deviceId": "6932ad83cb81d56e0343a63c",
+        "action": "ON"
+      },
+      "position": {
+        "x": 527,
+        "y": 318.25
+      }
+    },
+    {
+      "id": "generic_1765270081073",
+      "type": "SENSOR_READ",
+      "params": {
+        "label": "Read Sensor",
+        "readingType": "tank_volume",
+        "retryCount": 3,
+        "retryDelay": 1000,
+        "onFailure": "STOP",
+        "errorNotification": false,
+        "hasError": false,
+        "deviceId": "6932a99dcb81d56e0343a46d",
+        "variable": "var_1",
+        "mirrorOf": "SENSOR_READ_1765268250648"
+      },
+      "position": {
+        "x": 686,
+        "y": 603.25
+      }
+    },
+    {
+      "id": "FLOW_CONTROL_1765270111054",
+      "type": "FLOW_CONTROL",
+      "params": {
+        "label": "Flow Control (Jump/Label)",
+        "controlType": "LOOP_BACK",
+        "hasError": false,
+        "targetLabel": "LOOP_1765270134972"
+      },
+      "position": {
+        "x": 652,
+        "y": 750.25
+      }
+    },
+    {
+      "id": "LOOP_1765270134972",
+      "type": "LOOP",
+      "params": {
+        "label": "Проверка на ГР цикъл",
+        "limitMode": "TIME",
+        "interval": 1,
+        "count": 1,
+        "timeout": 60,
+        "operator": ">",
+        "errorNotification": false,
+        "loopType": "WHILE",
+        "maxIterations": 20,
+        "onMaxIterations": "GOTO_LABEL",
+        "hasError": false,
+        "variable": "global_2",
+        "value": "{{var_1}}",
+        "errorTargetLabel": "END"
+      },
+      "position": {
+        "x": 462.5,
+        "y": 441.75
+      }
+    },
+    {
+      "id": "generic_1765280669388",
+      "type": "ACTUATOR_SET",
+      "params": {
+        "label": "Set Actuator",
+        "strategy": "actuator_manual",
+        "amountUnit": "ml",
+        "retryCount": 3,
+        "retryDelay": 1000,
+        "onFailure": "STOP",
+        "errorNotification": false,
+        "hasError": false,
+        "deviceId": "6932ad83cb81d56e0343a63c",
+        "action": "OFF"
+      },
+      "position": {
+        "x": 443.5,
+        "y": 619.75
       }
     }
   ],
   "edges": [
     {
-      "id": "xy-edge__start-SENSOR_READ_1765180056364",
+      "id": "xy-edge__start-SENSOR_READ_1765268250648",
       "source": "start",
-      "target": "SENSOR_READ_1765180056364",
+      "target": "SENSOR_READ_1765268250648",
       "type": "smoothstep"
     },
     {
-      "id": "xy-edge__SENSOR_READ_1765180056364-end",
-      "source": "SENSOR_READ_1765180056364",
+      "id": "xy-edge__SENSOR_READ_1765268250648-IF_1765268300863",
+      "source": "SENSOR_READ_1765268250648",
+      "target": "IF_1765268300863",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__generic_1765270081073-FLOW_CONTROL_1765270111054",
+      "source": "generic_1765270081073",
+      "target": "FLOW_CONTROL_1765270111054",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__IF_1765268300863true-end",
+      "source": "IF_1765268300863",
+      "target": "end",
+      "sourceHandle": "true",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__IF_1765268300863false-ACTUATOR_SET_1765270055740",
+      "source": "IF_1765268300863",
+      "target": "ACTUATOR_SET_1765270055740",
+      "sourceHandle": "false",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__ACTUATOR_SET_1765270055740-LOOP_1765270134972",
+      "source": "ACTUATOR_SET_1765270055740",
+      "target": "LOOP_1765270134972",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__LOOP_1765270134972body-generic_1765270081073",
+      "source": "LOOP_1765270134972",
+      "target": "generic_1765270081073",
+      "sourceHandle": "body",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__LOOP_1765270134972exit-generic_1765280669388",
+      "source": "LOOP_1765270134972",
+      "target": "generic_1765280669388",
+      "sourceHandle": "exit",
+      "type": "smoothstep"
+    },
+    {
+      "id": "xy-edge__generic_1765280669388-end",
+      "source": "generic_1765280669388",
       "target": "end",
       "type": "smoothstep"
     }
@@ -152,111 +230,37 @@
   "variables": [
     {
       "id": "var_1",
-      "name": "Дистаниця",
+      "name": "Количество ГР",
       "type": "number",
       "scope": "local",
-      "unit": "m",
+      "unit": "l",
       "hasTolerance": false,
       "description": "",
       "_id": {
-        "$oid": "693682da270c66bff89a6b7e"
+        "$oid": "6937e2eca171a54cf8810a2b"
+      }
+    },
+    {
+      "id": "global_2",
+      "name": "Количество ГР",
+      "type": "number",
+      "scope": "global",
+      "unit": "l",
+      "hasTolerance": true,
+      "description": "Желаното количество в ГР",
+      "_id": {
+        "$oid": "6937e2eca171a54cf8810a2c"
       }
     }
   ],
   "isActive": true,
   "deletedAt": null,
   "createdAt": {
-    "$date": "2025-12-08T07:48:42.290Z"
+    "$date": "2025-12-09T08:50:52.598Z"
   },
   "updatedAt": {
-    "$date": "2025-12-08T08:45:00.636Z"
+    "$date": "2025-12-09T11:58:03.660Z"
   },
-  "__v": 0
+  "__v": 0,
+  "validationStatus": "VALID"
 }
-
-
-Рестартирах сървъра, презаредих програмта и я активирах и тов е лога в backenda:
-
-[2025-12-09 14:03:40.722 +0200] INFO: тЦ╢я╕П Active Program Started
-    env: "development"
-[SensorRead] ✔️ Saved to 'var_1': 1683 l
-[ActuatorSet] ✔️ Set 'ON' (State: 1)
-[2025-12-09 14:03:47.909 +0200] INFO: тЪб Cycle Force Started (Time updated to Now)
-    env: "development"
-    itemId: "6938100d801493ff2ffcc4e9"
-    newTime: "14:03"
-[2025-12-09 14:03:47.915 +0200] INFO: Attempting to start cycle with sanitized steps
-    env: "development"
-    cycleId: "6937e322a171a54cf8810a54"
-    steps: [
-      {
-        "flowId": "test_gr",
-        "overrides": {}
-      }
-    ]
-[2025-12-09 14:03:47.919 +0200] INFO: ЁЯЪА Starting Cycle
-    env: "development"
-    cycleId: "6937e322a171a54cf8810a54"
-    sessionId: "69381023801493ff2ffcc533"
-    stepsCount: 1
-[2025-12-09 14:03:47.919 +0200] INFO: тЦ╢я╕П Executing Cycle Step
-    env: "development"
-    step: 0
-    flowId: "test_gr"
-[2025-12-09 14:03:47.931 +0200] INFO: ЁЯУе Loading Program Session
-    env: "development"
-    sessionId: "69381023801493ff2ffcc539"
-    programId: "test_gr"
-    variables: {}
-[2025-12-09 14:03:48.023 +0200] INFO: ЁЯФМ [HardwareService] Creating UDP Transport
-    env: "development"
-    controllerId: "6932a965cb81d56e0343a42c"
-    ip: "10.1.10.253"
-[2025-12-09 14:03:48.023 +0200] INFO: ЁЯФМ [UdpTransport] Initializing...
-    env: "development"
-    ip: "10.1.10.253"
-    port: 8888
-[2025-12-09 14:03:48.024 +0200] INFO: тЬЕ [UdpTransport] Listening
-    env: "development"
-    address: {
-      "address": "0.0.0.0",
-      "family": "IPv4",
-      "port": 56884
-    }
-[2025-12-09 14:03:48.317 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    strategy: "tank_volume"
-    driverUnit: "mm"
-    newUnit: "l"
-[2025-12-09 14:03:48.317 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    driverId: "dfrobot_a02yyuw"
-    sourceUnit: "l"
-    raw: 1683
-    value: 1683
-[2025-12-09 14:03:48.318 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 1683000,
-      "baseUnit": "ml"
-    }
-[2025-12-09 14:03:48.318 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    from: "l"
-    to: "ml"
-    original: 1683
-    normalized: 1683000
-[ActuatorSet] ✔️ Set 'OFF' (State: 0)
-[2025-12-09 14:03:48.728 +0200] INFO: тЬЕ Cycle Step Completed
-    env: "development"
-    cycleId: "6937e322a171a54cf8810a54"
-    step: 0
-[2025-12-09 14:03:48.728 +0200] INFO: ЁЯПБ Cycle Completed Successfully
-    env: "development"
-    sessionId: "69381023801493ff2ffcc533"
-[2025-12-09 14:03:48.754 +0200] INFO: тЬЕ Active Program Cycle Marked Completed
-    env: "development"
-    cycleId: "6937e322a171a54cf8810a54"

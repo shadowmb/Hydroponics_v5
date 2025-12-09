@@ -52,16 +52,21 @@ export class LoopBlockExecutor implements IBlockExecutor {
             let right = value;
             let tolerance = 0;
 
+            console.log(`[LoopDebug] Variable: '${variable}', Left Value: ${left} (Type: ${typeof left})`);
+
             // Resolve variable reference in value
             if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
                 const varName = value.slice(2, -2);
                 right = ctx.variables[varName];
+                console.log(`[LoopDebug] Resolving Right Value from '${varName}': ${right} (Type: ${typeof right})`);
+
                 const toleranceVarName = `${varName}_tolerance`;
                 if (ctx.variables[toleranceVarName] !== undefined) {
                     tolerance = Number(ctx.variables[toleranceVarName]);
                 }
             } else {
                 right = this.parseValue(value);
+                console.log(`[LoopDebug] Static Right Value: ${right}`);
             }
 
             switch (operator) {
@@ -71,7 +76,10 @@ export class LoopBlockExecutor implements IBlockExecutor {
                 case '!=':
                     shouldLoop = tolerance > 0 ? Math.abs(Number(left) - Number(right)) > tolerance : left != right;
                     break;
-                case '>': shouldLoop = Number(left) > Number(right); break;
+                case '>':
+                    console.log(`[LoopDebug] Checking ${Number(left)} > ${Number(right)}`);
+                    shouldLoop = Number(left) > Number(right);
+                    break;
                 case '<': shouldLoop = Number(left) < Number(right); break;
                 case '>=': shouldLoop = Number(left) >= Number(right); break;
                 case '<=': shouldLoop = Number(left) <= Number(right); break;
