@@ -4,6 +4,7 @@ export class LoopBlockExecutor implements IBlockExecutor {
     type = 'LOOP';
 
     async execute(ctx: ExecutionContext, params: any): Promise<BlockResult> {
+        console.log(`[LoopDebug] Executing Loop Block: ${params._blockId}`, params);
         const { loopType = 'COUNT', count, variable, operator, value, _blockId, interval, limitMode = 'COUNT', timeout } = params;
 
         // Get previous state

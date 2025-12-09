@@ -379,6 +379,8 @@ export class AutomationEngine {
                     else {
                         const edge = context.edges.find(e => e.source === blockId);
                         nextBlockId = edge ? edge.target : null;
+
+                        logger.info({ blockId, edgeFound: !!edge, nextBlockId }, 'Graph Navigation Trace');
                     }
                 }
 
