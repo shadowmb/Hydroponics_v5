@@ -147,266 +147,279 @@ export class AutomationEngine {
 
         // 2a. Resolve Variable Definitions
         const variableDefinitions: Record<string, any> = {};
-        if (flow.variables) {
-            flow.variables.forEach((v: any) => {
-                // Key by ID if available (preferred), otherwise Name
-                const key = v.id || v.name;
-                variableDefinitions[key] = {
-                    type: v.type,
-                    unit: v.unit,
-                    scope: v.scope,
-                    name: v.name // Keep name for lookup if needed
-                };
+        flow.variables.forEach((v: any) => {
+            // Key by ID if available (preferred), otherwise Name
+            const key = v.id || v.name;
+            const name = v.name;
 
-                // Ensure runtime variables initialized if not present
-                // If input provided value by Name, map it to ID
-                if (v.id && variables[v.name] !== undefined) {
-                    variables[v.id] = variables[v.name];
-                    // delete variables[v.name]; // Optional: remove Name key to enforce ID usage? Safer to keep for now.
+            variableDefinitions[key] = {
+                type: v.type,
+                unit: v.unit,
+                scope: v.scope,
+                name: name
+            };
+
+            // 2b. INJECTION FIX: Check overrides for this variable
+            let val = undefined;
+
+            // Try finding by ID
+            if (v.id && overrides[v.id] !== undefined) val = overrides[v.id];
+            // Try finding by Name (this is what we see in logs)
+            else if (name && overrides[name] !== undefined) val = overrides[name];
+            // Fallback to default
+            else if (v.default !== undefined) val = v.default;
+
+            // If we found a value, inject it into the runtime map
+            if (val !== undefined) {
+                variables[key] = val;
+                // Also enable access by Name if ID is primary key (for convenience in Condition checks)
+                if (v.id && name) {
+                    variables[name] = val;
                 }
-            });
-        }
-
-        // 3. Create Session
-        const session = await sessionRepository.create({
-            programId: flow.id,
-            startTime: new Date(),
-            status: 'loaded', // Initial status
-            logs: [],
-            context: {
-                resumeState: {},
-                variables: variables, // Store resolved variables in context
-                variableDefinitions: variableDefinitions // Store metadata
             }
         });
+    }
+
+    // 3. Create Session
+    const session = await sessionRepository.create({
+        programId: flow.id,
+        startTime: new Date(),
+        status: 'loaded', // Initial status
+        logs: [],
+        context: {
+            resumeState: {},
+            variables: variables, // Store resolved variables in context
+            variableDefinitions: variableDefinitions // Store metadata
+        }
+    });
         this.currentSessionId = session.id;
 
-        logger.info({ sessionId: this.currentSessionId, programId, variables }, '📥 Loading Program Session');
+logger.info({ sessionId: this.currentSessionId, programId, variables }, '📥 Loading Program Session');
 
-        // 4. Send LOAD event to Machine
-        this.actor.send({
-            type: 'LOAD',
-            programId: flow.id,
-            templateId: 'default',
-            blocks: flow.nodes.map((n: any) => ({
-                id: n.id,
-                type: n.type,
-                params: n.params || n.data || {}
-            })),
-            edges: flow.edges as any[],
-            execContext: { // Pass initial context to machine
-                variables,
-                variableDefinitions
-            }
-        } as any);
+// 4. Send LOAD event to Machine
+this.actor.send({
+    type: 'LOAD',
+    programId: flow.id,
+    templateId: 'default',
+    blocks: flow.nodes.map((n: any) => ({
+        id: n.id,
+        type: n.type,
+        params: n.params || n.data || {}
+    })),
+    edges: flow.edges as any[],
+    execContext: { // Pass initial context to machine
+        variables,
+        variableDefinitions
+    }
+} as any);
 
-        return this.currentSessionId!;
+return this.currentSessionId!;
     }
 
     /**
      * Start the currently loaded program.
      */
     public async startProgram() {
-        const snapshot = this.actor.getSnapshot();
-        if (snapshot.value !== 'loaded' && snapshot.value !== 'stopped' && snapshot.value !== 'completed') {
-            throw new Error(`Cannot start program from state: ${snapshot.value}. Must be loaded, stopped, or completed.`);
-        }
-
-        this.actor.send({ type: 'START' });
+    const snapshot = this.actor.getSnapshot();
+    if (snapshot.value !== 'loaded' && snapshot.value !== 'stopped' && snapshot.value !== 'completed') {
+        throw new Error(`Cannot start program from state: ${snapshot.value}. Must be loaded, stopped, or completed.`);
     }
+
+    this.actor.send({ type: 'START' });
+}
 
     public async unloadProgram() {
-        this.actor.send({ type: 'UNLOAD' });
-        this.currentSessionId = null;
-    }
+    this.actor.send({ type: 'UNLOAD' });
+    this.currentSessionId = null;
+}
 
     public stopProgram() {
-        this.actor.send({ type: 'STOP' });
-    }
+    this.actor.send({ type: 'STOP' });
+}
 
     public pauseProgram() {
-        this.actor.send({ type: 'PAUSE' });
-    }
+    this.actor.send({ type: 'PAUSE' });
+}
 
     public resumeProgram() {
-        this.actor.send({ type: 'RESUME' });
-    }
+    this.actor.send({ type: 'RESUME' });
+}
 
     public getSnapshot() {
-        const snapshot = this.actor.getSnapshot();
-        return {
-            ...snapshot,
-            sessionId: this.currentSessionId
-        };
-    }
+    const snapshot = this.actor.getSnapshot();
+    return {
+        ...snapshot,
+        sessionId: this.currentSessionId
+    };
+}
 
     /**
      * Helper to resolve variable references in params (e.g. "{{duration}}")
      */
-    private resolveParams(params: Record<string, any>, variables: Record<string, any>): Record<string, any> {
-        const resolved: Record<string, any> = {};
-        for (const [key, value] of Object.entries(params)) {
-            if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
-                const varName = value.slice(2, -2).trim();
-                resolved[key] = variables[varName] !== undefined ? variables[varName] : value;
-            } else {
-                resolved[key] = value;
-            }
-        }
-        return resolved;
+    private resolveParams(params: Record<string, any>, variables: Record<string, any>): Record < string, any > {
+    const resolved: Record<string, any> = { };
+for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+        const varName = value.slice(2, -2).trim();
+        resolved[key] = variables[varName] !== undefined ? variables[varName] : value;
+    } else {
+        resolved[key] = value;
+    }
+}
+return resolved;
     }
 
     /**
      * The core logic run by the XState 'invoke'.
      * Executes a single block with Error Handling Policy.
      */
-    private async executeBlock(context: AutomationContext, signal?: AbortSignal): Promise<any> {
-        const blockId = context.currentBlockId;
-        if (!blockId) return { nextBlockId: null };
+    private async executeBlock(context: AutomationContext, signal ?: AbortSignal): Promise < any > {
+    const blockId = context.currentBlockId;
+    if(!blockId) return { nextBlockId: null };
 
-        const block = context.blocks.get(blockId);
-        if (!block) throw new Error(`Block not found: ${blockId}`);
+    const block = context.blocks.get(blockId);
+    if(!block) throw new Error(`Block not found: ${blockId}`);
 
-        const executor = this.executors.get(block.type);
-        if (!executor) throw new Error(`No executor for block type: ${block.type}`);
+    const executor = this.executors.get(block.type);
+    if(!executor) throw new Error(`No executor for block type: ${block.type}`);
 
-        // 0. Sync Context from DB (Critical for Resume)
-        if (this.currentSessionId) {
-            try {
-                const session = await sessionRepository.findById(this.currentSessionId);
-                if (session && session.context) {
-                    if (session.context.resumeState) context.execContext.resumeState = session.context.resumeState;
-                    if (session.context.variables) context.execContext.variables = session.context.variables;
-                    if (session.context.variableDefinitions) context.execContext.variableDefinitions = session.context.variableDefinitions;
-                }
-            } catch (err) { /* silent */ }
+    // 0. Sync Context from DB (Critical for Resume)
+    if(this.currentSessionId) {
+    try {
+        const session = await sessionRepository.findById(this.currentSessionId);
+        if (session && session.context) {
+            if (session.context.resumeState) context.execContext.resumeState = session.context.resumeState;
+            if (session.context.variables) context.execContext.variables = session.context.variables;
+            if (session.context.variableDefinitions) context.execContext.variableDefinitions = session.context.variableDefinitions;
+        }
+    } catch (err) { /* silent */ }
+}
+
+// --- ERROR HANDLING & RETRY LOGIC ---
+let params = { ...block.params };
+if (params.mirrorOf) {
+    const sourceBlock = context.blocks.get(params.mirrorOf);
+    if (sourceBlock) params = { ...sourceBlock.params, ...params, _mirrorId: blockId };
+}
+
+const retryCount = Number(params.retryCount) || 0;
+const retryDelay = Number(params.retryDelay) || 1000;
+const onFailure = params.onFailure || 'STOP';
+
+let attempts = 0;
+let lastError: Error | null = null;
+
+while (attempts <= retryCount) {
+    if (signal?.aborted) throw new Error('Aborted');
+
+    try {
+        if (attempts === 0) {
+            const resolvedParamsForUI = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
+
+            // Determine meaningful label
+            let label = resolvedParamsForUI.label || block.type;
+            if (block.type === 'LOG') label = `Log: ${resolvedParamsForUI.message || ''}`;
+
+            // Determine duration if applicable
+            let duration = 0;
+            if (block.type === 'WAIT' && resolvedParamsForUI.duration) duration = Number(resolvedParamsForUI.duration);
+            // Add other duration blocks here if needed
+
+            events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
+
+            // New Rich Execution Event
+            events.emit('automation:execution_step', {
+                blockId,
+                type: block.type,
+                sessionId: this.currentSessionId,
+                label: label,
+                duration: duration,
+                timestamp: Date.now(),
+                params: resolvedParamsForUI
+            });
         }
 
-        // --- ERROR HANDLING & RETRY LOGIC ---
-        let params = { ...block.params };
-        if (params.mirrorOf) {
-            const sourceBlock = context.blocks.get(params.mirrorOf);
-            if (sourceBlock) params = { ...sourceBlock.params, ...params, _mirrorId: blockId };
+        const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
+        const result = await executor.execute(context.execContext, resolvedParams, signal);
+
+        if (!result.success) throw new Error(result.error || 'Block execution returned failure');
+
+        // Success!
+        events.emit('automation:block_end', { blockId, success: true, output: result.output, sessionId: this.currentSessionId });
+
+        // Loop Safety Check
+        if (result.output && result.output.status === 'MAX_ITERATIONS') {
+            const onSafety = params.onMaxIterations || 'STOP';
+            if (onSafety === 'CONTINUE') {
+                // Determine 'exit' edge for loop
+                const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'exit');
+                return { nextBlockId: edge ? edge.target : null };
+            }
+            if (onSafety === 'PAUSE') {
+                this.actor.send({ type: 'PAUSE', resumeState: { blockId } } as any);
+                return new Promise(() => { });
+            }
+            throw new Error(`Loop Max Iterations Reached (${params.maxIterations})`);
         }
 
-        const retryCount = Number(params.retryCount) || 0;
-        const retryDelay = Number(params.retryDelay) || 1000;
-        const onFailure = params.onFailure || 'STOP';
-
-        let attempts = 0;
-        let lastError: Error | null = null;
-
-        while (attempts <= retryCount) {
-            if (signal?.aborted) throw new Error('Aborted');
-
-            try {
-                if (attempts === 0) {
-                    const resolvedParamsForUI = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
-
-                    // Determine meaningful label
-                    let label = resolvedParamsForUI.label || block.type;
-                    if (block.type === 'LOG') label = `Log: ${resolvedParamsForUI.message || ''}`;
-
-                    // Determine duration if applicable
-                    let duration = 0;
-                    if (block.type === 'WAIT' && resolvedParamsForUI.duration) duration = Number(resolvedParamsForUI.duration);
-                    // Add other duration blocks here if needed
-
-                    events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
-
-                    // New Rich Execution Event
-                    events.emit('automation:execution_step', {
-                        blockId,
-                        type: block.type,
-                        sessionId: this.currentSessionId,
-                        label: label,
-                        duration: duration,
-                        timestamp: Date.now(),
-                        params: resolvedParamsForUI
-                    });
-                }
-
-                const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
-                const result = await executor.execute(context.execContext, resolvedParams, signal);
-
-                if (!result.success) throw new Error(result.error || 'Block execution returned failure');
-
-                // Success!
-                events.emit('automation:block_end', { blockId, success: true, output: result.output, sessionId: this.currentSessionId });
-
-                // Loop Safety Check
-                if (result.output && result.output.status === 'MAX_ITERATIONS') {
-                    const onSafety = params.onMaxIterations || 'STOP';
-                    if (onSafety === 'CONTINUE') {
-                        // Determine 'exit' edge for loop
-                        const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'exit');
-                        return { nextBlockId: edge ? edge.target : null };
-                    }
-                    if (onSafety === 'PAUSE') {
-                        this.actor.send({ type: 'PAUSE', resumeState: { blockId } } as any);
-                        return new Promise(() => { });
-                    }
-                    throw new Error(`Loop Max Iterations Reached (${params.maxIterations})`);
-                }
-
-                // --- GRAPH NAVIGATION LOGIC ---
-                let nextBlockId: string | undefined | null = result.nextBlockId;
-                if (nextBlockId === undefined) {
-                    if (block.type === 'IF' && typeof result.output === 'boolean') {
-                        const expectedHandle = result.output ? 'true' : 'false';
-                        const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
-                        nextBlockId = edge ? edge.target : null;
-                        if (!nextBlockId) logger.warn({ blockId, result: result.output }, '⚠️ IF block has no matching edge');
-                    }
-                    else if (block.type === 'LOOP' && typeof result.output === 'boolean') {
-                        const expectedHandle = result.output ? 'body' : 'exit';
-                        const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
-                        nextBlockId = edge ? edge.target : null;
-                    }
-                    else {
-                        const edge = context.edges.find(e => e.source === blockId);
-                        nextBlockId = edge ? edge.target : null;
-                    }
-                }
-
-                return { nextBlockId, output: result.output };
-
-            } catch (err: any) {
-                lastError = err;
-                attempts++;
-                logger.warn({ blockId, attempt: attempts, err: err.message }, `Block execution failed`);
-                if (attempts <= retryCount) await new Promise(r => setTimeout(r, retryDelay));
+        // --- GRAPH NAVIGATION LOGIC ---
+        let nextBlockId: string | undefined | null = result.nextBlockId;
+        if (nextBlockId === undefined) {
+            if (block.type === 'IF' && typeof result.output === 'boolean') {
+                const expectedHandle = result.output ? 'true' : 'false';
+                const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
+                nextBlockId = edge ? edge.target : null;
+                if (!nextBlockId) logger.warn({ blockId, result: result.output }, '⚠️ IF block has no matching edge');
+            }
+            else if (block.type === 'LOOP' && typeof result.output === 'boolean') {
+                const expectedHandle = result.output ? 'body' : 'exit';
+                const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
+                nextBlockId = edge ? edge.target : null;
+            }
+            else {
+                const edge = context.edges.find(e => e.source === blockId);
+                nextBlockId = edge ? edge.target : null;
             }
         }
 
-        // FAILURE HANDLING
-        logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');
+        return { nextBlockId, output: result.output };
 
-        if (onFailure === 'CONTINUE') {
-            // Try to find a default outgoing edge to continue
-            const edge = context.edges.find(e => e.source === blockId);
-            return { nextBlockId: edge ? edge.target : null };
-        }
+    } catch (err: any) {
+        lastError = err;
+        attempts++;
+        logger.warn({ blockId, attempt: attempts, err: err.message }, `Block execution failed`);
+        if (attempts <= retryCount) await new Promise(r => setTimeout(r, retryDelay));
+    }
+}
 
-        if (onFailure === 'PAUSE') {
-            this.actor.send({ type: 'PAUSE', resumeState: { blockId } } as any);
-            return new Promise(() => { });
-        }
+// FAILURE HANDLING
+logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');
 
-        if (onFailure === 'GOTO_LABEL') {
-            const targetLabelName = params.errorTargetLabel;
-            if (targetLabelName) {
-                if (targetLabelName === 'END') return { nextBlockId: null };
+if (onFailure === 'CONTINUE') {
+    // Try to find a default outgoing edge to continue
+    const edge = context.edges.find(e => e.source === blockId);
+    return { nextBlockId: edge ? edge.target : null };
+}
 
-                for (const [id, b] of context.blocks) {
-                    if (b.type === 'FLOW_CONTROL' && b.params.controlType === 'LABEL' && b.params.labelName === targetLabelName) {
-                        return { nextBlockId: id };
-                    }
-                }
+if (onFailure === 'PAUSE') {
+    this.actor.send({ type: 'PAUSE', resumeState: { blockId } } as any);
+    return new Promise(() => { });
+}
+
+if (onFailure === 'GOTO_LABEL') {
+    const targetLabelName = params.errorTargetLabel;
+    if (targetLabelName) {
+        if (targetLabelName === 'END') return { nextBlockId: null };
+
+        for (const [id, b] of context.blocks) {
+            if (b.type === 'FLOW_CONTROL' && b.params.controlType === 'LABEL' && b.params.labelName === targetLabelName) {
+                return { nextBlockId: id };
             }
         }
+    }
+}
 
-        throw lastError || new Error('Block failed after retries');
+throw lastError || new Error('Block failed after retries');
     }
 }
 
