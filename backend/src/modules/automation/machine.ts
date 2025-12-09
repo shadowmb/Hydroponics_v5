@@ -92,13 +92,14 @@ export const automationMachine = createMachine({
                     target: 'running',
                     reenter: true,
                     actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
-                        const { nextBlockId, output, variables } = event.output;
+                        const { nextBlockId, output, variables, resumeState } = event.output;
                         return {
                             currentBlockId: nextBlockId || null,
                             execContext: {
                                 ...context.execContext,
                                 stepCount: context.execContext.stepCount + 1,
-                                variables: variables || context.execContext.variables // MERGE BACK
+                                variables: variables || context.execContext.variables, // MERGE BACK
+                                resumeState: resumeState || context.execContext.resumeState // MERGE BACK
                             }
                         };
                     })

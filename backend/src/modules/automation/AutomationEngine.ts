@@ -391,10 +391,16 @@ export class AutomationEngine {
                     }
                 }
 
+                if (result.state) {
+                    if (!context.execContext.resumeState) context.execContext.resumeState = {};
+                    context.execContext.resumeState[blockId] = result.state;
+                }
+
                 return {
                     nextBlockId,
                     output: result.output,
-                    variables: context.execContext.variables // PASS UPDATED VARIABLES BACK
+                    variables: context.execContext.variables, // PASS UPDATED VARIABLES BACK
+                    resumeState: context.execContext.resumeState // PASS STATE BACK
                 };
             } catch (err: any) {
                 lastError = err;
