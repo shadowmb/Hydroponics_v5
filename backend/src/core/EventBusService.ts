@@ -17,7 +17,7 @@ export interface SystemEvents {
 
     // Automation Events
     'automation:block_start': { blockId: string; type: string; sessionId?: string | null };
-    'automation:block_end': { blockId: string; success: boolean; output?: any; summary?: string; sessionId?: string | null };
+    'automation:block_end': { blockId: string; success: boolean; output?: any; summary?: string; sessionId?: string | null; error?: string };
     'automation:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null; error?: string | null };
     'automation:execution_step': { blockId: string; type: string; sessionId?: string | null; label: string; duration?: number; timestamp: number; params?: any };
     'log': { timestamp: Date | string; level: string; message: string; blockId?: string; data?: any; sessionId?: string | null };

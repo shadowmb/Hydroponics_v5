@@ -24,7 +24,7 @@ import { LoopBlockExecutor } from './blocks/LoopBlockExecutor';
 import { FlowControlBlockExecutor } from './blocks/FlowControlBlockExecutor';
 
 export class AutomationEngine {
-    private actor: Actor<any>;
+    private actor!: Actor<any>;
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
     private executionStartTime: number = 0;
@@ -49,6 +49,14 @@ export class AutomationEngine {
         this.registerExecutor(new LoopBlockExecutor());
         this.registerExecutor(new FlowControlBlockExecutor());
 
+        this.initializeActor();
+    }
+
+    private initializeActor() {
+        if (this.actor) {
+            this.actor.stop();
+        }
+
         // Define the logic for 'executeBlock'
         const executeBlockLogic = fromPromise(async ({ input, signal }: { input: { context: AutomationContext }, signal: AbortSignal }) => {
             return this.executeBlock(input.context, signal);
@@ -63,11 +71,9 @@ export class AutomationEngine {
 
         this.setupEventListeners();
         this.actor.start();
+        logger.info(`✨ AutomationEngine Actor Initialized/Reset (Session: ${this.currentSessionId || 'none'})`);
+
     }
-
-    // ... rest of class ...
-
-    // ... rest of class ...
 
     private setupEventListeners() {
         this.actor.subscribe(async (snapshot) => {
@@ -116,6 +122,11 @@ export class AutomationEngine {
      * Load a program into memory (Idle state).
      */
     public async loadProgram(programId: string, overrides: Record<string, any> = {}): Promise<string> {
+        // HARD RESET: Ensure clean state before loading new program
+        // This prevents 'dirty' variables from previous runs leaking into the new session.
+        this.currentSessionId = null; // Clear old session ref
+        this.initializeActor();
+
         // 1. Load Program (Flow)
         const flow = await flowRepository.findById(programId);
         if (!flow) {
@@ -212,7 +223,8 @@ export class AutomationEngine {
             edges: flow.edges as any[],
             execContext: { // Pass initial context to machine
                 variables,
-                variableDefinitions
+                variableDefinitions,
+                resumeState: {} // FORCE EMPTY STATE
             }
         } as any);
 
@@ -410,16 +422,16 @@ export class AutomationEngine {
                     }
                 }
 
+                let currentResumeState = { ...(context.execContext.resumeState || {}) };
                 if (result.state) {
-                    if (!context.execContext.resumeState) context.execContext.resumeState = {};
-                    context.execContext.resumeState[blockId] = result.state;
+                    currentResumeState[blockId] = result.state;
                 }
 
                 return {
                     nextBlockId,
                     output: result.output,
                     variables: context.execContext.variables, // PASS UPDATED VARIABLES BACK
-                    resumeState: context.execContext.resumeState // PASS STATE BACK
+                    resumeState: currentResumeState // PASS STATE BACK WITHOUT MUTATION
                 };
             } catch (err: any) {
                 lastError = err;
@@ -430,6 +442,14 @@ export class AutomationEngine {
         }
 
         // FAILURE HANDLING
+        // EMIT BLOCK_END (Failed) so frontend knows to close any groups
+        events.emit('automation:block_end', {
+            blockId,
+            success: false,
+            error: lastError?.message || 'Block Failed',
+            sessionId: this.currentSessionId
+        });
+
         logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');
 
         if (onFailure === 'CONTINUE') {

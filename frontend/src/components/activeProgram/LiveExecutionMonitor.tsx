@@ -38,62 +38,10 @@ interface LiveExecutionMonitorProps {
     isActive: boolean;
 }
 
-const CycleIterationItem: React.FC<{ iteration: CycleIteration; isLast: boolean; parentActive: boolean }> = ({ iteration, isLast, parentActive }) => {
-    // Auto-open if it's the active iteration in an active group
-    const [isOpen, setIsOpen] = useState(isLast && parentActive);
 
-    useEffect(() => {
-        if (isLast && parentActive) setIsOpen(true);
-        else if (!isLast) setIsOpen(false); // Auto-collapse history
-    }, [isLast, parentActive]);
 
-    const headerStep = iteration.headerStep;
+const CycleGroupItem: React.FC<{ group: CycleGroup; isLast: boolean }> = ({ group }) => {
 
-    return (
-        <div className="relative pl-4 border-l border-slate-800/50 mt-2">
-            {/* Iteration Header */}
-            <div
-                className="flex items-center gap-2 mb-2 cursor-pointer hover:bg-slate-900/50 p-1 rounded transition-colors"
-                onClick={() => setIsOpen(!isOpen)}
-            >
-                <div className={`h-1.5 w-1.5 rounded-full ${isLast && parentActive ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
-
-                <div className="flex-1 flex items-center justify-between">
-                    <span className="text-xs font-mono text-slate-300">
-                        {headerStep.summary || headerStep.label}
-                    </span>
-                    {!isOpen && iteration.steps.length > 0 && (
-                        <span className="text-[10px] text-slate-500 bg-slate-900 px-1 rounded">
-                            {iteration.steps.length} ops
-                        </span>
-                    )}
-                </div>
-            </div>
-
-            {/* Nested Steps */}
-            {isOpen && (
-                <div className="space-y-2 pl-2">
-                    {iteration.steps.map((step) => (
-                        <div key={step.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
-                            <ExecutionCard
-                                step={step}
-                                state={parentActive && isLast && step === iteration.steps[iteration.steps.length - 1] && !step.output ? 'active' : 'history'}
-                            />
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
-
-const CycleGroupItem: React.FC<{ group: CycleGroup; isLast: boolean }> = ({ group, isLast }) => {
-    const [isOpen, setIsOpen] = useState(isLast);
-
-    useEffect(() => {
-        if (isLast) setIsOpen(true);
-        else setIsOpen(false);
-    }, [isLast]);
 
     // Dynamic Header Logic: Use the latest iteration's summary/label
     const iterations = group.iterations;
@@ -297,9 +245,9 @@ export const LiveExecutionMonitor: React.FC<LiveExecutionMonitorProps> = ({ prog
                         };
                         // Do NOT return here. For SEQUENCE groups, the headerStep is often also in the steps array.
                         // We must continue to update the body steps below so the UI (which renders steps) updates.
-                        // If Loop Condition is FALSE (Loop Finished) or explicitly stopped, mark group as inactive
+                        // If Loop Condition is FALSE (Loop Finished) or explicitly stopped OR FAILED, mark group as inactive
                         // This ensures subsequent blocks (like END or what follows) start a NEW group instead of nesting inside.
-                        if (data.output === false || (data.output && data.output.status === 'MAX_ITERATIONS')) {
+                        if (data.success === false || data.output === false || (data.output && data.output.status === 'MAX_ITERATIONS')) {
                             currentGroup.isActive = false;
                         }
                     }
