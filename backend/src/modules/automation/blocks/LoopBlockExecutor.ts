@@ -182,10 +182,13 @@ export class LoopBlockExecutor implements IBlockExecutor {
                         break;
                     }
                     case '<': {
+                        // FIX: For `<`, tolerance should SUBTRACT to define the lower bound of truth.
+                        // "sensor < target" with tolerance means: sensor < (target - tolerance)
+                        // This stops the loop EARLY when sensor enters the truth range.
                         if (tolerance > 0) {
-                            const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
-                                ? Number(right) + tolerance
-                                : Number(right);
+                            const effectiveRight = (toleranceMode === 'upper')
+                                ? Number(right) + tolerance  // Upper: Expand upward
+                                : Number(right) - tolerance; // Lower/Symmetric: Contract downward
                             conditionResult = Number(left) < effectiveRight;
                         } else {
                             conditionResult = Number(left) < Number(right);
@@ -204,10 +207,11 @@ export class LoopBlockExecutor implements IBlockExecutor {
                         break;
                     }
                     case '<=': {
+                        // FIX: Same as `<`, subtract tolerance for Lower/Symmetric.
                         if (tolerance > 0) {
-                            const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
-                                ? Number(right) + tolerance
-                                : Number(right);
+                            const effectiveRight = (toleranceMode === 'upper')
+                                ? Number(right) + tolerance  // Upper: Expand upward
+                                : Number(right) - tolerance; // Lower/Symmetric: Contract downward
                             conditionResult = Number(left) <= effectiveRight;
                         } else {
                             conditionResult = Number(left) <= Number(right);
