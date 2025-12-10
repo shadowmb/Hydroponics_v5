@@ -43,20 +43,64 @@ export class IfBlockExecutor implements IBlockExecutor {
         }
 
         switch (operator) {
-            case '==':
+            case '==': {
+                let conditionResult = false;
+
+                // Get Tolerance Mode
+                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
+                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
+                    : undefined;
+                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined; // 'lower', 'upper', or undefined (symmetric)
+
                 if (tolerance > 0) {
-                    result = Math.abs(Number(left) - Number(right)) <= tolerance;
+                    const diff = Number(left) - Number(right);
+
+                    if (toleranceMode === 'lower') {
+                        // Allow Lower Only: [Target - Tol, Target] -> diff must be between -Tol and 0 (Target >= Left >= Target-Tol)
+                        // Actually logic: LEFT should be >= (RIGHT - TOL) AND LEFT <= RIGHT
+                        // diff = LEFT - RIGHT. 
+                        // LEFT - RIGHT >= -TOL  => diff >= -tolerance
+                        // LEFT - RIGHT <= 0     => diff <= 0
+                        conditionResult = diff >= -tolerance && diff <= 0.000001; // small epsilon for float comparison?
+                    } else if (toleranceMode === 'upper') {
+                        // Allow Upper Only: [Target, Target + Tol]
+                        // LEFT >= RIGHT AND LEFT <= RIGHT + TOL
+                        // diff >= 0 AND diff <= tolerance
+                        conditionResult = diff >= -0.000001 && diff <= tolerance;
+                    } else {
+                        // Symmetric (Default)
+                        conditionResult = Math.abs(diff) <= tolerance;
+                    }
                 } else {
-                    result = left == right;
+                    conditionResult = left == right;
                 }
+                result = conditionResult;
                 break;
-            case '!=':
+            }
+            case '!=': {
+                // Logic is inverted '=='
+                let isEqual = false;
+                // Get Tolerance Mode (Copy from above)
+                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
+                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
+                    : undefined;
+                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
+
                 if (tolerance > 0) {
-                    result = Math.abs(Number(left) - Number(right)) > tolerance;
+                    const diff = Number(left) - Number(right);
+                    if (toleranceMode === 'lower') {
+                        isEqual = diff >= -tolerance && diff <= 0.000001;
+                    } else if (toleranceMode === 'upper') {
+                        isEqual = diff >= -0.000001 && diff <= tolerance;
+                    } else {
+                        isEqual = Math.abs(diff) <= tolerance;
+                    }
                 } else {
-                    result = left != right;
+                    isEqual = left == right;
                 }
+                result = !isEqual;
                 break;
+            }
             case '>': result = Number(left) > Number(right); break;
             case '<': result = Number(left) < Number(right); break;
             case '>=': result = Number(left) >= Number(right); break;
