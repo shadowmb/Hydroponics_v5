@@ -174,15 +174,12 @@ export class IfBlockExecutor implements IBlockExecutor {
                 break;
             }
             case '<': {
-                // Algo: Left < Right
-                // Tolerance: "Ideally < Right, but (Right + Tol) is acceptable"
-                // Mode Upper/Symmetric: Yes, we allow going above Right by Tol.
-
+                // FIX: For `<`, tolerance should SUBTRACT to define the lower bound of truth.
+                // "sensor < target" with tolerance means: sensor < (target - tolerance)
                 if (tolerance > 0) {
-                    // If mode is Default(Symmetric) OR Upper, we effectively Raise the bar.
-                    const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
-                        ? Number(right) + tolerance
-                        : Number(right);
+                    const effectiveRight = (toleranceMode === 'upper')
+                        ? Number(right) + tolerance  // Upper: Expand upward
+                        : Number(right) - tolerance; // Lower/Symmetric: Contract downward
 
                     result = Number(left) < effectiveRight;
                 } else {
@@ -207,14 +204,11 @@ export class IfBlockExecutor implements IBlockExecutor {
                 break;
             }
             case '<=': {
-                // Algo: Left <= Right
-                // Tolerance: "Ideally <= Right, but (Right + Tol) is ok"
-                // Mode Upper/Symmetric: Apply Tol.
-
+                // FIX: Same as `<`, subtract tolerance for Lower/Symmetric.
                 if (tolerance > 0) {
-                    const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
-                        ? Number(right) + tolerance
-                        : Number(right);
+                    const effectiveRight = (toleranceMode === 'upper')
+                        ? Number(right) + tolerance  // Upper: Expand upward
+                        : Number(right) - tolerance; // Lower/Symmetric: Contract downward
 
                     result = Number(left) <= effectiveRight;
                 } else {
