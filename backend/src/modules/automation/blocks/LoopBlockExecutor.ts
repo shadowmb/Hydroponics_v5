@@ -96,12 +96,49 @@ export class LoopBlockExecutor implements IBlockExecutor {
                 }
 
                 switch (operator) {
-                    case '==':
-                        conditionResult = tolerance > 0 ? Math.abs(Number(left) - Number(right)) <= tolerance : left == right;
+                    case '==': {
+                        // Tol Mode Lookup
+                        const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
+                            ? `${value.slice(2, -2).trim()}_tolerance_mode`
+                            : undefined;
+                        const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
+
+                        if (tolerance > 0) {
+                            const diff = Number(left) - Number(right);
+                            if (toleranceMode === 'lower') {
+                                conditionResult = diff >= -tolerance && diff <= 0.000001;
+                            } else if (toleranceMode === 'upper') {
+                                conditionResult = diff >= -0.000001 && diff <= tolerance;
+                            } else {
+                                conditionResult = Math.abs(diff) <= tolerance;
+                            }
+                        } else {
+                            conditionResult = left == right;
+                        }
                         break;
-                    case '!=':
-                        conditionResult = tolerance > 0 ? Math.abs(Number(left) - Number(right)) > tolerance : left != right;
+                    }
+                    case '!=': {
+                        let isEqual = false;
+                        const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
+                            ? `${value.slice(2, -2).trim()}_tolerance_mode`
+                            : undefined;
+                        const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
+
+                        if (tolerance > 0) {
+                            const diff = Number(left) - Number(right);
+                            if (toleranceMode === 'lower') {
+                                isEqual = diff >= -tolerance && diff <= 0.000001;
+                            } else if (toleranceMode === 'upper') {
+                                isEqual = diff >= -0.000001 && diff <= tolerance;
+                            } else {
+                                isEqual = Math.abs(diff) <= tolerance;
+                            }
+                        } else {
+                            isEqual = left == right;
+                        }
+                        conditionResult = !isEqual;
                         break;
+                    }
                     case '>': conditionResult = Number(left) > Number(right); break;
                     case '<': conditionResult = Number(left) < Number(right); break;
                     case '>=': conditionResult = Number(left) >= Number(right); break;

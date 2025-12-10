@@ -500,7 +500,43 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                                                                         <>
                                                                                             <div className="w-[1px] h-5 bg-border/40 mx-0.5" />
                                                                                             <div className="flex items-center gap-1">
-                                                                                                <span className="text-muted-foreground text-xs">±</span>
+                                                                                                {/* Tolerance Mode Toggle */}
+                                                                                                <TooltipProvider>
+                                                                                                    <Tooltip>
+                                                                                                        <TooltipTrigger asChild>
+                                                                                                            <Button
+                                                                                                                variant="ghost"
+                                                                                                                size="icon"
+                                                                                                                className="h-6 w-6 p-0 hover:bg-transparent"
+                                                                                                                onClick={() => {
+                                                                                                                    const currentMode = item.overrides?.[variable.name + '_tolerance_mode'] || 'symmetric';
+                                                                                                                    let nextMode = 'symmetric';
+                                                                                                                    if (currentMode === 'symmetric') nextMode = 'lower';
+                                                                                                                    else if (currentMode === 'lower') nextMode = 'upper';
+                                                                                                                    else nextMode = 'symmetric';
+
+                                                                                                                    updateItemOverride(index, variable.name + '_tolerance_mode', nextMode);
+                                                                                                                }}
+                                                                                                            >
+                                                                                                                {(() => {
+                                                                                                                    const mode = item.overrides?.[variable.name + '_tolerance_mode'] || 'symmetric';
+                                                                                                                    if (mode === 'lower') return <ArrowDown className="h-4 w-4 text-cyan-500" />;
+                                                                                                                    if (mode === 'upper') return <ArrowUp className="h-4 w-4 text-orange-500" />;
+                                                                                                                    return <span className="text-muted-foreground text-base select-none">±</span>;
+                                                                                                                })()}
+                                                                                                            </Button>
+                                                                                                        </TooltipTrigger>
+                                                                                                        <TooltipContent side="top">
+                                                                                                            {(() => {
+                                                                                                                const mode = item.overrides?.[variable.name + '_tolerance_mode'] || 'symmetric';
+                                                                                                                if (mode === 'lower') return <p>Tolerance: <strong>Allow Lower Only</strong><br /><span className="text-xs opacity-70">(Target - Tol) to Target</span></p>;
+                                                                                                                if (mode === 'upper') return <p>Tolerance: <strong>Allow Upper Only</strong><br /><span className="text-xs opacity-70">Target to (Target + Tol)</span></p>;
+                                                                                                                return <p>Tolerance: <strong>Symmetric</strong><br /><span className="text-xs opacity-70">(Target - Tol) to (Target + Tol)</span></p>;
+                                                                                                            })()}
+                                                                                                        </TooltipContent>
+                                                                                                    </Tooltip>
+                                                                                                </TooltipProvider>
+
                                                                                                 <Input
                                                                                                     type="number"
                                                                                                     min={0}
