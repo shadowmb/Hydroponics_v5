@@ -40,6 +40,16 @@ export class IfBlockExecutor implements IBlockExecutor {
             const modeVar = `${varName}_tolerance_mode`;
             const tol = this.getVariable(ctx, tolVar);
             const mode = this.getVariable(ctx, modeVar);
+
+            // [HEAVY DEBUG] Dump context if tolerance is missing
+            if (tol === undefined) {
+                const allKeys = Object.keys(ctx.variables);
+                console.log(`[IfBlock DEBUG] Tolerance '${tolVar}' NOT found. Available keys (${allKeys.length}):`, allKeys.join(', '));
+                console.log(`[IfBlock DEBUG] Checking variants: '${tolVar}', '${tolVar.toLowerCase()}', '${tolVar.toUpperCase()}'`);
+            } else {
+                console.log(`[IfBlock DEBUG] FOUND Tolerance '${tolVar}': ${tol} (Mode: ${mode})`);
+            }
+
             return {
                 tolerance: tol !== undefined ? Number(tol) : 0,
                 mode: mode
@@ -52,6 +62,7 @@ export class IfBlockExecutor implements IBlockExecutor {
 
         // "variable" param is the name of the Left variable
         if (variable) {
+            console.log(`[IfBlock DEBUG] Checking Left Tolerance for: '${variable}'`);
             const leftTol = resolveTolerance(variable);
             if (leftTol.tolerance > 0) {
                 tolerance = leftTol.tolerance;
