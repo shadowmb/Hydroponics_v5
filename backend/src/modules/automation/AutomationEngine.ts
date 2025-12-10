@@ -190,18 +190,31 @@ export class AutomationEngine {
                         variables[name] = val;
                     }
 
-                    // Tolerance Injection: Check if there are overrides for this variable's tolerance
-                    // UI sends them as "VariableName_tolerance"
+                    // Tolerance Injection: Check and alias tolerance to the ID/Key
+                    // UI sends them as "VariableName_tolerance", but we need "ID_tolerance" accessible
                     if (name) {
-                        const tolKey = `${name}_tolerance`;
-                        const tolModeKey = `${name}_tolerance_mode`;
+                        const nameTol = `${name}_tolerance`;
+                        const nameMode = `${name}_tolerance_mode`;
 
-                        // Check exact name match in overrides
-                        if (overrides[tolKey] !== undefined) {
-                            variables[tolKey] = overrides[tolKey];
+                        const idTol = `${key}_tolerance`;
+                        const idMode = `${key}_tolerance_mode`;
+
+                        // 1. Check for overrides using the Readable Name (most common from UI)
+                        if (overrides[nameTol] !== undefined) {
+                            variables[nameTol] = overrides[nameTol]; // Keep readable ver
+                            variables[idTol] = overrides[nameTol];   // ALIAS TO ID (Critical Fix)
                         }
-                        if (overrides[tolModeKey] !== undefined) {
-                            variables[tolModeKey] = overrides[tolModeKey];
+                        if (overrides[nameMode] !== undefined) {
+                            variables[nameMode] = overrides[nameMode];
+                            variables[idMode] = overrides[nameMode];
+                        }
+
+                        // 2. Check for overrides using the ID directly (unlikely but possible)
+                        if (overrides[idTol] !== undefined) {
+                            variables[idTol] = overrides[idTol];
+                        }
+                        if (overrides[idMode] !== undefined) {
+                            variables[idMode] = overrides[idMode];
                         }
                     }
                 }
