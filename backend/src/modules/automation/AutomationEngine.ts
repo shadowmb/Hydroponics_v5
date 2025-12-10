@@ -189,6 +189,21 @@ export class AutomationEngine {
                     if (v.id && name) {
                         variables[name] = val;
                     }
+
+                    // Tolerance Injection: Check if there are overrides for this variable's tolerance
+                    // UI sends them as "VariableName_tolerance"
+                    if (name) {
+                        const tolKey = `${name}_tolerance`;
+                        const tolModeKey = `${name}_tolerance_mode`;
+
+                        // Check exact name match in overrides
+                        if (overrides[tolKey] !== undefined) {
+                            variables[tolKey] = overrides[tolKey];
+                        }
+                        if (overrides[tolModeKey] !== undefined) {
+                            variables[tolModeKey] = overrides[tolModeKey];
+                        }
+                    }
                 }
             });
         }
