@@ -64,10 +64,7 @@ export class LoopBlockExecutor implements IBlockExecutor {
                     console.warn(`[LoopBlock] Variable '${varName}' not found in context.`);
                 }
 
-                const toleranceVarName = `${varName}_tolerance`;
-                if (this.getVariable(ctx, toleranceVarName) !== undefined) {
-                    // tolerance handled in tolerance check
-                }
+
             } else {
                 right = this.parseValue(value);
             }
@@ -79,14 +76,38 @@ export class LoopBlockExecutor implements IBlockExecutor {
 
             if (shouldLoop) {
                 let conditionResult = false;
-                // Need to re-resolve tolerance locally for switch
+                // Helper to resolve tolerance
+                const resolveTolerance = (varName: string) => {
+                    const tolVar = `${varName}_tolerance`;
+                    const modeVar = `${varName}_tolerance_mode`;
+                    const tol = this.getVariable(ctx, tolVar);
+                    const mode = this.getVariable(ctx, modeVar);
+                    return {
+                        tolerance: tol !== undefined ? Number(tol) : 0,
+                        mode: mode
+                    };
+                };
+
+                // 1. Check Left Side Tolerance (variable)
                 let tolerance = 0;
-                if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
-                    const varName = value.slice(2, -2).trim();
-                    const toleranceVarName = `${varName}_tolerance`;
-                    const tolVal = this.getVariable(ctx, toleranceVarName);
-                    if (tolVal !== undefined) {
-                        tolerance = Number(tolVal);
+                let toleranceMode: string | undefined = undefined;
+
+                if (variable) {
+                    const leftTol = resolveTolerance(variable);
+                    if (leftTol.tolerance > 0) {
+                        tolerance = leftTol.tolerance;
+                        toleranceMode = leftTol.mode;
+                    }
+                }
+
+                // 2. Check Right Side Tolerance (value as var)
+                // If tolerance not found on left, try right
+                if (tolerance === 0 && typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+                    const rightVarName = value.slice(2, -2).trim();
+                    const rightTol = resolveTolerance(rightVarName);
+                    if (rightTol.tolerance > 0) {
+                        tolerance = rightTol.tolerance;
+                        toleranceMode = rightTol.mode;
                     }
                 }
 
@@ -97,12 +118,6 @@ export class LoopBlockExecutor implements IBlockExecutor {
 
                 switch (operator) {
                     case '==': {
-                        // Tol Mode Lookup
-                        const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                            ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                            : undefined;
-                        const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                         if (tolerance > 0) {
                             const diff = Number(left) - Number(right);
                             if (toleranceMode === 'lower') {
@@ -119,11 +134,6 @@ export class LoopBlockExecutor implements IBlockExecutor {
                     }
                     case '!=': {
                         let isEqual = false;
-                        const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                            ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                            : undefined;
-                        const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                         if (tolerance > 0) {
                             const diff = Number(left) - Number(right);
                             if (toleranceMode === 'lower') {
@@ -140,18 +150,10 @@ export class LoopBlockExecutor implements IBlockExecutor {
                         break;
                     }
                     case '>': {
-                        // Get Tolerance Mode lookup
-                        const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                            ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                            : undefined;
-                        const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                         if (tolerance > 0) {
-                            // If mode is Default(Symmetric) OR Lower, we effectively Lower the bar.
                             const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'lower')
                                 ? Number(right) - tolerance
                                 : Number(right);
-
                             conditionResult = Number(left) > effectiveRight;
                         } else {
                             conditionResult = Number(left) > Number(right);
@@ -159,18 +161,10 @@ export class LoopBlockExecutor implements IBlockExecutor {
                         break;
                     }
                     case '<': {
-                        // Get Tolerance Mode lookup
-                        const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                            ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                            : undefined;
-                        const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                         if (tolerance > 0) {
-                            // If mode is Default(Symmetric) OR Upper, we effectively Raise the bar.
                             const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
                                 ? Number(right) + tolerance
                                 : Number(right);
-
                             conditionResult = Number(left) < effectiveRight;
                         } else {
                             conditionResult = Number(left) < Number(right);
@@ -178,18 +172,10 @@ export class LoopBlockExecutor implements IBlockExecutor {
                         break;
                     }
                     case '>=': {
-                        // Get Tolerance Mode lookup
-                        const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                            ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                            : undefined;
-                        const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                         if (tolerance > 0) {
-                            // If mode is Default(Symmetric) OR Lower, we effectively Lower the bar.
                             const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'lower')
                                 ? Number(right) - tolerance
                                 : Number(right);
-
                             conditionResult = Number(left) >= effectiveRight;
                         } else {
                             conditionResult = Number(left) >= Number(right);
@@ -197,18 +183,10 @@ export class LoopBlockExecutor implements IBlockExecutor {
                         break;
                     }
                     case '<=': {
-                        // Get Tolerance Mode lookup
-                        const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                            ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                            : undefined;
-                        const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                         if (tolerance > 0) {
-                            // If mode is Default(Symmetric) OR Upper, we effectively Raise the bar.
                             const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
                                 ? Number(right) + tolerance
                                 : Number(right);
-
                             conditionResult = Number(left) <= effectiveRight;
                         } else {
                             conditionResult = Number(left) <= Number(right);

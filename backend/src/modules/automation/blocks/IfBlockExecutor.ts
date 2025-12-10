@@ -14,7 +14,6 @@ export class IfBlockExecutor implements IBlockExecutor {
 
         // Resolve 'value' if it's a variable reference
         let right: any = value;
-        let tolerance = 0;
 
         if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
             const varName = value.slice(2, -2).trim();
@@ -23,13 +22,6 @@ export class IfBlockExecutor implements IBlockExecutor {
             // Debugging for specific user issue
             if (right === undefined) {
                 console.warn(`[IfBlock] Variable '${varName}' not found in context. Keys: ${Object.keys(ctx.variables).join(', ')}`);
-            }
-
-            // Check for tolerance associated with this variable
-            const toleranceVarName = `${varName}_tolerance`;
-            const tolVal = this.getVariable(ctx, toleranceVarName);
-            if (tolVal !== undefined) {
-                tolerance = Number(tolVal);
             }
         } else {
             right = this.parseValue(value);
@@ -42,15 +34,47 @@ export class IfBlockExecutor implements IBlockExecutor {
             console.warn(`[IfBlock] Comparison involves NaN/undefined: ${left} ${operator} ${right}`);
         }
 
+        // Create explicit helper to try resolving tolerance for a given variable name
+        const resolveTolerance = (varName: string) => {
+            const tolVar = `${varName}_tolerance`;
+            const modeVar = `${varName}_tolerance_mode`;
+            const tol = this.getVariable(ctx, tolVar);
+            const mode = this.getVariable(ctx, modeVar);
+            return {
+                tolerance: tol !== undefined ? Number(tol) : 0,
+                mode: mode
+            };
+        };
+
+        // 1. Check Left Side Tolerance
+        let tolerance = 0;
+        let toleranceMode: string | undefined = undefined;
+
+        // "variable" param is the name of the Left variable
+        if (variable) {
+            const leftTol = resolveTolerance(variable);
+            if (leftTol.tolerance > 0) {
+                tolerance = leftTol.tolerance;
+                toleranceMode = leftTol.mode;
+            }
+        }
+
+        // 2. Check Right Side Tolerance (if value is a variable {{...}})
+        // Only override if Left didn't provide tolerance (or maybe preference?)
+        // Let's assume Valid Config usually puts tolerance on the Target.
+        // If both have tolerance, Left takes precedence (arbitrary choice, but consistent).
+        if (tolerance === 0 && typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+            const rightVarName = value.slice(2, -2).trim();
+            const rightTol = resolveTolerance(rightVarName);
+            if (rightTol.tolerance > 0) {
+                tolerance = rightTol.tolerance;
+                toleranceMode = rightTol.mode;
+            }
+        }
+
         switch (operator) {
             case '==': {
                 let conditionResult = false;
-
-                // Get Tolerance Mode
-                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                    : undefined;
-                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined; // 'lower', 'upper', or undefined (symmetric)
 
                 if (tolerance > 0) {
                     const diff = Number(left) - Number(right);
@@ -58,7 +82,7 @@ export class IfBlockExecutor implements IBlockExecutor {
                     if (toleranceMode === 'lower') {
                         // Allow Lower Only: [Target - Tol, Target] -> diff must be between -Tol and 0 (Target >= Left >= Target-Tol)
                         // Actually logic: LEFT should be >= (RIGHT - TOL) AND LEFT <= RIGHT
-                        // diff = LEFT - RIGHT. 
+                        // diff = LEFT - RIGHT.
                         // LEFT - RIGHT >= -TOL  => diff >= -tolerance
                         // LEFT - RIGHT <= 0     => diff <= 0
                         conditionResult = diff >= -tolerance && diff <= 0.000001; // small epsilon for float comparison?
@@ -80,12 +104,6 @@ export class IfBlockExecutor implements IBlockExecutor {
             case '!=': {
                 // Logic is inverted '=='
                 let isEqual = false;
-                // Get Tolerance Mode (Copy from above)
-                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                    : undefined;
-                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                 if (tolerance > 0) {
                     const diff = Number(left) - Number(right);
                     if (toleranceMode === 'lower') {
@@ -108,12 +126,6 @@ export class IfBlockExecutor implements IBlockExecutor {
                 // Mode Lower/Symmetric: Yes, we allow dipping below Right by Tol.
                 // Mode Upper: No, we strict Right.
 
-                // Get Tolerance Mode
-                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                    : undefined;
-                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                 if (tolerance > 0) {
                     // If mode is Default(Symmetric) OR Lower, we effectively Lower the bar.
                     const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'lower')
@@ -130,12 +142,6 @@ export class IfBlockExecutor implements IBlockExecutor {
                 // Algo: Left < Right
                 // Tolerance: "Ideally < Right, but (Right + Tol) is acceptable"
                 // Mode Upper/Symmetric: Yes, we allow going above Right by Tol.
-
-                // Get Tolerance Mode
-                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                    : undefined;
-                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
 
                 if (tolerance > 0) {
                     // If mode is Default(Symmetric) OR Upper, we effectively Raise the bar.
@@ -154,12 +160,6 @@ export class IfBlockExecutor implements IBlockExecutor {
                 // Tolerance: "Ideally >= Right, but (Right - Tol) is ok"
                 // Mode Lower/Symmetric: Apply Tol.
 
-                // Get Tolerance Mode
-                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                    : undefined;
-                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
-
                 if (tolerance > 0) {
                     const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'lower')
                         ? Number(right) - tolerance
@@ -175,12 +175,6 @@ export class IfBlockExecutor implements IBlockExecutor {
                 // Algo: Left <= Right
                 // Tolerance: "Ideally <= Right, but (Right + Tol) is ok"
                 // Mode Upper/Symmetric: Apply Tol.
-
-                // Get Tolerance Mode
-                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
-                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
-                    : undefined;
-                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
 
                 if (tolerance > 0) {
                     const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
