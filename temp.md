@@ -1,578 +1,544 @@
-[2025-12-09 23:15:40.533 +0200] INFO: ЁЯУЬ [HistoryService] Initializing...
+[2025-12-10 09:59:27.529 +0200] INFO: ЁЯЧСя╕П Active Program Unloaded
     env: "development"
-[2025-12-09 23:15:40.724 +0200] INFO: ЁЯЪА Socket.io Initialized
+GET /api/active-program/variables called
+Variables found: {
+  '6937e322a171a54cf8810a54': [
+    {
+      name: 'Количество ГР',
+      type: 'number',
+      default: undefined,
+      unit: 'l',
+      hasTolerance: true,
+      description: 'Желаното количество в ГР',
+      cycleId: '6937e322a171a54cf8810a54',
+      flowId: 'test_gr',
+      flowName: 'Test GR',
+      flowDescription: ''
+    }
+  ]
+}
+GET /api/active-program/variables called
+Variables found: {
+  '6937e322a171a54cf8810a54': [
+    {
+      name: 'Количество ГР',
+      type: 'number',
+      default: undefined,
+      unit: 'l',
+      hasTolerance: true,
+      description: 'Желаното количество в ГР',
+      cycleId: '6937e322a171a54cf8810a54',
+      flowId: 'test_gr',
+      flowName: 'Test GR',
+      flowDescription: ''
+    }
+  ]
+}
+[2025-12-10 09:59:29.758 +0200] INFO: ЁЯУе Active Program Loaded
     env: "development"
-[2025-12-09 23:15:40.790 +0200] INFO: ЁЯХТ Scheduler Service Started
+    program: "╨У╨а "
+GET /api/active-program/variables called
+Variables found: {
+  '6937e322a171a54cf8810a54': [
+    {
+      name: 'Количество ГР',
+      type: 'number',
+      default: undefined,
+      unit: 'l',
+      hasTolerance: true,
+      description: 'Желаното количество в ГР',
+      cycleId: '6937e322a171a54cf8810a54',
+      flowId: 'test_gr',
+      flowName: 'Test GR',
+      flowDescription: ''
+    }
+  ]
+}
+GET /api/active-program/variables called
+Variables found: {
+  '6937e322a171a54cf8810a54': [
+    {
+      name: 'Количество ГР',
+      type: 'number',
+      default: undefined,
+      unit: 'l',
+      hasTolerance: true,
+      description: 'Желаното количество в ГР',
+      cycleId: '6937e322a171a54cf8810a54',
+      flowId: 'test_gr',
+      flowName: 'Test GR',
+      flowDescription: ''
+    }
+  ]
+}
+[2025-12-10 09:59:42.248 +0200] INFO: ЁЯУЭ Active Program Updated
     env: "development"
-[2025-12-09 23:15:40.793 +0200] INFO: ЁЯЪА Server running on port 3000
+[2025-12-10 09:59:43.492 +0200] INFO: тЦ╢я╕П Active Program Started
     env: "development"
-[2025-12-09 23:15:42.667 +0200] INFO: ЁЯФМ Client Connected to WebSocket
+[2025-12-10 09:59:45.045 +0200] INFO: тЪб Cycle Force Started (Time updated to Now)
     env: "development"
-    socketId: "_giBwVAkWf752we7AAAB"
-[2025-12-09 23:15:43.921 +0200] INFO: тЪб Cycle Force Started (Time updated to Now)
+    itemId: "693928610a5b0aa707f15233"
+    newTime: "09:59"
+[2025-12-10 09:59:45.050 +0200] INFO: Attempting to start cycle with sanitized steps
     env: "development"
-    itemId: "6938916dbb826d2ab2fb4160"
-    newTime: "23:15"
-[2025-12-09 23:15:43.924 +0200] INFO: Attempting to start cycle with sanitized steps
-    env: "development"
-    cycleId: "6932b9a147564095227cf802"
+    cycleId: "6937e322a171a54cf8810a54"
     steps: [
       {
-        "flowId": "testerror",
+        "flowId": "test_gr",
         "overrides": {}
       }
     ]
-[2025-12-09 23:15:43.928 +0200] INFO: ЁЯЪА Starting Cycle (Trace Overrides)
+[2025-12-10 09:59:45.055 +0200] INFO: ЁЯЪА Starting Cycle (Trace Overrides)
     env: "development"
-    cycleId: "6932b9a147564095227cf802"
-    sessionId: "6938917faa2e64918aa6aa7a"
+    cycleId: "6937e322a171a54cf8810a54"
+    sessionId: "693928710a5b0aa707f1527a"
     stepsCount: 1
     overrides: {
-      "Global 2": 99,
-      "Global 2_tolerance": 3
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 100,
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower",
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20
     }
-[2025-12-09 23:15:43.928 +0200] INFO: тЦ╢я╕П Executing Cycle Step
+[2025-12-10 09:59:45.055 +0200] INFO: тЦ╢я╕П Executing Cycle Step
     env: "development"
     step: 0
-    flowId: "testerror"
-[2025-12-09 23:15:43.928 +0200] INFO: ЁЯФз Cycle Step Overrides Resolution
+    flowId: "test_gr"
+[2025-12-10 09:59:45.055 +0200] INFO: ЁЯФз Cycle Step Overrides Resolution
     env: "development"
     step: 0
     sessionOverrides: {
-      "Global 2": 99,
-      "Global 2_tolerance": 3
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 100,
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower",
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20
     }
     finalOverrides: {
-      "Global 2": 99,
-      "Global 2_tolerance": 3
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 100,
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower",
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20
     }
-[2025-12-09 23:15:43.930 +0200] INFO: тЬи AutomationEngine Actor Initialized/Reset (Session: none)
+[2025-12-10 09:59:45.056 +0200] INFO: тЬи AutomationEngine Actor Initialized/Reset (Session: none)
     env: "development"
-[2025-12-09 23:15:43.953 +0200] INFO: ЁЯзй AutomationEngine: Input Resolution
+[2025-12-10 09:59:45.060 +0200] INFO: ЁЯзй AutomationEngine: Input Resolution
     env: "development"
     overrides: {
-      "Global 2": 99,
-      "Global 2_tolerance": 3
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 100,
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower",
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20
     }
     variablesResolved: {}
-[2025-12-09 23:15:43.956 +0200] INFO: ЁЯУе Loading Program Session
+[2025-12-10 09:59:45.063 +0200] INFO: ЁЯУе Loading Program Session
     env: "development"
-    sessionId: "6938917faa2e64918aa6aa80"
-    programId: "testerror"
+    sessionId: "693928710a5b0aa707f15280"
+    programId: "test_gr"
     variables: {
-      "global_2": 99,
-      "Global 2": 99
+      "var_1": 100,
+      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 100,
+      "global_2": 100
     }
-[2025-12-09 23:15:43.956 +0200] INFO: ЁЯЫая╕П AutomationEngine LOAD Payload
-    env: "development"
-    execContextKeys: [
-      "variables",
-      "variableDefinitions",
-      "resumeState"
-    ]
-    resumeState: {}
-[2025-12-09 23:15:43.966 +0200] INFO: Graph Navigation Trace
+[2025-12-10 09:59:45.070 +0200] INFO: Graph Navigation Trace
     env: "development"
     blockId: "start"
     edgeFound: true
-    nextBlockId: "SENSOR_READ_1765271435543"
-[2025-12-09 23:15:43.987 +0200] INFO: ЁЯФМ [HardwareService] Creating Serial Transport
+    nextBlockId: "SENSOR_READ_1765268250648"
+[2025-12-10 09:59:45.347 +0200] WARN: Block execution failed
     env: "development"
-    controllerId: "693134db23b1320394ed43b5"
-    port: "COM3"
-[2025-12-09 23:15:43.987 +0200] INFO: ЁЯФМ [SerialTransport] Connecting...
+    blockId: "SENSOR_READ_1765268250648"
+    attempt: 1
+    err: "ERR_INVALID_HEADER"
+[SensorRead] ✔️ Saved to 'var_1': 0.7907542579075368 l
+[ActuatorSet] ✔️ Set 'ON' (State: 1)
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 1 | Mode: COUNT
+[SensorRead] ✔️ Saved to 'var_1': 0.7907542579075368 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 2 | Mode: COUNT
+[2025-12-10 09:59:46.576 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
     env: "development"
-    path: "COM3"
-    baudRate: 9600
-[2025-12-09 23:15:44.046 +0200] INFO: тЬЕ [SerialTransport] Port Opened
-    env: "development"
-    path: "COM3"
-[SensorRead] ✔️ Saved to 'var_1': -241.56626506024094 l
-[2025-12-09 23:15:46.155 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "693695d9585420702157d812"
+    deviceId: "6932a99dcb81d56e0343a46d"
     strategy: "tank_volume"
-    driverUnit: "cm"
+    driverUnit: "mm"
     newUnit: "l"
-[2025-12-09 23:15:46.155 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+[2025-12-10 09:59:46.577 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
     env: "development"
-    deviceId: "693695d9585420702157d812"
-    driverId: "hc_sr04"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
     sourceUnit: "l"
-    raw: 58.7
-    value: -241.56626506024094
-[2025-12-09 23:15:46.155 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    raw: 1672
+    value: 0.7907542579075368
+[2025-12-10 09:59:46.577 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
     env: "development"
     normalized: {
-      "value": -241566.26506024093,
+      "value": 790.7542579075368,
       "baseUnit": "ml"
     }
-[2025-12-09 23:15:46.155 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+[2025-12-10 09:59:46.577 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
     env: "development"
-    deviceId: "693695d9585420702157d812"
+    deviceId: "6932a99dcb81d56e0343a46d"
     from: "l"
     to: "ml"
-    original: -241.56626506024094
-    normalized: -241566.26506024093
-[2025-12-09 23:15:46.160 +0200] INFO: Graph Navigation Trace
+    original: 0.7907542579075368
+    normalized: 790.7542579075368
+[2025-12-10 09:59:46.587 +0200] INFO: Graph Navigation Trace
     env: "development"
-    blockId: "SENSOR_READ_1765271435543"
+    blockId: "SENSOR_READ_1765268250648"
     edgeFound: true
-    nextBlockId: "IF_1765301518579"
-[2025-12-09 23:15:46.162 +0200] INFO: тЭУ IF Block Navigation Trace
+    nextBlockId: "IF_1765268300863"
+[2025-12-10 09:59:46.589 +0200] INFO: тЭУ IF Block Navigation Trace
     env: "development"
-    blockId: "IF_1765301518579"
+    blockId: "IF_1765268300863"
     result: false
     expectedHandle: "false"
-    nextBlockId: "ACTUATOR_SET_1765301557224"
-[ActuatorSet] ✔️ Set 'ON' (State: 1)
-[2025-12-09 23:15:46.235 +0200] INFO: Graph Navigation Trace
+    nextBlockId: "ACTUATOR_SET_1765270055740"
+[2025-12-10 09:59:46.645 +0200] INFO: Graph Navigation Trace
     env: "development"
-    blockId: "ACTUATOR_SET_1765301557224"
+    blockId: "ACTUATOR_SET_1765270055740"
     edgeFound: true
-    nextBlockId: "LOOP_1765301551341"
-[2025-12-09 23:15:46.236 +0200] INFO: ЁЯФД LoopBlock Debug Trace
+    nextBlockId: "LOOP_1765270134972"
+[2025-12-10 09:59:46.773 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
     env: "development"
-    blockId: "LOOP_1765301551341"
-    iteration: 1
-    interval: 2
-    limitMode: "TIME"
-    allResumeState: {}
-[SensorRead] ✔️ Saved to 'var_1': 0 l
-[2025-12-09 23:15:46.354 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "693695d9585420702157d812"
+    deviceId: "6932a99dcb81d56e0343a46d"
     strategy: "tank_volume"
-    driverUnit: "cm"
+    driverUnit: "mm"
     newUnit: "l"
-[2025-12-09 23:15:46.354 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+[2025-12-10 09:59:46.773 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
     env: "development"
-    deviceId: "693695d9585420702157d812"
-    driverId: "hc_sr04"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
     sourceUnit: "l"
-    raw: 18.6
-    value: 0
-[2025-12-09 23:15:46.354 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    raw: 1672
+    value: 0.7907542579075368
+[2025-12-10 09:59:46.773 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
     env: "development"
     normalized: {
-      "value": 0,
+      "value": 790.7542579075368,
       "baseUnit": "ml"
     }
-[2025-12-09 23:15:46.354 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+[2025-12-10 09:59:46.773 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
     env: "development"
-    deviceId: "693695d9585420702157d812"
+    deviceId: "6932a99dcb81d56e0343a46d"
     from: "l"
     to: "ml"
-    original: 0
-    normalized: 0
-[2025-12-09 23:15:46.359 +0200] INFO: Graph Navigation Trace
+    original: 0.7907542579075368
+    normalized: 790.7542579075368
+[2025-12-10 09:59:46.780 +0200] INFO: Graph Navigation Trace
     env: "development"
-    blockId: "generic_1765301602942"
+    blockId: "generic_1765270081073"
     edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765301625104"
-[2025-12-09 23:15:46.362 +0200] INFO: ЁЯФД LoopBlock Debug Trace
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[SensorRead] ✔️ Saved to 'var_1': 85.64476885644768 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 3 | Mode: COUNT
+[2025-12-10 09:59:48.969 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
     env: "development"
-    blockId: "LOOP_1765301551341"
-    iteration: 2
-    interval: 2
-    limitMode: "TIME"
-    resumeState: {
-      "iteration": 1,
-      "startTime": 1765314946236
-    }
-    allResumeState: {
-      "LOOP_1765301551341": {
-        "iteration": 1,
-        "startTime": 1765314946236
-      }
-    }
-[SensorRead] ✔️ Saved to 'var_1': -2.4096385542168544 l
-[2025-12-09 23:15:48.444 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "693695d9585420702157d812"
+    deviceId: "6932a99dcb81d56e0343a46d"
     strategy: "tank_volume"
-    driverUnit: "cm"
+    driverUnit: "mm"
     newUnit: "l"
-[2025-12-09 23:15:48.444 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+[2025-12-10 09:59:48.969 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
     env: "development"
-    deviceId: "693695d9585420702157d812"
-    driverId: "hc_sr04"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
     sourceUnit: "l"
-    raw: 19
-    value: -2.409638554216855
-[2025-12-09 23:15:48.444 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    raw: 277
+    value: 85.64476885644768
+[2025-12-10 09:59:48.969 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
     env: "development"
     normalized: {
-      "value": -2409.6385542168546,
+      "value": 85644.76885644768,
       "baseUnit": "ml"
     }
-[2025-12-09 23:15:48.444 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+[2025-12-10 09:59:48.969 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
     env: "development"
-    deviceId: "693695d9585420702157d812"
+    deviceId: "6932a99dcb81d56e0343a46d"
     from: "l"
     to: "ml"
-    original: -2.409638554216855
-    normalized: -2409.6385542168546
-[2025-12-09 23:15:48.447 +0200] INFO: Graph Navigation Trace
+    original: 85.64476885644768
+    normalized: 85644.76885644768
+[2025-12-10 09:59:48.974 +0200] INFO: Graph Navigation Trace
     env: "development"
-    blockId: "generic_1765301602942"
+    blockId: "generic_1765270081073"
     edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765301625104"
-[2025-12-09 23:15:48.448 +0200] INFO: ЁЯФД LoopBlock Debug Trace
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[2025-12-10 09:59:51.166 +0200] WARN: Block execution failed
     env: "development"
-    blockId: "LOOP_1765301551341"
-    iteration: 3
-    interval: 2
-    limitMode: "TIME"
-    resumeState: {
-      "iteration": 2,
-      "startTime": 1765314946236
-    }
-    allResumeState: {
-      "LOOP_1765301551341": {
-        "iteration": 2,
-        "startTime": 1765314946236
-      }
-    }
-[SensorRead] ✔️ Saved to 'var_1': 0 l
-[2025-12-09 23:15:50.537 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "693695d9585420702157d812"
-    strategy: "tank_volume"
-    driverUnit: "cm"
-    newUnit: "l"
-[2025-12-09 23:15:50.537 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "693695d9585420702157d812"
-    driverId: "hc_sr04"
-    sourceUnit: "l"
-    raw: 18.6
-    value: 0
-[2025-12-09 23:15:50.537 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 0,
-      "baseUnit": "ml"
-    }
-[2025-12-09 23:15:50.537 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "693695d9585420702157d812"
-    from: "l"
-    to: "ml"
-    original: 0
-    normalized: 0
-[2025-12-09 23:15:50.542 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "generic_1765301602942"
-    edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765301625104"
-[2025-12-09 23:15:50.544 +0200] INFO: ЁЯФД LoopBlock Debug Trace
-    env: "development"
-    blockId: "LOOP_1765301551341"
-    iteration: 4
-    interval: 2
-    limitMode: "TIME"
-    resumeState: {
-      "iteration": 3,
-      "startTime": 1765314946236
-    }
-    allResumeState: {
-      "LOOP_1765301551341": {
-        "iteration": 3,
-        "startTime": 1765314946236
-      }
-    }
-[SensorRead] ✔️ Saved to 'var_1': -240.96385542168673 l
-[2025-12-09 23:15:52.622 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "693695d9585420702157d812"
-    strategy: "tank_volume"
-    driverUnit: "cm"
-    newUnit: "l"
-[2025-12-09 23:15:52.622 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "693695d9585420702157d812"
-    driverId: "hc_sr04"
-    sourceUnit: "l"
-    raw: 58.6
-    value: -240.96385542168673
-[2025-12-09 23:15:52.623 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": -240963.85542168672,
-      "baseUnit": "ml"
-    }
-[2025-12-09 23:15:52.623 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "693695d9585420702157d812"
-    from: "l"
-    to: "ml"
-    original: -240.96385542168673
-    normalized: -240963.85542168672
-[2025-12-09 23:15:52.626 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "generic_1765301602942"
-    edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765301625104"
-[2025-12-09 23:15:52.628 +0200] INFO: ЁЯФД LoopBlock Debug Trace
-    env: "development"
-    blockId: "LOOP_1765301551341"
-    iteration: 5
-    interval: 2
-    limitMode: "TIME"
-    resumeState: {
-      "iteration": 4,
-      "startTime": 1765314946236
-    }
-    allResumeState: {
-      "LOOP_1765301551341": {
-        "iteration": 4,
-        "startTime": 1765314946236
-      }
-    }
-[2025-12-09 23:15:54.638 +0200] WARN: Block execution failed
-    env: "development"
-    blockId: "LOOP_1765301551341"
+    blockId: "generic_1765270081073"
     attempt: 1
-    err: "Loop timed out after 8.4s (Limit: 8s)"
-[2025-12-09 23:15:54.639 +0200] ERROR: All retries exhausted.
+    err: "ERR_INVALID_HEADER"
+[SensorRead] ✔️ Saved to 'var_1': 86.13138686131387 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 4 | Mode: COUNT
+[2025-12-10 09:59:52.314 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
     env: "development"
-    blockId: "LOOP_1765301551341"
-    policy: "GOTO_LABEL"
-[2025-12-09 23:15:54.643 +0200] INFO: тЬЕ Cycle Step Completed
-    env: "development"
-    cycleId: "6932b9a147564095227cf802"
-    step: 0
-[2025-12-09 23:15:54.643 +0200] INFO: ЁЯПБ Cycle Completed Successfully
-    env: "development"
-    sessionId: "6938917faa2e64918aa6aa7a"
-[2025-12-09 23:15:54.654 +0200] INFO: тЬЕ Active Program Cycle Marked Completed
-    env: "development"
-    cycleId: "6932b9a147564095227cf802"
-[23:16] INFO: ЁЯХТ Scheduler Tick
-    env: "development"
-[2025-12-09 23:16:12.524 +0200] INFO: тП╣я╕П Active Program Stopped (Statuses Reset)
-    env: "development"
-[2025-12-09 23:16:14.323 +0200] INFO: ЁЯЧСя╕П Active Program Unloaded
-    env: "development"
-[2025-12-09 23:16:16.756 +0200] INFO: ЁЯУе Active Program Loaded
-    env: "development"
-    program: "╨Я╤А╨╛╨│╤А╨░╨╝╨░ 01 ╨в╨Х╨б╨в"
-GET /api/active-program/variables called
-Variables found: {
-  '6932b9a147564095227cf802': [
-    {
-      name: 'Global 2',
-      type: 'number',
-      default: undefined,
-      unit: '',
-      hasTolerance: true,
-      description: undefined,
-      cycleId: '6932b9a147564095227cf802',
-      flowId: 'testerror',
-      flowName: 'TestError',
-      flowDescription: ''
-    }
-  ]
-}
-GET /api/active-program/variables called
-Variables found: {
-  '6932b9a147564095227cf802': [
-    {
-      name: 'Global 2',
-      type: 'number',
-      default: undefined,
-      unit: '',
-      hasTolerance: true,
-      description: undefined,
-      cycleId: '6932b9a147564095227cf802',
-      flowId: 'testerror',
-      flowName: 'TestError',
-      flowDescription: ''
-    }
-  ]
-}
-[2025-12-09 23:16:22.877 +0200] INFO: ЁЯУЭ Active Program Updated
-    env: "development"
-GET /api/active-program/variables called
-Variables found: {
-  '6932b9a147564095227cf802': [
-    {
-      name: 'Global 2',
-      type: 'number',
-      default: undefined,
-      unit: '',
-      hasTolerance: true,
-      description: undefined,
-      cycleId: '6932b9a147564095227cf802',
-      flowId: 'testerror',
-      flowName: 'TestError',
-      flowDescription: ''
-    }
-  ]
-}
-GET /api/active-program/variables called
-Variables found: {
-  '6932b9a147564095227cf802': [
-    {
-      name: 'Global 2',
-      type: 'number',
-      default: undefined,
-      unit: '',
-      hasTolerance: true,
-      description: undefined,
-      cycleId: '6932b9a147564095227cf802',
-      flowId: 'testerror',
-      flowName: 'TestError',
-      flowDescription: ''
-    }
-  ]
-}
-[2025-12-09 23:16:24.470 +0200] INFO: тЦ╢я╕П Active Program Started
-    env: "development"
-[2025-12-09 23:16:25.726 +0200] INFO: тЪб Cycle Force Started (Time updated to Now)
-    env: "development"
-    itemId: "693891a0aa2e64918aa6ab13"
-    newTime: "23:16"
-[2025-12-09 23:16:25.731 +0200] INFO: Attempting to start cycle with sanitized steps
-    env: "development"
-    cycleId: "6932b9a147564095227cf802"
-    steps: [
-      {
-        "flowId": "testerror",
-        "overrides": {}
-      }
-    ]
-[2025-12-09 23:16:25.734 +0200] INFO: ЁЯЪА Starting Cycle (Trace Overrides)
-    env: "development"
-    cycleId: "6932b9a147564095227cf802"
-    sessionId: "693891a9aa2e64918aa6ab60"
-    stepsCount: 1
-    overrides: {
-      "Global 2": 89,
-      "Global 2_tolerance": 5
-    }
-[2025-12-09 23:16:25.734 +0200] INFO: тЦ╢я╕П Executing Cycle Step
-    env: "development"
-    step: 0
-    flowId: "testerror"
-[2025-12-09 23:16:25.734 +0200] INFO: ЁЯФз Cycle Step Overrides Resolution
-    env: "development"
-    step: 0
-    sessionOverrides: {
-      "Global 2": 89,
-      "Global 2_tolerance": 5
-    }
-    finalOverrides: {
-      "Global 2": 89,
-      "Global 2_tolerance": 5
-    }
-[2025-12-09 23:16:25.735 +0200] INFO: тЬи AutomationEngine Actor Initialized/Reset (Session: none)
-    env: "development"
-[2025-12-09 23:16:25.738 +0200] INFO: ЁЯзй AutomationEngine: Input Resolution
-    env: "development"
-    overrides: {
-      "Global 2": 89,
-      "Global 2_tolerance": 5
-    }
-    variablesResolved: {}
-[2025-12-09 23:16:25.741 +0200] INFO: ЁЯУе Loading Program Session
-    env: "development"
-    sessionId: "693891a9aa2e64918aa6ab66"
-    programId: "testerror"
-    variables: {
-      "global_2": 89,
-      "Global 2": 89
-    }
-[2025-12-09 23:16:25.741 +0200] INFO: ЁЯЫая╕П AutomationEngine LOAD Payload
-    env: "development"
-    execContextKeys: [
-      "variables",
-      "variableDefinitions",
-      "resumeState"
-    ]
-    resumeState: {}
-[2025-12-09 23:16:25.747 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "start"
-    edgeFound: true
-    nextBlockId: "SENSOR_READ_1765271435543"
-[SensorRead] ✔️ Saved to 'var_1': 0 l
-[2025-12-09 23:16:25.829 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "693695d9585420702157d812"
+    deviceId: "6932a99dcb81d56e0343a46d"
     strategy: "tank_volume"
-    driverUnit: "cm"
+    driverUnit: "mm"
     newUnit: "l"
-[2025-12-09 23:16:25.829 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+[2025-12-10 09:59:52.314 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
     env: "development"
-    deviceId: "693695d9585420702157d812"
-    driverId: "hc_sr04"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
     sourceUnit: "l"
-    raw: 18.6
-    value: 0
-[2025-12-09 23:16:25.830 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    raw: 269
+    value: 86.13138686131387
+[2025-12-10 09:59:52.314 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
     env: "development"
     normalized: {
-      "value": 0,
+      "value": 86131.38686131388,
       "baseUnit": "ml"
     }
-[2025-12-09 23:16:25.830 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+[2025-12-10 09:59:52.314 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
     env: "development"
-    deviceId: "693695d9585420702157d812"
+    deviceId: "6932a99dcb81d56e0343a46d"
     from: "l"
     to: "ml"
-    original: 0
-    normalized: 0
-[2025-12-09 23:16:25.834 +0200] INFO: Graph Navigation Trace
+    original: 86.13138686131387
+    normalized: 86131.38686131388
+[2025-12-10 09:59:52.319 +0200] INFO: Graph Navigation Trace
     env: "development"
-    blockId: "SENSOR_READ_1765271435543"
+    blockId: "generic_1765270081073"
     edgeFound: true
-    nextBlockId: "IF_1765301518579"
-[2025-12-09 23:16:25.835 +0200] INFO: тЭУ IF Block Navigation Trace
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[2025-12-10 09:59:54.510 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
     env: "development"
-    blockId: "IF_1765301518579"
-    result: false
-    expectedHandle: "false"
-    nextBlockId: "ACTUATOR_SET_1765301557224"
-[ActuatorSet] ✔️ Set 'ON' (State: 1)
-[2025-12-09 23:16:25.906 +0200] INFO: Graph Navigation Trace
+    deviceId: "6932a99dcb81d56e0343a46d"
+    strategy: "tank_volume"
+    driverUnit: "mm"
+    newUnit: "l"
+[2025-12-10 09:59:54.510 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
     env: "development"
-    blockId: "ACTUATOR_SET_1765301557224"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
+    sourceUnit: "l"
+    raw: 261
+    value: 86.61800486618004
+[2025-12-10 09:59:54.510 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 86618.00486618004,
+      "baseUnit": "ml"
+    }
+[2025-12-10 09:59:54.510 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    from: "l"
+    to: "ml"
+    original: 86.61800486618004
+    normalized: 86618.00486618004
+[SensorRead] ✔️ Saved to 'var_1': 86.61800486618004 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 5 | Mode: COUNT
+[2025-12-10 09:59:54.517 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "generic_1765270081073"
     edgeFound: true
-    nextBlockId: "LOOP_1765301551341"
-[2025-12-09 23:16:25.907 +0200] INFO: ЁЯФД LoopBlock Debug Trace
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[SensorRead] ✔️ Saved to 'var_1': 90.93673965936739 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 6 | Mode: COUNT
+[2025-12-10 09:59:56.814 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
     env: "development"
-    blockId: "LOOP_1765301551341"
-    iteration: 5
-    interval: 2
-    limitMode: "TIME"
-    resumeState: {
-      "iteration": 4,
-      "startTime": 1765314946236
+    deviceId: "6932a99dcb81d56e0343a46d"
+    strategy: "tank_volume"
+    driverUnit: "mm"
+    newUnit: "l"
+[2025-12-10 09:59:56.814 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
+    sourceUnit: "l"
+    raw: 190
+    value: 90.93673965936739
+[2025-12-10 09:59:56.815 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 90936.73965936739,
+      "baseUnit": "ml"
     }
-    allResumeState: {
-      "LOOP_1765301551341": {
-        "iteration": 4,
-        "startTime": 1765314946236
-      }
+[2025-12-10 09:59:56.815 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    from: "l"
+    to: "ml"
+    original: 90.93673965936739
+    normalized: 90936.73965936739
+[2025-12-10 09:59:56.820 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "generic_1765270081073"
+    edgeFound: true
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[SensorRead] ✔️ Saved to 'var_1': 99.39172749391727 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 7 | Mode: COUNT
+[2025-12-10 09:59:59.014 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    strategy: "tank_volume"
+    driverUnit: "mm"
+    newUnit: "l"
+[2025-12-10 09:59:59.014 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
+    sourceUnit: "l"
+    raw: 51
+    value: 99.39172749391727
+[2025-12-10 09:59:59.014 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 99391.72749391728,
+      "baseUnit": "ml"
     }
-[2025-12-09 23:16:27.919 +0200] WARN: Block execution failed
+[2025-12-10 09:59:59.014 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
     env: "development"
-    blockId: "LOOP_1765301551341"
-    attempt: 1
-    err: "Loop timed out after 41.7s (Limit: 8s)"
-[2025-12-09 23:16:27.919 +0200] ERROR: All retries exhausted.
+    deviceId: "6932a99dcb81d56e0343a46d"
+    from: "l"
+    to: "ml"
+    original: 99.39172749391727
+    normalized: 99391.72749391728
+[2025-12-10 09:59:59.019 +0200] INFO: Graph Navigation Trace
     env: "development"
-    blockId: "LOOP_1765301551341"
-    policy: "GOTO_LABEL"
-[2025-12-09 23:16:27.923 +0200] INFO: тЬЕ Cycle Step Completed
+    blockId: "generic_1765270081073"
+    edgeFound: true
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[10:00] INFO: ЁЯХТ Scheduler Tick
     env: "development"
-    cycleId: "6932b9a147564095227cf802"
+[2025-12-10 10:00:01.308 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    strategy: "tank_volume"
+    driverUnit: "mm"
+    newUnit: "l"
+[2025-12-10 10:00:01.308 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
+    sourceUnit: "l"
+    raw: 1690
+    value: -0.3041362530413636
+[2025-12-10 10:00:01.308 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": -304.1362530413636,
+      "baseUnit": "ml"
+    }
+[2025-12-10 10:00:01.308 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    from: "l"
+    to: "ml"
+    original: -0.3041362530413636
+    normalized: -304.1362530413636
+[SensorRead] ✔️ Saved to 'var_1': -0.3041362530413636 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 8 | Mode: COUNT
+[2025-12-10 10:00:01.314 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "generic_1765270081073"
+    edgeFound: true
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[SensorRead] ✔️ Saved to 'var_1': 100.79075425790754 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 9 | Mode: COUNT
+[2025-12-10 10:00:03.505 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    strategy: "tank_volume"
+    driverUnit: "mm"
+    newUnit: "l"
+[2025-12-10 10:00:03.505 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
+    sourceUnit: "l"
+    raw: 28
+    value: 100.79075425790754
+[2025-12-10 10:00:03.505 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 100790.75425790754,
+      "baseUnit": "ml"
+    }
+[2025-12-10 10:00:03.505 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    from: "l"
+    to: "ml"
+    original: 100.79075425790754
+    normalized: 100790.75425790754
+[2025-12-10 10:00:03.511 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "generic_1765270081073"
+    edgeFound: true
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[2025-12-10 10:00:05.706 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    strategy: "tank_volume"
+    driverUnit: "mm"
+    newUnit: "l"
+[2025-12-10 10:00:05.706 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
+    sourceUnit: "l"
+    raw: 15
+    value: 101.58150851581509
+[2025-12-10 10:00:05.706 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 101581.50851581509,
+      "baseUnit": "ml"
+    }
+[2025-12-10 10:00:05.706 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    from: "l"
+    to: "ml"
+    original: 101.58150851581509
+    normalized: 101581.50851581509
+[SensorRead] ✔️ Saved to 'var_1': 101.58150851581509 l
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 10 | Mode: COUNT
+[2025-12-10 10:00:05.713 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "generic_1765270081073"
+    edgeFound: true
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[2025-12-10 10:00:07.915 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    strategy: "tank_volume"
+    driverUnit: "mm"
+    newUnit: "l"
+[SensorRead] ✔️ Saved to 'var_1': 100.79075425790754 l
+[2025-12-10 10:00:07.915 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    driverId: "dfrobot_a02yyuw"
+    sourceUnit: "l"
+    raw: 28
+    value: 100.79075425790754
+[2025-12-10 10:00:07.915 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 100790.75425790754,
+      "baseUnit": "ml"
+    }
+[2025-12-10 10:00:07.915 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+    env: "development"
+    deviceId: "6932a99dcb81d56e0343a46d"
+    from: "l"
+    to: "ml"
+    original: 100.79075425790754
+    normalized: 100790.75425790754
+[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 11 | Mode: COUNT
+[2025-12-10 10:00:07.953 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "generic_1765270081073"
+    edgeFound: true
+    nextBlockId: "FLOW_CONTROL_1765270111054"
+[ActuatorSet] ✔️ Set 'OFF' (State: 0)
+[2025-12-10 10:00:10.110 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "generic_1765280669388"
+    edgeFound: true
+    nextBlockId: "end"
+[2025-12-10 10:00:10.116 +0200] INFO: тЬЕ Cycle Step Completed
+    env: "development"
+    cycleId: "6937e322a171a54cf8810a54"
     step: 0
-[2025-12-09 23:16:27.923 +0200] INFO: ЁЯПБ Cycle Completed Successfully
+[2025-12-10 10:00:10.116 +0200] INFO: ЁЯПБ Cycle Completed Successfully
     env: "development"
-    sessionId: "693891a9aa2e64918aa6ab60"
-[2025-12-09 23:16:27.931 +0200] INFO: тЬЕ Active Program Cycle Marked Completed
+    sessionId: "693928710a5b0aa707f1527a"
+[2025-12-10 10:00:10.128 +0200] INFO: тЬЕ Active Program Cycle Marked Completed
     env: "development"
-    cycleId: "6932b9a147564095227cf802"
+    cycleId: "6937e322a171a54cf8810a54"
