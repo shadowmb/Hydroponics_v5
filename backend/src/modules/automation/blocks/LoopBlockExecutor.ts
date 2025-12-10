@@ -216,7 +216,11 @@ export class LoopBlockExecutor implements IBlockExecutor {
                     }
                     default: return { success: false, error: `Unknown operator: ${operator}` };
                 }
-                shouldLoop = conditionResult;
+
+                // LOGIC FIX: The loop should continue only if IT IS WITHIN LIMITS (shouldLoop=true from Step 1)
+                // AND the condition is met (conditionResult=true).
+                // Previously, this line overwrote the limit check, potentially causing infinite loops or ignoring limits.
+                shouldLoop = shouldLoop && conditionResult;
             }
         }
 
