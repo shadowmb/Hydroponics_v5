@@ -287,9 +287,17 @@ export class AutomationEngine {
     /**
      * Helper to resolve variable references in params (e.g. "{{duration}}")
      */
-    private resolveParams(params: Record<string, any>, variables: Record<string, any>): Record<string, any> {
+    private resolveParams(params: Record<string, any>, variables: Record<string, any>, blockType?: string): Record<string, any> {
         const resolved: Record<string, any> = {};
         for (const [key, value] of Object.entries(params)) {
+            // SPECIAL CASE: Don't resolve 'value' parameter for IF/LOOP blocks
+            // This is critical effectively to preserve the variable reference (e.g. "{{Global var}}")
+            // so the block executor can look up associated metadata like Tolerance.
+            if ((blockType === 'IF' || blockType === 'LOOP') && key === 'value') {
+                resolved[key] = value;
+                continue;
+            }
+
             if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
                 const varName = value.slice(2, -2).trim();
                 resolved[key] = variables[varName] !== undefined ? variables[varName] : value;
@@ -349,7 +357,7 @@ export class AutomationEngine {
 
             try {
                 if (attempts === 0) {
-                    const resolvedParamsForUI = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
+                    const resolvedParamsForUI = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type);
 
                     // Determine meaningful label
                     let label = resolvedParamsForUI.label || block.type;
@@ -374,7 +382,7 @@ export class AutomationEngine {
                     });
                 }
 
-                const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {});
+                const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type);
                 const result = await executor.execute(context.execContext, resolvedParams, signal);
 
                 if (!result.success) throw new Error(result.error || 'Block execution returned failure');
