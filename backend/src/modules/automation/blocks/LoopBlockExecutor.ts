@@ -77,11 +77,32 @@ export class LoopBlockExecutor implements IBlockExecutor {
             if (shouldLoop) {
                 let conditionResult = false;
                 // Helper to resolve tolerance
+                // Helper to resolve tolerance (Robust Case-Insensitive)
                 const resolveTolerance = (varName: string) => {
-                    const tolVar = `${varName}_tolerance`;
-                    const modeVar = `${varName}_tolerance_mode`;
-                    const tol = this.getVariable(ctx, tolVar);
-                    const mode = this.getVariable(ctx, modeVar);
+                    let tolVar = `${varName}_tolerance`;
+                    let modeVar = `${varName}_tolerance_mode`;
+
+                    let tol = this.getVariable(ctx, tolVar);
+                    let mode = this.getVariable(ctx, modeVar);
+
+                    // Case-insensitive / Fuzzy fallback
+                    if (tol === undefined) {
+                        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const targetSlug = normalize(tolVar);
+
+                        const foundKey = Object.keys(ctx.variables).find(k => normalize(k) === targetSlug);
+                        if (foundKey) {
+                            tol = ctx.variables[foundKey];
+
+                            // Try to find mode too
+                            const targetModeSlug = normalize(modeVar);
+                            const foundModeKey = Object.keys(ctx.variables).find(k => normalize(k) === targetModeSlug);
+                            if (foundModeKey) {
+                                mode = ctx.variables[foundModeKey];
+                            }
+                        }
+                    }
+
                     return {
                         tolerance: tol !== undefined ? Number(tol) : 0,
                         mode: mode

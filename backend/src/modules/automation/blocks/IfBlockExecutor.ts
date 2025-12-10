@@ -4,6 +4,9 @@ export class IfBlockExecutor implements IBlockExecutor {
     type = 'IF';
 
     async execute(ctx: ExecutionContext, params: any): Promise<BlockResult> {
+        // [HEAVY DEBUG] Dump inputs
+        console.log('[IfBlock DEBUG] Params:', JSON.stringify(params, null, 2));
+
         const { variable, operator, value } = params;
 
         if (!variable) {
@@ -35,19 +38,42 @@ export class IfBlockExecutor implements IBlockExecutor {
         }
 
         // Create explicit helper to try resolving tolerance for a given variable name
+        // Create explicit helper to try resolving tolerance for a given variable name
         const resolveTolerance = (varName: string) => {
-            const tolVar = `${varName}_tolerance`;
-            const modeVar = `${varName}_tolerance_mode`;
-            const tol = this.getVariable(ctx, tolVar);
-            const mode = this.getVariable(ctx, modeVar);
+            let tolVar = `${varName}_tolerance`;
+            let modeVar = `${varName}_tolerance_mode`;
+
+            let tol = this.getVariable(ctx, tolVar);
+            let mode = this.getVariable(ctx, modeVar);
+
+            // [HEAVY DEBUG] Case-insensitive / Fuzzy fallback
+            if (tol === undefined) {
+                // Normalizer function: lowercase + remove all non-alphanumeric (spaces, underscores, etc)
+                const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+                const targetSlug = normalize(tolVar); // e.g. "global_2_tolerance" -> "global2tolerance"
+
+                const foundKey = Object.keys(ctx.variables).find(k => normalize(k) === targetSlug);
+
+                if (foundKey) {
+                    console.log(`[IfBlock DEBUG] Fuzzy match found: '${tolVar}' -> '${foundKey}'`);
+                    tol = ctx.variables[foundKey];
+
+                    // Also try to find mode with matching pattern
+                    const targetModeSlug = normalize(modeVar);
+                    const foundModeKey = Object.keys(ctx.variables).find(k => normalize(k) === targetModeSlug);
+                    if (foundModeKey) {
+                        mode = ctx.variables[foundModeKey];
+                    }
+                }
+            }
 
             // [HEAVY DEBUG] Dump context if tolerance is missing
             if (tol === undefined) {
                 const allKeys = Object.keys(ctx.variables);
                 console.log(`[IfBlock DEBUG] Tolerance '${tolVar}' NOT found. Available keys (${allKeys.length}):`, allKeys.join(', '));
-                console.log(`[IfBlock DEBUG] Checking variants: '${tolVar}', '${tolVar.toLowerCase()}', '${tolVar.toUpperCase()}'`);
             } else {
-                console.log(`[IfBlock DEBUG] FOUND Tolerance '${tolVar}': ${tol} (Mode: ${mode})`);
+                console.log(`[IfBlock DEBUG] FOUND Tolerance: ${tol} (Mode: ${mode})`);
             }
 
             return {
@@ -75,6 +101,7 @@ export class IfBlockExecutor implements IBlockExecutor {
         // Let's assume Valid Config usually puts tolerance on the Target.
         // If both have tolerance, Left takes precedence (arbitrary choice, but consistent).
         if (tolerance === 0 && typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+            console.log('[IfBlock DEBUG] Checking Right Tolerance for:', value);
             const rightVarName = value.slice(2, -2).trim();
             const rightTol = resolveTolerance(rightVarName);
             if (rightTol.tolerance > 0) {
