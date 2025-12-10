@@ -68,12 +68,9 @@ export class IfBlockExecutor implements IBlockExecutor {
                 }
             }
 
-            // [HEAVY DEBUG] Dump context if tolerance is missing
-            if (tol === undefined) {
-                const allKeys = Object.keys(ctx.variables);
-                console.log(`[IfBlock DEBUG] Tolerance '${tolVar}' NOT found. Available keys (${allKeys.length}):`, allKeys.join(', '));
-            } else {
-                console.log(`[IfBlock DEBUG] FOUND Tolerance: ${tol} (Mode: ${mode})`);
+            // [IfBlock DEBUG] Dump context if tolerance is missing
+            if (tol !== undefined) {
+                console.log(`[IfBlock Tolerance] Applied for '${varName}': ${tol} (Mode: ${mode || 'symmetric'})`);
             }
 
             return {
