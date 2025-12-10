@@ -101,10 +101,98 @@ export class IfBlockExecutor implements IBlockExecutor {
                 result = !isEqual;
                 break;
             }
-            case '>': result = Number(left) > Number(right); break;
-            case '<': result = Number(left) < Number(right); break;
-            case '>=': result = Number(left) >= Number(right); break;
-            case '<=': result = Number(left) <= Number(right); break;
+
+            case '>': {
+                // Algo: Left > Right
+                // Tolerance: "Ideally > Right, but (Right - Tol) is acceptable"
+                // Mode Lower/Symmetric: Yes, we allow dipping below Right by Tol.
+                // Mode Upper: No, we strict Right.
+
+                // Get Tolerance Mode
+                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
+                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
+                    : undefined;
+                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
+
+                if (tolerance > 0) {
+                    // If mode is Default(Symmetric) OR Lower, we effectively Lower the bar.
+                    const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'lower')
+                        ? Number(right) - tolerance
+                        : Number(right);
+
+                    result = Number(left) > effectiveRight;
+                } else {
+                    result = Number(left) > Number(right);
+                }
+                break;
+            }
+            case '<': {
+                // Algo: Left < Right
+                // Tolerance: "Ideally < Right, but (Right + Tol) is acceptable"
+                // Mode Upper/Symmetric: Yes, we allow going above Right by Tol.
+
+                // Get Tolerance Mode
+                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
+                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
+                    : undefined;
+                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
+
+                if (tolerance > 0) {
+                    // If mode is Default(Symmetric) OR Upper, we effectively Raise the bar.
+                    const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
+                        ? Number(right) + tolerance
+                        : Number(right);
+
+                    result = Number(left) < effectiveRight;
+                } else {
+                    result = Number(left) < Number(right);
+                }
+                break;
+            }
+            case '>=': {
+                // Algo: Left >= Right
+                // Tolerance: "Ideally >= Right, but (Right - Tol) is ok"
+                // Mode Lower/Symmetric: Apply Tol.
+
+                // Get Tolerance Mode
+                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
+                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
+                    : undefined;
+                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
+
+                if (tolerance > 0) {
+                    const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'lower')
+                        ? Number(right) - tolerance
+                        : Number(right);
+
+                    result = Number(left) >= effectiveRight;
+                } else {
+                    result = Number(left) >= Number(right);
+                }
+                break;
+            }
+            case '<=': {
+                // Algo: Left <= Right
+                // Tolerance: "Ideally <= Right, but (Right + Tol) is ok"
+                // Mode Upper/Symmetric: Apply Tol.
+
+                // Get Tolerance Mode
+                const toleranceModeVarName = typeof value === 'string' && value.startsWith('{{')
+                    ? `${value.slice(2, -2).trim()}_tolerance_mode`
+                    : undefined;
+                const toleranceMode = toleranceModeVarName ? this.getVariable(ctx, toleranceModeVarName) : undefined;
+
+                if (tolerance > 0) {
+                    const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
+                        ? Number(right) + tolerance
+                        : Number(right);
+
+                    result = Number(left) <= effectiveRight;
+                } else {
+                    result = Number(left) <= Number(right);
+                }
+                break;
+            }
             default: return { success: false, error: `Unknown operator: ${operator}` };
         }
 
