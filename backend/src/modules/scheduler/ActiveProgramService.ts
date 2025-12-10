@@ -229,8 +229,8 @@ export class ActiveProgramService {
         const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
         if (!item) throw new Error('Schedule item not found');
 
-        if (item.status !== 'pending') {
-            throw new Error('Cannot update a cycle that is already running or completed');
+        if (item.status === 'running') {
+            throw new Error('Cannot update a cycle that is currently running');
         }
 
         if (updates.time) {
@@ -261,8 +261,8 @@ export class ActiveProgramService {
         const itemA = active.schedule[indexA];
         const itemB = active.schedule[indexB];
 
-        if (itemA.status !== 'pending' || itemB.status !== 'pending') {
-            throw new Error('Cannot swap cycles that are not pending');
+        if (itemA.status === 'running' || itemB.status === 'running') {
+            throw new Error('Cannot swap cycles that are running');
         }
 
         // Swap CycleID and Overrides, BUT KEEP TIME
@@ -363,8 +363,8 @@ export class ActiveProgramService {
         const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
         if (!item) throw new Error('Schedule item not found');
 
-        if (item.status !== 'pending') {
-            throw new Error('Cannot force start a cycle that is not pending');
+        if (item.status === 'running') {
+            throw new Error('Cannot force start a cycle that is currently running');
         }
 
         // Stop any currently running cycle first?
@@ -381,6 +381,7 @@ export class ActiveProgramService {
         const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
         item.time = timeString;
+        item.status = 'pending'; // Reset status so it gets picked up
         await active.save();
 
         logger.info({ itemId, newTime: timeString }, '⚡ Cycle Force Started (Time updated to Now)');

@@ -50,6 +50,8 @@ export class LoopBlockExecutor implements IBlockExecutor {
 
         let left: any;
         let right: any;
+        let tolerance = 0;
+        let toleranceMode: string | undefined = undefined;
 
         if (variable) { // Should check loop condition even if limitMode time suggests looping
             // Resolve 'left'
@@ -110,8 +112,6 @@ export class LoopBlockExecutor implements IBlockExecutor {
                 };
 
                 // 1. Check Left Side Tolerance (variable)
-                let tolerance = 0;
-                let toleranceMode: string | undefined = undefined;
 
                 if (variable) {
                     const leftTol = resolveTolerance(variable);
@@ -230,8 +230,16 @@ export class LoopBlockExecutor implements IBlockExecutor {
 
         const nextState = shouldLoop ? { iteration: currentIteration, startTime: loopStartTime } : undefined;
 
+        // Build the right-side display: show range if tolerance is applied
+        let rightDisplay = Number(right).toFixed(2);
+        if (tolerance > 0) {
+            const lower = toleranceMode === 'upper' ? Number(right) : Number(right) - tolerance;
+            const upper = toleranceMode === 'lower' ? Number(right) : Number(right) + tolerance;
+            rightDisplay = `[${lower.toFixed(0)}–${upper.toFixed(0)}]`;
+        }
+
         const summaryDetails = variable
-            ? `: ${Number(left).toFixed(2)} ${operator} ${Number(right).toFixed(2)} => ${shouldLoop ? 'TRUE' : 'FALSE'}`
+            ? `: ${Number(left).toFixed(2)} ${operator} ${rightDisplay} => ${shouldLoop ? 'TRUE' : 'FALSE'}`
             : '';
 
         return {

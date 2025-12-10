@@ -719,7 +719,7 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                         </div>
 
                                         <div className="flex gap-2">
-                                            {item.status === 'pending' && (
+                                            {item.status !== 'running' && (
                                                 <>
                                                     <Button
                                                         variant="ghost"

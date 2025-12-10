@@ -219,8 +219,14 @@ export class IfBlockExecutor implements IBlockExecutor {
             default: return { success: false, error: `Unknown operator: ${operator}` };
         }
 
-        // Create readable summary
-        const summary = `${Number(left).toFixed(2)} ${operator} ${Number(right).toFixed(2)} => ${result ? 'TRUE' : 'FALSE'}`;
+        // Create readable summary - show range if tolerance is applied
+        let rightDisplay = Number(right).toFixed(2);
+        if (tolerance > 0) {
+            const lower = toleranceMode === 'upper' ? Number(right) : Number(right) - tolerance;
+            const upper = toleranceMode === 'lower' ? Number(right) : Number(right) + tolerance;
+            rightDisplay = `[${lower.toFixed(0)}–${upper.toFixed(0)}]`;
+        }
+        const summary = `${Number(left).toFixed(2)} ${operator} ${rightDisplay} => ${result ? 'TRUE' : 'FALSE'}`;
 
         return {
             success: true,
