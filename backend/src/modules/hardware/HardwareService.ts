@@ -316,6 +316,9 @@ export class HardwareService {
             value
         }, '🔍 [HardwareService] Checking Normalization');
 
+        let baseValue = value;
+        let baseUnit = sourceUnit;
+
         if (sourceUnit) {
             try {
                 // Dynamic import with absolute path to avoid relative path hell and ts-node restrictions
@@ -331,6 +334,8 @@ export class HardwareService {
                     if (normalized.baseUnit !== sourceUnit) {
                         logger.info({ deviceId, from: sourceUnit, to: normalized.baseUnit, original: value, normalized: normalized.value }, '📏 [HardwareService] Normalized Value');
                         value = normalized.value;
+                        baseValue = normalized.value;
+                        baseUnit = normalized.baseUnit;
                         // Update the sourceUnit to reflect the new Normalized Base Unit
                         // This ensures downstream consumers (like SensorRead block) know the value is now in 'mm', not 'cm'
                         sourceUnit = normalized.baseUnit;
@@ -433,7 +438,16 @@ export class HardwareService {
             logger.warn({ deviceId, error }, '⚠️ Failed to save lastReading to DB');
         }
 
-        return { raw, value, unit: sourceUnit, details: rawResponse };
+        return {
+            raw,
+            value,
+            unit: sourceUnit,
+            details: {
+                ...(typeof rawResponse === 'object' ? rawResponse : { rawResponse }),
+                baseValue,
+                baseUnit
+            }
+        };
     }
 
     /**

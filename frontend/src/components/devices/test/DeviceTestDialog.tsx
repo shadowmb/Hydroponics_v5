@@ -389,7 +389,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                                             unit={finalUnit}
 
                                                             // Pass Base Info for "Small Display" Logic
-                                                            baseValue={isMulti ? null : rawValue} // Only showing raw for single for now unless we dig deeper
+                                                            baseValue={isMulti ? null : (multiValues?.baseValue ?? rawValue)}
                                                             baseUnit={baseUnit}
 
                                                         // Current SensorValueCard logic uses baseValue/baseUnit to trigger "Converted" view

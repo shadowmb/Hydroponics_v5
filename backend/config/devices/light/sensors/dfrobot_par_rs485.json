@@ -17,11 +17,16 @@
             "uart": 1
         }
     },
+    "hardwareLimits": {
+        "min": 0,
+        "max": 2500,
+        "unit": "µmol/m²/s"
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "MODBUS_RTU_READ",
             "valuePath": "registers",
-            "sourceUnit": "umol_m2_s",
+            "sourceUnit": "µmol/m²/s",
             "params": {
                 "slaveId": 1,
                 "funcCode": 3,

@@ -17,6 +17,11 @@
             "uart": 1
         }
     },
+    "hardwareLimits": {
+        "min": 20,
+        "max": 450,
+        "unit": "mm"
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "UART_READ_DISTANCE",

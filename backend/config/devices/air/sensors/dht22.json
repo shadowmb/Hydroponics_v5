@@ -17,6 +17,11 @@
             "digital": 1
         }
     },
+    "hardwareLimits": {
+        "min": -40,
+        "max": 80,
+        "unit": "C"
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "DHT_READ",
