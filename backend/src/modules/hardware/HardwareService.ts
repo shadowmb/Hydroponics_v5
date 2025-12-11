@@ -337,6 +337,59 @@ export class HardwareService {
 
 
 
+
+        // --- PRE-SMART VALIDATION (Physical Layer) ---
+        // Validate the sensor's physical reading (Distance, Temp, etc) BEFORE we convert it to something else (Volume).
+        // This ensures the sensor is healthy and within its operating range.
+        const driverDoc = templates.getDriver(device.config.driverId);
+        // @ts-ignore
+        const physicalUnit = driverDoc.commands?.READ?.sourceUnit;
+
+        if (physicalUnit && !isNaN(raw)) {
+            try {
+                // Dynamic import needed here as well
+                const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
+                const { normalizeValue } = require(registryPath);
+
+                const physicalNormalized = normalizeValue(raw, physicalUnit);
+
+                if (physicalNormalized) {
+                    const validation = device.config?.validation;
+                    const valueToValidate = physicalNormalized.value; // Base Unit Value (e.g. mm)
+                    const unitToValidate = physicalNormalized.baseUnit;
+
+                    logger.info({
+                        deviceId,
+                        raw,
+                        physicalUnit,
+                        baseValue: valueToValidate,
+                        baseUnit: unitToValidate
+                    }, '🛡️ [HardwareService] Pre-Smart Physical Validation');
+
+                    if (validation && (validation.range?.min !== undefined || validation.range?.max !== undefined)) {
+                        const minValid = validation.range.min === undefined || valueToValidate >= validation.range.min;
+                        const maxValid = validation.range.max === undefined || valueToValidate <= validation.range.max;
+
+                        if (!minValid || !maxValid) {
+                            logger.warn({
+                                deviceId,
+                                value: valueToValidate,
+                                unit: unitToValidate,
+                                min: validation.range.min,
+                                max: validation.range.max
+                            }, '⚠️ [HardwareService] Physical sensor value out of valid range');
+
+                            throw new Error(`Sensor value ${valueToValidate} ${unitToValidate} is out of valid range [${validation.range.min ?? '-∞'} - ${validation.range.max ?? '∞'}]`);
+                        }
+                    }
+                }
+            } catch (err: any) {
+                // If validation failed, we stop here.
+                if (err.message.includes('out of valid range')) throw err;
+                logger.warn({ err, deviceId }, '⚠️ [HardwareService] Pre-validation check failed completely');
+            }
+        }
+
         // --- Smart Conversion (Auto-Strategy) ---
         // We ask ConversionService to find the best strategy for our desired Display Unit.
         const targetUnit = device.displayUnit || device.displayUnits?.get('_primary'); // Use primary display unit as target if valid
@@ -347,7 +400,7 @@ export class HardwareService {
 
         // --- Normalization Layer ---
         // Check if driver has a sourceUnit and normalize if needed
-        const driverDoc = templates.getDriver(device.config.driverId);
+        // const driverDoc = templates.getDriver(device.config.driverId);  <-- REUSED moved var
         // @ts-ignore - sourceUnit is new, might not be in interface yet
         let sourceUnit = driverDoc.commands?.READ?.sourceUnit;
 
@@ -401,29 +454,6 @@ export class HardwareService {
                 } else {
                     logger.warn({ deviceId, sourceUnit }, '⚠️ [HardwareService] Unknown sourceUnit in driver');
                 }
-
-                // --- VALIDATION STEP (Post-Normalization) ---
-                // Validate the Base Value (e.g. mm) against configured limits
-                const validation = device.config?.validation;
-                const valueToValidate = baseValue; // Use baseValue (mm) instead of raw (cm)
-
-                if (validation && (validation.range?.min !== undefined || validation.range?.max !== undefined)) {
-                    const minValid = validation.range.min === undefined || valueToValidate >= validation.range.min;
-                    const maxValid = validation.range.max === undefined || valueToValidate <= validation.range.max;
-
-                    if (!minValid || !maxValid) {
-                        logger.warn({
-                            deviceId,
-                            value: valueToValidate,
-                            unit: baseUnit,
-                            min: validation.range.min,
-                            max: validation.range.max
-                        }, '⚠️ [HardwareService] Sensor value out of valid range');
-
-                        throw new Error(`Sensor value ${valueToValidate} ${baseUnit} is out of valid range [${validation.range.min ?? '-∞'} - ${validation.range.max ?? '∞'}]`);
-                    }
-                }
-                // --- END VALIDATION ---
 
                 // --- Display Unit Conversion ---
 

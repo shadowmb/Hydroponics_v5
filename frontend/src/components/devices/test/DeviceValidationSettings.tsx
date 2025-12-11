@@ -96,6 +96,49 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
         setIsSaving(false);
     };
 
+    // Clamping helper
+    const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
+
+    // Blur Handlers
+    const handleSamplingBlur = (field: 'count' | 'delayMs') => {
+        const val = Number(sampling[field]);
+        if (field === 'count') {
+            const clamped = clamp(val || 1, 1, 10);
+            if (clamped !== val) updateSampling('count', clamped);
+        } else {
+            const clamped = clamp(val || 0, 0, 500);
+            if (clamped !== val) updateSampling('delayMs', clamped);
+        }
+    };
+
+    const handleRangeBlur = (field: 'min' | 'max') => {
+        let val = config.range[field];
+        if (val === '' || val === undefined) return; // Allow empty
+        val = Number(val);
+
+        // Clamp to Hardware Limits if available
+        if (hardwareLimits?.min !== undefined && val < hardwareLimits.min) {
+            val = hardwareLimits.min;
+        }
+        if (hardwareLimits?.max !== undefined && val > hardwareLimits.max) {
+            val = hardwareLimits.max;
+        }
+
+        // Logic check: Min < Max
+        if (field === 'min' && config.range.max !== '' && val > Number(config.range.max)) {
+            // If Min > Max, usually we might push Max up or clamp Min down. 
+            // Simple approach: Clamp Min to Max
+            val = Number(config.range.max);
+        }
+        if (field === 'max' && config.range.min !== '' && val < Number(config.range.min)) {
+            val = Number(config.range.min);
+        }
+
+        if (val !== config.range[field]) {
+            updateRange(field, val.toString());
+        }
+    };
+
     const baseUnit = hardwareLimits?.unit || 'raw';
     const limitInfo = hardwareLimits?.min !== undefined && hardwareLimits?.max !== undefined
         ? ` ${hardwareLimits.min} - ${hardwareLimits.max} ${baseUnit}`
@@ -129,6 +172,7 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                     value={sampling.count}
                                     min={1} max={10}
                                     onChange={(e) => updateSampling('count', e.target.value)}
+                                    onBlur={() => handleSamplingBlur('count')}
                                 />
                                 <p className="text-xs text-muted-foreground">Number of readings to take (1-10)</p>
                             </div>
@@ -141,6 +185,7 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                     value={sampling.delayMs}
                                     min={0} max={500} step={10}
                                     onChange={(e) => updateSampling('delayMs', e.target.value)}
+                                    onBlur={() => handleSamplingBlur('delayMs')}
                                 />
                                 <p className="text-xs text-muted-foreground">Pause between samples (0-500ms)</p>
                             </div>
@@ -177,6 +222,7 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                     placeholder={hardwareLimits?.min?.toString() || "No Limit"}
                                     value={config.range.min}
                                     onChange={(e) => updateRange('min', e.target.value)}
+                                    onBlur={() => handleRangeBlur('min')}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -187,6 +233,7 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                     placeholder={hardwareLimits?.max?.toString() || "No Limit"}
                                     value={config.range.max}
                                     onChange={(e) => updateRange('max', e.target.value)}
+                                    onBlur={() => handleRangeBlur('max')}
                                 />
                             </div>
                         </div>
