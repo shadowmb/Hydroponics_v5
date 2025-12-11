@@ -1,310 +1,183 @@
-[2025-12-10 13:02:28.294 +0200] INFO: тЦ╢я╕П Active Program Started
-    env: "development"
-[2025-12-10 13:02:33.617 +0200] INFO: тЪб Cycle Force Started (Time updated to Now)
-    env: "development"
-    itemId: "6939533a32f8d6a4fbbd549b"
-    newTime: "13:02"
-[2025-12-10 13:02:33.622 +0200] INFO: Attempting to start cycle with sanitized steps
-    env: "development"
-    cycleId: "6937e322a171a54cf8810a54"
-    steps: [
-      {
-        "flowId": "test_gr",
-        "overrides": {}
-      }
-    ]
-[2025-12-10 13:02:33.626 +0200] INFO: ЁЯЪА Starting Cycle (Trace Overrides)
-    env: "development"
-    cycleId: "6937e322a171a54cf8810a54"
-    sessionId: "6939534932f8d6a4fbbd54e2"
-    stepsCount: 1
-    overrides: {
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 98,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower"
-    }
-[2025-12-10 13:02:33.627 +0200] INFO: тЦ╢я╕П Executing Cycle Step
-    env: "development"
-    step: 0
-    flowId: "test_gr"
-[2025-12-10 13:02:33.627 +0200] INFO: ЁЯФз Cycle Step Overrides Resolution
-    env: "development"
-    step: 0
-    sessionOverrides: {
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 98,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower"
-    }
-    finalOverrides: {
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 98,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower"
-    }
-[2025-12-10 13:02:33.628 +0200] INFO: тЬи AutomationEngine Actor Initialized/Reset (Session: none)
-    env: "development"
-[2025-12-10 13:02:33.633 +0200] INFO: ЁЯзй AutomationEngine: Input Resolution
-    env: "development"
-    overrides: {
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 98,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower"
-    }
-    variablesResolved: {}
-[2025-12-10 13:02:33.638 +0200] INFO: ЁЯУе Loading Program Session
-    env: "development"
-    sessionId: "6939534932f8d6a4fbbd54e8"
-    programId: "test_gr"
-    variables: {
-      "var_1": 98,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а": 98,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance": 20,
-      "var_1_tolerance": 20,
-      "╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨У╨а_tolerance_mode": "lower",
-      "var_1_tolerance_mode": "lower",
-      "global_2": 98,
-      "global_2_tolerance": 20,
-      "global_2_tolerance_mode": "lower"
-    }
-[2025-12-10 13:02:33.645 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "start"
-    edgeFound: true
-    nextBlockId: "SENSOR_READ_1765268250648"
-[SensorRead] ✔️ Saved to 'var_1': 0.48661800486617324 l
-[IfBlock DEBUG] Params: {
-  "label": "Condition (IF)",
-  "operator": ">=",
-  "onFailure": "STOP",
-  "errorNotification": false,
-  "hasError": false,
-  "variable": "var_1",
-  "value": "{{global_2}}",
-  "_blockId": "IF_1765268300863"
+Dashboard Redesign — Implementation Plan
+Преработка на Dashboard страницата за Hydroponics v5 с цел по-информативен, професионален и функционален начален екран.
+
+Цел
+Dashboard-ът трябва да отговаря на 3 ключови въпроса за 5 секунди:
+
+Работи ли системата? → Status cards
+Какво прави в момента? → Active Program с детайли
+Какви са ключовите параметри? → Pinned Sensors
+Има ли нещо, което изисква внимание? → Alerts panel
+Визуална структура
+┌─────────────────────────────────────────────────────────┐
+│  Control Panel                         [21:38]  [⚙️]   │
+├─────────────────────────────────────────────────────────┤
+│  [System Status] [Active Devices] [Program Uptime]     │
+├─────────────────────────────────────────────────────────┤
+│  Active Program                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ Програма 01 ТЕСТ                    [RUNNING]   │   │
+│  │ ▸ Текущ: Watering Cycle @ 14:30                 │   │
+│  │ ▹ Следващ: Feeding @ 18:00                      │   │
+│  │ ●───●───○───○───○  Progress: 2/5 cycles         │   │
+│  │ [⏸ Pause] [⏹ Stop] [↗ Manage]                  │   │
+│  └─────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────┤
+│  📊 Quick Stats                                         │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
+│  │🌡️ 24.5°C │ │💧 pH 6.2 │ │⚡ EC 1.8 │ │📏 85%    │   │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
+├─────────────────────────────────────────────────────────┤
+│  🔔 System Alerts                                       │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ ✅ Системата работи нормално                     │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+Предложени промени
+Фаза 1: Backend подготовка
+[MODIFY] 
+Device.ts
+Какво: Добавяне на две нови полета за dashboard pinning.
+
+Защо: Позволява на потребителя да избере кои сензори да се показват на dashboard-а.
+
+Полета:
+
+dashboardPinned: boolean — дали устройството е "закачено" на dashboard
+dashboardOrder: number — позиция в grid-а (0-5)
+[MODIFY] 
+hardwareRoutes.ts
+Какво: Нов endpoint GET /api/devices/pinned за извличане само на dashboard devices.
+
+Защо: Оптимизира заявката — dashboard-ът не зарежда всички устройства, а само избраните.
+
+Допълнително: Endpoint за PATCH /api/devices/:id/pin за toggle на pinned статус.
+
+Фаза 2: Frontend компоненти
+[NEW] 
+PinnedSensorsGrid.tsx
+Какво: Нов компонент за показване на избраните сензори в grid layout.
+
+Защо: Изолира логиката за sensor cards от основния Dashboard.
+
+Структура:
+
+Приема devices: IDevice[] като prop
+Показва 4-6 карти в responsive grid (2x2 или 3x2)
+Всяка карта съдържа: икона, име, стойност, единица, last update
+Празно състояние: "Няма избрани сензори" + бутон за настройки
+Real-time: Слуша Socket.io event device:data за актуализации.
+
+[NEW] 
+SensorCard.tsx
+Какво: Малък компонент за единична sensor карта.
+
+Защо: Reusable, лесен за стилизиране и тестване.
+
+Визуални състояния:
+
+Normal: Стандартен вид
+Stale: Ако lastUpdate > 5 min → избледнял вид + "No recent data"
+Error: Ако device е offline → сива карта + warning icon
+[NEW] 
+AlertsPanel.tsx
+Какво: Placeholder компонент за системни alerts.
+
+Защо: Подготвя UI структурата за бъдещ AlertService.
+
+Фаза 1 (сега):
+
+Показва "Системата работи нормално" ако няма грешки
+Филтрира logs от store за level === 'error' от последните 30 минути
+Показва failed cycles от ActiveProgram.schedule
+Фаза 2 (бъдеще):
+
+Интеграция с dedicated AlertService
+Threshold-based alerts от sensor readings
+[NEW] 
+DashboardSettingsDialog.tsx
+Какво: Dialog за конфигуриране на dashboard изгледа.
+
+Защо: Дава гъвкавост на потребителя без да претоварва основния UI.
+
+Съдържание:
+
+Списък с всички сензори + checkboxes за pin/unpin
+Максимум 6 избрани (валидация)
+Drag & drop за подреждане (опционално, v2)
+Save/Cancel бутони
+Storage: LocalStorage за бърза имплементация.
+
+[MODIFY] 
+ActiveProgramDashboard.tsx
+Какво: Подобряване с повече информация и progress indicator.
+
+Промени:
+
+Добавяне на "Текущ цикъл" — показва името и часа на running cycle
+Progress indicator — визуална лента/точки за напредъка (завършени/общо цикли)
+По-добър статус display — цветни badges за RUNNING/PAUSED/STOPPED/ERROR
+Защо: Дава мигновен контекст какво се случва с програмата.
+
+Фаза 3: Dashboard интеграция
+[MODIFY] 
+Dashboard.tsx
+Какво: Преструктуриране на основния layout.
+
+Промени:
+
+Header: Добавяне на ⚙️ Settings бутон
+Status Cards: Замяна на "Session Uptime" с "Program Uptime"
+Active Program: Използване на подобрения <ActiveProgramDashboard />
+Quick Stats: Добавяне на <PinnedSensorsGrid />
+Alerts: Добавяне на <AlertsPanel />
+Recent Activity: Премахване или преместване в отделен таб
+Responsive:
+
+Desktop: 2-3 колони за sensor cards
+Tablet: 2 колони
+Mobile: 1 колона
+[NEW] 
+dashboardSettings.ts
+Какво: Utility функции за LocalStorage persistence.
+
+Функции:
+
+getDashboardSettings(): DashboardSettings
+saveDashboardSettings(settings: DashboardSettings)
+getDefaultSettings(): DashboardSettings
+Интерфейс:
+
+interface DashboardSettings {
+  pinnedDeviceIds: string[]  // max 6
+  showAlerts: boolean
+  refreshInterval: number    // seconds
 }
-[IfBlock DEBUG] Checking Left Tolerance for: 'var_1'
-[IfBlock Tolerance] Applied for 'var_1': 20 (Mode: lower)
-[2025-12-10 13:02:33.795 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    strategy: "tank_volume"
-    driverUnit: "mm"
-    newUnit: "l"
-[2025-12-10 13:02:33.795 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    driverId: "dfrobot_a02yyuw"
-    sourceUnit: "l"
-    raw: 1677
-    value: 0.48661800486617324
-[2025-12-10 13:02:33.795 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 486.61800486617324,
-      "baseUnit": "ml"
-    }
-[2025-12-10 13:02:33.795 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    from: "l"
-    to: "ml"
-    original: 0.48661800486617324
-    normalized: 486.61800486617324
-[2025-12-10 13:02:33.800 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "SENSOR_READ_1765268250648"
-    edgeFound: true
-    nextBlockId: "IF_1765268300863"
-[2025-12-10 13:02:33.802 +0200] INFO: тЭУ IF Block Navigation Trace
-    env: "development"
-    blockId: "IF_1765268300863"
-    result: false
-    expectedHandle: "false"
-    nextBlockId: "ACTUATOR_SET_1765270055740"
-[ActuatorSet] ✔️ Set 'ON' (State: 1)
-[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 1 | Mode: COUNT
-[2025-12-10 13:02:33.990 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "ACTUATOR_SET_1765270055740"
-    edgeFound: true
-    nextBlockId: "LOOP_1765270134972"
-[SensorRead] ✔️ Saved to 'var_1': 0.5474452554744431 l
-[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 2 | Mode: COUNT
-[2025-12-10 13:02:34.165 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    strategy: "tank_volume"
-    driverUnit: "mm"
-    newUnit: "l"
-[2025-12-10 13:02:34.165 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    driverId: "dfrobot_a02yyuw"
-    sourceUnit: "l"
-    raw: 1676
-    value: 0.5474452554744431
-[2025-12-10 13:02:34.166 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 547.4452554744431,
-      "baseUnit": "ml"
-    }
-[2025-12-10 13:02:34.166 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    from: "l"
-    to: "ml"
-    original: 0.5474452554744431
-    normalized: 547.4452554744431
-[2025-12-10 13:02:34.184 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "generic_1765270081073"
-    edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765270111054"
-[SensorRead] ✔️ Saved to 'var_1': 74.69586374695864 l
-[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 3 | Mode: COUNT
-[2025-12-10 13:02:36.360 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    strategy: "tank_volume"
-    driverUnit: "mm"
-    newUnit: "l"
-[2025-12-10 13:02:36.360 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    driverId: "dfrobot_a02yyuw"
-    sourceUnit: "l"
-    raw: 457
-    value: 74.69586374695864
-[2025-12-10 13:02:36.361 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 74695.86374695864,
-      "baseUnit": "ml"
-    }
-[2025-12-10 13:02:36.361 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    from: "l"
-    to: "ml"
-    original: 74.69586374695864
-    normalized: 74695.86374695864
-[2025-12-10 13:02:36.367 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "generic_1765270081073"
-    edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765270111054"
-[2025-12-10 13:02:38.653 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    strategy: "tank_volume"
-    driverUnit: "mm"
-    newUnit: "l"
-[2025-12-10 13:02:38.653 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    driverId: "dfrobot_a02yyuw"
-    sourceUnit: "l"
-    raw: 445
-    value: 75.4257907542579
-[2025-12-10 13:02:38.654 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 75425.7907542579,
-      "baseUnit": "ml"
-    }
-[2025-12-10 13:02:38.654 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    from: "l"
-    to: "ml"
-    original: 75.4257907542579
-    normalized: 75425.7907542579
-[SensorRead] ✔️ Saved to 'var_1': 75.4257907542579 l
-[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 4 | Mode: COUNT
-[2025-12-10 13:02:38.680 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "generic_1765270081073"
-    edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765270111054"
-[SensorRead] ✔️ Saved to 'var_1': 88.62530413625304 l
-[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 5 | Mode: COUNT
-[2025-12-10 13:02:40.855 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    strategy: "tank_volume"
-    driverUnit: "mm"
-    newUnit: "l"
-[2025-12-10 13:02:40.855 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    driverId: "dfrobot_a02yyuw"
-    sourceUnit: "l"
-    raw: 228
-    value: 88.62530413625304
-[2025-12-10 13:02:40.855 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 88625.30413625303,
-      "baseUnit": "ml"
-    }
-[2025-12-10 13:02:40.855 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    from: "l"
-    to: "ml"
-    original: 88.62530413625304
-    normalized: 88625.30413625303
-[2025-12-10 13:02:40.864 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "generic_1765270081073"
-    edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765270111054"
-[SensorRead] ✔️ Saved to 'var_1': 89.29440389294403 l
-[LoopBlock Debug] Block: LOOP_1765270134972 | Interval: 2 (number) | Iteration: 6 | Mode: COUNT
-[2025-12-10 13:02:43.149 +0200] INFO: ЁЯФД [HardwareService] Strategy Changed Output Unit
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    strategy: "tank_volume"
-    driverUnit: "mm"
-    newUnit: "l"
-[2025-12-10 13:02:43.149 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    driverId: "dfrobot_a02yyuw"
-    sourceUnit: "l"
-    raw: 217
-    value: 89.29440389294403
-[2025-12-10 13:02:43.150 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
-    env: "development"
-    normalized: {
-      "value": 89294.40389294403,
-      "baseUnit": "ml"
-    }
-[2025-12-10 13:02:43.150 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
-    env: "development"
-    deviceId: "6932a99dcb81d56e0343a46d"
-    from: "l"
-    to: "ml"
-    original: 89.29440389294403
-    normalized: 89294.40389294403
-[2025-12-10 13:02:43.165 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "generic_1765270081073"
-    edgeFound: true
-    nextBlockId: "FLOW_CONTROL_1765270111054"
-[ActuatorSet] ✔️ Set 'OFF' (State: 0)
-[2025-12-10 13:02:45.307 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "generic_1765280669388"
-    edgeFound: true
-    nextBlockId: "end"
-[2025-12-10 13:02:45.328 +0200] INFO: тЬЕ Cycle Step Completed
-    env: "development"
-    cycleId: "6937e322a171a54cf8810a54"
-    step: 0
-[2025-12-10 13:02:45.328 +0200] INFO: ЁЯПБ Cycle Completed Successfully
-    env: "development"
-    sessionId: "6939534932f8d6a4fbbd54e2"
-[2025-12-10 13:02:45.347 +0200] INFO: тЬЕ Active Program Cycle Marked Completed
-    env: "development"
-    cycleId: "6937e322a171a54cf8810a54"
+План за верификация
+Автоматични тестове
+Проверка за lint errors след всички промени
+Build verification (npm run build)
+Ръчна верификация
+Responsive test: Проверка на layout на различни екрани
+Real-time test: Промяна на sensor стойност → виждане на update в dashboard
+Settings test: Pin/unpin sensors → refresh → persist
+Empty state: Dashboard без pinned sensors → показва placeholder
+Изпълнение
+Фаза	Оценка	Приоритет
+Backend fields + endpoints	30 min	Висок
+PinnedSensorsGrid + SensorCard	45 min	Висок
+AlertsPanel (placeholder)	20 min	Среден
+DashboardSettingsDialog	40 min	Среден
+ActiveProgramDashboard подобрения	30 min	Висок
+Dashboard.tsx интеграция	30 min	Висок
+Тестване и полиране	30 min	Висок
+Общо: ~3-4 часа работа
+
+Бележки
+NOTE
+
+LocalStorage vs Database: Настройките се пазят в LocalStorage за бърза имплементация. При нужда от multi-user sync — migrate към UserSettings колекция в MongoDB.
+
+TIP
+
+Incremental approach: Може да се имплементира на етапи — първо sensor cards, после settings dialog, накрая alerts panel.

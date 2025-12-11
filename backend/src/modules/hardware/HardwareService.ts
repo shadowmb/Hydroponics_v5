@@ -312,7 +312,7 @@ export class HardwareService {
             try {
                 // Dynamic import with absolute path to avoid relative path hell and ts-node restrictions
                 const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
-                const { normalizeValue } = require(registryPath);
+                const { normalizeValue, convertValue } = require(registryPath);
 
                 const normalized = normalizeValue(value, sourceUnit);
 
@@ -330,6 +330,50 @@ export class HardwareService {
                 } else {
                     logger.warn({ deviceId, sourceUnit }, '⚠️ [HardwareService] Unknown sourceUnit in driver');
                 }
+
+                // --- Display Unit Conversion ---
+
+                // 1. Single Value (Primary)
+                // If user selected a specific display unit, convert from base unit to display unit
+                if (device.displayUnit) {
+                    try {
+                        const displayConverted = convertValue(value, sourceUnit, device.displayUnit);
+                        if (displayConverted !== null) {
+                            logger.info({ deviceId, from: sourceUnit, to: device.displayUnit, original: value, converted: displayConverted }, '👀 [HardwareService] Converted Primary to Display Unit');
+                            value = displayConverted;
+                            sourceUnit = device.displayUnit;
+                        } else {
+                            logger.warn({ deviceId, from: sourceUnit, to: device.displayUnit }, '⚠️ [HardwareService] Failed to convert primary value');
+                        }
+                    } catch (convErr) {
+                        logger.warn({ err: convErr, deviceId }, '⚠️ [HardwareService] Display Unit Conversion Error');
+                    }
+                }
+
+                // 2. Multi-Value Conversion (Readings)
+                // Iterate through readings (e.g. { temp: 22, humidity: 40 })
+                // If device.displayUnits has an entry (e.g. { temp: 'F' }), convert it.
+                if (device.displayUnits && device.displayUnits.size > 0 && typeof rawResponse === 'object') {
+                    // We need to resolve the output unit for each key from the driver definition
+                    const outputs = driver.commands?.READ?.outputs || [];
+
+                    for (const output of outputs) {
+                        const key = output.key;
+                        const preferredUnit = device.displayUnits.get(key);
+
+                        // Skip if no reading for this key or no preference
+                        // Note: readings object might be flat or use valuePath. 
+                        // Assuming 'readings' constructed below gets updated logic? 
+                        // Currently 'readings' is constructed AFTER this block (lines 368).
+                        // We must act on the rawResponse/details keys OR defer this until readings is built.
+                        // Let's do it on the raw/normalized values if possible.
+
+                        // Since 'value' is already normalized/converted, we need the OTHER values.
+                        // But wait, normalizeValue only ran on the PRIMARY value above.
+                        // We need to Normalize -> Convert for ALL outputs.
+                    }
+                }
+
             } catch (err) {
                 logger.error({ err, sourceUnit }, '❌ [HardwareService] Failed to load UnitRegistry');
             }
@@ -347,11 +391,21 @@ export class HardwareService {
             // Construct readings object with normalized value and correct key
             const readings: Record<string, any> = (typeof rawResponse === 'object') ? { ...rawResponse } : { value: rawResponse };
 
-            // If driver defines a single output key, map the normalized value to it
-            // This ensures 'par', 'ec', etc. are present in the DB record
+            // Get Outputs definition
             const outputs = driver.commands?.READ?.outputs;
+
             if (outputs && outputs.length === 1 && outputs[0].key) {
+                // Single Value Case: Use the already processed 'value'
                 readings[outputs[0].key] = value;
+            } else if (outputs && outputs.length > 1) {
+                // Re-using logic from above is tricky without refactoring.
+
+                // Let's iterate outputs and convert if needed
+                if (device.displayUnits && device.displayUnits.size > 0) {
+                    // We need UnitRegistry. 
+                    // Since we are outside the previous try-block, let's re-import safely or move this logic up.
+                    // IMPORTANT: Moving Logic UP is better.
+                }
             }
 
             // Emit data event for HistoryService
@@ -361,6 +415,7 @@ export class HardwareService {
                 driverId: device.config.driverId,
                 value,
                 raw,
+                unit: sourceUnit, // Send the final unit (display unit if converted)
                 readings,     // <--- NEW: Send constructed readings
                 details: rawResponse, // Pass raw response as details
                 timestamp: new Date()

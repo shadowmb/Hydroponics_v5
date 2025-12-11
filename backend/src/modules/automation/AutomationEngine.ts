@@ -489,8 +489,14 @@ export class AutomationEngine {
         logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');
 
         if (onFailure === 'CONTINUE') {
-            // Try to find a default outgoing edge to continue
-            const edge = context.edges.find(e => e.source === blockId);
+            // Try to find a default outgoing edge to continue, prioritizing "escape" paths
+            let edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'exit');
+            if (!edge) edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'false');
+            if (!edge) edge = context.edges.find(e => e.source === blockId && (e.sourceHandle === 'default' || !e.sourceHandle));
+
+            // Fallback: just take the first one (Legacy behavior)
+            if (!edge) edge = context.edges.find(e => e.source === blockId);
+
             return { nextBlockId: edge ? edge.target : null };
         }
 

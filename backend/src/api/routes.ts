@@ -14,14 +14,17 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/hardware/device-templates', HardwareController.getDeviceTemplates);
     app.get('/api/hardware/template-units', HardwareController.getTemplateUnits);
     app.get('/api/hardware/devices', HardwareController.getDevices);
+    app.get('/api/hardware/devices/pinned', HardwareController.getPinnedDevices);
     app.post('/api/hardware/devices', HardwareController.createDevice);
     app.put('/api/hardware/devices/:id', HardwareController.updateDevice);
+    app.patch('/api/hardware/devices/:id/pin', HardwareController.togglePinDevice);
     app.delete('/api/hardware/devices/:id', HardwareController.deleteDevice);
     app.post('/api/hardware/devices/:id/restore', HardwareController.restoreDevice);
     app.delete('/api/hardware/devices/:id/hard', HardwareController.hardDeleteDevice);
     app.post('/api/hardware/devices/:id/test', HardwareController.testDevice);
     app.get('/api/hardware/devices/:id/history', HardwareController.getDeviceHistory);
     app.post('/api/hardware/devices/:id/refresh', HardwareController.refreshDevice);
+    app.get('/api/hardware/devices/:id/available-units', HardwareController.getAvailableUnits);
 
     // Controller Management
     app.get('/api/hardware/templates', HardwareController.getTemplates);

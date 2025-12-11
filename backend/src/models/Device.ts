@@ -35,6 +35,12 @@ export interface IDevice extends SoftDeleteDocument {
     tags: string[]; // New: Tags for grouping
     group: 'Water' | 'Air' | 'Light' | 'Power' | 'Other'; // New: Strict grouping
 
+    // Dashboard Settings
+    dashboardPinned?: boolean; // Whether device is pinned to dashboard
+    dashboardOrder?: number;   // Display order on dashboard (0-5)
+    displayUnit?: string;      // User preferred display unit (Primary)
+    displayUnits?: Map<string, string>; // Multi-value overrides (key -> unit)
+
     lastReading?: {
         value: number;
         raw: number;
@@ -83,6 +89,12 @@ const DeviceSchema = new Schema<IDevice>(
 
         tags: { type: [String], default: [] }, // New: Tags for grouping
         group: { type: String, enum: ['Water', 'Air', 'Light', 'Power', 'Other'], default: 'Other' }, // New: Strict grouping
+
+        // Dashboard Settings
+        dashboardPinned: { type: Boolean, default: false },
+        dashboardOrder: { type: Number, default: 0 },
+        displayUnit: { type: String },
+        displayUnits: { type: Map, of: String },
 
         lastReading: {
             value: Number,

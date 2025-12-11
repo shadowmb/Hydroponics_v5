@@ -1,44 +1,65 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils"; // Assuming cn utility is available
 
 interface SensorValueCardProps {
-    label: string;
+    label?: string;
     value: string | number | null;
     unit?: string;
-    subValue?: string | number | null;
-    variant?: 'primary' | 'secondary' | 'raw';
+    icon?: React.ReactNode;
+    lastUpdate?: Date;
+    status?: 'normal' | 'warning' | 'error';
+    variant?: 'default' | 'primary' | 'raw';
+
+    // New Props for Dual Display
+    baseValue?: string | number | null;
+    baseUnit?: string;
+    subValue?: string | number | null; // Keep for raw compatibility
 }
 
 export const SensorValueCard: React.FC<SensorValueCardProps> = ({
-    label,
-    value,
-    unit,
-    subValue,
-    variant = 'primary'
+    label, value, unit, icon, lastUpdate, status = 'normal', variant = 'default',
+    baseValue, baseUnit, subValue
 }) => {
-    const isRaw = variant === 'raw';
-    const isSecondary = variant === 'secondary';
+    const isConverted = baseValue !== undefined && baseValue !== null && baseUnit && baseUnit !== unit;
+    const isRawVariant = variant === 'raw';
 
     return (
-        <Card className={`overflow-hidden ${isRaw ? 'bg-muted/30 border-dashed' : 'bg-card'}`}>
-            <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full min-h-[140px]">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                    {label}
-                </span>
+        <Card className={cn(
+            "overflow-hidden",
+            isRawVariant ? 'bg-muted/30 border-dashed' : 'bg-card'
+        )}>
+            <CardContent className="p-6 text-center space-y-1">
+                {label && <div className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-4">{label}</div>}
+                {icon && <div className="mb-2 flex justify-center text-primary/80">{icon}</div>}
 
-                <div className={`font-mono font-bold flex items-baseline gap-1 ${isRaw ? 'text-2xl text-muted-foreground' :
-                        isSecondary ? 'text-3xl text-foreground' :
-                            'text-4xl text-primary'
-                    }`}>
-                    {value !== null && value !== undefined ? value : '--'}
-                    {unit && <span className="text-base font-normal text-muted-foreground ml-1">{unit}</span>}
+                {/* Main Value */}
+                <div className="flex items-baseline justify-center gap-1">
+                    <span className={cn("text-4xl font-bold tracking-tight",
+                        variant === 'primary' ? "text-primary" : "text-foreground",
+                        status === 'error' && "text-destructive"
+                    )}>
+                        {value ?? '--'}
+                    </span>
+                    {unit && <span className="text-sm text-muted-foreground font-medium">{unit}</span>}
                 </div>
 
-                {subValue !== undefined && subValue !== null && (
-                    <div className="mt-2 text-xs text-muted-foreground font-mono bg-muted/50 px-2 py-1 rounded">
+                {/* Secondary (Base) Value - Show only if different from main */}
+                {isConverted && (
+                    <div className="text-xs text-muted-foreground/60 flex items-center justify-center gap-1 mt-1">
+                        <span>Raw:</span>
+                        <span>{baseValue}</span>
+                        <span>{baseUnit}</span>
+                    </div>
+                )}
+
+                {/* Fallback for old subValue (Raw Input) usage */}
+                {!isConverted && subValue !== undefined && subValue !== null && (
+                    <div className="text-xs text-muted-foreground/50 mt-1">
                         Raw: {subValue}
                     </div>
                 )}
+
             </CardContent>
         </Card>
     );

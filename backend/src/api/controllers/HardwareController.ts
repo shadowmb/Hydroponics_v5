@@ -597,6 +597,103 @@ export class HardwareController {
         }
     }
 
+    static async getPinnedDevices(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { DeviceModel } = await import('../../models/Device');
+
+            // Get only pinned devices, sorted by dashboardOrder
+            const devices = await DeviceModel.find({ dashboardPinned: true })
+                .sort({ dashboardOrder: 1 })
+                .populate('config.driverId')
+                .limit(6); // Max 6 pinned devices
+
+            return reply.send({ success: true, data: devices });
+        } catch (error) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: 'Failed to fetch pinned devices' });
+        }
+    }
+
+    static async togglePinDevice(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { pinned, order } = req.body as { pinned: boolean; order?: number };
+            const { DeviceModel } = await import('../../models/Device');
+
+            const device = await DeviceModel.findById(id);
+            if (!device) {
+                return reply.status(404).send({ success: false, error: 'Device not found' });
+            }
+
+            // Check if we're trying to pin and already have 6 pinned
+            if (pinned) {
+                const pinnedCount = await DeviceModel.countDocuments({ dashboardPinned: true });
+                if (pinnedCount >= 6 && !device.dashboardPinned) {
+                    return reply.status(400).send({
+                        success: false,
+                        error: 'Maximum 6 devices can be pinned to dashboard'
+                    });
+                }
+            }
+
+            device.dashboardPinned = pinned;
+            if (order !== undefined) {
+                device.dashboardOrder = order;
+            }
+
+            await device.save();
+            return reply.send({ success: true, data: device });
+        } catch (error) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: 'Failed to toggle pin device' });
+        }
+    }
+
+    static async getAvailableUnits(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { DeviceModel } = await import('../../models/Device');
+            const { templates } = await import('../../modules/hardware/DeviceTemplateManager');
+            // Use require to allow weak linking or dynamic loading of StrategyRegistry if needed
+            // But usually, standard import works if we have path alias
+            const { StrategyRegistry } = require('../../../../shared/strategies/StrategyRegistry');
+
+
+            const device = await DeviceModel.findById(id);
+            if (!device) return reply.status(404).send({ success: false, error: 'Device not found' });
+
+            const driverId = String(device.config.driverId);
+            // Use getTemplate to access full metadata (uiConfig, supportedStrategies) 
+            // getDriver returns a subset focused on execution
+            const template = templates.getTemplate(driverId);
+
+            if (!template) return reply.status(404).send({ success: false, error: 'Driver template not found' });
+
+            // 1. Base Units from Driver
+            const units = new Set<string>(template.uiConfig?.units || []);
+
+            // 2. Strategy Units (only calibrated ones)
+            if (device.config.calibrations && template.supportedStrategies) {
+                for (const strategyId of template.supportedStrategies) {
+                    // Check if device has data for this strategy
+                    if (device.config.calibrations[strategyId]) {
+                        // Find strategy definition
+                        const strategyDef = StrategyRegistry.get ? StrategyRegistry.get(strategyId) : (StrategyRegistry.STRATEGIES ? StrategyRegistry.STRATEGIES[strategyId] : undefined);
+                        if (strategyDef && strategyDef.outputUnit && strategyDef.outputUnit !== 'any') {
+                            units.add(strategyDef.outputUnit);
+                        }
+                    }
+                }
+            }
+
+            return reply.send({ success: true, data: Array.from(units) });
+
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to fetch available units' });
+        }
+    }
+
     static async createDevice(req: FastifyRequest, reply: FastifyReply) {
         try {
             const body = req.body as any;
