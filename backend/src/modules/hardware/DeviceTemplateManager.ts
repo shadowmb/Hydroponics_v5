@@ -56,6 +56,7 @@ const VariantSchema = z.object({
 const DeviceTemplateSchema = z.object({
     id: z.string(),
     name: z.string(),
+    description: z.string().optional(),
     category: z.enum(['CONTROLLER', 'SENSOR', 'ACTUATOR']),
     supportedStrategies: z.array(z.string()).optional(),
     conversionStrategy: z.string().optional(),
@@ -65,6 +66,12 @@ const DeviceTemplateSchema = z.object({
     requirements: RequirementsSchema.optional(),
     variants: z.array(VariantSchema).optional(),
     initialState: z.record(z.any()).optional(),
+    hardwareLimits: z.object({
+        min: z.number().optional(),
+        max: z.number().optional(),
+        unit: z.string().optional(),
+        resolution: z.number().optional()
+    }).optional(),
     uiConfig: z.object({
         category: z.string().optional(),
         icon: z.string().optional(),

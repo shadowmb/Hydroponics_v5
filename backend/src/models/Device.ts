@@ -25,7 +25,16 @@ export interface IDevice extends SoftDeleteDocument {
         variantId?: string;
         pollInterval?: number;
         conversionStrategy?: string;
-        calibrations?: Record<string, { lastCalibrated: Date; data: any }>; // Dynamic calibration data based on strategy
+        calibrations?: Record<string, { lastCalibrated: Date; data: any }>;
+        validation?: {
+            range?: { min: number; max: number };
+            retryCount?: number;
+            retryDelayMs?: number;
+            fallbackAction?: 'error' | 'useLastValid' | 'useDefault' | 'skip';
+            defaultValue?: number;
+            staleLimit?: number;
+            staleTimeoutMs?: number;
+        };
     };
 
     metadata?: {
@@ -81,6 +90,22 @@ const DeviceSchema = new Schema<IDevice>(
                 type: Schema.Types.Mixed,
                 default: {}
             },
+            validation: {
+                range: {
+                    min: Number,
+                    max: Number
+                },
+                retryCount: { type: Number, default: 3 },
+                retryDelayMs: { type: Number, default: 100 },
+                fallbackAction: {
+                    type: String,
+                    enum: ['error', 'useLastValid', 'useDefault', 'skip'],
+                    default: 'error'
+                },
+                defaultValue: Number,
+                staleLimit: { type: Number, default: 1 },
+                staleTimeoutMs: { type: Number, default: 30000 }
+            }
         },
 
         metadata: {

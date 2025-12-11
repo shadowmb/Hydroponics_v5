@@ -34,6 +34,12 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         recommendedPins?: string[];
         capabilities?: Record<string, { label: string; icon?: string; tooltip?: string }>;
     };
+    hardwareLimits?: {
+        min?: number;
+        max?: number;
+        unit?: string;
+        resolution?: number;
+    };
     initialState?: Record<string, any>;
     variants?: {
         id: string;
@@ -79,6 +85,12 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
         tags: [{ type: String }], // System tags (e.g. ['EC', 'Conductivity'])
         recommendedPins: [{ type: String }],
         capabilities: { type: Map, of: { label: String, icon: String, tooltip: String } }
+    },
+    hardwareLimits: {
+        min: { type: Number },
+        max: { type: Number },
+        unit: { type: String },
+        resolution: { type: Number }
     },
     initialState: { type: Schema.Types.Mixed },
     variants: [{

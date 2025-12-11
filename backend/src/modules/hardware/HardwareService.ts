@@ -257,6 +257,28 @@ export class HardwareService {
             raw = 0;
         }
 
+        // --- VALIDATION STEP ---
+        // Validate the RAW/Base value BEFORE converting to display units
+        // This ensures we filter out invalid readings early
+        const validation = device.config?.validation;
+        if (validation && (validation.range?.min !== undefined || validation.range?.max !== undefined)) {
+            const minValid = validation.range.min === undefined || raw >= validation.range.min;
+            const maxValid = validation.range.max === undefined || raw <= validation.range.max;
+
+            if (!minValid || !maxValid) {
+                logger.warn({
+                    deviceId,
+                    raw,
+                    min: validation.range.min,
+                    max: validation.range.max
+                }, '⚠️ [HardwareService] Sensor value out of valid range');
+
+                // For now, throw error. Future: implement retry/fallback via SensorValidationService
+                throw new Error(`Sensor value ${raw} is out of valid range [${validation.range.min ?? '-∞'} - ${validation.range.max ?? '∞'}]`);
+            }
+        }
+        // --- END VALIDATION ---
+
         // --- Smart Conversion (Auto-Strategy) ---
         // We ask ConversionService to find the best strategy for our desired Display Unit.
         const targetUnit = device.displayUnit || device.displayUnits?.get('_primary'); // Use primary display unit as target if valid
