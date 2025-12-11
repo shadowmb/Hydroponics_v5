@@ -50,6 +50,16 @@ export interface IDeviceDriver {
     capabilities: string[];
     commands?: Record<string, any>;
     initialState?: Record<string, any>;
+    hardwareLimits?: {
+        min?: number;
+        max?: number;
+        unit?: string;
+        resolution?: number;
+    };
+    sampling?: {
+        count?: number;
+        delayMs?: number;
+    };
 
     /**
      * Translates a high-level command to a hardware packet.

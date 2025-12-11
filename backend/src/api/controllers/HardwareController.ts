@@ -990,7 +990,12 @@ export class HardwareController {
             }
 
             // Update device fields
-            Object.assign(device, body);
+            // Use set() to handle dot notation (e.g. 'config.validation') correctly
+            Object.keys(body).forEach(key => {
+                if (key !== 'hardware') { // Hardware is handled specially above
+                    device.set(key, body[key]);
+                }
+            });
             await device.save();
 
             return reply.send({ success: true, data: device });

@@ -72,6 +72,10 @@ const DeviceTemplateSchema = z.object({
         unit: z.string().optional(),
         resolution: z.number().optional()
     }).optional(),
+    sampling: z.object({
+        count: z.number().min(1).max(10).optional(),
+        delayMs: z.number().min(0).max(500).optional()
+    }).optional(),
     uiConfig: z.object({
         category: z.string().optional(),
         icon: z.string().optional(),

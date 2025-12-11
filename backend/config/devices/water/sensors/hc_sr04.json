@@ -23,6 +23,10 @@
         "max": 4000,
         "unit": "mm"
     },
+    "sampling": {
+        "count": 5,
+        "delayMs": 30
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ULTRASONIC_TRIG_ECHO",
