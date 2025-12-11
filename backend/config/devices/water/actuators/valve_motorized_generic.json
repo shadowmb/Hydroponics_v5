@@ -10,6 +10,11 @@
     "capabilities": [
         "DIGITAL_WRITE"
     ],
+    "hardwareLimits": {
+        "min": 0,
+        "max": 100000,
+        "unit": "s"
+    },
     "commands": {
         "OPEN": {
             "hardwareCmd": "DIGITAL_WRITE",

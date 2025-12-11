@@ -36,6 +36,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
 
     // New state for template info
     const [hardwareLimits, setHardwareLimits] = useState<{ min?: number, max?: number, unit?: string } | undefined>(undefined);
+    const [samplingDefaults, setSamplingDefaults] = useState<{ count: number, delayMs: number } | undefined>(undefined);
 
     useEffect(() => {
         // Get Hardware Limits & Base Unit from populated driverId (or fallback to fetching templates)
@@ -58,6 +59,14 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                     hwMin = template.hardwareLimits.min;
                     hwMax = template.hardwareLimits.max;
                     console.log('🔍 [DeviceTestDialog] Found hardwareLimits:', { baseUnit, hwMin, hwMax });
+                }
+
+                // 1b. Check for sampling defaults
+                if (template.sampling) {
+                    setSamplingDefaults({
+                        count: template.sampling.count || 1,
+                        delayMs: template.sampling.delayMs || 0
+                    });
                 }
 
                 // 2. Fallback: Try commands.READ.outputs[0].unit
@@ -389,7 +398,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                                             unit={finalUnit}
 
                                                             // Pass Base Info for "Small Display" Logic
-                                                            baseValue={isMulti ? null : rawValue} // Only showing raw for single for now unless we dig deeper
+                                                            baseValue={isMulti ? null : (multiValues?.baseValue ?? rawValue)}
                                                             baseUnit={baseUnit}
 
                                                         // Current SensorValueCard logic uses baseValue/baseUnit to trigger "Converted" view
@@ -442,12 +451,18 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                     device={device}
                                     onSave={async (newConfig) => {
                                         try {
+                                            const { sampling, ...validation } = newConfig;
+                                            const updates: any = {
+                                                "config.validation": validation
+                                            };
+                                            if (sampling) {
+                                                updates["config.sampling"] = sampling;
+                                            }
+
                                             const response = await fetch(`/api/hardware/devices/${device._id}`, {
                                                 method: 'PUT',
                                                 headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                    "config.validation": newConfig
-                                                })
+                                                body: JSON.stringify(updates)
                                             });
 
                                             if (!response.ok) throw new Error('Failed to save settings');
@@ -460,6 +475,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                         }
                                     }}
                                     hardwareLimits={hardwareLimits}
+                                    samplingDefaults={samplingDefaults}
                                 />
                             </TabsContent>
                         </div>

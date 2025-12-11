@@ -17,11 +17,16 @@
             "analog": 1
         }
     },
+    "hardwareLimits": {
+        "min": 0,
+        "max": 14000,
+        "unit": "µS/cm"
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ANALOG",
             "valuePath": "value",
-            "sourceUnit": "uS_cm",
+            "sourceUnit": "µS/cm",
             "outputs": [
                 {
                     "key": "ec",

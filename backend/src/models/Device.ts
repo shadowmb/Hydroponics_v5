@@ -35,6 +35,10 @@ export interface IDevice extends SoftDeleteDocument {
             staleLimit?: number;
             staleTimeoutMs?: number;
         };
+        sampling?: {
+            count?: number;
+            delayMs?: number;
+        };
     };
 
     metadata?: {
@@ -105,6 +109,10 @@ const DeviceSchema = new Schema<IDevice>(
                 defaultValue: Number,
                 staleLimit: { type: Number, default: 1 },
                 staleTimeoutMs: { type: Number, default: 30000 }
+            },
+            sampling: {
+                count: { type: Number, default: 1 },
+                delayMs: { type: Number, default: 0 }
             }
         },
 

@@ -16,6 +16,11 @@
             "digital": 1
         }
     },
+    "hardwareLimits": {
+        "min": -55,
+        "max": 125,
+        "unit": "C"
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ONEWIRE_READ_TEMP",

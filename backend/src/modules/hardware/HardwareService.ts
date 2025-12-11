@@ -218,37 +218,115 @@ export class HardwareService {
             }
         );
 
-        let raw = 0;
 
         // Check if Driver has a specific value path configured
         const driver = templates.getDriver(device.config.driverId);
         const valuePath = driver.commands?.READ?.valuePath;
         let valueFound = false;
 
-        if (valuePath && typeof rawResponse === 'object') {
-            const extracted = this.getValueByPath(rawResponse, valuePath);
-            if (extracted !== undefined) {
-                raw = Number(extracted);
-                valueFound = true;
-            } else {
-                logger.warn({ deviceId, valuePath, rawResponse }, '⚠️ [HardwareService] Configured valuePath not found in response, attempting auto-detect');
-            }
-        }
+        // --- BURST READ + MEDIAN FILTERING ---
+        // Check if device/template has sampling configuration
+        const samplingConfig = device.config?.sampling || driver.sampling;
+        const sampleCount = samplingConfig?.count || 1;
+        const sampleDelay = samplingConfig?.delayMs || 0;
 
-        if (!valueFound) {
-            // Fallback: Auto-detect common formats
-            if (typeof rawResponse === 'number') {
-                raw = rawResponse;
-            } else if (typeof rawResponse === 'object') {
-                if (Array.isArray(rawResponse) && rawResponse.length > 0) {
-                    raw = Number(rawResponse[0]);
-                } else if ('registers' in rawResponse && Array.isArray(rawResponse.registers) && rawResponse.registers.length > 0) {
-                    // Handle Modbus response: { ok: 1, registers: [val1, val2] }
-                    raw = Number(rawResponse.registers[0]);
-                } else if ('val' in rawResponse) raw = Number(rawResponse.val);
-                else if ('value' in rawResponse) raw = Number(rawResponse.value);
-                else if ('raw' in rawResponse) raw = Number(rawResponse.raw);
-                else raw = Number(rawResponse); // Try casting the whole object? Unlikely.
+        let raw = 0;
+
+        if (sampleCount > 1) {
+            // Burst Read Mode: Take N samples and calculate median
+            logger.info({ deviceId, sampleCount, sampleDelay }, '📊 [HardwareService] Burst Read Mode');
+
+            const samples: number[] = [];
+
+            for (let i = 0; i < sampleCount; i++) {
+                // Execute hardware command for each sample with full context
+                const sampleResponse = await this.sendCommand(
+                    deviceId,
+                    device.config.driverId,
+                    'READ',
+                    {},
+                    {
+                        pins: device.hardware?.pins
+                    }
+                );
+
+                // Extract raw value from this sample
+                let sampleRaw = 0;
+                if (valuePath && typeof sampleResponse === 'object') {
+                    const extracted = this.getValueByPath(sampleResponse, valuePath);
+                    if (extracted !== undefined) {
+                        sampleRaw = Number(extracted);
+                    }
+                } else {
+                    // Fallback auto-detect
+                    if (typeof sampleResponse === 'number') {
+                        sampleRaw = sampleResponse;
+                    } else if (typeof sampleResponse === 'object') {
+                        if (Array.isArray(sampleResponse) && sampleResponse.length > 0) {
+                            sampleRaw = Number(sampleResponse[0]);
+                        } else if ('registers' in sampleResponse && Array.isArray(sampleResponse.registers)) {
+                            sampleRaw = Number(sampleResponse.registers[0]);
+                        } else if ('val' in sampleResponse) sampleRaw = Number(sampleResponse.val);
+                        else if ('value' in sampleResponse) sampleRaw = Number(sampleResponse.value);
+                        else if ('raw' in sampleResponse) sampleRaw = Number(sampleResponse.raw);
+                    }
+                }
+
+                if (!isNaN(sampleRaw)) {
+                    samples.push(sampleRaw);
+                }
+
+                // Delay between samples (except after last one)
+                if (i < sampleCount - 1 && sampleDelay > 0) {
+                    await new Promise(resolve => setTimeout(resolve, sampleDelay));
+                }
+            }
+
+            // Calculate median
+            if (samples.length > 0) {
+                samples.sort((a, b) => a - b);
+                const mid = Math.floor(samples.length / 2);
+                raw = samples.length % 2 === 0
+                    ? (samples[mid - 1] + samples[mid]) / 2
+                    : samples[mid];
+
+                logger.info({
+                    deviceId,
+                    samples,
+                    median: raw,
+                    min: samples[0],
+                    max: samples[samples.length - 1]
+                }, '✅ [HardwareService] Median Calculated');
+            } else {
+                logger.warn({ deviceId }, '⚠️ [HardwareService] No valid samples collected');
+                raw = 0;
+            }
+        } else {
+            // Single Read Mode (original logic)
+            if (valuePath && typeof rawResponse === 'object') {
+                const extracted = this.getValueByPath(rawResponse, valuePath);
+                if (extracted !== undefined) {
+                    raw = Number(extracted);
+                    valueFound = true;
+                } else {
+                    logger.warn({ deviceId, valuePath, rawResponse }, '⚠️ [HardwareService] Configured valuePath not found in response, attempting auto-detect');
+                }
+            }
+
+            if (!valueFound) {
+                // Fallback: Auto-detect common formats
+                if (typeof rawResponse === 'number') {
+                    raw = rawResponse;
+                } else if (typeof rawResponse === 'object') {
+                    if (Array.isArray(rawResponse) && rawResponse.length > 0) {
+                        raw = Number(rawResponse[0]);
+                    } else if ('registers' in rawResponse && Array.isArray(rawResponse.registers) && rawResponse.registers.length > 0) {
+                        raw = Number(rawResponse.registers[0]);
+                    } else if ('val' in rawResponse) raw = Number(rawResponse.val);
+                    else if ('value' in rawResponse) raw = Number(rawResponse.value);
+                    else if ('raw' in rawResponse) raw = Number(rawResponse.raw);
+                    else raw = Number(rawResponse);
+                }
             }
         }
 
@@ -257,27 +335,60 @@ export class HardwareService {
             raw = 0;
         }
 
-        // --- VALIDATION STEP ---
-        // Validate the RAW/Base value BEFORE converting to display units
-        // This ensures we filter out invalid readings early
-        const validation = device.config?.validation;
-        if (validation && (validation.range?.min !== undefined || validation.range?.max !== undefined)) {
-            const minValid = validation.range.min === undefined || raw >= validation.range.min;
-            const maxValid = validation.range.max === undefined || raw <= validation.range.max;
 
-            if (!minValid || !maxValid) {
-                logger.warn({
-                    deviceId,
-                    raw,
-                    min: validation.range.min,
-                    max: validation.range.max
-                }, '⚠️ [HardwareService] Sensor value out of valid range');
 
-                // For now, throw error. Future: implement retry/fallback via SensorValidationService
-                throw new Error(`Sensor value ${raw} is out of valid range [${validation.range.min ?? '-∞'} - ${validation.range.max ?? '∞'}]`);
+
+        // --- PRE-SMART VALIDATION (Physical Layer) ---
+        // Validate the sensor's physical reading (Distance, Temp, etc) BEFORE we convert it to something else (Volume).
+        // This ensures the sensor is healthy and within its operating range.
+        const driverDoc = templates.getDriver(device.config.driverId);
+        // @ts-ignore
+        const physicalUnit = driverDoc.commands?.READ?.sourceUnit;
+
+        if (physicalUnit && !isNaN(raw)) {
+            try {
+                // Dynamic import needed here as well
+                const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
+                const { normalizeValue } = require(registryPath);
+
+                const physicalNormalized = normalizeValue(raw, physicalUnit);
+
+                if (physicalNormalized) {
+                    const validation = device.config?.validation;
+                    const valueToValidate = physicalNormalized.value; // Base Unit Value (e.g. mm)
+                    const unitToValidate = physicalNormalized.baseUnit;
+
+                    logger.info({
+                        deviceId,
+                        raw,
+                        physicalUnit,
+                        baseValue: valueToValidate,
+                        baseUnit: unitToValidate
+                    }, '🛡️ [HardwareService] Pre-Smart Physical Validation');
+
+                    if (validation && (validation.range?.min !== undefined || validation.range?.max !== undefined)) {
+                        const minValid = validation.range.min === undefined || valueToValidate >= validation.range.min;
+                        const maxValid = validation.range.max === undefined || valueToValidate <= validation.range.max;
+
+                        if (!minValid || !maxValid) {
+                            logger.warn({
+                                deviceId,
+                                value: valueToValidate,
+                                unit: unitToValidate,
+                                min: validation.range.min,
+                                max: validation.range.max
+                            }, '⚠️ [HardwareService] Physical sensor value out of valid range');
+
+                            throw new Error(`Sensor value ${valueToValidate} ${unitToValidate} is out of valid range [${validation.range.min ?? '-∞'} - ${validation.range.max ?? '∞'}]`);
+                        }
+                    }
+                }
+            } catch (err: any) {
+                // If validation failed, we stop here.
+                if (err.message.includes('out of valid range')) throw err;
+                logger.warn({ err, deviceId }, '⚠️ [HardwareService] Pre-validation check failed completely');
             }
         }
-        // --- END VALIDATION ---
 
         // --- Smart Conversion (Auto-Strategy) ---
         // We ask ConversionService to find the best strategy for our desired Display Unit.
@@ -289,7 +400,7 @@ export class HardwareService {
 
         // --- Normalization Layer ---
         // Check if driver has a sourceUnit and normalize if needed
-        const driverDoc = templates.getDriver(device.config.driverId);
+        // const driverDoc = templates.getDriver(device.config.driverId);  <-- REUSED moved var
         // @ts-ignore - sourceUnit is new, might not be in interface yet
         let sourceUnit = driverDoc.commands?.READ?.sourceUnit;
 
@@ -316,6 +427,9 @@ export class HardwareService {
             value
         }, '🔍 [HardwareService] Checking Normalization');
 
+        let baseValue = value;
+        let baseUnit = sourceUnit;
+
         if (sourceUnit) {
             try {
                 // Dynamic import with absolute path to avoid relative path hell and ts-node restrictions
@@ -331,6 +445,8 @@ export class HardwareService {
                     if (normalized.baseUnit !== sourceUnit) {
                         logger.info({ deviceId, from: sourceUnit, to: normalized.baseUnit, original: value, normalized: normalized.value }, '📏 [HardwareService] Normalized Value');
                         value = normalized.value;
+                        baseValue = normalized.value;
+                        baseUnit = normalized.baseUnit;
                         // Update the sourceUnit to reflect the new Normalized Base Unit
                         // This ensures downstream consumers (like SensorRead block) know the value is now in 'mm', not 'cm'
                         sourceUnit = normalized.baseUnit;
@@ -433,7 +549,16 @@ export class HardwareService {
             logger.warn({ deviceId, error }, '⚠️ Failed to save lastReading to DB');
         }
 
-        return { raw, value, unit: sourceUnit, details: rawResponse };
+        return {
+            raw,
+            value,
+            unit: sourceUnit,
+            details: {
+                ...(typeof rawResponse === 'object' ? rawResponse : { rawResponse }),
+                baseValue,
+                baseUnit
+            }
+        };
     }
 
     /**
