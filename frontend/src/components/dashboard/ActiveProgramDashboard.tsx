@@ -101,15 +101,60 @@ export const ActiveProgramDashboard = () => {
             <CardContent>
                 <div className="text-2xl font-bold mb-1">{program.name}</div>
 
-                {nextCycle ? (
-                    <div className="text-sm text-muted-foreground mb-4">
-                        Next: <span className="font-semibold text-foreground">{nextCycle.name || nextCycle.cycleName}</span> at <span className="font-mono font-bold text-foreground">{nextCycle.time}</span>
+                {/* Current and Next Cycle */}
+                <div className="space-y-2 mb-4">
+                    {program.schedule.find(s => s.status === 'running') && (
+                        <div className="text-sm">
+                            <span className="text-muted-foreground">▸ Текущ: </span>
+                            <span className="font-semibold text-green-600">
+                                {program.schedule.find(s => s.status === 'running')?.name || 'Running'}
+                            </span>
+                            <span className="text-muted-foreground ml-2">
+                                @ {program.schedule.find(s => s.status === 'running')?.time}
+                            </span>
+                        </div>
+                    )}
+                    {nextCycle && (
+                        <div className="text-sm">
+                            <span className="text-muted-foreground">▹ Следващ: </span>
+                            <span className="font-semibold text-foreground">
+                                {nextCycle.name || nextCycle.cycleName}
+                            </span>
+                            <span className="text-muted-foreground ml-2">
+                                @ {nextCycle.time}
+                            </span>
+                        </div>
+                    )}
+                    {!nextCycle && !program.schedule.find(s => s.status === 'running') && (
+                        <div className="text-sm text-muted-foreground">
+                            All cycles completed
+                        </div>
+                    )}
+                </div>
+
+                {/* Progress Indicator */}
+                <div className="mb-4">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                        <span>Progress</span>
+                        <span>
+                            {program.schedule.filter(s => s.status === 'completed').length} / {program.schedule.length} cycles
+                        </span>
                     </div>
-                ) : (
-                    <div className="text-sm text-muted-foreground mb-4">
-                        All cycles completed
+                    <div className="flex gap-1">
+                        {program.schedule.map((cycle, index) => (
+                            <div
+                                key={index}
+                                className={`h-2 flex-1 rounded-full ${cycle.status === 'completed' ? 'bg-green-500' :
+                                        cycle.status === 'running' ? 'bg-blue-500 animate-pulse' :
+                                            cycle.status === 'failed' ? 'bg-red-500' :
+                                                cycle.status === 'skipped' ? 'bg-gray-300' :
+                                                    'bg-gray-200'
+                                    }`}
+                                title={`${cycle.name || cycle.cycleName} - ${cycle.status}`}
+                            />
+                        ))}
                     </div>
-                )}
+                </div>
 
                 <div className="flex gap-2 mb-4">
                     {program.status === 'running' ? (
