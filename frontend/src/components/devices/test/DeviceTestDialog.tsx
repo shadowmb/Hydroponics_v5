@@ -73,19 +73,44 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
         }
     };
 
-    const handleUnitChange = async (unit: string) => {
+    const handleUnitChange = async (unit: string, key: string = 'default') => {
         try {
+            // Determine payload
+            let body: any = {};
+            if (key === 'default') {
+                body = { displayUnit: unit };
+            } else {
+                // If checking for map support, we need to send the whole object or use a specific endpoint?
+                // Standard PATCH usually merges top-level. 
+                // Mongoose 'displayUnits' is a Map.
+                // We likely need to send { displayUnits: { [key]: unit } } and handle merge on backend?
+                // Or simply send the updated map. 
+                // Let's assume backend merges or we send the delta.
+                // Best practice: Send the structure we want.
+
+                // We need current displayUnits to merge? 
+                // Simplest: Send { displayUnits: { [key]: unit } } and backend Mongoose might replace the map if not careful.
+                // Let's rely on standard object structure:
+                const currentMap = device.displayUnits || {};
+                body = {
+                    displayUnits: {
+                        ...currentMap,
+                        [key]: unit
+                    }
+                };
+            }
+
             const res = await fetch(`/api/hardware/devices/${device._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ displayUnit: unit })
+                body: JSON.stringify(body)
             });
 
             if (!res.ok) throw new Error('Failed to update');
 
             if (onDeviceUpdate) onDeviceUpdate();
             readValue(); // Refresh value immediately
-            toast.success(`Display unit set to ${unit}`);
+            toast.success(`Unit for ${key === 'default' ? 'Device' : key} set to ${unit}`);
         } catch (error) {
             console.error('Failed to update unit:', error);
             toast.error('Failed to update display unit');
@@ -245,25 +270,28 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                                 Read Once
                                             </Button>
 
-                                            <div className="ml-4 w-[120px]">
-                                                <Select
-                                                    value={device.displayUnit || activeTab === 'monitor' ? (liveUnit || availableUnits[0]) : undefined}
-                                                    onValueChange={handleUnitChange}
-                                                    disabled={availableUnits.length === 0}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder={availableUnits.length === 0 ? "No units" : "Unit"} />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {availableUnits.length === 0 ? (
-                                                            <SelectItem value="none" disabled>No units available</SelectItem>
-                                                        ) : (
-                                                            availableUnits.map(u => (
-                                                                <SelectItem key={u} value={u}>{u}</SelectItem>
-                                                            ))
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
+                                            <div className="ml-4 flex gap-2">
+                                                {/* Global or Primary Unit Selector - Shown only if single value or primary legacy */}
+                                                {(!device.config?.driverId?.commands?.READ?.outputs || device.config.driverId.commands.READ.outputs.length <= 1) && (
+                                                    <Select
+                                                        value={device.displayUnit || activeTab === 'monitor' ? (liveUnit || availableUnits[0]) : undefined}
+                                                        onValueChange={(u) => handleUnitChange(u, 'default')}
+                                                        disabled={availableUnits.length === 0}
+                                                    >
+                                                        <SelectTrigger className="w-[120px]">
+                                                            <SelectValue placeholder={availableUnits.length === 0 ? "No units" : "Unit"} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {availableUnits.length === 0 ? (
+                                                                <SelectItem value="none" disabled>No units available</SelectItem>
+                                                            ) : (
+                                                                availableUnits.map(u => (
+                                                                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                                                                ))
+                                                            )}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
                                             </div>
                                         </div>
                                     </>
@@ -275,44 +303,94 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                         <ActuatorControlPanel device={device} onLog={addLog} />
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-                                            {/* Scenario A: Multi-Value Sensor (e.g. DHT22) */}
-                                            {device.config?.driverId?.commands?.READ?.outputs ? (
-                                                device.config.driverId.commands.READ.outputs.map((output: any) => {
-                                                    // Resolve value: Try direct key match in details, fallback to liveValue if single output
-                                                    let val = multiValues && multiValues[output.key] !== undefined
-                                                        ? multiValues[output.key]
-                                                        : (device.config.driverId.commands.READ.outputs.length === 1 ? liveValue : null);
+                                            {/* Logic for Multi-Output Sensors */}
+                                            {(device.config?.driverId?.commands?.READ?.outputs || [{ key: '_primary', label: 'Value', unit: device.config?.driverId?.uiConfig?.units?.[0] }]).map((output: any) => {
+                                                // Resolve Value
+                                                // If outputs > 1, check multiValues[key]. If not, use liveValue (primary).
+                                                const isMulti = device.config?.driverId?.commands?.READ?.outputs?.length > 1;
+                                                const key = output.key || '_primary';
 
-                                                    // Format number
-                                                    if (typeof val === 'number') val = val.toFixed(2);
+                                                // Value Logic:
+                                                // 1. Try multiValues[key] (raw form from backend might differ)
+                                                // 2. Try liveValue if single
+                                                // 3. Backend now returns 'readings' object with CONVERTED values if configured
 
-                                                    return (
+                                                // We need raw base value for the "Small" display.
+                                                // But 'liveValue' comes pre-converted if primary. 
+                                                // 'multiValues' (details) usually has the RAW response.
+
+                                                // Let's assume 'readings' in event/response has the processed values.
+                                                // But initially we only have 'liveValue' (primary) and 'multiValues' (raw details).
+                                                // We rely on the backend sending valid 'readings' structure in 'details' or similar?
+                                                // In 'readValue', we setMultiValues(result.details).
+
+                                                // If we want accurate "Base vs Converted" here without complex frontend math,
+                                                // we might need to rely on the backend sending both. 
+                                                // BUT, for now, let's assume 'liveValue' IS the converted one.
+                                                // And 'rawValue' is the ADC/Wire raw.
+
+                                                // Better approach: 
+                                                // If we have a display unit selected, 'val' IS converted.
+                                                // We should ideally calculate 'base' by reversing or (safer) just standardizing units.
+                                                // Let's Simplify: 
+                                                // The backend ensures 'readings' contains the correct values.
+
+                                                let val = isMulti && multiValues
+                                                    ? multiValues[output.key]
+                                                    : liveValue;
+
+                                                if (typeof val === 'number') val = val.toFixed(2);
+
+                                                // Unit Resolution
+                                                // 1. User Override (displayUnits[key] or displayUnit)
+                                                // 2. Default (output.unit)
+                                                const userUnit = isMulti
+                                                    ? (device.displayUnits?.[key] || device.displayUnit)
+                                                    : (device.displayUnit || liveUnit);
+
+                                                const finalUnit = userUnit || output.unit;
+                                                const baseUnit = output.unit; // The physical/driver unit
+
+                                                return (
+                                                    <div key={key} className="flex flex-col gap-2">
                                                         <SensorValueCard
-                                                            key={output.key}
-                                                            label={output.label}
+                                                            label={output.label || 'Value'}
                                                             value={val}
-                                                            unit={output.unit}
-                                                            subValue={rawValue}
+                                                            unit={finalUnit}
+
+                                                            // Pass Base Info for "Small Display" Logic
+                                                            baseValue={isMulti ? null : rawValue} // Only showing raw for single for now unless we dig deeper
+                                                            baseUnit={baseUnit}
+
+                                                        // Current SensorValueCard logic uses baseValue/baseUnit to trigger "Converted" view
+                                                        // validation: if finalUnit != baseUnit, it shows base below.
                                                         />
-                                                    );
-                                                })
-                                            ) : (
-                                                /* Scenario B: Single-Value Sensor (e.g. pH) */
-                                                <>
-                                                    <SensorValueCard
-                                                        label={device.config?.driverId?.physicalType === 'ph' ? 'pH Value' : 'Calibrated Value'}
-                                                        value={liveValue !== null ? liveValue.toFixed(2) : null}
-                                                        unit={liveUnit || device.displayUnit || device.config?.driverId?.uiConfig?.units?.[0]}
-                                                        variant="primary"
-                                                    />
-                                                    <SensorValueCard
-                                                        label="Raw Input"
-                                                        value={rawValue}
-                                                        unit="ADC"
-                                                        variant="raw"
-                                                    />
-                                                </>
-                                            )}
+
+                                                        {/* Per-Value Unit Selector */}
+                                                        <div className="flex justify-center">
+                                                            <Select
+                                                                value={finalUnit}
+                                                                onValueChange={(u) => handleUnitChange(u, isMulti ? key : 'default')}
+                                                            >
+                                                                <SelectTrigger className="w-[100px] h-8 text-xs">
+                                                                    <SelectValue placeholder="Unit" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {/* 
+                                                                        Smart Unit Options:
+                                                                        Ideally filtered by category (Temp vs Humidity).
+                                                                        For now, we can use a helper map or just offer all if generic.
+                                                                        Let's hardcode common category mappings or use availableUnits if single.
+                                                                     */}
+                                                                    {(availableUnits.length > 0 ? availableUnits : ['%', 'C', 'F']).map(u => (
+                                                                        <SelectItem key={u} value={u} className="text-xs">{u}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

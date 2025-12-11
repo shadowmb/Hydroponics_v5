@@ -38,7 +38,8 @@ export interface IDevice extends SoftDeleteDocument {
     // Dashboard Settings
     dashboardPinned?: boolean; // Whether device is pinned to dashboard
     dashboardOrder?: number;   // Display order on dashboard (0-5)
-    displayUnit?: string;      // User preferred display unit
+    displayUnit?: string;      // User preferred display unit (Primary)
+    displayUnits?: Map<string, string>; // Multi-value overrides (key -> unit)
 
     lastReading?: {
         value: number;
@@ -93,6 +94,7 @@ const DeviceSchema = new Schema<IDevice>(
         dashboardPinned: { type: Boolean, default: false },
         dashboardOrder: { type: Number, default: 0 },
         displayUnit: { type: String },
+        displayUnits: { type: Map, of: String },
 
         lastReading: {
             value: Number,
