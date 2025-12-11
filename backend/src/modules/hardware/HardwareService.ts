@@ -257,7 +257,13 @@ export class HardwareService {
             raw = 0;
         }
 
-        let value = conversionService.convert(device, raw, strategyOverride);
+        // --- Smart Conversion (Auto-Strategy) ---
+        // We ask ConversionService to find the best strategy for our desired Display Unit.
+        const targetUnit = device.displayUnit || device.displayUnits?.get('_primary'); // Use primary display unit as target if valid
+
+        const smartResult = conversionService.convertSmart(device, raw, targetUnit);
+        let value = smartResult.value;
+        const activeStrategy = smartResult.strategyUsed; // The strategy that was actually used
 
         // --- Normalization Layer ---
         // Check if driver has a sourceUnit and normalize if needed
@@ -265,37 +271,17 @@ export class HardwareService {
         // @ts-ignore - sourceUnit is new, might not be in interface yet
         let sourceUnit = driverDoc.commands?.READ?.sourceUnit;
 
-        // --- Strategy Output Unit Resolution ---
-        // If a strategy transforms the unit (e.g. Distance -> Volume), we must track it
-        const activeStrategy = strategyOverride || device.config.conversionStrategy;
-        if (activeStrategy && activeStrategy !== 'linear' && activeStrategy !== 'raw') {
-            try {
-                // Dynamic import to avoid path issues (consistent with UnitRegistry usage below)
-                const strategyRegPath = require('path').resolve(__dirname, '../../../../shared/strategies/StrategyRegistry');
-                const { StrategyRegistry } = require(strategyRegPath);
-
-                // We access the static map directly or via a getter if available. 
-                // StrategyRegistry export is usually a class with static methods or a const object.
-                // Based on previous tasks, StrategyRegistry.STRATEGIES might be exposed or getStrategy().
-                // Let's assume standardized access: StrategyRegistry.strategies or similar.
-                // CHECK: shared/strategies/StrategyRegistry.ts was defined as "export class StrategyRegistry".
-                // I'll assume `get(id)` or `STRATEGIES[id]`.
-                // Safer: Just try to get the definition.
-                const strategyDef = StrategyRegistry.get ? StrategyRegistry.get(activeStrategy) : (StrategyRegistry.STRATEGIES ? StrategyRegistry.STRATEGIES[activeStrategy] : undefined);
-
-                if (strategyDef && strategyDef.outputUnit && strategyDef.outputUnit !== 'any') {
-                    // Start Log
-                    logger.info({
-                        deviceId,
-                        strategy: activeStrategy,
-                        driverUnit: sourceUnit,
-                        newUnit: strategyDef.outputUnit
-                    }, '🔄 [HardwareService] Strategy Changed Output Unit');
-
-                    sourceUnit = strategyDef.outputUnit;
-                }
-            } catch (regErr) {
-                logger.warn({ err: regErr, activeStrategy }, '⚠️ [HardwareService] Failed to resolve Strategy Unit');
+        // If the strategy explicitly output a unit (e.g. 'l'), that becomes our new sourceUnit for downstream logic.
+        if (smartResult.unit && smartResult.unit !== 'any') {
+            // If strategy changed unit, we trust it.
+            if (activeStrategy !== 'linear' && activeStrategy !== 'raw') {
+                logger.info({
+                    deviceId,
+                    strategy: activeStrategy,
+                    oldUnit: sourceUnit,
+                    newUnit: smartResult.unit
+                }, '🔄 [HardwareService] Smart Strategy Switched Unit');
+                sourceUnit = smartResult.unit;
             }
         }
         // ---------------------------------------
