@@ -9,6 +9,7 @@ interface PinnedDevice {
     _id: string;
     name: string;
     type: string;
+    displayUnit?: string;
     lastReading?: {
         value: number;
         timestamp: Date;
@@ -56,10 +57,14 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
     // Listen to real-time device updates
     useEffect(() => {
         const handleDeviceData = (event: CustomEvent) => {
-            const { deviceId, value, timestamp } = event.detail;
+            const { deviceId, value, timestamp, unit } = event.detail;
             setDevices(prev => prev.map(d =>
                 d._id === deviceId
-                    ? { ...d, lastReading: { value, timestamp: new Date(timestamp) } }
+                    ? {
+                        ...d,
+                        lastReading: { value, timestamp: new Date(timestamp) },
+                        displayUnit: unit
+                    }
                     : d
             ));
         };
@@ -130,7 +135,7 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
                         key={device._id}
                         name={device.name}
                         value={device.lastReading?.value ?? 'N/A'}
-                        unit={device.config.driverId?.uiConfig?.unit}
+                        unit={device.displayUnit || device.config.driverId?.uiConfig?.unit}
                         icon={getIcon(device.config.driverId?.uiConfig?.icon)}
                         lastUpdate={device.lastReading?.timestamp}
                         status={systemStatus === 'offline' ? 'error' : 'normal'}

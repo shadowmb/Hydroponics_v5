@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, Square } from 'lucide-react';
 import { hardwareService } from '../../../services/hardwareService';
 import { DeviceTestHeader } from './DeviceTestHeader';
@@ -24,10 +25,12 @@ interface DeviceTestDialogProps {
 export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpenChange, device, onDeviceUpdate }) => {
     const [activeTab, setActiveTab] = useState('monitor');
     const [liveValue, setLiveValue] = useState<number | null>(null);
+    const [liveUnit, setLiveUnit] = useState<string | undefined>(undefined);
     const [rawValue, setRawValue] = useState<number | null>(null);
     const [multiValues, setMultiValues] = useState<any>(null);
     const [isStreaming, setIsStreaming] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);
+    const [availableUnits, setAvailableUnits] = useState<string[]>([]);
     const intervalRef = useRef<any>(null);
 
     const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
@@ -39,15 +42,16 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
         try {
             addLog('Reading value...', 'info');
             const result = await hardwareService.testDevice(device._id);
-            // Result format: { raw: 123, value: 1.2 } (Unwrapped by service)
+            // Result format: { raw: 123, value: 1.2, unit: 'cm' } (Unwrapped by service)
             console.log('DeviceTestDialog Read Result:', result);
 
             if (result) {
                 setLiveValue(result.value);
+                setLiveUnit(result.unit);
                 setRawValue(result.raw);
                 setMultiValues(result.details); // Store full details for multi-value display
 
-                let logMsg = `Read OK: ${result.value} (Raw: ${result.raw})`;
+                let logMsg = `Read OK: ${result.value} ${result.unit || ''} (Raw: ${result.raw})`;
                 if (result.details) {
                     logMsg += ` [Full Response: ${JSON.stringify(result.details)}]`;
                 }
@@ -68,6 +72,38 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
             toast.error('Failed to read device');
         }
     };
+
+    const handleUnitChange = async (unit: string) => {
+        try {
+            const res = await fetch(`/api/hardware/devices/${device._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ displayUnit: unit })
+            });
+
+            if (!res.ok) throw new Error('Failed to update');
+
+            if (onDeviceUpdate) onDeviceUpdate();
+            readValue(); // Refresh value immediately
+            toast.success(`Display unit set to ${unit}`);
+        } catch (error) {
+            console.error('Failed to update unit:', error);
+            toast.error('Failed to update display unit');
+        }
+    };
+
+    useEffect(() => {
+        if (open && device) {
+            fetch(`/api/hardware/devices/${device._id}/available-units`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        setAvailableUnits(data.data);
+                    }
+                })
+                .catch(err => console.error('Failed to fetch units:', err));
+        }
+    }, [open, device]);
 
     const stopStream = () => {
         if (intervalRef.current) {
@@ -208,6 +244,27 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                             >
                                                 Read Once
                                             </Button>
+
+                                            <div className="ml-4 w-[120px]">
+                                                <Select
+                                                    value={device.displayUnit || activeTab === 'monitor' ? (liveUnit || availableUnits[0]) : undefined}
+                                                    onValueChange={handleUnitChange}
+                                                    disabled={availableUnits.length === 0}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder={availableUnits.length === 0 ? "No units" : "Unit"} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {availableUnits.length === 0 ? (
+                                                            <SelectItem value="none" disabled>No units available</SelectItem>
+                                                        ) : (
+                                                            availableUnits.map(u => (
+                                                                <SelectItem key={u} value={u}>{u}</SelectItem>
+                                                            ))
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
                                     </>
                                 )}
@@ -245,7 +302,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                                     <SensorValueCard
                                                         label={device.config?.driverId?.physicalType === 'ph' ? 'pH Value' : 'Calibrated Value'}
                                                         value={liveValue !== null ? liveValue.toFixed(2) : null}
-                                                        unit={device.config?.driverId?.defaultUnits?.[0]}
+                                                        unit={liveUnit || device.displayUnit || device.config?.driverId?.uiConfig?.units?.[0]}
                                                         variant="primary"
                                                     />
                                                     <SensorValueCard

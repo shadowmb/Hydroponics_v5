@@ -176,3 +176,51 @@ export const normalizeValue = (value: number, unit: string): { value: number, ba
 };
 
 export const getAllUnits = (): string[] => Object.keys(UNITS).sort();
+
+// --- INVERSE CONVERSION LOGIC (Base -> Unit) ---
+const INVERSE_CONVERSIONS: Record<string, (v: number) => number> = {
+    'F': (val: number) => (val * 9 / 5) + 32,
+    'K': (val: number) => val + 273.15,
+};
+
+/**
+ * Converts a value from one unit to another.
+ * Handles normalization and compatibility checks.
+ */
+export const convertValue = (value: number, fromUnit: string, toUnit: string): number | null => {
+    if (!fromUnit || !toUnit) return null;
+    const cleanFrom = fromUnit.trim();
+    const cleanTo = toUnit.trim();
+
+    // 1. Normalize source to base
+    const sourceNorm = normalizeValue(value, cleanFrom);
+    if (!sourceNorm) return null;
+
+    const { value: baseValue, baseUnit } = sourceNorm;
+
+    // 2. Check compatibility
+    const toDef = UNITS[cleanTo];
+    if (!toDef) return null;
+
+    const baseDef = UNITS[baseUnit];
+    if (!baseDef || baseDef.category !== toDef.category) return null;
+
+    // 3. Convert Base -> Target
+    if (cleanTo === baseUnit) return baseValue;
+
+    const factor = FACTORS[cleanTo];
+    if (factor === undefined) return null;
+
+    if (typeof factor === 'number') {
+        const result = baseValue / factor;
+        // Round to 3 decimal places for sanity? No, keeep precision.
+        return result;
+    } else {
+        // It's a function (Temperature)
+        const inverse = INVERSE_CONVERSIONS[cleanTo];
+        if (inverse) {
+            return inverse(baseValue);
+        }
+        return null; // No inverse defined
+    }
+};

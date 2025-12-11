@@ -312,7 +312,7 @@ export class HardwareService {
             try {
                 // Dynamic import with absolute path to avoid relative path hell and ts-node restrictions
                 const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
-                const { normalizeValue } = require(registryPath);
+                const { normalizeValue, convertValue } = require(registryPath);
 
                 const normalized = normalizeValue(value, sourceUnit);
 
@@ -330,6 +330,26 @@ export class HardwareService {
                 } else {
                     logger.warn({ deviceId, sourceUnit }, '⚠️ [HardwareService] Unknown sourceUnit in driver');
                 }
+
+                // --- Display Unit Conversion ---
+                // If user selected a specific display unit, convert from base unit to display unit
+                if (device.displayUnit) {
+                    // Check if conversion is possible (basic validation)
+                    // We trust convertValue to return null/throw if impossible, or we can check canConvert
+                    try {
+                        const displayConverted = convertValue(value, sourceUnit, device.displayUnit);
+                        if (displayConverted !== null) {
+                            logger.info({ deviceId, from: sourceUnit, to: device.displayUnit, original: value, converted: displayConverted }, '👀 [HardwareService] Converted to Display Unit');
+                            value = displayConverted;
+                            sourceUnit = device.displayUnit; // Output unit is now the display unit
+                        } else {
+                            logger.warn({ deviceId, from: sourceUnit, to: device.displayUnit }, '⚠️ [HardwareService] Failed to convert to displayUnit');
+                        }
+                    } catch (convErr) {
+                        logger.warn({ err: convErr, deviceId }, '⚠️ [HardwareService] Display Unit Conversion Error');
+                    }
+                }
+
             } catch (err) {
                 logger.error({ err, sourceUnit }, '❌ [HardwareService] Failed to load UnitRegistry');
             }
@@ -361,6 +381,7 @@ export class HardwareService {
                 driverId: device.config.driverId,
                 value,
                 raw,
+                unit: sourceUnit, // Send the final unit (display unit if converted)
                 readings,     // <--- NEW: Send constructed readings
                 details: rawResponse, // Pass raw response as details
                 timestamp: new Date()
