@@ -270,29 +270,6 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                                 Read Once
                                             </Button>
 
-                                            <div className="ml-4 flex gap-2">
-                                                {/* Global or Primary Unit Selector - Shown only if single value or primary legacy */}
-                                                {(!device.config?.driverId?.commands?.READ?.outputs || device.config.driverId.commands.READ.outputs.length <= 1) && (
-                                                    <Select
-                                                        value={device.displayUnit || activeTab === 'monitor' ? (liveUnit || availableUnits[0]) : undefined}
-                                                        onValueChange={(u) => handleUnitChange(u, 'default')}
-                                                        disabled={availableUnits.length === 0}
-                                                    >
-                                                        <SelectTrigger className="w-[120px]">
-                                                            <SelectValue placeholder={availableUnits.length === 0 ? "No units" : "Unit"} />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {availableUnits.length === 0 ? (
-                                                                <SelectItem value="none" disabled>No units available</SelectItem>
-                                                            ) : (
-                                                                availableUnits.map(u => (
-                                                                    <SelectItem key={u} value={u}>{u}</SelectItem>
-                                                                ))
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            </div>
                                         </div>
                                     </>
                                 )}
