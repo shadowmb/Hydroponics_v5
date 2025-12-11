@@ -14,6 +14,7 @@ import { SensorValueCard } from './SensorValueCard';
 import { DeviceHistoryTab } from '../history/DeviceHistoryTab';
 import { ActuatorControlPanel } from './ActuatorControlPanel';
 import { ActuatorCalibration } from './calibration/ActuatorCalibration';
+import { DeviceValidationSettings } from './DeviceValidationSettings';
 
 interface DeviceTestDialogProps {
     open: boolean;
@@ -33,6 +34,58 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
     const [availableUnits, setAvailableUnits] = useState<string[]>([]);
     const intervalRef = useRef<any>(null);
 
+    // New state for template info
+    const [hardwareLimits, setHardwareLimits] = useState<{ min?: number, max?: number, unit?: string } | undefined>(undefined);
+
+    useEffect(() => {
+        // Get Hardware Limits & Base Unit from populated driverId (or fallback to fetching templates)
+        const extractTemplateInfo = () => {
+            // driverId might be populated as an object with all template data
+            const template = typeof device?.config?.driverId === 'object'
+                ? device.config.driverId
+                : null;
+
+            if (template) {
+                console.log('🔍 [DeviceTestDialog] Using populated driverId:', template._id || template.id);
+
+                let baseUnit = 'raw';
+                let hwMin: number | undefined;
+                let hwMax: number | undefined;
+
+                // 1. Try hardwareLimits (best source)
+                if (template.hardwareLimits?.unit) {
+                    baseUnit = template.hardwareLimits.unit;
+                    hwMin = template.hardwareLimits.min;
+                    hwMax = template.hardwareLimits.max;
+                    console.log('🔍 [DeviceTestDialog] Found hardwareLimits:', { baseUnit, hwMin, hwMax });
+                }
+
+                // 2. Fallback: Try commands.READ.outputs[0].unit
+                if (baseUnit === 'raw' && template.commands?.READ?.outputs?.[0]?.unit) {
+                    baseUnit = template.commands.READ.outputs[0].unit;
+                    console.log('🔍 [DeviceTestDialog] Using commands.READ.outputs[0].unit:', baseUnit);
+                }
+
+                // 3. Final fallback: uiConfig.units[0]
+                if (baseUnit === 'raw' && template.uiConfig?.units?.[0]) {
+                    baseUnit = template.uiConfig.units[0];
+                    console.log('🔍 [DeviceTestDialog] Using uiConfig.units[0]:', baseUnit);
+                }
+
+                console.log('🔍 [DeviceTestDialog] FINAL setHardwareLimits:', { min: hwMin, max: hwMax, unit: baseUnit });
+                setHardwareLimits({ min: hwMin, max: hwMax, unit: baseUnit });
+
+                if (template.uiConfig?.units) {
+                    setAvailableUnits(template.uiConfig.units);
+                }
+            } else {
+                console.warn('🔍 [DeviceTestDialog] driverId is not populated, template info unavailable');
+            }
+        };
+
+        extractTemplateInfo();
+    }, [device?.config?.driverId]);
+
     const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
         const time = new Date().toLocaleTimeString();
         setLogs(prev => [`[${time}] [${type.toUpperCase()}] ${msg}`, ...prev].slice(0, 50));
@@ -42,14 +95,14 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
         try {
             addLog('Reading value...', 'info');
             const result = await hardwareService.testDevice(device._id);
-            // Result format: { raw: 123, value: 1.2, unit: 'cm' } (Unwrapped by service)
+            // Result format: { raw: 123, value: 1.2, unit: 'cm' }
             console.log('DeviceTestDialog Read Result:', result);
 
             if (result) {
                 setLiveValue(result.value);
                 setLiveUnit(result.unit);
                 setRawValue(result.raw);
-                setMultiValues(result.details); // Store full details for multi-value display
+                setMultiValues(result.details);
 
                 let logMsg = `Read OK: ${result.value} ${result.unit || ''} (Raw: ${result.raw})`;
                 if (result.details) {
@@ -383,10 +436,31 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                 <ActuatorCalibration device={device} onUpdate={() => onDeviceUpdate && onDeviceUpdate()} />
                             </TabsContent>
 
-                            <TabsContent value="settings" className="m-0">
-                                <div className="flex items-center justify-center h-full text-muted-foreground">
-                                    Device Settings UI...
-                                </div>
+
+                            <TabsContent value="settings" className="m-0 h-full overflow-y-auto p-4 space-y-6">
+                                <DeviceValidationSettings
+                                    device={device}
+                                    onSave={async (newConfig) => {
+                                        try {
+                                            const response = await fetch(`/api/hardware/devices/${device._id}`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    "config.validation": newConfig
+                                                })
+                                            });
+
+                                            if (!response.ok) throw new Error('Failed to save settings');
+
+                                            toast.success('Validation settings saved successfully');
+                                            if (onDeviceUpdate) onDeviceUpdate();
+                                        } catch (error) {
+                                            console.error(error);
+                                            toast.error('Failed to save settings');
+                                        }
+                                    }}
+                                    hardwareLimits={hardwareLimits}
+                                />
                             </TabsContent>
                         </div>
                     </Tabs>
@@ -410,7 +484,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                     </ScrollArea>
                 </div>
 
-            </DialogContent>
-        </Dialog>
+            </DialogContent >
+        </Dialog >
     );
 };

@@ -18,6 +18,11 @@
             "digital": 2
         }
     },
+    "hardwareLimits": {
+        "min": 20,
+        "max": 4000,
+        "unit": "mm"
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ULTRASONIC_TRIG_ECHO",
