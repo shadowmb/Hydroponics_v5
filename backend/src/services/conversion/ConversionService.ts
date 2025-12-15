@@ -3,21 +3,21 @@ import { IConversionStrategy } from './strategies/IConversionStrategy';
 import { LinearInterpolationStrategy } from './strategies/LinearInterpolationStrategy';
 import { EcDfrStrategy } from './strategies/EcDfrStrategy';
 import { VolumetricFlowStrategy } from './strategies/VolumetricFlowStrategy';
-
 import { PhDfrStrategy } from './strategies/PhDfrStrategy';
-import { Dist_HcSr04 } from './strategies/Dist_HcSr04';
 
 export class ConversionService {
     private strategies: Map<string, IConversionStrategy> = new Map();
 
     constructor() {
-        // Register default strategies
+        // Register strategies
+        // Simple sensors use 'linear' (default) - UnitRegistry handles unit normalization
         this.registerStrategy('linear', new LinearInterpolationStrategy());
-        this.registerStrategy('ec-dfr-analog', new EcDfrStrategy());
-        this.registerStrategy('volumetric_flow', new VolumetricFlowStrategy());
         this.registerStrategy('tank_volume', new LinearInterpolationStrategy());
+        this.registerStrategy('volumetric_flow', new VolumetricFlowStrategy());
+
+        // Complex sensors with special physics need dedicated strategies
+        this.registerStrategy('ec-dfr-analog', new EcDfrStrategy());
         this.registerStrategy('ph_dfr', new PhDfrStrategy());
-        this.registerStrategy('dist-hcsr04-std', new Dist_HcSr04());
     }
 
     registerStrategy(name: string, strategy: IConversionStrategy) {
@@ -39,7 +39,12 @@ export class ConversionService {
         const strategy = this.strategies.get(strategyName);
 
         if (!strategy) {
-            console.warn(`Conversion strategy '${strategyName}' not found for device ${device.name}. Using raw value.`);
+            // Strategy not found - fallback to 'linear' instead of returning raw
+            console.warn(`Conversion strategy '${strategyName}' not found for device ${device.name}. Falling back to 'linear'.`);
+            const linearStrategy = this.strategies.get('linear');
+            if (linearStrategy) {
+                return linearStrategy.convert(rawValue, device, 'linear', context);
+            }
             return rawValue;
         }
 
@@ -64,9 +69,12 @@ export class ConversionService {
             defaultStrategyName = (device.config.driverId === 'dfrobot_ec_k1') ? 'ec-dfr-analog' : 'linear';
         }
 
-        // 2. Resolve Strategy Registry & Units (Legacy/Meta Logic - Optional)
+        // 2. Fallback if strategy doesn't exist
         let activeStrategyName = defaultStrategyName;
-        // ... (StrategyRegistry logic omitted for brevity as it's legacy/complex dependencies) ...
+        if (!this.strategies.has(activeStrategyName)) {
+            console.warn(`Strategy '${activeStrategyName}' not registered, falling back to 'linear'`);
+            activeStrategyName = 'linear';
+        }
 
         // 3. Execute
         const result = this.convert(device, rawValue, activeStrategyName, context);

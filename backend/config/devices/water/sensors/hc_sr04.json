@@ -4,11 +4,9 @@
     "description": "Ultrasonic distance sensor for measuring liquid levels or proximity.",
     "category": "SENSOR",
     "supportedStrategies": [
-        "dist-hcsr04-std",
         "linear",
         "tank_volume"
     ],
-    "conversionStrategy": "dist-hcsr04-std",
     "capabilities": [
         "ULTRASONIC_TRIG_ECHO"
     ],
