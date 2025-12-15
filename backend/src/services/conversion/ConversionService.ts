@@ -4,6 +4,8 @@ import { LinearInterpolationStrategy } from './strategies/LinearInterpolationStr
 import { EcDfrStrategy } from './strategies/EcDfrStrategy';
 import { VolumetricFlowStrategy } from './strategies/VolumetricFlowStrategy';
 
+import { PhDfrStrategy } from './strategies/PhDfrStrategy';
+
 export class ConversionService {
     private strategies: Map<string, IConversionStrategy> = new Map();
 
@@ -13,13 +15,14 @@ export class ConversionService {
         this.registerStrategy('ec-dfr-analog', new EcDfrStrategy());
         this.registerStrategy('volumetric_flow', new VolumetricFlowStrategy());
         this.registerStrategy('tank_volume', new LinearInterpolationStrategy());
+        this.registerStrategy('ph_dfr', new PhDfrStrategy());
     }
 
     registerStrategy(name: string, strategy: IConversionStrategy) {
         this.strategies.set(name, strategy);
     }
 
-    convert(device: IDevice, rawValue: number, strategyOverride?: string): number {
+    convert(device: IDevice, rawValue: number, strategyOverride?: string, context?: any): number {
         let strategyName = strategyOverride || device.config.conversionStrategy;
 
         // Auto-detect strategy if not explicitly set
@@ -39,7 +42,8 @@ export class ConversionService {
         }
 
         try {
-            return strategy.convert(rawValue, device, strategyName);
+            // Pass context to strategy
+            return strategy.convert(rawValue, device, strategyName, context);
         } catch (error) {
             console.error(`Error converting value for device ${device.name}:`, error);
             return rawValue;
@@ -50,7 +54,7 @@ export class ConversionService {
      * Smart conversion that attempts to find a strategy producing the 'targetUnit'.
      * If found, it uses that strategy. If not, it falls back to the default strategy.
      */
-    convertSmart(device: IDevice, rawValue: number, targetUnit?: string): { value: number, unit?: string, strategyUsed: string } {
+    convertSmart(device: IDevice, rawValue: number, targetUnit?: string, context?: any): { value: number, unit?: string, strategyUsed: string } {
         // 1. Identify Default Strategy
         // Just like in convert(), explicit override > device config > default logic
         let defaultStrategyName = device.config.conversionStrategy;
@@ -92,7 +96,7 @@ export class ConversionService {
         }
 
         // 3. Execute
-        const val = this.convert(device, rawValue, activeStrategyName);
+        const val = this.convert(device, rawValue, activeStrategyName, context);
 
         // Resolve final unit for return (to help HardwareService know what happened)
         // We re-fetch definition to be sure

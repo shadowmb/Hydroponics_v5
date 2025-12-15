@@ -24,7 +24,7 @@ const PinSchema = z.object({
 
 const RequirementsSchema = z.object({
     interface: z.enum(['digital', 'analog', 'i2c', 'uart', 'onewire', 'pwm']).optional(),
-    voltage: z.string().optional(),
+    voltage: z.union([z.string(), z.array(z.number())]).optional(),
     pin_count: z.object({
         digital: z.number().optional(),
         analog: z.number().optional(),
@@ -64,6 +64,19 @@ const DeviceTemplateSchema = z.object({
     commands: z.record(CommandSchema),
     pins: z.array(PinSchema),
     requirements: RequirementsSchema.optional(),
+    settingsSchema: z.object({
+        compensation: z.object({
+            temperature: z.object({
+                enabled: z.boolean(),
+                source: z.enum(['default', 'external', 'internal']),
+                default: z.number().optional(),
+                externalDeviceId: z.string().optional()
+            }).optional()
+        }).optional(),
+        voltage: z.object({
+            reference: z.number().optional()
+        }).optional()
+    }).optional(),
     variants: z.array(VariantSchema).optional(),
     initialState: z.record(z.any()).optional(),
     hardwareLimits: z.object({

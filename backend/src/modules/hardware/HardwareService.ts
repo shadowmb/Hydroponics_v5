@@ -390,11 +390,79 @@ export class HardwareService {
             }
         }
 
+        // --- Context Resolution (Compensation & Hardware) ---
+        const context: any = {};
+
+        try {
+            // 1. Resolve ADC & System Voltage (from Controller)
+            const { Controller } = await import('../../models/Controller');
+            let controllerId = device.hardware?.parentId as unknown as string; // Cast for safety
+
+            if (!controllerId && device.hardware?.relayId) {
+                const { Relay } = await import('../../models/Relay');
+                const relay = await Relay.findById(device.hardware.relayId);
+                if (relay && relay.controllerId) controllerId = relay.controllerId.toString();
+            }
+
+            if (controllerId) {
+                const controller = await Controller.findById(controllerId);
+                // Access hardwareConfig safely
+                if (controller && (controller as any).hardwareConfig) {
+                    context.adcMax = (controller as any).hardwareConfig.adcResolution;
+                    context.voltage = (controller as any).hardwareConfig.voltageReference;
+                }
+            }
+
+            // 2. Resolve Voltage Override (Device Config)
+            if (device.config?.voltage?.reference) {
+                context.voltage = device.config.voltage.reference;
+            }
+
+            // 3. Resolve Temperature (Compensation)
+            const comp = device.config?.compensation?.temperature;
+            if (comp?.enabled) {
+                let temp = comp.default || 25.0;
+
+                if (comp.source === 'external' && comp.externalDeviceId) {
+                    const extDev = await DeviceModel.findById(comp.externalDeviceId);
+
+                    if (extDev) {
+                        // Check Freshness
+                        const lastRead = extDev.lastReading;
+                        const now = Date.now();
+                        const lastTs = lastRead?.timestamp ? new Date(lastRead.timestamp).getTime() : 0;
+                        const age = now - lastTs;
+                        const LIMIT = 5 * 60 * 1000; // 5 min
+
+                        if (age < LIMIT && lastRead) {
+                            temp = lastRead.value;
+                        } else {
+                            // Active Polling
+                            logger.warn({ deviceId, extDev: extDev.name, age }, '⚠️ [HardwareService] Stale Temp Data. Polling...');
+                            try {
+                                // Trigger read
+                                const res = await this.readSensorValue(extDev.id); // Recursion risk if cycle
+                                if (res && typeof res.value === 'number') {
+                                    temp = res.value;
+                                }
+                            } catch (err) {
+                                logger.error({ err }, '❌ [HardwareService] Active Poll Failed. Using Default.');
+                            }
+                        }
+                    }
+                }
+                context.temperature = temp;
+                logger.info({ deviceId, temp, voltage: context.voltage, adc: context.adcMax }, '🌡️ [HardwareService] Compensation Context');
+            }
+        } catch (ctxErr) {
+            logger.error({ err: ctxErr }, '❌ [HardwareService] Context Resolution Failed');
+        }
+
         // --- Smart Conversion (Auto-Strategy) ---
         // We ask ConversionService to find the best strategy for our desired Display Unit.
         const targetUnit = device.displayUnit || device.displayUnits?.get('_primary'); // Use primary display unit as target if valid
 
-        const smartResult = conversionService.convertSmart(device, raw, targetUnit);
+        const smartResult = conversionService.convertSmart(device, raw, targetUnit, context);
         let value = smartResult.value;
         const activeStrategy = smartResult.strategyUsed; // The strategy that was actually used
 

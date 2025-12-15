@@ -39,6 +39,17 @@ export interface IDevice extends SoftDeleteDocument {
             count?: number;
             delayMs?: number;
         };
+        compensation?: {
+            temperature?: {
+                enabled: boolean;
+                source: 'default' | 'external' | 'internal';
+                default?: number;
+                externalDeviceId?: string;
+            };
+        };
+        voltage?: {
+            reference?: number;
+        };
     };
 
     metadata?: {

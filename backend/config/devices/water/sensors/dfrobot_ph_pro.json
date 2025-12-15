@@ -1,0 +1,88 @@
+{
+    "id": "dfrobot_ph_pro",
+    "name": "DFRobot Analog pH Sensor V2",
+    "category": "SENSOR",
+    "supportedStrategies": [
+        "ph_dfr",
+        "linear",
+        "two_point_linear"
+    ],
+    "conversionStrategy": "ph_dfr",
+    "capabilities": [
+        "READ"
+    ],
+    "requirements": {
+        "interface": "analog",
+        "voltage": [
+            3.3,
+            5.0
+        ],
+        "pin_count": {
+            "analog": 1
+        }
+    },
+    "settingsSchema": {
+        "compensation": {
+            "temperature": {
+                "enabled": true,
+                "source": "default",
+                "default": 25.0
+            }
+        },
+        "voltage": {
+            "reference": 5.0
+        }
+    },
+    "hardwareLimits": {
+        "min": 0,
+        "max": 14,
+        "unit": "pH"
+    },
+    "commands": {
+        "READ": {
+            "hardwareCmd": "ANALOG",
+            "sourceUnit": "pH",
+            "valuePath": "value",
+            "outputs": [
+                {
+                    "key": "ph",
+                    "label": "Acidity",
+                    "unit": "pH"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "Signal",
+            "type": "ANALOG_IN"
+        }
+    ],
+    "initialState": {
+        "value": 7.0
+    },
+    "uiConfig": {
+        "category": "Water",
+        "icon": "droplet",
+        "units": [
+            "pH"
+        ],
+        "tags": [
+            "pH",
+            "Water",
+            "Acidity"
+        ],
+        "recommendedPins": [
+            "A1",
+            "A2",
+            "A3"
+        ],
+        "capabilities": {
+            "READ": {
+                "label": "Acidity",
+                "icon": "activity",
+                "tooltip": "Measures pH level. Supports Auto-Temperature Compensation."
+            }
+        }
+    }
+}

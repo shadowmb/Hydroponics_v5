@@ -19,12 +19,25 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
     }[];
     requirements?: {
         interface?: 'digital' | 'analog' | 'i2c' | 'uart' | 'onewire';
-        voltage?: string;
+        voltage?: string | number[]; // String "3.3V" or Array [3.3, 5]
         pin_count?: {
             digital?: number;
             analog?: number;
             uart?: number;
             i2c?: number;
+        };
+    };
+    settingsSchema?: {
+        compensation?: {
+            temperature?: {
+                enabled: boolean;
+                source: 'default' | 'external' | 'internal';
+                default?: number;
+                externalDeviceId?: string;
+            };
+        };
+        voltage?: {
+            reference?: number;
         };
     };
     uiConfig?: {
@@ -71,12 +84,25 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     }],
     requirements: {
         interface: { type: String, enum: ['digital', 'analog', 'i2c', 'uart', 'onewire'] },
-        voltage: { type: String },
+        voltage: { type: Schema.Types.Mixed }, // String "3.3V" or Array [3.3, 5]
         pin_count: {
             digital: { type: Number },
             analog: { type: Number },
             uart: { type: Number },
             i2c: { type: Number }
+        }
+    },
+    settingsSchema: {
+        compensation: {
+            temperature: {
+                enabled: { type: Boolean },
+                source: { type: String, enum: ['default', 'external', 'internal'] },
+                default: { type: Number },
+                externalDeviceId: { type: String }
+            }
+        },
+        voltage: {
+            reference: { type: Number }
         }
     },
     uiConfig: {
