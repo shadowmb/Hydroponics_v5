@@ -5,7 +5,7 @@
   "name": "DS18B20",
   "type": "SENSOR",
   "isEnabled": true,
-  "status": "offline",
+  "status": "online",
   "hardware": {
     "pins": [
       {
@@ -21,7 +21,19 @@
   },
   "config": {
     "driverId": "ds18b20",
-    "pollInterval": 5000
+    "pollInterval": 5000,
+    "conversionStrategy": "linear",
+    "sampling": {
+      "count": 1,
+      "delayMs": 0
+    },
+    "validation": {
+      "fallbackAction": "error",
+      "retryCount": 3,
+      "retryDelayMs": 100,
+      "staleLimit": 1,
+      "staleTimeoutMs": 30000
+    }
   },
   "tags": [
     "Temperature",
@@ -35,10 +47,13 @@
     "$date": "2025-12-15T07:39:18.067Z"
   },
   "updatedAt": {
-    "$date": "2025-12-15T07:39:28.148Z"
+    "$date": "2025-12-15T08:21:13.104Z"
   },
   "__v": 0,
   "metadata": {
     "description": ""
+  },
+  "lastConnectionCheck": {
+    "$date": "2025-12-15T08:21:13.103Z"
   }
 }

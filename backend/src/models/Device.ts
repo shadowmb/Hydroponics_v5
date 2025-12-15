@@ -124,6 +124,17 @@ const DeviceSchema = new Schema<IDevice>(
             sampling: {
                 count: { type: Number, default: 1 },
                 delayMs: { type: Number, default: 0 }
+            },
+            compensation: {
+                temperature: {
+                    enabled: { type: Boolean, default: false },
+                    source: { type: String, enum: ['default', 'external', 'internal'], default: 'default' },
+                    default: Number,
+                    externalDeviceId: String
+                }
+            },
+            voltage: {
+                reference: Number
             }
         },
 

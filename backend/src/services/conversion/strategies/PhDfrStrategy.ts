@@ -60,6 +60,9 @@ export class PhDfrStrategy implements IConversionStrategy {
         const deltaV = neutralVoltage - voltageMs;
         let ph = 7.0 + (deltaV / correctedSensitivity);
 
-        return parseFloat(ph.toFixed(2));
+        const result = parseFloat(ph.toFixed(2));
+        // console.log(`[PhDfrStrategy] pH Calc: V=${voltageMs.toFixed(2)}mV (Raw: ${raw}), T=${temperature}°C, pH=${result}`);
+
+        return result;
     }
 }

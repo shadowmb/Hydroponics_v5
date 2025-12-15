@@ -436,6 +436,7 @@ export class HardwareService {
 
                         if (age < LIMIT && lastRead) {
                             temp = lastRead.value;
+                            logger.info({ deviceId: device._id, temp, source: 'external', extDevId: extDev._id, freshness: 'fresh' }, '🌡️ [HardwareService] Using External Temperature for Compensation');
                         } else {
                             // Active Polling
                             logger.warn({ deviceId, extDev: extDev.name, age }, '⚠️ [HardwareService] Stale Temp Data. Polling...');
@@ -444,6 +445,9 @@ export class HardwareService {
                                 const res = await this.readSensorValue(extDev.id); // Recursion risk if cycle
                                 if (res && typeof res.value === 'number') {
                                     temp = res.value;
+                                    logger.info({ deviceId: device._id, temp, source: 'external', extDevId: extDev._id, freshness: 'polled' }, '🌡️ [HardwareService] Using Polled External Temperature for Compensation');
+                                } else {
+                                    logger.warn({ deviceId: device._id, lastRead, source: 'external' }, '⚠️ [HardwareService] External Temperature Stale or Poll Failed, using Default');
                                 }
                             } catch (err) {
                                 logger.error({ err }, '❌ [HardwareService] Active Poll Failed. Using Default.');

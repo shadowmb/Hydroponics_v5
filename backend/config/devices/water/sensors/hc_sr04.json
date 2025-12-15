@@ -13,7 +13,9 @@
     ],
     "requirements": {
         "interface": "digital",
-        "voltage": "5V",
+        "voltage": [
+            5.0
+        ],
         "pin_count": {
             "digital": 2
         }

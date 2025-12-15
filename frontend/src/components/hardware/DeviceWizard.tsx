@@ -155,13 +155,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                         return allTags;
                     })(),
                     settings: {
-                        ...initialData.config?.compensation,
-                        ...initialData.config?.voltage,
-                        // Flatten for simpler UI binding? Or keep minimal nested structure?
-                        // Let's keep nested but map it carefully.
-                        // Actually, let's map it 1:1 with config structure to be safe.
-                        compensation: initialData.config?.compensation,
-                        voltage: initialData.config?.voltage
+                        compensation: initialData.config?.compensation || {},
+                        voltage: initialData.config?.voltage || {}
                     }
                 });
                 // Determine connection type
@@ -331,6 +326,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     channel: parseInt(formData.channel)
                 };
             }
+
+            console.log('🚀 [DeviceWizard] Submitting Payload:', JSON.stringify(payload, null, 2));
 
             if (isEditMode) {
                 await hardwareService.updateDevice(initialData._id, payload);
@@ -908,19 +905,15 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                                                     <SelectValue />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="default">Fixed Default</SelectItem>
+                                                                    <SelectItem value="default">Fixed Value</SelectItem>
                                                                     <SelectItem value="external">External Sensor</SelectItem>
-                                                                    <SelectItem value="internal">Internal (Built-in)</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
 
-                                                        {formData.settings?.compensation?.temperature?.source === 'external' ? (
+                                                        {formData.settings?.compensation?.temperature?.source === 'external' && (
                                                             <div className="space-y-2">
                                                                 <Label>Select Sensor</Label>
-                                                                {/* Filter for Temperature Sensors (Group: Water/Air + Tag: Temp) */}
-                                                                {/* Actually we just need to list devices and maybe filter? */}
-                                                                {/* We'll use a Combobox or Select. Select is easier. */}
                                                                 <Select
                                                                     value={formData.settings?.compensation?.temperature?.externalDeviceId || ''}
                                                                     onValueChange={(v) => setFormData(prev => ({
@@ -945,10 +938,16 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                                                             .filter(d =>
                                                                                 d._id !== initialData?._id && // Exclude self
                                                                                 d.type === 'SENSOR' &&        // Only Sensors
-                                                                                // Optional: strict filtering for Temp sensors?
-                                                                                // For now, let user pick any sensor, maybe they have a hybrid one.
-                                                                                // But prioritizing Water/Air groups or explicit Temp tags is good UX.
-                                                                                true
+                                                                                // Filter for Temperature sensors (Tag: Temp/Temperature) OR (Group: Water + Tag: Temp)
+                                                                                (
+                                                                                    d.tags?.some((t: string) => ['Temp', 'Temperature'].includes(t)) ||
+                                                                                    // Also allow Group: Water if it has 'Temp' in name/tags just to be safe, 
+                                                                                    // but strictly speaking, tags are the best indicator.
+                                                                                    // Let's stick to tags + strict unit check if available? 
+                                                                                    // User agreed on Tags.
+                                                                                    // Also include if it has 'Temperature' in the name as fallback?
+                                                                                    d.name.toLowerCase().includes('temperature')
+                                                                                )
                                                                             )
                                                                             .map(d => (
                                                                                 <SelectItem key={d._id} value={d._id}>
@@ -960,9 +959,11 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                                                     </SelectContent>
                                                                 </Select>
                                                             </div>
-                                                        ) : (
+                                                        )}
+
+                                                        {(!formData.settings?.compensation?.temperature?.source || formData.settings?.compensation?.temperature?.source === 'default') && (
                                                             <div className="space-y-2">
-                                                                <Label>Default Value (°C)</Label>
+                                                                <Label>Fixed Temperature (°C)</Label>
                                                                 <Input
                                                                     type="number"
                                                                     value={formData.settings?.compensation?.temperature?.default ?? 25}

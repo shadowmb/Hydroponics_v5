@@ -12,7 +12,10 @@
     ],
     "requirements": {
         "interface": "analog",
-        "voltage": "3.3V-5V",
+        "voltage": [
+            3.3,
+            5.0
+        ],
         "pin_count": {
             "analog": 1
         }

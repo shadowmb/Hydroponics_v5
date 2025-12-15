@@ -25,15 +25,44 @@ export const checkCompatibility = (
     const req = device.requirements;
 
     // 1. Voltage Check
-    // We assume board.electrical_specs.logic_voltage is like "5V" or "3.3V"
-    // We assume device.requirements.voltage is like "5V", "3.3V", or "3.3V-5V"
-    const boardVoltage = board.electrical_specs?.logic_voltage;
+    const boardVoltage = board.electrical_specs?.logic_voltage; // e.g., "5V" or "3.3V"
+
     if (boardVoltage && req.voltage) {
-        if (req.voltage !== '3.3V-5V' && req.voltage !== boardVoltage) {
-            // Strict mismatch: Board 5V vs Device 3.3V (or vice versa)
+        // Parse Board Voltage (remove 'V')
+        const boardV = parseFloat(boardVoltage.replace('V', ''));
+
+        // Resolve Device Requirement
+        // Verify if user has overridden the voltage in device config (if passed)
+        // Note: 'device' here is DeviceTemplate. We might need the actual Device config if passed?
+        // But checkCompatibility signature only takes DeviceTemplate.
+        // If we want to support dynamic override, we need to pass the configured voltage.
+        // For now, let's just make sure the ARRAY logic works.
+
+        let allowedVoltages: number[] = [];
+
+        if (Array.isArray(req.voltage)) {
+            // Handle [3.3, 5]
+            allowedVoltages = req.voltage.map(v => typeof v === 'string' ? parseFloat(v.replace('V', '')) : v);
+        } else if (typeof req.voltage === 'string') {
+            // Handle "3.3V-5V" or "5V"
+            if (req.voltage.includes('-')) {
+                // Range "3.3V-5V" -> Compatible if board is within? Actually usually means "supports both"
+                // Simplified: accept both ends.
+                const parts = req.voltage.split('-').map(p => parseFloat(p.replace('V', '')));
+                allowedVoltages = parts;
+            } else {
+                allowedVoltages = [parseFloat(req.voltage.replace('V', ''))];
+            }
+        }
+
+        // Check compatibility
+        // If board voltage is in allowed list, OR if list contains a value close enough (tolerance?)
+        const isCompatible = allowedVoltages.some(v => Math.abs(v - boardV) < 0.2); // 0.2V tolerance
+
+        if (!isCompatible) {
             return {
                 compatible: false,
-                reason: `Voltage Mismatch: Board is ${boardVoltage}, Device requires ${req.voltage}`
+                reason: `Voltage Mismatch: Board remains ${boardVoltage}, Device requires ${allowedVoltages.join('/')}V`
             };
         }
     }
