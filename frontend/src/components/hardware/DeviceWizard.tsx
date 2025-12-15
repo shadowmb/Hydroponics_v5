@@ -301,6 +301,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                 config: {
                     driverId: selectedTemplate?._id, // Always use the base template ID
                     pollInterval: 5000,
+                    conversionStrategy: effectiveTemplate?.conversionStrategy, // Propagate strategy from template
                     variantId: selectedVariant?.id,
                     compensation: formData.settings?.compensation, // New
                     voltage: formData.settings?.voltage           // New

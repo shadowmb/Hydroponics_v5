@@ -466,6 +466,8 @@ export class HardwareService {
         // We ask ConversionService to find the best strategy for our desired Display Unit.
         const targetUnit = device.displayUnit || device.displayUnits?.get('_primary'); // Use primary display unit as target if valid
 
+        logger.info({ deviceId, configStrategy: device.config?.conversionStrategy, driverId: device.config.driverId }, '🧐 [HardwareService] Debug Strategy Selection');
+
         const smartResult = conversionService.convertSmart(device, raw, targetUnit, context);
         let value = smartResult.value;
         const activeStrategy = smartResult.strategyUsed; // The strategy that was actually used

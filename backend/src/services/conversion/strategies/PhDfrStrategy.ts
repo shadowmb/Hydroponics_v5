@@ -61,7 +61,7 @@ export class PhDfrStrategy implements IConversionStrategy {
         let ph = 7.0 + (deltaV / correctedSensitivity);
 
         const result = parseFloat(ph.toFixed(2));
-        // console.log(`[PhDfrStrategy] pH Calc: V=${voltageMs.toFixed(2)}mV (Raw: ${raw}), T=${temperature}°C, pH=${result}`);
+        console.log(`🧪 [PhDfrStrategy] Raw:${raw} | ADC_Max:${adcMax} | V_Ref:${vRef}V | V_Meas:${voltageMs.toFixed(2)}mV | Temp:${temperature.toFixed(1)}°C | Sensitivity:${correctedSensitivity.toFixed(2)} | pH:${result}`);
 
         return result;
     }

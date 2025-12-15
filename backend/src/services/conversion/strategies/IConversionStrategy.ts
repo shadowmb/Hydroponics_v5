@@ -15,6 +15,6 @@ export interface IConversionStrategy {
      * @param device The device configuration containing calibration data.
      * @param context Context providing runtime values like Temperature, Voltage, ADC Max.
      */
-    convert(rawValue: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): number;
+    convert(rawValue: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): number | { value: number; unit: string };
     reverseConvert?(targetValue: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): number; // For actuators
 }

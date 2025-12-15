@@ -23,6 +23,8 @@ export class EcDfrStrategy implements IConversionStrategy {
         const k = calibration.multiplier || 1.0;
         ec = ec * k;
 
-        return parseFloat(ec.toFixed(2));
+        const result = parseFloat(ec.toFixed(2));
+        console.log(`⚡ [EcDfrStrategy] Raw:${raw} | V_Calc:${voltage.toFixed(2)}mV | K:${k} | EC:${result} mS/cm`);
+        return result;
     }
 }

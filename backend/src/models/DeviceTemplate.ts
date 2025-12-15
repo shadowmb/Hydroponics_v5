@@ -6,6 +6,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
     description?: string;
     category: 'CONTROLLER' | 'SENSOR' | 'ACTUATOR';
     supportedStrategies?: string[]; // List of supported calibration strategies
+    conversionStrategy?: string; // Default conversion strategy key
     capabilities: string[]; // List of supported commands (e.g., ['ANALOG', 'DHT_READ'])
     commands: Record<string, any>; // Command definitions
     portRequirements: {
@@ -26,7 +27,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
             uart?: number;
             i2c?: number;
         };
-    };
+    }[];
     settingsSchema?: {
         compensation?: {
             temperature?: {
@@ -38,6 +39,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         };
         voltage?: {
             reference?: number;
+            range?: number[]; // Added for consistency
         };
     };
     uiConfig?: {
@@ -71,6 +73,7 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     description: { type: String },
     category: { type: String, enum: ['CONTROLLER', 'SENSOR', 'ACTUATOR'], default: 'SENSOR' },
     supportedStrategies: [{ type: String }],
+    conversionStrategy: { type: String },
     capabilities: [{ type: String }],
     commands: { type: Map, of: Schema.Types.Mixed },
     portRequirements: [{

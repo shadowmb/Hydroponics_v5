@@ -41,7 +41,6 @@
     "commands": {
         "READ": {
             "hardwareCmd": "ANALOG",
-            "sourceUnit": "pH",
             "valuePath": "value",
             "outputs": [
                 {
