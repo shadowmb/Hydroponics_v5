@@ -20,6 +20,18 @@
             "analog": 1
         }
     },
+    "settingsSchema": {
+        "compensation": {
+            "temperature": {
+                "enabled": true,
+                "source": "default",
+                "default": 25.0
+            }
+        },
+        "voltage": {
+            "reference": 5.0
+        }
+    },
     "hardwareLimits": {
         "min": 0,
         "max": 14000,

@@ -6,7 +6,7 @@ export class EcDfrStrategy implements IConversionStrategy {
         // 1. Convert ADC (0-1023) to Voltage (mV)
         // Assuming 5V reference and 10-bit ADC. 
         // TODO: Make reference voltage configurable via context or config
-        const vRef = context?.voltage || 5000; // mV
+        const vRef = (context?.voltage ? context.voltage * 1000 : 5000); // Convert V to mV
         const adcMax = context?.adcMax || 1024;
         const voltage = (raw / adcMax) * vRef;
 
