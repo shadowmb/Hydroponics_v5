@@ -1,12 +1,13 @@
 {
-    "id": "dfrobot_ec_k1",
-    "name": "DFRobot EC Sensor (K=1.0)",
+    "id": "dfrobot_ph_pro",
+    "name": "DFRobot Analog pH Sensor V2",
     "category": "SENSOR",
     "supportedStrategies": [
-        "two_point_linear",
-        "linear"
+        "ph_dfr",
+        "linear",
+        "two_point_linear"
     ],
-    "conversionStrategy": "ec-dfr-analog",
+    "conversionStrategy": "ph_dfr",
     "capabilities": [
         "READ"
     ],
@@ -34,19 +35,18 @@
     },
     "hardwareLimits": {
         "min": 0,
-        "max": 14000,
-        "unit": "µS/cm"
+        "max": 14,
+        "unit": "pH"
     },
     "commands": {
         "READ": {
             "hardwareCmd": "ANALOG",
             "valuePath": "value",
-            "sourceUnit": "µS/cm",
             "outputs": [
                 {
-                    "key": "ec",
-                    "label": "Conductivity",
-                    "unit": "µS/cm"
+                    "key": "ph",
+                    "label": "Acidity",
+                    "unit": "pH"
                 }
             ]
         }
@@ -58,30 +58,29 @@
         }
     ],
     "initialState": {
-        "value": 0
+        "value": 7.0
     },
     "uiConfig": {
         "category": "Water",
         "icon": "droplet",
         "units": [
-            "mS/cm",
-            "µS/cm",
-            "ppm"
+            "pH"
         ],
         "tags": [
-            "EC",
-            "Conductivity",
-            "Water"
+            "pH",
+            "Water",
+            "Acidity"
         ],
         "recommendedPins": [
             "A1",
-            "A2"
+            "A2",
+            "A3"
         ],
         "capabilities": {
             "READ": {
-                "label": "Conductivity",
+                "label": "Acidity",
                 "icon": "activity",
-                "tooltip": "Measures electrical conductivity (EC) in µS/cm. Requires temperature compensation."
+                "tooltip": "Measures pH level. Supports Auto-Temperature Compensation."
             }
         }
     }

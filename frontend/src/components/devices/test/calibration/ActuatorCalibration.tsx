@@ -118,11 +118,22 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
 
     const handleRunCommand = async (cmd: string, params: any) => {
         try {
-            const result = await hardwareService.executeCommand(device._id, cmd, {
-                ...params,
-                driverId: device.config.driverId._id || device.config.driverId // Fix: use _id or fallback if it's already a string
-            });
-            toast.success(`Command '${cmd}' sent`);
+            let result;
+
+            // For READ command (sensor readings), use testDevice which returns normalized values
+            if (cmd === 'READ') {
+                result = await hardwareService.testDevice(device._id);
+                console.log('[ActuatorCalibration] testDevice result:', result);
+                toast.success('Sensor reading captured');
+            } else {
+                // For other commands (actuator actions), use executeCommand
+                result = await hardwareService.executeCommand(device._id, cmd, {
+                    ...params,
+                    driverId: device.config.driverId._id || device.config.driverId
+                });
+                toast.success(`Command '${cmd}' sent`);
+            }
+
             return result;
         } catch (error: any) {
             console.error('Command failed:', error);

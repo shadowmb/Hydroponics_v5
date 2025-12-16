@@ -66,6 +66,10 @@ const ControllerSchema = new Schema({
         default: {}
     },
     capabilities: { type: [String], default: [] },
+    hardwareConfig: {
+        adcResolution: { type: Number, default: 1023 },
+        voltageReference: { type: Number, default: 5.0 }
+    },
     isActive: { type: Boolean, default: true }
 }, {
     timestamps: true

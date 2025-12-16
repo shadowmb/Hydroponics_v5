@@ -6,6 +6,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
     description?: string;
     category: 'CONTROLLER' | 'SENSOR' | 'ACTUATOR';
     supportedStrategies?: string[]; // List of supported calibration strategies
+    conversionStrategy?: string; // Default conversion strategy key
     capabilities: string[]; // List of supported commands (e.g., ['ANALOG', 'DHT_READ'])
     commands: Record<string, any>; // Command definitions
     portRequirements: {
@@ -19,12 +20,26 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
     }[];
     requirements?: {
         interface?: 'digital' | 'analog' | 'i2c' | 'uart' | 'onewire';
-        voltage?: string;
+        voltage?: string | number[]; // String "3.3V" or Array [3.3, 5]
         pin_count?: {
             digital?: number;
             analog?: number;
             uart?: number;
             i2c?: number;
+        };
+    }[];
+    settingsSchema?: {
+        compensation?: {
+            temperature?: {
+                enabled: boolean;
+                source: 'default' | 'external' | 'internal';
+                default?: number;
+                externalDeviceId?: string;
+            };
+        };
+        voltage?: {
+            reference?: number;
+            range?: number[]; // Added for consistency
         };
     };
     uiConfig?: {
@@ -58,6 +73,7 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     description: { type: String },
     category: { type: String, enum: ['CONTROLLER', 'SENSOR', 'ACTUATOR'], default: 'SENSOR' },
     supportedStrategies: [{ type: String }],
+    conversionStrategy: { type: String },
     capabilities: [{ type: String }],
     commands: { type: Map, of: Schema.Types.Mixed },
     portRequirements: [{
@@ -71,12 +87,25 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     }],
     requirements: {
         interface: { type: String, enum: ['digital', 'analog', 'i2c', 'uart', 'onewire'] },
-        voltage: { type: String },
+        voltage: { type: Schema.Types.Mixed }, // String "3.3V" or Array [3.3, 5]
         pin_count: {
             digital: { type: Number },
             analog: { type: Number },
             uart: { type: Number },
             i2c: { type: Number }
+        }
+    },
+    settingsSchema: {
+        compensation: {
+            temperature: {
+                enabled: { type: Boolean },
+                source: { type: String, enum: ['default', 'external', 'internal'] },
+                default: { type: Number },
+                externalDeviceId: { type: String }
+            }
+        },
+        voltage: {
+            reference: { type: Number }
         }
     },
     uiConfig: {

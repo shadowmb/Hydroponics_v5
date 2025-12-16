@@ -4,7 +4,6 @@
     "description": "Ultrasonic distance sensor for measuring liquid levels or proximity.",
     "category": "SENSOR",
     "supportedStrategies": [
-        "offset_only",
         "linear",
         "tank_volume"
     ],
@@ -13,7 +12,9 @@
     ],
     "requirements": {
         "interface": "digital",
-        "voltage": "5V",
+        "voltage": [
+            5.0
+        ],
         "pin_count": {
             "digital": 2
         }

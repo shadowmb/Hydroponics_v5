@@ -123,7 +123,9 @@ export const DeviceSelectionStep: React.FC<Props> = ({ devices, selectedDeviceId
                                                             )}
                                                             {device.requirements?.voltage && (
                                                                 <Badge variant="outline" className="text-[10px] px-1 py-0 h-5">
-                                                                    {device.requirements.voltage}
+                                                                    {Array.isArray(device.requirements.voltage)
+                                                                        ? device.requirements.voltage.map(v => typeof v === 'number' ? `${v}V` : v).join(' / ')
+                                                                        : device.requirements.voltage}
                                                                 </Badge>
                                                             )}
                                                         </div>

@@ -39,6 +39,17 @@ export interface IDevice extends SoftDeleteDocument {
             count?: number;
             delayMs?: number;
         };
+        compensation?: {
+            temperature?: {
+                enabled: boolean;
+                source: 'default' | 'external' | 'internal';
+                default?: number;
+                externalDeviceId?: string;
+            };
+        };
+        voltage?: {
+            reference?: number;
+        };
     };
 
     metadata?: {
@@ -113,6 +124,17 @@ const DeviceSchema = new Schema<IDevice>(
             sampling: {
                 count: { type: Number, default: 1 },
                 delayMs: { type: Number, default: 0 }
+            },
+            compensation: {
+                temperature: {
+                    enabled: { type: Boolean, default: false },
+                    source: { type: String, enum: ['default', 'external', 'internal'], default: 'default' },
+                    default: Number,
+                    externalDeviceId: String
+                }
+            },
+            voltage: {
+                reference: Number
             }
         },
 

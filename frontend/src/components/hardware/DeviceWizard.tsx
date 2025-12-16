@@ -62,6 +62,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const [templates, setTemplates] = useState<any[]>([]);
     const [controllers, setControllers] = useState<IController[]>([]);
     const [relays, setRelays] = useState<any[]>([]);
+    const [devices, setDevices] = useState<any[]>([]); // All devices for reference (e.g. external compensation)
     const [existingTags, setExistingTags] = useState<string[]>([]); // For suggestions
     const [loading, setLoading] = useState(false);
 
@@ -79,7 +80,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         relayId: '',
         channel: '',
         isEnabled: true,
-        tags: [] as string[]
+        tags: [] as string[],
+        settings: {} as Record<string, any>
     });
 
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -149,8 +151,13 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                         // Actually, let's keep ALL tags in formData for now, 
                         // and filter them dynamically in the UI to avoid data loss 
                         // if the template is missing or changed.
+                        // if the template is missing or changed.
                         return allTags;
-                    })()
+                    })(),
+                    settings: {
+                        compensation: initialData.config?.compensation || {},
+                        voltage: initialData.config?.voltage || {}
+                    }
                 });
                 // Determine connection type
                 if (initialData.hardware?.relayId) {
@@ -170,13 +177,13 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     relayId: '',
                     channel: '',
                     isEnabled: true,
-                    tags: []
+                    tags: [],
+                    settings: {} // Dynamic settings container
                 });
                 setSelectedCategory('');
                 setSelectedTemplate(null);
                 setSelectedVariant(null);
                 setConnectionType('direct');
-
             }
         }
     }, [open, initialData]);
@@ -227,6 +234,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             setTemplates(tpls);
             setControllers(ctrls);
             setRelays(rlys);
+            setDevices(devices);
 
             // Extract unique tags
             const tags = new Set<string>();
@@ -293,7 +301,10 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                 config: {
                     driverId: selectedTemplate?._id, // Always use the base template ID
                     pollInterval: 5000,
-                    variantId: selectedVariant?.id
+                    conversionStrategy: effectiveTemplate?.conversionStrategy, // Propagate strategy from template
+                    variantId: selectedVariant?.id,
+                    compensation: formData.settings?.compensation, // New
+                    voltage: formData.settings?.voltage           // New
                 },
                 metadata: {
                     description: formData.description
@@ -316,6 +327,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     channel: parseInt(formData.channel)
                 };
             }
+
+            console.log('🚀 [DeviceWizard] Submitting Payload:', JSON.stringify(payload, null, 2));
 
             if (isEditMode) {
                 await hardwareService.updateDevice(initialData._id, payload);
@@ -796,7 +809,190 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                 </CardContent>
                             </Card>
 
-                            {/* 2. Control Mode (Variants) */}
+                            {/* 2. Advanced Settings (Dynamic Schema) */}
+                            {selectedTemplate?.settingsSchema && (
+                                <Card>
+                                    <CardContent className="p-4 space-y-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Settings2 className="h-5 w-5 text-primary" />
+                                            <h3 className="font-semibold text-lg">Sensor Configuration</h3>
+                                        </div>
+
+                                        {/* Voltage Reference */}
+                                        {selectedTemplate.settingsSchema.voltage && (
+                                            <div className="space-y-2">
+                                                <Label>Voltage Reference (Vref)</Label>
+                                                <Select
+                                                    value={String(formData.settings?.voltage?.reference || selectedTemplate.settingsSchema.voltage.reference?.default || '')}
+                                                    onValueChange={(v) => setFormData(prev => ({
+                                                        ...prev,
+                                                        settings: {
+                                                            ...prev.settings,
+                                                            voltage: { ...prev.settings.voltage, reference: parseFloat(v) }
+                                                        }
+                                                    }))}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select Voltage" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {selectedTemplate.requirements?.voltage && Array.isArray(selectedTemplate.requirements.voltage)
+                                                            ? selectedTemplate.requirements.voltage.map((v: number) => (
+                                                                <SelectItem key={v} value={String(v)}>{v}V</SelectItem>
+                                                            ))
+                                                            : (
+                                                                // Fallback if not array (shouldn't happen with new schema but safe to handle)
+                                                                <SelectItem value="5">5V</SelectItem>
+                                                            )
+                                                        }
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-xs text-muted-foreground">Operating voltage of the sensor (check hardware jumper).</p>
+                                            </div>
+                                        )}
+
+                                        {/* Temperature Compensation */}
+                                        {selectedTemplate.settingsSchema.compensation?.temperature && (
+                                            <div className="space-y-4 pt-2 border-t">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="flex items-center gap-2">
+                                                        <Thermometer className="h-4 w-4" />
+                                                        Temperature Compensation
+                                                    </Label>
+                                                    <Switch
+                                                        checked={formData.settings?.compensation?.temperature?.enabled ?? true}
+                                                        onCheckedChange={(c) => setFormData(prev => ({
+                                                            ...prev,
+                                                            settings: {
+                                                                ...prev.settings,
+                                                                compensation: {
+                                                                    ...prev.settings.compensation,
+                                                                    temperature: {
+                                                                        ...prev.settings.compensation?.temperature,
+                                                                        enabled: c
+                                                                    }
+                                                                }
+                                                            }
+                                                        }))}
+                                                    />
+                                                </div>
+
+                                                {(formData.settings?.compensation?.temperature?.enabled ?? true) && (
+                                                    <div className="grid grid-cols-2 gap-4 pl-4 border-l-2">
+                                                        <div className="space-y-2">
+                                                            <Label>Source</Label>
+                                                            <Select
+                                                                value={formData.settings?.compensation?.temperature?.source || 'default'}
+                                                                onValueChange={(v) => {
+                                                                    // Reset external ID if not external
+                                                                    const isExternal = v === 'external';
+                                                                    setFormData(prev => ({
+                                                                        ...prev,
+                                                                        settings: {
+                                                                            ...prev.settings,
+                                                                            compensation: {
+                                                                                ...prev.settings.compensation,
+                                                                                temperature: {
+                                                                                    ...prev.settings.compensation?.temperature,
+                                                                                    source: v,
+                                                                                    externalDeviceId: isExternal ? prev.settings.compensation?.temperature?.externalDeviceId : undefined
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }));
+                                                                }}
+                                                            >
+                                                                <SelectTrigger>
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="default">Fixed Value</SelectItem>
+                                                                    <SelectItem value="external">External Sensor</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+
+                                                        {formData.settings?.compensation?.temperature?.source === 'external' && (
+                                                            <div className="space-y-2">
+                                                                <Label>Select Sensor</Label>
+                                                                <Select
+                                                                    value={formData.settings?.compensation?.temperature?.externalDeviceId || ''}
+                                                                    onValueChange={(v) => setFormData(prev => ({
+                                                                        ...prev,
+                                                                        settings: {
+                                                                            ...prev.settings,
+                                                                            compensation: {
+                                                                                ...prev.settings.compensation,
+                                                                                temperature: {
+                                                                                    ...prev.settings.compensation?.temperature,
+                                                                                    externalDeviceId: v
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }))}
+                                                                >
+                                                                    <SelectTrigger>
+                                                                        <SelectValue placeholder="Choose sensor..." />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {devices
+                                                                            .filter(d =>
+                                                                                d._id !== initialData?._id && // Exclude self
+                                                                                d.type === 'SENSOR' &&        // Only Sensors
+                                                                                // Filter for Temperature sensors (Tag: Temp/Temperature) OR (Group: Water + Tag: Temp)
+                                                                                (
+                                                                                    d.tags?.some((t: string) => ['Temp', 'Temperature'].includes(t)) ||
+                                                                                    // Also allow Group: Water if it has 'Temp' in name/tags just to be safe, 
+                                                                                    // but strictly speaking, tags are the best indicator.
+                                                                                    // Let's stick to tags + strict unit check if available? 
+                                                                                    // User agreed on Tags.
+                                                                                    // Also include if it has 'Temperature' in the name as fallback?
+                                                                                    d.name.toLowerCase().includes('temperature')
+                                                                                )
+                                                                            )
+                                                                            .map(d => (
+                                                                                <SelectItem key={d._id} value={d._id}>
+                                                                                    {d.name} {d.lastReading?.value !== undefined ? `(${d.lastReading.value})` : ''}
+                                                                                </SelectItem>
+                                                                            ))
+                                                                        }
+                                                                        {devices.length === 0 && <SelectItem value="_disabled" disabled>No other sensors found</SelectItem>}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                        )}
+
+                                                        {(!formData.settings?.compensation?.temperature?.source || formData.settings?.compensation?.temperature?.source === 'default') && (
+                                                            <div className="space-y-2">
+                                                                <Label>Fixed Temperature (°C)</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={formData.settings?.compensation?.temperature?.default ?? 25}
+                                                                    onChange={(e) => setFormData(prev => ({
+                                                                        ...prev,
+                                                                        settings: {
+                                                                            ...prev.settings,
+                                                                            compensation: {
+                                                                                ...prev.settings.compensation,
+                                                                                temperature: {
+                                                                                    ...prev.settings.compensation?.temperature,
+                                                                                    default: parseFloat(e.target.value)
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }))}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* 3. Control Mode (Variants) */}
                             {selectedTemplate?.variants && selectedTemplate.variants.length > 0 && (
                                 <Card>
                                     <CardContent className="p-4 space-y-3">

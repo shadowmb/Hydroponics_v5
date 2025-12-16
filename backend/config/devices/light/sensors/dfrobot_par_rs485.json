@@ -12,7 +12,9 @@
     ],
     "requirements": {
         "interface": "uart",
-        "voltage": "5V",
+        "voltage": [
+            5.0
+        ],
         "pin_count": {
             "uart": 1
         }

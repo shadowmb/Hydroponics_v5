@@ -67,7 +67,7 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
         label: 'Tank Volume (Liters)',
         type: 'SENSOR',
         description: 'Converts distance measurement to volume using a multi-point lookup table.',
-        inputUnit: 'cm',
+        inputUnit: 'mm',
         outputUnit: 'l',
         calibration: {
             calibrationKey: 'tank_volume',
