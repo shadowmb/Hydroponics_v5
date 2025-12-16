@@ -568,12 +568,9 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
                 };
 
                 const captureReading = async (index: number) => {
-                    console.log('[DynamicWizard] captureReading called for index:', index);
                     if (onRunCommand) {
                         try {
-                            console.log('[DynamicWizard] Sending READ command...');
                             const result = await onRunCommand('READ', {});
-                            console.log('[DynamicWizard] READ command result:', result);
 
                             // IMPORTANT: For calibration, we need the BASE VALUE (normalized to mm)
                             // Backend returns: { raw, value, unit, details: { baseValue, baseUnit } }
@@ -582,21 +579,14 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
                             // Priority: details.baseValue > baseValue > value > raw number
                             if (result?.details?.baseValue !== undefined) {
                                 reading = result.details.baseValue;
-                                console.log('[DynamicWizard] Using details.baseValue:', reading);
                             } else if (result && typeof result.baseValue === 'number') {
                                 reading = result.baseValue;
-                                console.log('[DynamicWizard] Using baseValue:', reading);
                             } else if (result && typeof result.value === 'number') {
                                 reading = result.value;
-                                console.log('[DynamicWizard] Using value:', reading);
                             } else if (typeof result === 'number') {
                                 reading = result;
-                                console.log('[DynamicWizard] Using raw number:', reading);
-                            } else {
-                                console.warn('[DynamicWizard] Could not extract reading from result:', result);
                             }
 
-                            console.log('[DynamicWizard] Final reading to update:', reading);
                             updatePoint(index, 'raw', reading);
                         } catch (err) {
                             console.error("[DynamicWizard] Failed to capture reading:", err);

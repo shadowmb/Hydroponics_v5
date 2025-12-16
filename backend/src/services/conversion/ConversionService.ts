@@ -50,6 +50,7 @@ export class ConversionService {
 
         try {
             // Pass context to strategy
+
             return strategy.convert(rawValue, device, strategyName, context);
         } catch (error) {
             console.error(`Error converting value for device ${device.name}:`, error);
@@ -61,7 +62,7 @@ export class ConversionService {
      * Smart conversion that attempts to find a strategy producing the 'targetUnit'.
      * If found, it uses that strategy. If not, it falls back to the default strategy.
      */
-    convertSmart(device: IDevice, rawValue: number, context?: any): { value: number, unit?: string, strategyUsed: string } {
+    convertSmart(device: IDevice, rawValue: number, targetUnit?: string, context?: any): { value: number, unit?: string, strategyUsed: string } {
         // 1. Identify Default Strategy
         // Just like in convert(), explicit override > device config > default logic
         let defaultStrategyName = device.config.conversionStrategy;
