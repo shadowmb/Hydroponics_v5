@@ -77,6 +77,36 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
             yLabel: 'Volume (L)'
         }
     },
+    'two_point_linear': {
+        id: 'two_point_linear',
+        label: 'Two-Point Linear Calibration',
+        type: 'SENSOR',
+        description: 'Calibrate using two known reference points (e.g. pH 4.0/7.0).',
+        inputUnit: 'any',
+        outputUnit: 'any',
+        calibration: {
+            calibrationKey: 'two_point_linear', // Matches device config schema
+            component: 'MultiPointTable',       // Reusing existing table component
+            minPoints: 2,
+            xLabel: 'Raw Value',
+            yLabel: 'Calibrated Value'
+        }
+    },
+    'ph_dfr': {
+        id: 'ph_dfr',
+        label: 'DFRobot pH (Pro/V2)',
+        type: 'SENSOR',
+        description: 'Temperature-compensated pH conversion (Nernst Equation).',
+        inputUnit: 'any',
+        outputUnit: 'pH',
+        calibration: {
+            calibrationKey: 'ph_dfr',
+            component: 'MultiPointTable',
+            minPoints: 1, // Allow 1 (Offset/Neutral) or 2 (Slope)
+            xLabel: 'Raw Value',
+            yLabel: 'pH Value'
+        }
+    },
 
     // --- ACTUATORS ---
     'actuator_manual': {
