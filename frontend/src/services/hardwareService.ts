@@ -152,8 +152,8 @@ export const hardwareService = {
         await axios.delete(`${API_URL}/hardware/devices/${id}`);
     },
 
-    testDevice: async (id: string): Promise<any> => {
-        const response = await axios.post(`${API_URL}/hardware/devices/${id}/test`);
+    testDevice: async (id: string, strategy?: string): Promise<any> => {
+        const response = await axios.post(`${API_URL}/hardware/devices/${id}/test`, { strategy });
         return response.data.data;
     },
 

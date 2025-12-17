@@ -53,6 +53,13 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
         description: 'Standard linear reading (y = mx + c). Returns value in base unit.',
         inputUnit: 'any',
         outputUnit: 'any',
+        calibration: {
+            calibrationKey: 'linear',
+            component: 'MultiPointTable',
+            minPoints: 2,
+            xLabel: 'Raw Input',
+            yLabel: 'Calibrated Value'
+        }
     },
     'offset_only': {
         id: 'offset_only',

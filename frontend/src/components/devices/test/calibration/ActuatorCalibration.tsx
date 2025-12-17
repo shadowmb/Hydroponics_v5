@@ -15,6 +15,7 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
     const [strategies, setStrategies] = useState<CalibrationStrategy[]>([]);
     const [selectedStrategyId, setSelectedStrategyId] = useState<string | undefined>(undefined);
     const [loading, setLoading] = useState(true);
+    const [detectedBaseUnit, setDetectedBaseUnit] = useState<string | undefined>(undefined);
 
 
 
@@ -43,19 +44,35 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
                     console.error("Could not fetch templates for capability check", e);
                 }
 
-                const supported = template?.supportedStrategies || device.config?.supportedStrategies;
+                // NEW: Role-Based Filtering
+                // If a role is active, we MUST restrict calibration options to that role's strategies.
+                const activeRoleKey = device.config?.activeRole;
+                const templateRoles = template?.roles;
 
                 let filtered = allStrategies;
-                if (supported && Array.isArray(supported) && supported.length > 0) {
-                    filtered = allStrategies.filter(s => supported.includes(s.id));
+
+                if (activeRoleKey && templateRoles && templateRoles[activeRoleKey]) {
+                    // 1. Strict Role Mode
+                    const allowedStrategies = templateRoles[activeRoleKey].strategies || [];
+                    filtered = allStrategies.filter(s => allowedStrategies.includes(s.id));
                 } else {
-                    // Fallback: Filter by category if no specific strategies defined
-                    const category = template?.category || device.config?.driverId?.category; // 'SENSOR' or 'ACTUATOR'
-                    filtered = allStrategies.filter(s => {
-                        if (s.category === 'BOTH') return true;
-                        if (category && s.category === category) return true;
-                        return false;
-                    });
+                    // 2. Legacy/Fallback Mode
+                    const supported = template?.supportedStrategies || device.config?.supportedStrategies;
+                    if (supported && Array.isArray(supported) && supported.length > 0) {
+                        filtered = allStrategies.filter(s => supported.includes(s.id));
+                    } else if (templateRoles) {
+                        // If roles exist but none active, allow ALL (Union)
+                        const allRoleStrategies = new Set(Object.values(templateRoles).flatMap((r: any) => r.strategies));
+                        filtered = allStrategies.filter(s => allRoleStrategies.has(s.id));
+                    } else {
+                        // 3. Category Fallback
+                        const category = template?.category || device.config?.driverId?.category;
+                        filtered = allStrategies.filter(s => {
+                            if (s.category === 'BOTH') return true;
+                            if (category && s.category === category) return true;
+                            return false;
+                        });
+                    }
                 }
 
                 const templateCapabilities = template?.capabilities || [];
@@ -86,6 +103,18 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
         };
         loadStrategies();
     }, [device]);
+
+    // Infer Base Unit from Role (Heuristic for initial state)
+    useEffect(() => {
+        if (!detectedBaseUnit && device.config?.activeRole) {
+            const role = device.config.activeRole;
+            if (['distance', 'volume'].includes(role)) setDetectedBaseUnit('mm');
+            else if (['temperature', 'water_temp', 'air_temp'].includes(role)) setDetectedBaseUnit('°C');
+            else if (['humidity'].includes(role)) setDetectedBaseUnit('%');
+            else if (['ph'].includes(role)) setDetectedBaseUnit('pH');
+            else if (['ec', 'tds'].includes(role)) setDetectedBaseUnit('µS/cm');
+        }
+    }, [device, detectedBaseUnit]);
 
     const handleSave = async (data: any) => {
         try {
@@ -120,10 +149,17 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
         try {
             let result;
 
-            // For READ command (sensor readings), use testDevice which returns normalized values
+            // For READ command (sensor readings), use testDevice which returns normalized values.
+            // FIX: Force 'linear' strategy to get the RAW PHYSICAL value (e.g. mm) instead of converted volume (L).
             if (cmd === 'READ') {
-                result = await hardwareService.testDevice(device._id);
-                console.log('[ActuatorCalibration] testDevice result:', result);
+                result = await hardwareService.testDevice(device._id, 'linear');
+                console.log('[ActuatorCalibration] testDevice (Linear/Raw) result:', result);
+
+                // Capture Base Unit if available
+                if (result.details && result.details.validPhysicalBaseUnit) {
+                    setDetectedBaseUnit(result.details.validPhysicalBaseUnit);
+                }
+
                 toast.success('Sensor reading captured');
             } else {
                 // For other commands (actuator actions), use executeCommand
@@ -190,6 +226,25 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
 
     if (loading) return <div>Loading strategies...</div>;
 
+    // EMPTY STATE: If template has roles but none selected.
+    const hasRoles = device.config?.driverId?.roles || (typeof device.config?.driverId === 'object' && device.config.driverId.roles);
+    if (hasRoles && Object.keys(hasRoles).length > 0 && !device.config?.activeRole) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 space-y-4 text-center border rounded-lg bg-muted/10 m-4">
+                <div className="p-3 bg-yellow-500/10 rounded-full text-yellow-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
+                </div>
+                <div className="space-y-2">
+                    <h3 className="font-semibold text-lg">No Role Selected</h3>
+                    <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                        This sensor supports multiple roles (e.g., Distance or Volume).
+                        Please select a role in the <strong>Settings</strong> tab to continue.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 p-4">
             <div className="max-w-md">
@@ -215,9 +270,66 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
 
                             <div className="text-sm space-y-1">
                                 <p><span className="text-muted-foreground">Last Calibrated:</span> {new Date(existingCalibration.lastCalibrated).toLocaleString()}</p>
-                                {existingCalibration.data && Object.entries(existingCalibration.data).map(([key, value]) => (
-                                    <p key={key}><span className="text-muted-foreground">{key}:</span> {String(value)}</p>
-                                ))}
+                                {existingCalibration.data && Object.entries(existingCalibration.data).map(([key, value]) => {
+                                    // Detect if this is the calibration dataset (Array of objects)
+                                    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
+                                        // Infer Units based on strategy or device config
+                                        let inUnit = 'Raw';
+                                        let outUnit = 'Target';
+
+                                        if (selectedStrategy?.id === 'tank_volume') {
+                                            inUnit = 'mm';
+                                            outUnit = 'L'; // Assuming Liters for volume
+                                        } else if (selectedStrategy?.id === 'linear') {
+                                            inUnit = 'Raw';
+                                            outUnit = device.displayUnit || 'Unit';
+                                        }
+
+                                        return (
+                                            <div key={key} className="mt-4 border rounded-md overflow-hidden">
+                                                <div className="bg-muted/50 px-3 py-2 border-b flex justify-between items-center">
+                                                    <span className="font-medium text-sm">Calibration Table ({key})</span>
+                                                    <span className="text-xs text-muted-foreground">{value.length} points</span>
+                                                </div>
+                                                <div className="max-h-60 overflow-y-auto">
+                                                    <table className="w-full text-sm">
+                                                        <thead className="bg-muted/20 text-xs text-muted-foreground uppercase sticky top-0 backdrop-blur-sm">
+                                                            <tr>
+                                                                <th className="px-3 py-2 text-left font-medium">Input ({inUnit})</th>
+                                                                <th className="px-3 py-2 text-left font-medium">Arrow</th>
+                                                                <th className="px-3 py-2 text-right font-medium">Output ({outUnit})</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y">
+                                                            {value.map((pt: any, i: number) => {
+                                                                // Infer keys
+                                                                const inVal = pt.x ?? pt.input ?? pt.raw;
+                                                                const outVal = pt.y ?? pt.output ?? pt.value;
+
+                                                                return (
+                                                                    <tr key={i} className="hover:bg-muted/30 transition-colors">
+                                                                        <td className="px-3 py-2 font-mono text-muted-foreground">{inVal}</td>
+                                                                        <td className="px-3 py-2 text-muted-foreground/30">→</td>
+                                                                        <td className="px-3 py-2 text-right font-medium">{outVal}</td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    // Skip rendering empty arrays or non-object arrays differently if needed, 
+                                    // or just fall through to default.
+
+                                    return (
+                                        <div key={key} className="flex justify-between py-1 border-b border-muted/20 last:border-0">
+                                            <span className="text-muted-foreground capitalize">{key}:</span>
+                                            <span className="font-medium">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             <div className="flex gap-3 pt-2">
@@ -240,6 +352,8 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
                             strategyId={selectedStrategy.id}
                             onSave={handleSave}
                             onRunCommand={handleRunCommand}
+                            baseUnit={detectedBaseUnit}
+                            targetUnit={selectedStrategy.id === 'linear' ? detectedBaseUnit : (device.displayUnit || selectedStrategy.outputUnit)}
                         />
                     )}
                 </div>

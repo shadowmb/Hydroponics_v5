@@ -669,10 +669,20 @@ export class HardwareController {
 
             if (!template) return reply.status(404).send({ success: false, error: 'Driver template not found' });
 
-            // 1. Base Units from Driver
+            // 1. Check for Active Role in Template
+            const activeRoleKey = device.config?.activeRole;
+            const roleConfig = activeRoleKey && template.roles?.[activeRoleKey];
+
+            if (roleConfig && roleConfig.units && roleConfig.units.length > 0) {
+                // STRICT MODE: If role has units, return ONLY those.
+                // This effectively hides "mm" when role is "volume".
+                return reply.send({ success: true, data: roleConfig.units });
+            }
+
+            // 2. Base Units from Driver (Fallback)
             const units = new Set<string>(template.uiConfig?.units || []);
 
-            // 2. Strategy Units (only calibrated ones)
+            // 3. Strategy Units (only calibrated ones) - Legacy/Fallback logic
             if (device.config.calibrations && template.supportedStrategies) {
                 for (const strategyId of template.supportedStrategies) {
                     // Check if device has data for this strategy
@@ -1152,7 +1162,8 @@ export class HardwareController {
     static async testDevice(req: FastifyRequest, reply: FastifyReply) {
         try {
             const { id } = req.params as { id: string };
-            const result = await hardware.readSensorValue(id);
+            const { strategy } = req.body as { strategy?: string };
+            const result = await hardware.readSensorValue(id, strategy);
             return reply.send({ success: true, data: result });
         } catch (error: any) {
             req.log.error(error);

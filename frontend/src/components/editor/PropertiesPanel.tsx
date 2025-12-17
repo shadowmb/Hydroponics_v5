@@ -256,11 +256,27 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                 // Fetch compatible strategies
                 const allStrategies = StrategyRegistry.getForType('ACTUATOR');
-                const supported = template?.supportedStrategies;
 
+                // NEW: Role-Aware Logic
                 let available = allStrategies;
-                if (supported && Array.isArray(supported) && supported.length > 0) {
-                    available = allStrategies.filter(s => supported.includes(s.id));
+                const activeRoleKey = device.config?.activeRole;
+
+                if (activeRoleKey && template?.roles && template.roles[activeRoleKey]) {
+                    // 1. Strict Mode: If role is defined, ONLY allow strategies for that role
+                    const roleStrategies = template.roles[activeRoleKey].strategies || [];
+                    available = allStrategies.filter(s => roleStrategies.includes(s.id));
+                } else {
+                    // 2. Legacy/Fallback: Union of all available strategies (backward compat)
+                    // If supportedStrategies exists (legacy), use it. 
+                    // If roles exist but no activeRole, merge all strategies.
+                    const legacySupported = template?.supportedStrategies;
+
+                    if (legacySupported && legacySupported.length > 0) {
+                        available = allStrategies.filter(s => legacySupported.includes(s.id));
+                    } else if (template?.roles) {
+                        const allRoleStrategies = new Set(Object.values(template.roles).flatMap((r: any) => r.strategies));
+                        available = allStrategies.filter(s => allRoleStrategies.has(s.id));
+                    }
                 }
 
                 // Map to Options
@@ -353,11 +369,25 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
 
                 const allStrategies = StrategyRegistry.getForType('SENSOR');
-                const supported = template?.supportedStrategies;
 
+                // NEW: Role-Aware Logic for Seniors
                 let available = allStrategies;
-                if (supported && Array.isArray(supported) && supported.length > 0) {
-                    available = allStrategies.filter(s => supported.includes(s.id));
+                const activeRoleKey = device.config?.activeRole;
+
+                if (activeRoleKey && template?.roles && template.roles[activeRoleKey]) {
+                    // 1. Strict Mode: If role is defined, ONLY allow strategies for that role
+                    const roleStrategies = template.roles[activeRoleKey].strategies || [];
+                    available = allStrategies.filter(s => roleStrategies.includes(s.id));
+                } else {
+                    // 2. Legacy/Fallback: Union of all available strategies (backward compat)
+                    const legacySupported = template?.supportedStrategies;
+
+                    if (legacySupported && legacySupported.length > 0) {
+                        available = allStrategies.filter(s => legacySupported.includes(s.id));
+                    } else if (template?.roles) {
+                        const allRoleStrategies = new Set(Object.values(template.roles).flatMap((r: any) => r.strategies));
+                        available = allStrategies.filter(s => allRoleStrategies.has(s.id));
+                    }
                 }
 
                 options = available.map(strategy => {

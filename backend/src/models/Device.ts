@@ -23,6 +23,8 @@ export interface IDevice extends SoftDeleteDocument {
     config: {
         driverId: string;
         variantId?: string;
+        // activeRole: Key from template.roles (e.g., 'distance', 'volume')
+        activeRole?: string;
         pollInterval?: number;
         conversionStrategy?: string;
         calibrations?: Record<string, { lastCalibrated: Date; data: any }>;
@@ -66,7 +68,7 @@ export interface IDevice extends SoftDeleteDocument {
     displayUnits?: Map<string, string>; // Multi-value overrides (key -> unit)
 
     lastReading?: {
-        value: number;
+        value: number | null;
         raw: number;
         timestamp: Date;
     };
@@ -98,6 +100,7 @@ const DeviceSchema = new Schema<IDevice>(
         config: {
             driverId: { type: String, required: true, ref: 'DeviceTemplate' },
             variantId: { type: String }, // New: Support for template variants
+            activeRole: { type: String }, // New: Selected Role Key
             pollInterval: Number,
             conversionStrategy: { type: String, default: 'linear' },
             calibrations: {

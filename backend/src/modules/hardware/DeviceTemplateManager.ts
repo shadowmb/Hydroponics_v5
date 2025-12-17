@@ -58,8 +58,16 @@ const DeviceTemplateSchema = z.object({
     name: z.string(),
     description: z.string().optional(),
     category: z.enum(['CONTROLLER', 'SENSOR', 'ACTUATOR']),
+    // supportedStrategies: z.array(z.string()).optional(), // Legacy: Kept for compat if needed, but we rely on roles now
     supportedStrategies: z.array(z.string()).optional(),
     conversionStrategy: z.string().optional(),
+    roles: z.record(z.object({
+        label: z.string(),
+        description: z.string().optional(),
+        defaultStrategy: z.string().optional(),
+        strategies: z.array(z.string()),
+        units: z.array(z.string()).optional()
+    })).optional(),
     capabilities: z.array(z.string()),
     commands: z.record(CommandSchema),
     pins: z.array(PinSchema),
