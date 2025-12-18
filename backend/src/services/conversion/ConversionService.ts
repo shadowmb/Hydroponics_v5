@@ -64,10 +64,10 @@ export class ConversionService {
      * Smart conversion that attempts to find a strategy producing the 'targetUnit'.
      * If found, it uses that strategy. If not, it falls back to the default strategy.
      */
-    convertSmart(device: IDevice, rawValue: number, targetUnit?: string, context?: any): { value: number, unit?: string, strategyUsed: string } {
+    convertSmart(device: IDevice, rawValue: number, targetUnit?: string, context?: any, strategyOverride?: string): { value: number, unit?: string, strategyUsed: string } {
         // 1. Identify Default Strategy
         // Just like in convert(), explicit override > device config > default logic
-        let defaultStrategyName = device.config.conversionStrategy;
+        let defaultStrategyName = strategyOverride || device.config.conversionStrategy;
         if (!defaultStrategyName) {
             defaultStrategyName = (device.config.driverId === 'dfrobot_ec_k1') ? 'ec-dfr-analog' : 'linear';
         }
