@@ -21,23 +21,39 @@ The `StrategyRegistry` mediates between raw hardware units and high-level logica
 
 ## 3. Data Flow & Normalization
 
-### 3.1. Standard Flow (Linear/Passthrough)
-| Component | Role | State |
-| :--- | :--- | :--- |
-| **Sensor** | Measures raw physical phenomenon | `1662` (cm) |
-| **Driver** | Defines `sourceUnit` | `sourceUnit: "cm"` |
-| **Strategy** | `linear` (Input: `any`, Output: `any`) | Passthrough (`cm`) |
-| **Backend** | Normalizes to **Base Unit** | `1662 cm` -> `16620 mm` |
-| **Database** | Stores normalized value | `{ distance: 16620 }` |
+### 3.1. Measurements Block Flow (Current)
+The `measurements` block in device templates defines explicit unit conversion.
 
-### 3.2. Transformed Flow (e.g. Tank Volume)
-| Component | Role | State |
-| :--- | :--- | :--- |
-| **Sensor** | Measures raw distance | `50` (cm) |
-| **Strategy** | `tank_volume` (Input: `cm`, Output: `l`) | Transforming... |
-| **Calibration** | Lookup Table | `50cm` -> `120 Liters` |
-| **Backend** | Normalizes Output Unit | `120 l` -> `120000 ml` (if 'ml' is base) |
-| **Database** | Stores mapped value | `{ volume: 120000 }` |
+| Step | Component | Value | Unit |
+|:-----|:----------|:------|:-----|
+| 1 | **Sensor** | Raw reading | `17.7 cm` |
+| 2 | **Measurements Block** | `rawUnit → baseUnit` | `177 mm` |
+| 3 | **Strategy** | `linear` or calibration | `177 mm` or `0 L` |
+| 4 | **Display Conversion** | User's displayUnit | `0.177 m` |
+
+### 3.2. Key Variables in HardwareService
+
+| Variable | Description |
+|:---------|:------------|
+| `validPhysicalBaseValue` | Value after measurements normalization (baseUnit) |
+| `validPhysicalBaseUnit` | The baseUnit from measurements block |
+| `usedMeasurementsBlock` | Flag to skip old normalization if true |
+| `sourceUnit` | Updated to baseUnit after measurements normalization |
+| `smartInput` | Input to strategy (always in baseUnit) |
+
+### 3.3. Derived Roles (e.g., Volume from Distance)
+For roles with `source` field, the system uses the source measurement's units.
+
+```
+activeRole: "volume"
+↓
+roleConfig.source: "distance"
+↓
+measurementKey: "distance"
+↓
+measurements["distance"]: { rawUnit: "cm", baseUnit: "mm" }
+```
+
 
 ---
 

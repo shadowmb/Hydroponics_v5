@@ -34,8 +34,15 @@ const generateSteps = (strategyId: string, baseUnit?: string, targetUnit?: strin
     const { component, xLabel, yLabel } = strategy.calibration;
 
     // Use units if provided, otherwise fallback to labels
-    const displayXLabel = baseUnit ? `${xLabel || 'Raw Input'} (${baseUnit})` : (xLabel || 'Raw Input');
-    const displayYLabel = targetUnit ? `${yLabel || 'Calibrated Value'} (${targetUnit})` : (yLabel || 'Calibrated Value');
+    // FIX: Avoid duplicate units - check if label already contains unit in parentheses
+    const hasUnitInLabel = (label: string, unit: string) => label?.includes(`(${unit})`);
+
+    const displayXLabel = baseUnit && !hasUnitInLabel(xLabel || '', baseUnit)
+        ? `${xLabel || 'Raw Input'} (${baseUnit})`
+        : (xLabel || 'Raw Input');
+    const displayYLabel = targetUnit && !hasUnitInLabel(yLabel || '', targetUnit)
+        ? `${yLabel || 'Calibrated Value'} (${targetUnit})`
+        : (yLabel || 'Calibrated Value');
 
     // Template: Multi-Point Table (e.g. Tank Volume)
     if (component === 'MultiPointTable') {
@@ -585,15 +592,22 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
                             // Priority: details.baseValue > baseValue > raw > value > raw number
                             if (result?.details?.baseValue !== undefined) {
                                 reading = result.details.baseValue;
+                                console.log('[DynamicWizard] Using details.baseValue:', reading);
                             } else if (result && typeof result.baseValue === 'number') {
                                 reading = result.baseValue;
+                                console.log('[DynamicWizard] Using baseValue:', reading);
                             } else if (result && typeof result.raw === 'number') {
                                 reading = result.raw;
+                                console.log('[DynamicWizard] FALLBACK to raw:', reading, '- baseValue not found!');
                             } else if (result && typeof result.value === 'number') {
                                 reading = result.value;
+                                console.log('[DynamicWizard] FALLBACK to value:', reading);
                             } else if (typeof result === 'number') {
                                 reading = result;
+                                console.log('[DynamicWizard] FALLBACK to result number:', reading);
                             }
+
+                            console.log('[DynamicWizard] Full result object:', result);
 
                             updatePoint(index, 'raw', reading);
                         } catch (err) {

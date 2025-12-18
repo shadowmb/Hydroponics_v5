@@ -1,8 +1,54 @@
 {
     "id": "pump_generic",
     "name": "Generic Pump",
+    "description": "Versatile water pump template with support for Relay (ON/OFF) and PWM (Speed Control) variants.",
     "category": "ACTUATOR",
-    "description": "Standard water pump (Relay or PWM control)",
+    "measurements": {
+        "state": {
+            "rawUnit": "boolean",
+            "baseUnit": "boolean"
+        }
+    },
+    "roles": {
+        "manual": {
+            "label": "Manual Switch",
+            "description": "Simple ON/OFF control.",
+            "source": "state",
+            "defaultStrategy": "actuator_manual",
+            "strategies": [
+                "actuator_manual"
+            ],
+            "units": [
+                "boolean"
+            ]
+        },
+        "dosing": {
+            "label": "Dosing Pump",
+            "description": "Dose specific volume of liquid based on flow rate calibration.",
+            "source": "state",
+            "defaultStrategy": "volumetric_flow",
+            "strategies": [
+                "volumetric_flow"
+            ],
+            "units": [
+                "ml",
+                "l",
+                "gal"
+            ]
+        },
+        "speed": {
+            "label": "Variable Speed",
+            "description": "Control pump speed via PWM mapping.",
+            "source": "state",
+            "defaultStrategy": "range_linear",
+            "strategies": [
+                "range_linear"
+            ],
+            "units": [
+                "%"
+            ]
+        }
+    },
     "supportedStrategies": [
         "actuator_manual",
         "volumetric_flow",
@@ -15,6 +61,10 @@
         "min": 0,
         "max": 100000,
         "unit": "s"
+    },
+    "sampling": {
+        "count": 1,
+        "delayMs": 0
     },
     "commands": {
         "RELAY_SET": {

@@ -1,7 +1,29 @@
 {
     "id": "ds18b20",
     "name": "DS18B20 Temperature Sensor",
+    "description": "Waterproof digital temperature sensor with OneWire interface. Accuracy: ±0.5°C.",
     "category": "SENSOR",
+    "measurements": {
+        "temp": {
+            "rawUnit": "C",
+            "baseUnit": "C"
+        }
+    },
+    "roles": {
+        "temp": {
+            "label": "Temperature",
+            "description": "Measure water or ambient temperature.",
+            "defaultStrategy": "linear",
+            "strategies": [
+                "linear",
+                "offset_only"
+            ],
+            "units": [
+                "C",
+                "F"
+            ]
+        }
+    },
     "supportedStrategies": [
         "offset_only",
         "linear"
@@ -23,6 +45,10 @@
         "min": -55,
         "max": 125,
         "unit": "C"
+    },
+    "sampling": {
+        "count": 3,
+        "delayMs": 100
     },
     "commands": {
         "READ": {

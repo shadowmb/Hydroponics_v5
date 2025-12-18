@@ -104,15 +104,47 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
         loadStrategies();
     }, [device]);
 
-    // Infer Base Unit from Role (Heuristic for initial state)
+    // Detect Base Unit from Template measurements block (NEW: Data-driven)
+    // Fallback to heuristic if measurements block not available
     useEffect(() => {
         if (!detectedBaseUnit && device.config?.activeRole) {
             const role = device.config.activeRole;
-            if (['distance', 'volume'].includes(role)) setDetectedBaseUnit('mm');
-            else if (['temperature', 'water_temp', 'air_temp'].includes(role)) setDetectedBaseUnit('°C');
-            else if (['humidity'].includes(role)) setDetectedBaseUnit('%');
-            else if (['ph'].includes(role)) setDetectedBaseUnit('pH');
-            else if (['ec', 'tds'].includes(role)) setDetectedBaseUnit('µS/cm');
+
+            // NEW: Try to get from fresh template measurements
+            const tryGetFromTemplate = async () => {
+                try {
+                    const templates = await hardwareService.getDeviceTemplates();
+                    const driverId = typeof device.config?.driverId === 'string'
+                        ? device.config.driverId
+                        : device.config?.driverId?._id || device.config?.driverId?.id;
+
+                    const template = templates.find((t: any) => t._id === driverId || t.id === driverId);
+
+                    if (template?.measurements) {
+                        // Check if role has a source (derived role like 'volume' -> 'distance')
+                        const roleConfig = template.roles?.[role];
+                        const measurementKey = roleConfig?.source || role;
+
+                        const measurement = template.measurements[measurementKey];
+                        if (measurement?.baseUnit) {
+                            console.log('[ActuatorCalibration] Base unit from template.measurements:', measurement.baseUnit);
+                            setDetectedBaseUnit(measurement.baseUnit);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[ActuatorCalibration] Could not fetch template for measurements:', e);
+                }
+
+                // FALLBACK: Heuristic (for templates without measurements block)
+                if (['distance', 'volume'].includes(role)) setDetectedBaseUnit('mm');
+                else if (['temperature', 'water_temp', 'air_temp'].includes(role)) setDetectedBaseUnit('°C');
+                else if (['humidity'].includes(role)) setDetectedBaseUnit('%');
+                else if (['ph'].includes(role)) setDetectedBaseUnit('pH');
+                else if (['ec', 'tds'].includes(role)) setDetectedBaseUnit('µS/cm');
+            };
+
+            tryGetFromTemplate();
         }
     }, [device, detectedBaseUnit]);
 

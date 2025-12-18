@@ -342,14 +342,81 @@ export class HardwareService {
         // Validate the sensor's physical reading (Distance, Temp, etc) BEFORE we convert it to something else (Volume).
         // This ensures the sensor is healthy and within its operating range.
         const driverDoc = templates.getDriver(device.config.driverId);
-        // @ts-ignore
-        const physicalUnit = driverDoc.commands?.READ?.sourceUnit;
 
         // Create a persistent variable for correct baseValue calculation
         let validPhysicalBaseValue: number | undefined;
         let validPhysicalBaseUnit: string | undefined;
+        let usedMeasurementsBlock = false; // Flag to skip old normalization later
 
-        if (physicalUnit && !isNaN(raw)) {
+        // NEW: Try to get rawUnit/baseUnit from template's measurements block first
+        // @ts-ignore - measurements is new optional field
+        const templateMeasurements = driverDoc.measurements;
+
+        // Determine measurement key from activeRole or default to first available
+        const activeRole = device.config?.activeRole;
+        let measurementKey = activeRole || Object.keys(templateMeasurements || {})[0] || 'distance';
+
+        // For derived roles (like 'volume'), use the source measurement
+        // @ts-ignore
+        const roleConfig = driverDoc.roles?.[activeRole];
+        if (roleConfig?.source) {
+            measurementKey = roleConfig.source; // e.g., 'volume' role sources from 'distance' measurement
+        }
+
+        // DEBUG: Log measurements resolution
+        logger.info({
+            deviceId,
+            activeRole,
+            measurementKey,
+            hasTemplateMeasurements: !!templateMeasurements,
+            measurementConfig: templateMeasurements?.[measurementKey],
+            roleSource: roleConfig?.source
+        }, '🔍 [HardwareService] DEBUG: Measurements Resolution');
+
+        // NEW: Use measurements block if available
+        if (templateMeasurements && templateMeasurements[measurementKey] && !isNaN(raw)) {
+            try {
+                const measConfig = templateMeasurements[measurementKey];
+                const { rawUnit, baseUnit } = measConfig;
+
+                if (rawUnit && baseUnit) {
+                    const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
+                    const { convertValue } = require(registryPath);
+
+                    const convertedValue = convertValue(raw, rawUnit, baseUnit);
+
+                    if (convertedValue !== null) {
+                        validPhysicalBaseValue = convertedValue;
+                        validPhysicalBaseUnit = baseUnit;
+                        usedMeasurementsBlock = true;
+
+                        logger.info({
+                            rawValue: raw,
+                            rawUnit,
+                            baseUnit,
+                            convertedValue
+                        }, '📐 [HardwareService] Measurement normalized (rawUnit → baseUnit)');
+
+                        logger.info({
+                            deviceId,
+                            measurementKey,
+                            raw,
+                            rawUnit,
+                            baseValue: convertedValue,
+                            baseUnit
+                        }, '📐 [HardwareService] Normalized via measurements block');
+                    }
+                }
+            } catch (measErr: any) {
+                logger.warn({ deviceId, err: measErr.message }, '⚠️ [HardwareService] Measurements block normalization failed, falling back');
+            }
+        }
+
+        // FALLBACK: Use old physicalUnit logic if measurements block wasn't used
+        // @ts-ignore
+        const physicalUnit = driverDoc.commands?.READ?.sourceUnit;
+
+        if (!usedMeasurementsBlock && physicalUnit && !isNaN(raw)) {
             try {
                 // Dynamic import needed here as well
                 const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
@@ -491,6 +558,12 @@ export class HardwareService {
         // @ts-ignore - sourceUnit is new, might not be in interface yet
         let sourceUnit = driverDoc.commands?.READ?.sourceUnit;
 
+        // If measurements block was used, update sourceUnit to baseUnit
+        // This ensures downstream conversions (displayUnit) work correctly
+        if (usedMeasurementsBlock && validPhysicalBaseUnit) {
+            sourceUnit = validPhysicalBaseUnit; // e.g., 'mm' instead of 'cm'
+        }
+
         // If the strategy explicitly output a unit (e.g. 'l'), that becomes our new sourceUnit for downstream logic.
         if (smartResult.unit && smartResult.unit !== 'any') {
             // If strategy changed unit, we trust it.
@@ -519,7 +592,9 @@ export class HardwareService {
         let baseValue = !isNaN(value) ? value : (validPhysicalBaseValue ?? value);
         let baseUnit = !isNaN(value) ? sourceUnit : (validPhysicalBaseUnit ?? sourceUnit);
 
-        if (sourceUnit && !isNaN(value)) { // Only normalize if value is valid number
+        // SKIP old normalization if new measurements-based normalization already ran
+        // This prevents double normalization (e.g., cm→mm then value*10 again)
+        if (sourceUnit && !isNaN(value) && !usedMeasurementsBlock) { // Only normalize if value is valid AND new normalization didn't run
             try {
                 // Dynamic import with absolute path to avoid relative path hell and ts-node restrictions
                 const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');

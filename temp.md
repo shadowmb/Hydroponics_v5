@@ -1,71 +1,128 @@
-Анализ и Архитектура на Динамични Мерни Единици (Final Spec)
-🎯 Цел
-Създаване на универсална, управляванa от шаблони система за мерни единици, която:
 
-Ясно дефинира физическите величини (measurements) в JSON шаблона (Raw vs Base).
-Позволява на клиентите (Frontend, Automation Blocks) да изискват данни в конкретен формат (Raw, Base, Converted) чрез API Modes.
-🏗️ 1. Configuration: Global Measurements Model
-Вместо да се повтаряме роля по роля, въвеждаме глобален пропърти measurements в темплейта.
+Това е лога от тест на линейна стратегия:
 
-Структура (JSON)
-Пример 1: Единичен Сензор (HC-SR04) - Scaling
-{
-  "id": "hc_sr04",
-  "measurements": {
-      "distance": { "rawUnit": "cm", "baseUnit": "mm" }  // Scaling Needed
-  },
-  "roles": {
-      "monitor": { "source": "distance", ... }
-  }
-}
-Пример 2: Комбиниран Сензор (DHT22) - Pass-through
-{
-  "id": "dht22",
-  "measurements": {
-      "temp": { "rawUnit": "C", "baseUnit": "C" },      // Pass-through
-      "hum":  { "rawUnit": "%", "baseUnit": "%" }
-  },
-  "roles": {
-      "air_temp": { "source": "temp", ... },
-      "air_hum":  { "source": "hum", ... }
-  }
-}
-🔌 2. API Architecture: Request Modes
-HardwareService.testDevice ще приема флаг mode: RAW | BASE | STRATEGY.
+[2025-12-17 15:40:18.637 +0200] INFO: ЁЯФМ [HardwareService] Creating Serial Transport
+    env: "development"
+    controllerId: "693134db23b1320394ed43b5"
+    port: "COM3"
+[2025-12-17 15:40:18.637 +0200] INFO: ЁЯФМ [SerialTransport] Connecting...
+    env: "development"
+    path: "COM3"
+    baudRate: 9600
+[2025-12-17 15:40:18.782 +0200] INFO: тЬЕ [SerialTransport] Port Opened
+    env: "development"
+    path: "COM3"
+[2025-12-17 15:40:20.862 +0200] INFO: ЁЯУК [HardwareService] Burst Read Mode
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    sampleCount: 5
+    sampleDelay: 100
+[2025-12-17 15:40:21.680 +0200] INFO: тЬЕ [HardwareService] Median Calculated
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    samples: [
+      17.3,
+      17.3,
+      17.3,
+      19.4,
+      19.5
+    ]
+    median: 17.3
+    min: 17.3
+    max: 19.5
+[2025-12-17 15:40:21.683 +0200] INFO: ЁЯзР [HardwareService] Debug Strategy Selection
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    configStrategy: "linear"
+    driverId: "hc_sr04"
+[2025-12-17 15:40:21.683 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    driverId: "hc_sr04"
+    sourceUnit: "cm"
+    raw: 17.3
+    smartInput: 17.3
+    value: 17.3
+[2025-12-17 15:40:21.684 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 173,
+      "baseUnit": "mm"
+    }
+[2025-12-17 15:40:21.684 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    from: "cm"
+    to: "mm"
+    original: 17.3
+    normalized: 173
+[2025-12-17 15:40:21.684 +0200] INFO: ЁЯСА [HardwareService] Converted Primary to Display Unit
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    from: "mm"
+    to: "m"
+    original: 173
+    converted: 0.173
 
-Modes
-RAW: "Дай ми каквото връща драйвера" (за debug/calibration input).
-BASE (Default): "Дай ми Системната Величина" (mm, pH).
-Ако rawUnit != baseUnit -> 
-HardwareService
- вика UnitRegistry.convert(raw, rawUnit, baseUnit).
-Ако rawUnit == baseUnit -> Pass-through.
-STRATEGY: "Дай ми Display Value" (Liters, Gal).
-Прилата Base -> Strategy Conversion.
-🚧 3. Текущо Състояние и Стратегия за Миграция
-Как е сега (Current State):
-HardwareService: Разчита на UnitRegistry с "предположения" или partially hardcoded logic. Често "Raw" стойността се бърка с "Base".
-Frontend (ActuatorCalibration): "Гадае" единицата на база ролята (напр. if role == distance then mm).
-Templates: Липсва информация за физическите единици (measurements блока го няма).
-Какво точно ще се промени (Refactoring Points):
-A. Backend Refactoring (
-HardwareService.ts
-)
-Премахване: Ако има логика тип if (driver === 'hc_sr04') val = val * 10, тя изчезва.
-Добавяне: Логика, която чете template.measurements[sourceKey] и автоматично нормализира.
-Нов Метод: normalizeMeasurement(value, rawUnit, baseUnit).
-B. Template Updates (JSON Files)
-Масово обновяване на 
-hc_sr04.json
-, 
-dht22.json
-, ph_meter.json и др. с новия блок measurements.
-C. Frontend Refactoring (
-ActuatorCalibration.tsx
-)
-Премахване: Хевристиката if (role == 'distance') setUnit('mm').
-Добавяне: useEffect, който чете device.template.measurements и попълва UI-а автоматично.
-✅ Предимства
-Safety: Никога повече няма да сравняваме cm с mm по погрешка.
-Explicit: Всеки програмист вижда в JSON-а какво става.
-Universal: Работи еднакво добре за прости (Scaling) и сложни (Multi-sensor) устройства.
+
+Това е лога от тест на volume стратегия:
+
+[2025-12-17 15:41:49.149 +0200] INFO: ЁЯУК [HardwareService] Burst Read Mode
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    sampleCount: 5
+    sampleDelay: 100
+[2025-12-17 15:41:49.970 +0200] INFO: тЬЕ [HardwareService] Median Calculated
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    samples: [
+      17.7,
+      17.7,
+      17.7,
+      17.7,
+      58.8
+    ]
+    median: 17.7
+    min: 17.7
+    max: 58.8
+[2025-12-17 15:41:49.973 +0200] INFO: ЁЯзР [HardwareService] Debug Strategy Selection
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    configStrategy: "tank_volume"
+    driverId: "hc_sr04"
+[2025-12-17 15:41:49.974 +0200] INFO: ЁЯФД [HardwareService] Smart Strategy Switched Unit
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    strategy: "tank_volume"
+    oldUnit: "cm"
+    newUnit: "L"
+[2025-12-17 15:41:49.974 +0200] INFO: ЁЯФН [HardwareService] Checking Normalization
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    driverId: "hc_sr04"
+    sourceUnit: "L"
+    raw: 17.7
+    smartInput: 17.7
+    value: 91.02857142857142
+[2025-12-17 15:41:49.974 +0200] INFO: ЁЯФН [HardwareService] Normalization Result
+    env: "development"
+    normalized: {
+      "value": 91028.57142857142,
+      "baseUnit": "ml"
+    }
+[2025-12-17 15:41:49.974 +0200] INFO: ЁЯУП [HardwareService] Normalized Value
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    from: "L"
+    to: "ml"
+    original: 91.02857142857142
+    normalized: 91028.57142857142
+[2025-12-17 15:41:49.974 +0200] INFO: ЁЯСА [HardwareService] Converted Primary to Display Unit
+    env: "development"
+    deviceId: "6941b7fc0567cb0853c420cd"
+    from: "ml"
+    to: "L"
+    original: 91028.57142857142
+    converted: 91.02857142857142
+[15:42] INFO: ЁЯХТ Scheduler Tick
+    env: "development"

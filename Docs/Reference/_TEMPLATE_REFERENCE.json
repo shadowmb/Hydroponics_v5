@@ -3,6 +3,25 @@
     "name": "Device Name (e.g. DFRobot pH Sensor)",
     "description": "Short description of the device",
     "category": "SENSOR | ACTUATOR | CONTROLLER",
+    "measurements": {
+        "distance": {
+            "rawUnit": "cm",
+            "baseUnit": "mm"
+        }
+    },
+    "roles": {
+        "distance": {
+            "label": "Distance",
+            "unit": "mm",
+            "defaultStrategy": "linear"
+        },
+        "volume": {
+            "label": "Tank Volume",
+            "unit": "L",
+            "source": "distance",
+            "defaultStrategy": "tank_volume"
+        }
+    },
     "supportedStrategies": [
         "linear",
         "two_point_linear",
