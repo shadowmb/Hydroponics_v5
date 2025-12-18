@@ -75,6 +75,14 @@ measurements["distance"]: { rawUnit: "cm", baseUnit: "mm" }
 *   **Base Unit:** `ms` (Milliseconds)
 *   **Allowed Keys:** `duration`, `interval`
 
+### 4.5. ANALYTIC (Chemistry/Environment)
+*   **Base Unit:** `ph` (pH) | `ec` (mS/cm) | `temp` (C)
+*   **Allowed Keys:** `ph`, `ec`, `tds`, `orp`
+
+### 4.6. RAW / VOLTAGE (Hardware)
+*   **Base Unit:** `mv` (Millivolts) | `adc` (Raw ADC Units)
+*   **Allowed Keys:** `raw`, `voltage`
+
 ---
 
 ## 5. Strategy Implementation Rules
@@ -97,7 +105,7 @@ When connecting a Block to a Variable:
 
 ### 5.3. Frontend Logic (`PropertiesPanel`)
 *   **Listing:** All supported strategies from `DeviceTemplate` are shown.
-*   **Availability:** Strategies requiring calibration (e.g. `tank_volume`) are **selectable** but trigger a "Missing Calibration" warning if config is absent.
+*   **Availability:** Strategies requiring calibration (e.g. `tank_volume`, `ph_smart`) are **selectable** but trigger a "Missing Calibration" warning if config is absent.
 *   **Disabling:** Strategies are only functionally disabled if hardware lacks prerequisite capabilities (e.g. wrong interface), though currently implemented as always visible for supported lists.
 
 ---
