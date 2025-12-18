@@ -5,6 +5,7 @@ import { EcDfrStrategy } from './strategies/EcDfrStrategy';
 import { VolumetricFlowStrategy } from './strategies/VolumetricFlowStrategy';
 import { PhDfrStrategy } from './strategies/PhDfrStrategy';
 import { PhSmartStrategy } from './strategies/PhSmartStrategy';
+import { EcSmartStrategy } from './strategies/EcSmartStrategy';
 
 export class ConversionService {
     private strategies: Map<string, IConversionStrategy> = new Map();
@@ -13,11 +14,13 @@ export class ConversionService {
         // Register strategies
         // Simple sensors use 'linear' (default) - UnitRegistry handles unit normalization
         this.registerStrategy('linear', new LinearInterpolationStrategy());
+        this.registerStrategy('offset_only', new LinearInterpolationStrategy());
         this.registerStrategy('tank_volume', new LinearInterpolationStrategy());
         this.registerStrategy('volumetric_flow', new VolumetricFlowStrategy());
 
         // Complex sensors with special physics need dedicated strategies
         this.registerStrategy('ec-dfr-analog', new EcDfrStrategy());
+        this.registerStrategy('ec_smart', new EcSmartStrategy());
         this.registerStrategy('ph_dfr', new PhDfrStrategy());
         this.registerStrategy('ph_smart', new PhSmartStrategy());
     }

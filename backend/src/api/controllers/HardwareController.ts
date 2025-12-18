@@ -44,6 +44,17 @@ export class HardwareController {
         }
     }
 
+    static async refreshRelay(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            await hardware.refreshRelayStatus(id);
+            return reply.send({ success: true });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to refresh relay' });
+        }
+    }
+
     // --- Templates ---
 
     static async getTemplates(req: FastifyRequest, reply: FastifyReply) {

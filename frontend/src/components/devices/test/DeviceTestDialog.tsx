@@ -113,7 +113,15 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                 setRawValue(result.raw);
                 setMultiValues(result.details);
 
-                let logMsg = `Read OK: ${result.value} ${result.unit || ''} (Raw: ${result.raw})`;
+                let logMsg = `Read OK: ${result.value} ${result.unit || ''}`;
+
+                // Add Raw vs Normalized info
+                if (result.hwValue !== undefined && result.hwValue !== result.raw) {
+                    logMsg += ` [Normalized: ${result.hwValue} ${result.hwUnit || ''}, Wire Raw: ${result.raw}]`;
+                } else {
+                    logMsg += ` [Raw: ${result.raw}]`;
+                }
+
                 if (result.details) {
                     logMsg += ` [Full Response: ${JSON.stringify(result.details)}]`;
                 }
@@ -398,7 +406,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                                             unit={finalUnit}
 
                                                             // Pass Base Info for "Small Display" Logic
-                                                            baseValue={isMulti ? null : (multiValues?.baseValue ?? rawValue)}
+                                                            baseValue={isMulti ? null : (multiValues?.baseHwValue ?? multiValues?.baseValue ?? rawValue)}
                                                             baseUnit={baseUnit}
 
                                                         // Current SensorValueCard logic uses baseValue/baseUnit to trigger "Converted" view

@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PhSmartWizard } from './PhSmartWizard';
+import { EcSmartWizard } from './EcSmartWizard';
+import { OffsetWizard } from './OffsetWizard';
 
 import {
     Dialog,
@@ -25,6 +27,8 @@ interface DynamicWizardProps {
     onRunCommand?: (cmd: string, params: any) => Promise<any>;
     baseUnit?: string;
     targetUnit?: string;
+    device?: any;
+    template?: any;
 }
 
 // Helper to generate steps based on Strategy Calibration Config
@@ -96,7 +100,7 @@ const generateSteps = (strategyId: string, baseUnit?: string, targetUnit?: strin
     return null;
 };
 
-export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave, onRunCommand, baseUnit, targetUnit }) => {
+export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave, onRunCommand, baseUnit, targetUnit, device, template }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [errorDialogOpen, setErrorDialogOpen] = useState(false);
@@ -108,6 +112,21 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
     const strategy = StrategyRegistry.get(strategyId);
     if (strategy?.calibration?.component === 'PhSmartWizard' && onRunCommand) {
         return <PhSmartWizard onSave={onSave} onRunCommand={onRunCommand} />;
+    }
+
+    if (strategy?.calibration?.component === 'EcSmartWizard' && onRunCommand) {
+        return <EcSmartWizard onSave={onSave} onRunCommand={onRunCommand} />;
+    }
+
+    if (strategy?.calibration?.component === 'OffsetWizard' && onRunCommand) {
+        return (
+            <OffsetWizard
+                onSave={onSave}
+                onRunCommand={onRunCommand}
+                role={template?.roles?.[device?.config?.activeRole]?.label || Object.values(template?.roles || {})[0]?.label || 'Generic'}
+                unit={targetUnit || baseUnit}
+            />
+        );
     }
 
 

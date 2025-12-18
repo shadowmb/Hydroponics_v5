@@ -15,9 +15,7 @@
             "description": "Measure water acidity/alkalinity (0-14 pH scale).",
             "defaultStrategy": "ph_smart",
             "strategies": [
-                "ph_smart",
-                "ph_dfr",
-                "linear"
+                "ph_smart"
             ],
             "units": [
                 "pH"

@@ -13,10 +13,9 @@
         "ec": {
             "label": "EC Meter",
             "description": "Measure electrical conductivity for nutrient concentration.",
-            "defaultStrategy": "two_point_linear",
+            "defaultStrategy": "ec_smart",
             "strategies": [
-                "two_point_linear",
-                "linear"
+                "ec_smart"
             ],
             "units": [
                 "µS/cm",
@@ -26,10 +25,11 @@
         }
     },
     "supportedStrategies": [
+        "ec_smart",
         "two_point_linear",
         "linear"
     ],
-    "conversionStrategy": "ec-dfr-analog",
+    "conversionStrategy": "ec_smart",
     "capabilities": [
         "READ"
     ],
