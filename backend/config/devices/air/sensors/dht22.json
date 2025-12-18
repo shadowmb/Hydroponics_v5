@@ -34,7 +34,8 @@
             "source": "humidity",
             "defaultStrategy": "linear",
             "strategies": [
-                "linear"
+                "linear",
+                "offset_only"
             ],
             "units": [
                 "%"

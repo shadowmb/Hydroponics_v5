@@ -14,6 +14,7 @@ export class ConversionService {
         // Register strategies
         // Simple sensors use 'linear' (default) - UnitRegistry handles unit normalization
         this.registerStrategy('linear', new LinearInterpolationStrategy());
+        this.registerStrategy('offset_only', new LinearInterpolationStrategy());
         this.registerStrategy('tank_volume', new LinearInterpolationStrategy());
         this.registerStrategy('volumetric_flow', new VolumetricFlowStrategy());
 

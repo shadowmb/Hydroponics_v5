@@ -462,6 +462,8 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
                             onRunCommand={handleRunCommand}
                             baseUnit={detectedBaseUnit}
                             targetUnit={selectedStrategy.id === 'linear' ? detectedBaseUnit : (device.displayUnit || selectedStrategy.outputUnit)}
+                            device={device}
+                            template={template}
                         />
                     )}
                 </div>

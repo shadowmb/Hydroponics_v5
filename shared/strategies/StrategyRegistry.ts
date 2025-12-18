@@ -65,9 +65,16 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
         id: 'offset_only',
         label: 'Offset Only',
         type: 'SENSOR',
-        description: 'Simple offset adjustment (val + offset).',
+        description: 'Simple offset adjustment (val + offset). Suitable for digital sensors like DS18B20.',
         inputUnit: 'any',
         outputUnit: 'any',
+        calibration: {
+            calibrationKey: 'offset_only',
+            component: 'OffsetWizard',
+            minPoints: 1,
+            xLabel: 'Actual Value',
+            yLabel: 'Sensor Reading'
+        }
     },
     'tank_volume': {
         id: 'tank_volume',
