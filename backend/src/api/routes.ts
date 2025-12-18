@@ -57,6 +57,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.delete('/api/hardware/relays/:id', HardwareController.deleteRelay);
     app.post('/api/hardware/relays/:id/restore', HardwareController.restoreRelay);
     app.delete('/api/hardware/relays/:id/hard', HardwareController.hardDeleteRelay);
+    app.post('/api/hardware/relays/:id/refresh', HardwareController.refreshRelay);
 
     // Automation Routes
     app.post('/api/automation/load', AutomationController.load);

@@ -299,6 +299,40 @@ export class HardwareService {
         return newStatus;
     }
 
+    public async refreshDeviceStatus(deviceId: string): Promise<void> {
+        const { DeviceModel } = await import('../../models/Device');
+        const device = await DeviceModel.findById(deviceId);
+        if (!device) throw new Error('Device not found');
+
+        let controllerId = device.hardware?.parentId;
+
+        if (!controllerId && device.hardware?.relayId) {
+            const { Relay } = await import('../../models/Relay');
+            const relay = await Relay.findById(device.hardware.relayId);
+            if (relay) {
+                controllerId = relay.controllerId?.toString();
+            }
+        }
+
+        if (controllerId) {
+            await this.refreshControllerStatus(controllerId);
+        } else {
+            logger.warn({ deviceId }, '⚠️ Cannot refresh device status: No parent controller found');
+        }
+    }
+
+    public async refreshRelayStatus(relayId: string): Promise<void> {
+        const { Relay } = await import('../../models/Relay');
+        const relay = await Relay.findById(relayId);
+        if (!relay) throw new Error('Relay not found');
+
+        if (relay.controllerId) {
+            await this.refreshControllerStatus(relay.controllerId.toString());
+        } else {
+            logger.warn({ relayId }, '⚠️ Cannot refresh relay status: No parent controller found');
+        }
+    }
+
     private getValueByPath(obj: any, path: string): any {
         return path.split('.').reduce((acc, part) => acc && acc[part], obj);
     }
