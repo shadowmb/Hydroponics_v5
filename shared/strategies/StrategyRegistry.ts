@@ -53,6 +53,13 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
         description: 'Standard linear reading (y = mx + c). Returns value in base unit.',
         inputUnit: 'any',
         outputUnit: 'any',
+        calibration: {
+            calibrationKey: 'linear',
+            component: 'MultiPointTable',
+            minPoints: 2,
+            xLabel: 'Raw Input',
+            yLabel: 'Calibrated Value'
+        }
     },
     'offset_only': {
         id: 'offset_only',
@@ -75,6 +82,52 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
             minPoints: 2,
             xLabel: 'Distance (mm)',
             yLabel: 'Volume (L)'
+        }
+    },
+    'two_point_linear': {
+        id: 'two_point_linear',
+        label: 'Two-Point Linear Calibration',
+        type: 'SENSOR',
+        description: 'Calibrate using two known reference points (e.g. pH 4.0/7.0).',
+        inputUnit: 'any',
+        outputUnit: 'any',
+        calibration: {
+            calibrationKey: 'two_point_linear', // Matches device config schema
+            component: 'MultiPointTable',       // Reusing existing table component
+            minPoints: 2,
+            xLabel: 'Raw Value',
+            yLabel: 'Calibrated Value'
+        }
+    },
+    'ph_dfr': {
+        id: 'ph_dfr',
+        label: 'DFRobot pH (Pro/V2) [Legacy]',
+        type: 'SENSOR',
+        description: 'Traditional temperature-compensated pH conversion (Legacy).',
+        inputUnit: 'any',
+        outputUnit: 'pH',
+        calibration: {
+            calibrationKey: 'ph_dfr',
+            component: 'MultiPointTable',
+            minPoints: 1,
+            xLabel: 'Raw Value',
+            yLabel: 'pH Value'
+        }
+    },
+    'ph_smart': {
+        id: 'ph_smart',
+        label: 'Smart pH Tracker',
+        type: 'SENSOR',
+        description: 'Advanced 3-point segmented linear conversion with Nernst temp compensation and health diagnostics.',
+        inputUnit: 'any',
+        outputUnit: 'pH',
+        calibration: {
+            calibrationKey: 'ph_smart',
+            component: 'PhSmartWizard',
+
+            minPoints: 1, // 1=Offset, 2=Slope, 3=Segmented
+            xLabel: 'Raw Input',
+            yLabel: 'pH Value (Buffer)'
         }
     },
 

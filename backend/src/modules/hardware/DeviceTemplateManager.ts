@@ -34,6 +34,12 @@ const RequirementsSchema = z.object({
     }).optional()
 });
 
+// Schema for Physical Measurements (rawUnit/baseUnit)
+const MeasurementSchema = z.object({
+    rawUnit: z.string(),  // Unit returned by hardware (e.g., "cm")
+    baseUnit: z.string()  // Normalized system unit (e.g., "mm")
+});
+
 const VariantSchema = z.object({
     id: z.string(),
     label: z.string(),
@@ -58,8 +64,18 @@ const DeviceTemplateSchema = z.object({
     name: z.string(),
     description: z.string().optional(),
     category: z.enum(['CONTROLLER', 'SENSOR', 'ACTUATOR']),
+    // supportedStrategies: z.array(z.string()).optional(), // Legacy: Kept for compat if needed, but we rely on roles now
     supportedStrategies: z.array(z.string()).optional(),
     conversionStrategy: z.string().optional(),
+    measurements: z.record(MeasurementSchema).optional(), // Physical measurements with rawUnit/baseUnit
+    roles: z.record(z.object({
+        label: z.string(),
+        description: z.string().optional(),
+        source: z.string().optional(), // Source measurement key (e.g., 'distance' for volume role)
+        defaultStrategy: z.string().optional(),
+        strategies: z.array(z.string()),
+        units: z.array(z.string()).optional()
+    })).optional(),
     capabilities: z.array(z.string()),
     commands: z.record(CommandSchema),
     pins: z.array(PinSchema),
@@ -187,6 +203,17 @@ export class DeviceTemplateManager {
             // Validate with Zod
             const template = DeviceTemplateSchema.parse(raw);
 
+            // DEBUG: Log measurements loading
+            if (template.id === 'hc_sr04') {
+                logger.info({
+                    templateId: template.id,
+                    hasMeasurements: !!template.measurements,
+                    measurements: template.measurements,
+                    rawMeasurements: raw.measurements,
+                    roles: template.roles
+                }, '🔍 [DeviceTemplateManager] DEBUG: HC-SR04 Template Loaded');
+            }
+
             this.templates.set(template.id, template);
             logger.debug({ id: template.id, category: inferredCategory }, 'Loaded Template');
 
@@ -238,6 +265,8 @@ export class DeviceTemplateManager {
             capabilities: template.capabilities,
             commands: template.commands,
             initialState: template.initialState,
+            measurements: template.measurements, // NEW: Physical unit mapping (rawUnit/baseUnit)
+            roles: template.roles,               // NEW: Role definitions with source mapping
 
             createPacket: (cmdName, params, context: any) => {
                 const cmdDef = template.commands[cmdName];

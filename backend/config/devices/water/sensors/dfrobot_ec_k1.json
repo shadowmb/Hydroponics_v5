@@ -1,7 +1,30 @@
 {
     "id": "dfrobot_ec_k1",
     "name": "DFRobot EC Sensor (K=1.0)",
+    "description": "Analog electrical conductivity sensor with K=1.0 probe. Requires temperature compensation.",
     "category": "SENSOR",
+    "measurements": {
+        "ec": {
+            "rawUnit": "adc",
+            "baseUnit": "µS/cm"
+        }
+    },
+    "roles": {
+        "ec": {
+            "label": "EC Meter",
+            "description": "Measure electrical conductivity for nutrient concentration.",
+            "defaultStrategy": "two_point_linear",
+            "strategies": [
+                "two_point_linear",
+                "linear"
+            ],
+            "units": [
+                "µS/cm",
+                "mS/cm",
+                "ppm"
+            ]
+        }
+    },
     "supportedStrategies": [
         "two_point_linear",
         "linear"
@@ -36,6 +59,10 @@
         "min": 0,
         "max": 14000,
         "unit": "µS/cm"
+    },
+    "sampling": {
+        "count": 5,
+        "delayMs": 50
     },
     "commands": {
         "READ": {

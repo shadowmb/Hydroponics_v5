@@ -421,9 +421,28 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                                                         For now, we can use a helper map or just offer all if generic.
                                                                         Let's hardcode common category mappings or use availableUnits if single.
                                                                      */}
-                                                                    {(availableUnits.length > 0 ? availableUnits : ['%', 'C', 'F']).map(u => (
-                                                                        <SelectItem key={u} value={u} className="text-xs">{u}</SelectItem>
-                                                                    ))}
+                                                                    {/* 
+                                                                        Smart Unit Options:
+                                                                        Filter by Active Role if present.
+                                                                     */}
+                                                                    {(() => {
+                                                                        const activeRoleKey = device.config?.activeRole;
+                                                                        const template = typeof device?.config?.driverId === 'object' ? device.config.driverId : null;
+
+                                                                        let unitsToShow = availableUnits;
+
+                                                                        // STRICT FILTER: If Role has defined units, USE THEM.
+                                                                        if (activeRoleKey && template?.roles?.[activeRoleKey]?.units) {
+                                                                            unitsToShow = template.roles[activeRoleKey].units;
+                                                                        }
+
+                                                                        // Fallback if empty (shouldn't happen if properly config)
+                                                                        if (!unitsToShow || unitsToShow.length === 0) unitsToShow = ['%', 'C', 'F'];
+
+                                                                        return unitsToShow.map(u => (
+                                                                            <SelectItem key={u} value={u} className="text-xs">{u}</SelectItem>
+                                                                        ));
+                                                                    })()}
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
@@ -447,6 +466,8 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
 
 
                             <TabsContent value="settings" className="m-0 h-full overflow-y-auto p-4 space-y-6">
+
+
                                 <DeviceValidationSettings
                                     device={device}
                                     onSave={async (newConfig) => {

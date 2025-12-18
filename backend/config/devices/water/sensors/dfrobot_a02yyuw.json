@@ -1,7 +1,45 @@
 {
     "id": "dfrobot_a02yyuw",
     "name": "DFRobot Waterproof Ultrasonic",
+    "description": "IP67 waterproof ultrasonic distance sensor with UART interface. Range: 3cm-450cm.",
     "category": "SENSOR",
+    "measurements": {
+        "distance": {
+            "rawUnit": "mm",
+            "baseUnit": "mm"
+        }
+    },
+    "roles": {
+        "distance": {
+            "label": "Distance Monitor",
+            "description": "Measure linear distance. Ideal for liquid level monitoring.",
+            "defaultStrategy": "linear",
+            "strategies": [
+                "linear",
+                "offset_only"
+            ],
+            "units": [
+                "mm",
+                "cm",
+                "m",
+                "in",
+                "ft"
+            ]
+        },
+        "volume": {
+            "label": "Tank Volume",
+            "description": "Calculate liquid volume based on distance.",
+            "source": "distance",
+            "defaultStrategy": "tank_volume",
+            "strategies": [
+                "tank_volume"
+            ],
+            "units": [
+                "L",
+                "gal"
+            ]
+        }
+    },
     "supportedStrategies": [
         "offset_only",
         "linear",
@@ -21,9 +59,13 @@
         }
     },
     "hardwareLimits": {
-        "min": 20,
+        "min": 30,
         "max": 4500,
         "unit": "mm"
+    },
+    "sampling": {
+        "count": 3,
+        "delayMs": 50
     },
     "commands": {
         "READ": {

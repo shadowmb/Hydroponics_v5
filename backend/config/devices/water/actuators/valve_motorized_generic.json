@@ -1,8 +1,42 @@
 {
     "id": "valve_motorized_generic",
     "name": "Motorized Ball Valve (Generic)",
+    "description": "Motorized ball valve with position control via timing (0-100%). Supports dosing based on flow rate when open.",
     "category": "ACTUATOR",
-    "description": "Motorized valve controlled by duration (Time-to-Open/Close). Supports CR02/CR05 (3-wire/5-wire) types.",
+    "measurements": {
+        "position": {
+            "rawUnit": "%",
+            "baseUnit": "%"
+        }
+    },
+    "roles": {
+        "positioning": {
+            "label": "Valve Positioning",
+            "description": "Control valve opening percentage (0-100%).",
+            "source": "position",
+            "defaultStrategy": "duration_position",
+            "strategies": [
+                "duration_position"
+            ],
+            "units": [
+                "%"
+            ]
+        },
+        "dosing": {
+            "label": "Flow Dosing",
+            "description": "Dose specific volume when the valve is open.",
+            "source": "position",
+            "defaultStrategy": "volumetric_flow",
+            "strategies": [
+                "volumetric_flow"
+            ],
+            "units": [
+                "ml",
+                "l",
+                "gal"
+            ]
+        }
+    },
     "supportedStrategies": [
         "duration_position",
         "volumetric_flow"
@@ -14,6 +48,10 @@
         "min": 0,
         "max": 100000,
         "unit": "s"
+    },
+    "sampling": {
+        "count": 1,
+        "delayMs": 0
     },
     "commands": {
         "OPEN": {

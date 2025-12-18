@@ -3,10 +3,43 @@
     "name": "HC-SR04 Ultrasonic Sensor",
     "description": "Ultrasonic distance sensor for measuring liquid levels or proximity.",
     "category": "SENSOR",
-    "supportedStrategies": [
-        "linear",
-        "tank_volume"
-    ],
+    "measurements": {
+        "distance": {
+            "rawUnit": "cm",
+            "baseUnit": "mm"
+        }
+    },
+    "roles": {
+        "distance": {
+            "label": "Distance Monitor",
+            "description": "Measure linear distance (mm, cm, m). Ideal for proximity or clearance monitoring.",
+            "defaultStrategy": "linear",
+            "strategies": [
+                "linear",
+                "offset"
+            ],
+            "units": [
+                "mm",
+                "cm",
+                "m",
+                "in",
+                "ft"
+            ]
+        },
+        "volume": {
+            "label": "Tank Volume",
+            "description": "Measure liquid volume (Liters) based on distance levels.",
+            "source": "distance",
+            "defaultStrategy": "tank_volume",
+            "strategies": [
+                "tank_volume"
+            ],
+            "units": [
+                "L",
+                "gal"
+            ]
+        }
+    },
     "capabilities": [
         "ULTRASONIC_TRIG_ECHO"
     ],
@@ -62,7 +95,9 @@
             "cm",
             "m",
             "in",
-            "ft"
+            "ft",
+            "L",
+            "gal"
         ],
         "tags": [
             "Distance",

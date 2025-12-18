@@ -3,6 +3,44 @@
     "name": "DHT22 Temp/Humidity",
     "description": "Digital temperature and humidity sensor.",
     "category": "SENSOR",
+    "measurements": {
+        "temp": {
+            "rawUnit": "C",
+            "baseUnit": "C"
+        },
+        "humidity": {
+            "rawUnit": "%",
+            "baseUnit": "%"
+        }
+    },
+    "roles": {
+        "temp": {
+            "label": "Air Temperature",
+            "description": "Ambient air temperature monitoring.",
+            "source": "temp",
+            "defaultStrategy": "linear",
+            "strategies": [
+                "linear",
+                "offset_only"
+            ],
+            "units": [
+                "C",
+                "F"
+            ]
+        },
+        "humidity": {
+            "label": "Air Humidity",
+            "description": "Ambient air humidity monitoring.",
+            "source": "humidity",
+            "defaultStrategy": "linear",
+            "strategies": [
+                "linear"
+            ],
+            "units": [
+                "%"
+            ]
+        }
+    },
     "supportedStrategies": [
         "offset_only",
         "linear"
@@ -24,6 +62,10 @@
         "min": -40,
         "max": 80,
         "unit": "C"
+    },
+    "sampling": {
+        "count": 2,
+        "delayMs": 2000
     },
     "commands": {
         "READ": {

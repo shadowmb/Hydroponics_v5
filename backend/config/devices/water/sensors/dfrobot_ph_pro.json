@@ -1,13 +1,35 @@
 {
     "id": "dfrobot_ph_pro",
     "name": "DFRobot Analog pH Sensor V2",
+    "description": "Industrial-grade analog pH sensor with auto-temperature compensation support.",
     "category": "SENSOR",
+    "measurements": {
+        "ph": {
+            "rawUnit": "adc",
+            "baseUnit": "pH"
+        }
+    },
+    "roles": {
+        "ph": {
+            "label": "pH Meter",
+            "description": "Measure water acidity/alkalinity (0-14 pH scale).",
+            "defaultStrategy": "ph_smart",
+            "strategies": [
+                "ph_smart",
+                "ph_dfr",
+                "linear"
+            ],
+            "units": [
+                "pH"
+            ]
+        }
+    },
     "supportedStrategies": [
+        "ph_smart",
         "ph_dfr",
-        "linear",
-        "two_point_linear"
+        "linear"
     ],
-    "conversionStrategy": "ph_dfr",
+    "conversionStrategy": "ph_smart",
     "capabilities": [
         "READ"
     ],
@@ -38,10 +60,15 @@
         "max": 14,
         "unit": "pH"
     },
+    "sampling": {
+        "count": 5,
+        "delayMs": 50
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ANALOG",
             "valuePath": "value",
+            "sourceUnit": "adc",
             "outputs": [
                 {
                     "key": "ph",

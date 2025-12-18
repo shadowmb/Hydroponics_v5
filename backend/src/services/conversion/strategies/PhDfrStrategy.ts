@@ -22,20 +22,45 @@ export class PhDfrStrategy implements IConversionStrategy {
         // Ideally we should have a 'calibration' object in device config.
         const calibration = device.config.calibrations?.['ph_dfr']?.data || {};
 
-        // Default Calibration (Ideal Probe)
-        // pH 7.00 = 1500mV (at 0 offset)
-        // Sensitivity = -59.16 mV/pH at 25°C
-        const neutralVoltage = calibration.neutralVoltage ?? 1500.0;
-        const acidVoltage = calibration.acidVoltage ?? 2032.44; // Approx for pH 4.0 at -59.16mV/pH * -3 = 177.48 + 1500? No.
-        // pH 4 is 3 units away from 7. 3 * 59.16 = 177.48. 1500 + 177.48 = 1677.48 (Wait, slope is negative? High voltage = Low pH?)
-        // DFRobot Analog pH Sensor V2: Output 0-3.0V. Neutral ~1.5V.
-        // Usually: pH = 7.0 + ((NeutralVoltage - Voltage) / Sensitivity)
+        // Check for calibration data (Legacy vs New Wizard)
+        // New Wizard (MultiPointTable) saves data as { points: [{ raw, value }, ...] }
+        let neutralVoltage = calibration.neutralVoltage;
+        let acidVoltage = calibration.acidVoltage;
 
-        // Let's compute Sensitivity (Slope) from Calibration if available (Acid Point)
-        // Sensitivity = (NeutralVoltage - AcidVoltage) / (7.0 - 4.0)
-        let sensitivity = (neutralVoltage - acidVoltage) / (7.0 - 4.0);
+        if (calibration.points && Array.isArray(calibration.points)) {
+            // Find Neutral (closest to pH 7.0)
+            const neutralPoint = calibration.points.find((p: any) => Math.abs(p.value - 7.0) < 0.5);
+            if (neutralPoint) {
+                // Point raw is ADC or Voltage? 
+                // Wizard captures 'raw'. If raw is ADC, we need to convert to mV.
+                // But wait, strategy receives 'raw' (ADC). 
+                // The wizard saves whatever 'raw' is.
+                // If wizard captured ADC, we need to convert it to Voltage using THIS context (or the one during cal?).
+                // Assuming Calibration was done with same VRef/ADCMax, we can convert.
+                // Or better: Assume the wizard saves 'raw' as ADC values.
 
-        if (!calibration.acidVoltage) {
+                // We need Voltage for the formula.
+                // neutralVoltage = (neutralPoint.raw / adcMax) * (vRef * 1000);
+
+                // Actually, let's keep it safe. If the wizard saves normalized values (e.g. if we fix wizard to save mV?), 
+                // But simpler: just convert the raw ADC from the point to mV using current context.
+                neutralVoltage = (neutralPoint.raw / adcMax) * (vRef * 1000);
+            }
+
+            // Find Acid (closest to pH 4.0)
+            const acidPoint = calibration.points.find((p: any) => Math.abs(p.value - 4.0) < 0.5);
+            if (acidPoint) {
+                acidVoltage = (acidPoint.raw / adcMax) * (vRef * 1000);
+            }
+        }
+
+        // Fallbacks
+        neutralVoltage = neutralVoltage ?? 1500.0;
+
+        let sensitivity;
+        if (acidVoltage !== undefined && neutralVoltage !== undefined) {
+            sensitivity = (neutralVoltage - acidVoltage) / (7.0 - 4.0);
+        } else {
             // Default Sensitivity if no Cal: 59.16mV/pH
             sensitivity = 59.16;
         }

@@ -31,7 +31,9 @@ export interface CalibrationStrategy {
     category: 'SENSOR' | 'ACTUATOR' | 'BOTH';
     capabilities?: string[];
     compatibility: string[];
+    outputUnit?: string;
     storageSchema: Record<string, any>;
+
     wizard: {
         component: string;
         steps: WizardStep[];

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PhSmartWizard } from './PhSmartWizard';
+
 import {
     Dialog,
     DialogContent,
@@ -21,15 +23,28 @@ interface DynamicWizardProps {
     strategyId: string;
     onSave: (data: any) => void;
     onRunCommand?: (cmd: string, params: any) => Promise<any>;
+    baseUnit?: string;
+    targetUnit?: string;
 }
 
 // Helper to generate steps based on Strategy Calibration Config
 // TODO: This could be moved to a separate file or within StrategyRegistry if it gets too large
-const generateSteps = (strategyId: string): { steps: WizardStep[], formula?: string } | null => {
+const generateSteps = (strategyId: string, baseUnit?: string, targetUnit?: string): { steps: WizardStep[], formula?: string } | null => {
     const strategy = StrategyRegistry.get(strategyId);
     if (!strategy || !strategy.calibration) return null;
 
     const { component, xLabel, yLabel } = strategy.calibration;
+
+    // Use units if provided, otherwise fallback to labels
+    // FIX: Avoid duplicate units - check if label already contains unit in parentheses
+    const hasUnitInLabel = (label: string, unit: string) => label?.includes(`(${unit})`);
+
+    const displayXLabel = baseUnit && !hasUnitInLabel(xLabel || '', baseUnit)
+        ? `${xLabel || 'Raw Input'} (${baseUnit})`
+        : (xLabel || 'Raw Input');
+    const displayYLabel = targetUnit && !hasUnitInLabel(yLabel || '', targetUnit)
+        ? `${yLabel || 'Calibrated Value'} (${targetUnit})`
+        : (yLabel || 'Calibrated Value');
 
     // Template: Multi-Point Table (e.g. Tank Volume)
     if (component === 'MultiPointTable') {
@@ -37,12 +52,12 @@ const generateSteps = (strategyId: string): { steps: WizardStep[], formula?: str
             steps: [
                 {
                     label: 'Multi-Point Calibration',
-                    instructions: `Add points to map ${xLabel || 'Input'} to ${yLabel || 'Output'}.`,
+                    instructions: `Add points to map ${displayXLabel} to ${displayYLabel}.`,
                     type: 'points_table',
                     key: 'data', // Standard key for table data
                     headers: [
-                        { label: xLabel || 'Raw Input', key: 'raw' },
-                        { label: yLabel || 'Calibrated Value', key: 'value' }
+                        { label: displayXLabel, key: 'raw' },
+                        { label: displayYLabel, key: 'value' }
                     ]
                 }
             ]
@@ -81,15 +96,23 @@ const generateSteps = (strategyId: string): { steps: WizardStep[], formula?: str
     return null;
 };
 
-export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave, onRunCommand }) => {
+export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave, onRunCommand, baseUnit, targetUnit }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [errorDialogOpen, setErrorDialogOpen] = useState(false);
     const [errorDialogMessage, setErrorDialogMessage] = useState("");
 
-    const config = generateSteps(strategyId);
+    const config = generateSteps(strategyId, baseUnit, targetUnit);
+
+    // Specialized Wizards
+    const strategy = StrategyRegistry.get(strategyId);
+    if (strategy?.calibration?.component === 'PhSmartWizard' && onRunCommand) {
+        return <PhSmartWizard onSave={onSave} onRunCommand={onRunCommand} />;
+    }
+
 
     if (!config || !config.steps || config.steps.length === 0) {
+
         return <div className="p-4 text-red-500">Error: No wizard configuration found for strategy '{strategyId}'</div>;
     }
 
@@ -576,16 +599,25 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
                             // Backend returns: { raw, value, unit, details: { baseValue, baseUnit } }
                             let reading = 0;
 
-                            // Priority: details.baseValue > baseValue > value > raw number
+                            // Priority: details.baseValue > baseValue > raw > value > raw number
                             if (result?.details?.baseValue !== undefined) {
                                 reading = result.details.baseValue;
+                                console.log('[DynamicWizard] Using details.baseValue:', reading);
                             } else if (result && typeof result.baseValue === 'number') {
                                 reading = result.baseValue;
+                                console.log('[DynamicWizard] Using baseValue:', reading);
+                            } else if (result && typeof result.raw === 'number') {
+                                reading = result.raw;
+                                console.log('[DynamicWizard] FALLBACK to raw:', reading, '- baseValue not found!');
                             } else if (result && typeof result.value === 'number') {
                                 reading = result.value;
+                                console.log('[DynamicWizard] FALLBACK to value:', reading);
                             } else if (typeof result === 'number') {
                                 reading = result;
+                                console.log('[DynamicWizard] FALLBACK to result number:', reading);
                             }
+
+                            console.log('[DynamicWizard] Full result object:', result);
 
                             updatePoint(index, 'raw', reading);
                         } catch (err) {
