@@ -13,6 +13,7 @@ export type UnitCategory =
     | 'pressure'
     | 'flow'
     | 'light'
+    | 'analytic'
     | 'generic'
     | 'unknown';
 
@@ -55,6 +56,9 @@ register('flow', 'l/min', 'L/min', 'l/h', 'L/h', 'ml/min', 'gpm');
 
 // Light
 register('light', 'lux', 'lx', 'klux', 'umol/m2*s', 'W/m2');
+
+// Analytic (Chemistry/Environment)
+register('analytic', 'pH', 'mS/cm', 'uS/cm', 'ppm');
 
 // Generic / State
 register('generic', 'adc', 'mV', 'mv', '%', 'percent', 'boolean', 'on/off');
