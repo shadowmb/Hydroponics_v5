@@ -119,6 +119,94 @@
         }
     },
     {
+        "id": "ph_smart",
+        "name": "Smart pH Tracker (Segmented)",
+        "description": "Advanced 1, 2 or 3-point segmented linear conversion with temperature compensation.",
+        "category": "SENSOR",
+        "compatibility": [
+            "ph"
+        ],
+        "storageSchema": {
+            "points": {
+                "type": "array",
+                "required": true,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "raw": {
+                            "type": "number"
+                        },
+                        "value": {
+                            "type": "number"
+                        }
+                    }
+                }
+            }
+        },
+        "wizard": {
+            "component": "PhSmartWizard",
+            "steps": [
+                {
+                    "type": "points_table",
+                    "label": "pH Calibration Points",
+                    "instructions": "Place sensor in buffer solution (e.g. 4.0, 7.0, 10.0). Click 'READ' to capture raw value, then enter buffer pH.",
+                    "key": "points",
+                    "headers": [
+                        {
+                            "label": "Raw Reading",
+                            "key": "raw",
+                            "readOnly": false,
+                            "action": "READ"
+                        },
+                        {
+                            "label": "Buffer pH",
+                            "key": "value",
+                            "readOnly": false
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "ph_dfr",
+        "name": "DFRobot pH (Pro/V2) [Legacy]",
+        "description": "Traditional pH conversion using Neutral (7.0) and Acid (4.0) voltage offsets.",
+        "category": "SENSOR",
+        "compatibility": [
+            "ph"
+        ],
+        "storageSchema": {
+            "neutralVoltage": {
+                "type": "number",
+                "required": true,
+                "default": 1500
+            },
+            "acidVoltage": {
+                "type": "number",
+                "required": true,
+                "default": 2032
+            }
+        },
+        "wizard": {
+            "component": "PhDfrWizard",
+            "steps": [
+                {
+                    "type": "measure",
+                    "label": "Neutral Point (pH 7.0)",
+                    "refKey": "neutral",
+                    "instructions": "Place sensor in pH 7.0 buffer solution."
+                },
+                {
+                    "type": "measure",
+                    "label": "Acid Point (pH 4.0)",
+                    "refKey": "acid",
+                    "instructions": "Place sensor in pH 4.0 buffer solution."
+                }
+            ]
+        }
+    },
+    {
         "id": "offset_only",
         "name": "Offset Only (Tare)",
         "description": "Adjusts only the zero-point (intercept). Slope remains 1.",

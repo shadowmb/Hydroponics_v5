@@ -57,7 +57,8 @@ register('flow', 'l/min', 'L/min', 'l/h', 'L/h', 'ml/min', 'gpm');
 register('light', 'lux', 'lx', 'klux', 'umol/m2*s', 'W/m2');
 
 // Generic / State
-register('generic', '%', 'percent', 'boolean', 'on/off');
+register('generic', 'adc', 'mV', 'mv', '%', 'percent', 'boolean', 'on/off');
+
 
 
 /**

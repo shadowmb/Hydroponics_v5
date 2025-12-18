@@ -13,10 +13,11 @@
         "ph": {
             "label": "pH Meter",
             "description": "Measure water acidity/alkalinity (0-14 pH scale).",
-            "defaultStrategy": "ph_dfr",
+            "defaultStrategy": "ph_smart",
             "strategies": [
+                "ph_smart",
                 "ph_dfr",
-                "two_point_linear"
+                "linear"
             ],
             "units": [
                 "pH"
@@ -24,11 +25,11 @@
         }
     },
     "supportedStrategies": [
+        "ph_smart",
         "ph_dfr",
-        "linear",
-        "two_point_linear"
+        "linear"
     ],
-    "conversionStrategy": "ph_dfr",
+    "conversionStrategy": "ph_smart",
     "capabilities": [
         "READ"
     ],

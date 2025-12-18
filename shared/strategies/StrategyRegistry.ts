@@ -101,17 +101,33 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
     },
     'ph_dfr': {
         id: 'ph_dfr',
-        label: 'DFRobot pH (Pro/V2)',
+        label: 'DFRobot pH (Pro/V2) [Legacy]',
         type: 'SENSOR',
-        description: 'Temperature-compensated pH conversion (Nernst Equation).',
+        description: 'Traditional temperature-compensated pH conversion (Legacy).',
         inputUnit: 'any',
         outputUnit: 'pH',
         calibration: {
             calibrationKey: 'ph_dfr',
             component: 'MultiPointTable',
-            minPoints: 1, // Allow 1 (Offset/Neutral) or 2 (Slope)
+            minPoints: 1,
             xLabel: 'Raw Value',
             yLabel: 'pH Value'
+        }
+    },
+    'ph_smart': {
+        id: 'ph_smart',
+        label: 'Smart pH Tracker',
+        type: 'SENSOR',
+        description: 'Advanced 3-point segmented linear conversion with Nernst temp compensation and health diagnostics.',
+        inputUnit: 'any',
+        outputUnit: 'pH',
+        calibration: {
+            calibrationKey: 'ph_smart',
+            component: 'PhSmartWizard',
+
+            minPoints: 1, // 1=Offset, 2=Slope, 3=Segmented
+            xLabel: 'Raw Input',
+            yLabel: 'pH Value (Buffer)'
         }
     },
 

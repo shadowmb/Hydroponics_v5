@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { StrategySelector } from './StrategySelector';
 import { DynamicWizard } from './DynamicWizard';
 import { calibrationService } from '../../../../services/calibrationService';
@@ -242,6 +244,46 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
         }
     };
 
+    // Check for template roles
+    const template = typeof device.config?.driverId === 'object' ? device.config.driverId : null;
+    const roles = template?.roles || {};
+    const hasRoles = Object.keys(roles).length > 0;
+    const activeRole = device.config?.activeRole;
+
+    const handleRoleChange = async (roleKey: string) => {
+        try {
+            const selectedRole = roles[roleKey];
+            const body: any = { "config.activeRole": roleKey };
+
+            // Auto-Update Strategy if Role defines a default
+            if (selectedRole?.defaultStrategy) {
+                body["config.conversionStrategy"] = selectedRole.defaultStrategy;
+                setSelectedStrategyId(selectedRole.defaultStrategy);
+            }
+
+            const res = await fetch(`/api/hardware/devices/${device._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) throw new Error('Failed to update role');
+
+            toast.success(`Role set to ${selectedRole?.label || roleKey}`);
+            if (onUpdate) onUpdate();
+        } catch (e) {
+            console.error(e);
+            toast.error('Failed to update role');
+        }
+    };
+
+    // Auto-select role if only one exists
+    useEffect(() => {
+        if (hasRoles && !activeRole && Object.keys(roles).length === 1) {
+            handleRoleChange(Object.keys(roles)[0]);
+        }
+    }, [hasRoles, activeRole, roles]);
+
     const selectedStrategy = strategies.find(s => s.id === selectedStrategyId);
 
     // Check if the selected strategy has existing calibration data
@@ -258,35 +300,69 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
 
     if (loading) return <div>Loading strategies...</div>;
 
-    // EMPTY STATE: If template has roles but none selected.
-    const hasRoles = device.config?.driverId?.roles || (typeof device.config?.driverId === 'object' && device.config.driverId.roles);
-    if (hasRoles && Object.keys(hasRoles).length > 0 && !device.config?.activeRole) {
-        return (
-            <div className="flex flex-col items-center justify-center p-8 space-y-4 text-center border rounded-lg bg-muted/10 m-4">
-                <div className="p-3 bg-yellow-500/10 rounded-full text-yellow-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
-                </div>
-                <div className="space-y-2">
-                    <h3 className="font-semibold text-lg">No Role Selected</h3>
-                    <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                        This sensor supports multiple roles (e.g., Distance or Volume).
-                        Please select a role in the <strong>Settings</strong> tab to continue.
-                    </p>
-                </div>
-            </div>
-        );
-    }
+
 
     return (
         <div className="space-y-6 p-4">
-            <div className="max-w-md">
-                <StrategySelector
-                    strategies={strategies}
-                    selectedId={selectedStrategyId}
-                    onSelect={setSelectedStrategyId}
-                    existingCalibrations={existingCalibrationsList}
-                />
-            </div>
+            {/* Header: Role Selection */}
+            {hasRoles && (
+                <div className="space-y-4 max-w-2xl border rounded-lg p-5 bg-card/50 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-md text-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold">Device Function (Role)</h4>
+                            <p className="text-xs text-muted-foreground">Define how this sensor is currently used to unlock specific strategies.</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Select
+                            value={activeRole || ""}
+                            onValueChange={handleRoleChange}
+                        >
+                            <SelectTrigger className="w-full h-11">
+                                <SelectValue placeholder="--- Select Active Role ---" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(roles).map(([key, role]: any) => (
+                                    <SelectItem key={key} value={key}>
+                                        <div className="flex flex-col items-start py-0.5">
+                                            <span className="font-medium text-sm">{role.label}</span>
+                                            {role.description && <span className="text-[10px] opacity-70 leading-tight">{role.description}</span>}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            )}
+
+            {!activeRole && hasRoles ? (
+                <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center border-2 border-dashed rounded-xl bg-muted/5">
+                    <div className="p-4 bg-yellow-500/10 rounded-full text-yellow-500 animate-pulse">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="font-bold text-xl">Action Required: Define Role</h3>
+                        <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                            To start calibration, you must first select the <strong>Device Function</strong> above.
+                            This tells the system what physics to apply (e.g., pH, EC or Volume).
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="max-w-md">
+                    <StrategySelector
+                        strategies={strategies}
+                        selectedId={selectedStrategyId}
+                        onSelect={setSelectedStrategyId}
+                        existingCalibrations={existingCalibrationsList}
+                    />
+                </div>
+            )}
 
 
             {selectedStrategy && (

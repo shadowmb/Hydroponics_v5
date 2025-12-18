@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PhSmartWizard } from './PhSmartWizard';
+
 import {
     Dialog,
     DialogContent,
@@ -102,7 +104,15 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
 
     const config = generateSteps(strategyId, baseUnit, targetUnit);
 
+    // Specialized Wizards
+    const strategy = StrategyRegistry.get(strategyId);
+    if (strategy?.calibration?.component === 'PhSmartWizard' && onRunCommand) {
+        return <PhSmartWizard onSave={onSave} onRunCommand={onRunCommand} />;
+    }
+
+
     if (!config || !config.steps || config.steps.length === 0) {
+
         return <div className="p-4 text-red-500">Error: No wizard configuration found for strategy '{strategyId}'</div>;
     }
 
