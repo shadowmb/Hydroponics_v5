@@ -202,10 +202,25 @@ export class HardwareService {
     /**
      * Reads a sensor value, returning both RAW and Converted data.
      */
-    public async readSensorValue(deviceId: string, strategyOverride?: string): Promise<{ raw: number, value: number | null, unit?: string, details?: any }> {
+    public async readSensorValue(deviceId: string, strategyOverride?: string): Promise<{
+        raw: number,
+        value: number | null,
+        unit?: string,
+        baseValue: number | null,
+        baseUnit: string,
+        hwValue: number,
+        hwUnit: string,
+        details?: any
+    }> {
         const { DeviceModel } = await import('../../models/Device');
         const device = await DeviceModel.findById(deviceId);
         if (!device) throw new Error('Device not found');
+
+        const context = {
+            pins: device.hardware?.pins,
+            voltage: device.config?.voltage?.reference || 5.0,
+            temperature: device.config?.compensation?.temperature?.default || 25.0
+        };
 
         // Execute 'READ' command
         const rawResponse = await this.sendCommand(
@@ -213,20 +228,18 @@ export class HardwareService {
             device.config.driverId,
             'READ',
             {},
-            {
-                pins: device.hardware?.pins
-            }
+            context
         );
 
 
         // Check if Driver has a specific value path configured
-        const driver = templates.getDriver(device.config.driverId);
-        const valuePath = driver.commands?.READ?.valuePath;
+        const driverDoc = templates.getDriver(device.config.driverId);
+        const valuePath = driverDoc.commands?.READ?.valuePath;
         let valueFound = false;
 
         // --- BURST READ + MEDIAN FILTERING ---
         // Check if device/template has sampling configuration
-        const samplingConfig = device.config?.sampling || driver.sampling;
+        const samplingConfig = device.config?.sampling || driverDoc.sampling;
         const sampleCount = samplingConfig?.count || 1;
         const sampleDelay = samplingConfig?.delayMs || 0;
 
@@ -338,42 +351,118 @@ export class HardwareService {
 
 
 
-        // --- PRE-SMART VALIDATION (Physical Layer) ---
-        // Validate the sensor's physical reading (Distance, Temp, etc) BEFORE we convert it to something else (Volume).
-        // This ensures the sensor is healthy and within its operating range.
-        const driverDoc = templates.getDriver(device.config.driverId);
+        // --- MODULAR CONVERSION PIPELINE ---
 
-        // Create a persistent variable for correct baseValue calculation
-        let validPhysicalBaseValue: number | undefined;
-        let validPhysicalBaseUnit: string | undefined;
-        let usedMeasurementsBlock = false; // Flag to skip old normalization later
+        // 1. RAW -> BASIC (Logical System Truth)
+        // This includes Hardware Normalization (Stage 2) and Strategy/Calibration (Stage 3)
+        const basicResult = await this.processRawToBasic(raw, device, driverDoc, context, strategyOverride);
 
-        // NEW: Try to get rawUnit/baseUnit from template's measurements block first
-        // @ts-ignore - measurements is new optional field
+        const rawNum = raw;
+        const {
+            value: baseLogValue,
+            unit: baseLogUnit,
+            hwValue: baseHwValue,
+            hwUnit: baseHwUnit,
+            activeStrategy
+        } = basicResult;
+
+        // DB RECORDING: Save the UNIFIED LOGICAL value (Stage 3 / BASIC)
+        try {
+            const safeBaseValue = isNaN(baseLogValue) ? null : baseLogValue;
+            device.lastReading = {
+                value: safeBaseValue,
+                raw: rawNum,
+                timestamp: new Date()
+            };
+            await device.save();
+        } catch (dbErr) {
+            logger.warn({ deviceId, error: dbErr }, '⚠️ Failed to save lastReading to DB');
+        }
+
+        // 2. BASIC -> DISPLAY (User Preference)
+        // Stage 4: Final conversion for UI only
+        const displayResult = this.processBasicToDisplay(baseLogValue, baseLogUnit, device);
+        const { value: displayVal, unit: displayUnitFinal } = displayResult;
+
+        // --- RESPONSE & EVENTS ---
+
+        const readings: Record<string, any> = (typeof rawResponse === 'object') ? { ...rawResponse } : { value: rawResponse };
+        const outputs = driverDoc.commands?.READ?.outputs;
+
+        if (outputs && outputs.length === 1 && outputs[0].key) {
+            // Return Display Value (Stage 4) for the active key
+            readings[outputs[0].key] = isNaN(displayVal) ? null : displayVal;
+        }
+
+        // Emit data event with full unit lineage
+        events.emit('device:data', {
+            deviceId: device.id,
+            deviceName: device.name,
+            driverId: device.config.driverId,
+            value: isNaN(displayVal) ? null : displayVal, // Display value
+            raw: rawNum,
+            unit: displayUnitFinal,
+            baseValue: isNaN(baseLogValue) ? null : baseLogValue,
+            baseUnit: baseLogUnit,
+            hwValue: baseHwValue,
+            hwUnit: baseHwUnit,
+            readings,
+            details: {
+                ...rawResponse,
+                baseHwValue,
+                baseHwUnit,
+                baseLogValue,
+                baseLogUnit,
+                activeStrategy
+            },
+            timestamp: new Date()
+        });
+
+        return {
+            raw: rawNum,
+            value: isNaN(displayVal) ? null : displayVal,
+            unit: displayUnitFinal,
+            baseValue: isNaN(baseLogValue) ? null : baseLogValue,
+            baseUnit: baseLogUnit,
+            hwValue: baseHwValue,
+            hwUnit: baseHwUnit,
+            details: {
+                ...(typeof rawResponse === 'object' ? rawResponse : { rawResponse }),
+                baseHwValue,
+                baseHwUnit,
+                baseLogValue,
+                baseLogUnit,
+                activeStrategy
+            }
+        };
+    }
+
+    /**
+     * Stage 2 & 3: Converts RAW hardware reading to unified BASIC logical value.
+     */
+    private async processRawToBasic(
+        raw: number,
+        device: any,
+        driverDoc: any,
+        context: any,
+        strategyOverride?: string
+    ): Promise<{ value: number, unit: string, hwValue: number, hwUnit: string, activeStrategy: string }> {
+
+        let validPhysicalBaseValue = raw;
+        let validPhysicalBaseUnit = driverDoc.commands?.READ?.sourceUnit || 'raw';
+        let usedMeasurementsBlock = false;
+
+        // Stage 2: Hardware Normalization (measurements block)
         const templateMeasurements = driverDoc.measurements;
-
-        // Determine measurement key from activeRole or default to first available
         const activeRole = device.config?.activeRole;
         let measurementKey = activeRole || Object.keys(templateMeasurements || {})[0] || 'distance';
 
-        // For derived roles (like 'volume'), use the source measurement
         // @ts-ignore
         const roleConfig = driverDoc.roles?.[activeRole];
         if (roleConfig?.source) {
-            measurementKey = roleConfig.source; // e.g., 'volume' role sources from 'distance' measurement
+            measurementKey = roleConfig.source;
         }
 
-        // DEBUG: Log measurements resolution
-        logger.info({
-            deviceId,
-            activeRole,
-            measurementKey,
-            hasTemplateMeasurements: !!templateMeasurements,
-            measurementConfig: templateMeasurements?.[measurementKey],
-            roleSource: roleConfig?.source
-        }, '🔍 [HardwareService] DEBUG: Measurements Resolution');
-
-        // NEW: Use measurements block if available
         if (templateMeasurements && templateMeasurements[measurementKey] && !isNaN(raw)) {
             try {
                 const measConfig = templateMeasurements[measurementKey];
@@ -382,380 +471,82 @@ export class HardwareService {
                 if (rawUnit && baseUnit) {
                     const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
                     const { convertValue } = require(registryPath);
-
                     const convertedValue = convertValue(raw, rawUnit, baseUnit);
 
                     if (convertedValue !== null) {
                         validPhysicalBaseValue = convertedValue;
                         validPhysicalBaseUnit = baseUnit;
                         usedMeasurementsBlock = true;
-
-                        logger.info({
-                            rawValue: raw,
-                            rawUnit,
-                            baseUnit,
-                            convertedValue
-                        }, '📐 [HardwareService] Measurement normalized (rawUnit → baseUnit)');
-
-                        logger.info({
-                            deviceId,
-                            measurementKey,
-                            raw,
-                            rawUnit,
-                            baseValue: convertedValue,
-                            baseUnit
-                        }, '📐 [HardwareService] Normalized via measurements block');
                     }
                 }
-            } catch (measErr: any) {
-                logger.warn({ deviceId, err: measErr.message }, '⚠️ [HardwareService] Measurements block normalization failed, falling back');
-            }
-        }
-
-        // FALLBACK: Use old physicalUnit logic if measurements block wasn't used
-        // @ts-ignore
-        const physicalUnit = driverDoc.commands?.READ?.sourceUnit;
-
-        if (!usedMeasurementsBlock && physicalUnit && !isNaN(raw)) {
-            try {
-                // Dynamic import needed here as well
-                const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
-                const { normalizeValue } = require(registryPath);
-
-                const physicalNormalized = normalizeValue(raw, physicalUnit);
-
-                if (physicalNormalized) {
-                    validPhysicalBaseValue = physicalNormalized.value;
-                    validPhysicalBaseUnit = physicalNormalized.baseUnit;
-
-                    const validation = device.config?.validation;
-                    const valueToValidate = physicalNormalized.value; // Base Unit Value (e.g. mm)
-                    const unitToValidate = physicalNormalized.baseUnit;
-
-                    logger.info({
-                        deviceId,
-                        raw,
-                        physicalUnit,
-                        baseValue: valueToValidate,
-                        baseUnit: unitToValidate
-                    }, '🛡️ [HardwareService] Pre-Smart Physical Validation');
-
-                    if (validation && (validation.range?.min !== undefined || validation.range?.max !== undefined)) {
-                        const minValid = validation.range.min === undefined || valueToValidate >= validation.range.min;
-                        const maxValid = validation.range.max === undefined || valueToValidate <= validation.range.max;
-
-                        if (!minValid || !maxValid) {
-                            logger.warn({
-                                deviceId,
-                                value: valueToValidate,
-                                unit: unitToValidate,
-                                min: validation.range.min,
-                                max: validation.range.max
-                            }, '⚠️ [HardwareService] Physical sensor value out of valid range');
-
-                            throw new Error(`Sensor value ${valueToValidate} ${unitToValidate} is out of valid range [${validation.range.min ?? '-∞'} - ${validation.range.max ?? '∞'}]`);
-                        }
-                    }
-                }
-            } catch (err: any) {
-                // If validation failed, we stop here.
-                if (err.message.includes('out of valid range')) throw err;
-                logger.warn({ err, deviceId }, '⚠️ [HardwareService] Pre-validation check failed completely');
-            }
-        }
-
-        // --- Context Resolution (Compensation & Hardware) ---
-        const context: any = {};
-
-        try {
-            // 1. Resolve ADC & System Voltage (from Controller)
-            const { Controller } = await import('../../models/Controller');
-            let controllerId = device.hardware?.parentId as unknown as string; // Cast for safety
-
-            if (!controllerId && device.hardware?.relayId) {
-                const { Relay } = await import('../../models/Relay');
-                const relay = await Relay.findById(device.hardware.relayId);
-                if (relay && relay.controllerId) controllerId = relay.controllerId.toString();
-            }
-
-            if (controllerId) {
-                const controller = await Controller.findById(controllerId);
-                // Access hardwareConfig safely
-                if (controller && (controller as any).hardwareConfig) {
-                    context.adcMax = (controller as any).hardwareConfig.adcResolution;
-                    context.voltage = (controller as any).hardwareConfig.voltageReference;
-                }
-            }
-
-            // 2. Resolve Voltage Override (Device Config)
-            if (device.config?.voltage?.reference) {
-                context.voltage = device.config.voltage.reference;
-            }
-
-            // 3. Resolve Temperature (Compensation)
-            const comp = device.config?.compensation?.temperature;
-            if (comp?.enabled) {
-                let temp = comp.default || 25.0;
-
-                if (comp.source === 'external' && comp.externalDeviceId) {
-                    const extDev = await DeviceModel.findById(comp.externalDeviceId);
-
-                    if (extDev) {
-                        // Check Freshness
-                        const lastRead = extDev.lastReading;
-                        const now = Date.now();
-                        const lastTs = lastRead?.timestamp ? new Date(lastRead.timestamp).getTime() : 0;
-                        const age = now - lastTs;
-                        const LIMIT = 5 * 60 * 1000; // 5 min
-
-                        if (age < LIMIT && lastRead) {
-                            if (lastRead.value !== null) {
-                                temp = lastRead.value;
-                            }
-                            logger.info({ deviceId: device._id, temp, source: 'external', extDevId: extDev._id, freshness: 'fresh' }, '🌡️ [HardwareService] Using External Temperature for Compensation');
-                        } else {
-                            // Active Polling
-                            logger.warn({ deviceId, extDev: extDev.name, age }, '⚠️ [HardwareService] Stale Temp Data. Polling...');
-                            try {
-                                // Trigger read
-                                const res = await this.readSensorValue(extDev.id); // Recursion risk if cycle
-                                if (res && typeof res.value === 'number') {
-                                    temp = res.value;
-                                    logger.info({ deviceId: device._id, temp, source: 'external', extDevId: extDev._id, freshness: 'polled' }, '🌡️ [HardwareService] Using Polled External Temperature for Compensation');
-                                } else {
-                                    logger.warn({ deviceId: device._id, lastRead, source: 'external' }, '⚠️ [HardwareService] External Temperature Stale or Poll Failed, using Default');
-                                }
-                            } catch (err) {
-                                logger.error({ err }, '❌ [HardwareService] Active Poll Failed. Using Default.');
-                            }
-                        }
-                    }
-                }
-                context.temperature = temp;
-                logger.info({ deviceId, temp, voltage: context.voltage, adc: context.adcMax }, '🌡️ [HardwareService] Compensation Context');
-            }
-        } catch (ctxErr) {
-            logger.error({ err: ctxErr }, '❌ [HardwareService] Context Resolution Failed');
-        }
-
-        // --- Smart Conversion (Auto-Strategy) ---
-        // We ask ConversionService to find the best strategy for our desired Display Unit.
-        const targetUnit = device.displayUnit || device.displayUnits?.get('_primary'); // Use primary display unit as target if valid
-
-        logger.info({ deviceId, configStrategy: device.config?.conversionStrategy, driverId: device.config.driverId }, '🧐 [HardwareService] Debug Strategy Selection');
-
-        // Note: convertSmart might return NaN if strict mode is active and no calibration
-        // FIX: Pass validPhysicalBaseValue (mm) instead of raw (cm) if available.
-        const smartInput = validPhysicalBaseValue ?? raw;
-
-        const smartResult = conversionService.convertSmart(device, smartInput, targetUnit, context);
-        let value = smartResult.value;
-        const activeStrategy = smartResult.strategyUsed; // The strategy that was actually used
-
-        // --- Normalization Layer ---
-        // Check if driver has a sourceUnit and normalize if needed
-        // const driverDoc = templates.getDriver(device.config.driverId);  <-- REUSED moved var
-        // @ts-ignore - sourceUnit is new, might not be in interface yet
-        let sourceUnit = driverDoc.commands?.READ?.sourceUnit;
-
-        // If measurements block was used, update sourceUnit to baseUnit
-        // This ensures downstream conversions (displayUnit) work correctly
-        if (usedMeasurementsBlock && validPhysicalBaseUnit) {
-            sourceUnit = validPhysicalBaseUnit; // e.g., 'mm' instead of 'cm'
-        }
-
-        // If the strategy explicitly output a unit (e.g. 'l'), that becomes our new sourceUnit for downstream logic.
-        if (smartResult.unit && smartResult.unit !== 'any') {
-            // If strategy changed unit, we trust it.
-            if (activeStrategy !== 'linear' && activeStrategy !== 'raw') {
-                logger.info({
-                    deviceId,
-                    strategy: activeStrategy,
-                    oldUnit: sourceUnit,
-                    newUnit: smartResult.unit
-                }, '🔄 [HardwareService] Smart Strategy Switched Unit');
-                sourceUnit = smartResult.unit;
-            }
-        }
-        // ---------------------------------------
-
-        logger.info({
-            deviceId,
-            driverId: device.config.driverId,
-            sourceUnit,
-            raw,
-            smartInput,
-            value
-        }, '🔍 [HardwareService] Checking Normalization');
-
-        // Fallback for baseValue: Use validPhysicalBaseValue if available and value is NaN
-        let baseValue = !isNaN(value) ? value : (validPhysicalBaseValue ?? value);
-        let baseUnit = !isNaN(value) ? sourceUnit : (validPhysicalBaseUnit ?? sourceUnit);
-
-        // SKIP old normalization if new measurements-based normalization already ran
-        // This prevents double normalization (e.g., cm→mm then value*10 again)
-        if (sourceUnit && !isNaN(value) && !usedMeasurementsBlock) { // Only normalize if value is valid AND new normalization didn't run
-            try {
-                // Dynamic import with absolute path to avoid relative path hell and ts-node restrictions
-                const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
-                const { normalizeValue, convertValue } = require(registryPath);
-
-                const normalized = normalizeValue(value, sourceUnit);
-
-                logger.info({ normalized }, '🔍 [HardwareService] Normalization Result');
-
-                if (normalized) {
-                    // If normalization happened, we update 'value' to be the Base Unit
-                    if (normalized.baseUnit !== sourceUnit) {
-                        logger.info({ deviceId, from: sourceUnit, to: normalized.baseUnit, original: value, normalized: normalized.value }, '📏 [HardwareService] Normalized Value');
-                        value = normalized.value;
-                        baseValue = normalized.value;
-                        baseUnit = normalized.baseUnit;
-                        // Update the sourceUnit to reflect the new Normalized Base Unit
-                        // This ensures downstream consumers (like SensorRead block) know the value is now in 'mm', not 'cm'
-                        sourceUnit = normalized.baseUnit;
-                    }
-                } else {
-                    logger.warn({ deviceId, sourceUnit }, '⚠️ [HardwareService] Unknown sourceUnit in driver');
-                }
-
-                // --- Calibration Chaining (e.g., mm → L via tank_volume) ---
-                // If displayUnit requires a calibrated conversion (like Liters from Distance),
-                // we apply the calibration strategy here BEFORE standard unit conversion.
-                // FIX: Check activeStrategy to absolutely prevent double-execution.
-                const displayUnit = device.displayUnit;
-                if (displayUnit && (displayUnit === 'L' || displayUnit === 'l') && activeStrategy !== 'tank_volume' && sourceUnit !== 'L' && sourceUnit !== 'l') {
-                    const tankCalibration = device.config.calibrations?.['tank_volume'];
-                    if (tankCalibration?.data) {
-                        try {
-                            // Use LinearInterpolationStrategy with tank_volume calibration data
-                            const { LinearInterpolationStrategy } = require('../../services/conversion/strategies/LinearInterpolationStrategy');
-                            const tankStrategy = new LinearInterpolationStrategy();
-
-                            // Create a mock device config for the strategy call
-                            const mockDevice = {
-                                ...device,
-                                config: {
-                                    ...device.config,
-                                    conversionStrategy: 'tank_volume'
-                                }
-                            };
-
-                            const volumeResult = tankStrategy.convert(value, mockDevice, 'tank_volume');
-
-                            // Handle potential object return { value, unit }
-                            let finalVal = volumeResult;
-                            let finalUnit = 'L';
-
-                            if (typeof volumeResult === 'object' && volumeResult !== null && 'value' in volumeResult) {
-                                finalVal = volumeResult.value;
-                                if (volumeResult.unit) finalUnit = volumeResult.unit;
-                            }
-
-                            logger.info({
-                                deviceId,
-                                from: sourceUnit,
-                                inputValue: value,
-                                outputValue: finalVal,
-                                to: finalUnit
-                            }, '🔗 [HardwareService] Chained tank_volume conversion (mm → L)');
-
-                            value = finalVal;
-                            sourceUnit = finalUnit; // Update sourceUnit to reflect the new unit
-                        } catch (chainErr) {
-                            logger.warn({ err: chainErr, deviceId }, '⚠️ [HardwareService] tank_volume chaining failed, using base value');
-                        }
-                    } else {
-                        logger.warn({ deviceId }, '⚠️ [HardwareService] displayUnit=L but no tank_volume calibration found');
-                    }
-                }
-
-                // --- Display Unit Conversion ---
-
-                // 1. Single Value (Primary)
-                // If user selected a specific display unit, convert from base unit to display unit
-                if (device.displayUnit) {
-                    try {
-                        const displayConverted = convertValue(value, sourceUnit, device.displayUnit);
-                        if (displayConverted !== null) {
-                            logger.info({ deviceId, from: sourceUnit, to: device.displayUnit, original: value, converted: displayConverted }, '👀 [HardwareService] Converted Primary to Display Unit');
-                            value = displayConverted;
-                            sourceUnit = device.displayUnit;
-                        } else {
-                            logger.warn({ deviceId, from: sourceUnit, to: device.displayUnit }, '⚠️ [HardwareService] Failed to convert primary value');
-                        }
-                    } catch (convErr) {
-                        logger.warn({ err: convErr, deviceId }, '⚠️ [HardwareService] Display Unit Conversion Error');
-                    }
-                }
-
-                // 2. Multi-Value Conversion (Readings)
-                if (device.displayUnits && device.displayUnits.size > 0 && typeof rawResponse === 'object') {
-                    // We need to resolve the output unit for each key from the driver definition
-                    const outputs = driver.commands?.READ?.outputs || [];
-
-                    for (const output of outputs) {
-                        // TODO: Implement multi-value conversion logic
-                    }
-                }
-
             } catch (err) {
-                logger.error({ err, sourceUnit }, '❌ [HardwareService] Failed to load UnitRegistry');
+                logger.warn({ deviceId: device.id, err }, '⚠️ Measurement normalization failed');
             }
         }
 
-        // Save last reading to DB
-        try {
-            // SAFE SAVE: If value is NaN, sanitize it. MongoDB/Mongoose can fail strict casting.
-            const safeValue = isNaN(value) ? null : value;
+        // Stage 3: Logical Strategy (Calibration, Physics, etc)
+        const smartInput = validPhysicalBaseValue;
+        const targetUnit = device.displayUnit || device.displayUnits?.get('_primary');
+        const smartResult = conversionService.convertSmart(device, smartInput, targetUnit, context);
 
-            device.lastReading = {
-                value: safeValue, // Use sanitized value (null if NaN)
-                raw,
-                timestamp: new Date()
-            };
-            await device.save();
+        let baseLogValue = smartResult.value;
+        let baseLogUnit = smartResult.unit && smartResult.unit !== 'any' ? smartResult.unit : validPhysicalBaseUnit;
+        const activeStrategy = smartResult.strategyUsed;
 
-            // Construct readings object with normalized value and correct key
-            const readings: Record<string, any> = (typeof rawResponse === 'object') ? { ...rawResponse } : { value: rawResponse };
+        // Stage 3.5: Calibration Chaining (e.g., mm → L)
+        const displayUnit = device.displayUnit;
+        if (displayUnit && (displayUnit === 'L' || displayUnit === 'l') && activeStrategy !== 'tank_volume' && baseLogUnit !== 'L' && baseLogUnit !== 'l') {
+            const tankCalibration = device.config.calibrations?.['tank_volume'];
+            if (tankCalibration?.data) {
+                try {
+                    const { LinearInterpolationStrategy } = require('../../services/conversion/strategies/LinearInterpolationStrategy');
+                    const tankStrategy = new LinearInterpolationStrategy();
+                    const mockDevice = { ...device, config: { ...device.config, conversionStrategy: 'tank_volume' } };
+                    const volumeResult = tankStrategy.convert(baseLogValue, mockDevice, 'tank_volume');
 
-            // Get Outputs definition
-            const outputs = driver.commands?.READ?.outputs;
-
-            if (outputs && outputs.length === 1 && outputs[0].key) {
-                // Single Value Case: Use the already processed 'value'
-                readings[outputs[0].key] = safeValue; // Use safe value here too
-            } else if (outputs && outputs.length > 1) {
-                // ... multi-output logic
+                    if (typeof volumeResult === 'object' && volumeResult !== null && 'value' in volumeResult) {
+                        baseLogValue = volumeResult.value;
+                        baseLogUnit = volumeResult.unit || 'L';
+                    } else {
+                        baseLogValue = volumeResult;
+                        baseLogUnit = 'L';
+                    }
+                } catch (err) {
+                    logger.warn({ deviceId: device.id, err }, '⚠️ Calibration chaining failed');
+                }
             }
-
-            // Emit data event for HistoryService
-            events.emit('device:data', {
-                deviceId: device.id,
-                deviceName: device.name,
-                driverId: device.config.driverId,
-                value: safeValue, // Ensure we emit safe value
-                raw,
-                unit: sourceUnit, // Send the final unit (display unit if converted)
-                readings,     // <--- NEW: Send constructed readings
-                details: rawResponse, // Pass raw response as details
-                timestamp: new Date()
-            });
-
-        } catch (error) {
-            logger.warn({ deviceId, error }, '⚠️ Failed to save lastReading to DB');
         }
 
         return {
-            raw,
-            value,
-            unit: sourceUnit,
-            details: {
-                ...(typeof rawResponse === 'object' ? rawResponse : { rawResponse }),
-                baseValue: validPhysicalBaseValue,
-                baseUnit: validPhysicalBaseUnit
-            }
+            value: baseLogValue,
+            unit: baseLogUnit,
+            hwValue: validPhysicalBaseValue,
+            hwUnit: validPhysicalBaseUnit,
+            activeStrategy
         };
+    }
+
+    /**
+     * Stage 4: Converts BASIC logical value to user-preferred DISPLAY value.
+     */
+    private processBasicToDisplay(basicValue: number, basicUnit: string, device: any): { value: number, unit: string } {
+        if (!device.displayUnit || isNaN(basicValue)) {
+            return { value: basicValue, unit: basicUnit };
+        }
+
+        try {
+            const registryPath = require('path').resolve(__dirname, '../../../../shared/UnitRegistry');
+            const { convertValue } = require(registryPath);
+            const converted = convertValue(basicValue, basicUnit, device.displayUnit);
+
+            if (converted !== null) {
+                return { value: converted, unit: device.displayUnit };
+            }
+        } catch (err) {
+            logger.warn({ deviceId: device.id, err }, '⚠️ Display conversion failed');
+        }
+
+        return { value: basicValue, unit: basicUnit };
     }
 
     /**

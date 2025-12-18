@@ -2,7 +2,7 @@ import { IDevice } from '../../../models/Device';
 import { IConversionStrategy, ConversionContext } from './IConversionStrategy';
 
 export class EcDfrStrategy implements IConversionStrategy {
-    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): number {
+    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): { value: number; unit: string } {
         // 1. Convert ADC (0-1023) to Voltage (mV)
         // Assuming 5V reference and 10-bit ADC. 
         // TODO: Make reference voltage configurable via context or config
@@ -34,6 +34,6 @@ export class EcDfrStrategy implements IConversionStrategy {
 
         const result = parseFloat(ec25.toFixed(2));
         console.log(`⚡ [EcDfrStrategy] Raw:${raw} | V:${voltage.toFixed(0)}mV | T:${temperature.toFixed(1)}°C | K:${k} | EC_raw:${ec.toFixed(2)} | EC_25:${result} mS/cm`);
-        return result;
+        return { value: result, unit: 'mS/cm' };
     }
 }

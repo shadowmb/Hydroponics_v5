@@ -2,7 +2,7 @@ import { IDevice } from '../../../models/Device';
 import { IConversionStrategy, ConversionContext } from './IConversionStrategy';
 
 export class PhDfrStrategy implements IConversionStrategy {
-    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): number {
+    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): { value: number; unit: string } {
         // Defaults
         const vRef = context?.voltage || 5.0; // Default 5V
         const adcMax = context?.adcMax || 1023; // Default 10-bit
@@ -44,13 +44,13 @@ export class PhDfrStrategy implements IConversionStrategy {
 
                 // Actually, let's keep it safe. If the wizard saves normalized values (e.g. if we fix wizard to save mV?), 
                 // But simpler: just convert the raw ADC from the point to mV using current context.
-                neutralVoltage = (neutralPoint.raw / adcMax) * (vRef * 1000);
+                neutralVoltage = (Number(neutralPoint.raw) / adcMax) * (vRef * 1000);
             }
 
             // Find Acid (closest to pH 4.0)
             const acidPoint = calibration.points.find((p: any) => Math.abs(p.value - 4.0) < 0.5);
             if (acidPoint) {
-                acidVoltage = (acidPoint.raw / adcMax) * (vRef * 1000);
+                acidVoltage = (Number(acidPoint.raw) / adcMax) * (vRef * 1000);
             }
         }
 
@@ -88,6 +88,6 @@ export class PhDfrStrategy implements IConversionStrategy {
         const result = parseFloat(ph.toFixed(2));
         console.log(`🧪 [PhDfrStrategy] Raw:${raw} | ADC_Max:${adcMax} | V_Ref:${vRef}V | V_Meas:${voltageMs.toFixed(2)}mV | Temp:${temperature.toFixed(1)}°C | Sensitivity:${correctedSensitivity.toFixed(2)} | pH:${result}`);
 
-        return result;
+        return { value: result, unit: 'pH' };
     }
 }

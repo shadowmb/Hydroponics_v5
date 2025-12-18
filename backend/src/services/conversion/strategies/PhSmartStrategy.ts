@@ -13,7 +13,7 @@ import { IConversionStrategy, ConversionContext } from './IConversionStrategy';
 export class PhSmartStrategy implements IConversionStrategy {
     id = 'ph_smart';
 
-    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): number {
+    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): { value: number; unit: string } {
         // 1. Resolve Hardware Context
         const vRef = context?.voltage || 5.0; // Default to 5V if not provided
         const adcMax = context?.adcMax || 1023; // Default to 10-bit if not provided
@@ -30,16 +30,17 @@ export class PhSmartStrategy implements IConversionStrategy {
 
         // 4. Map Points to Calibration Roles
         // We look for points closest to standard buffers
-        const neutralPoint = points.find((p: any) => Math.abs(p.value - 7.0) < 0.5);
-        const acidPoint = points.find((p: any) => p.value < 6.5);
-        const alkaliPoint = points.find((p: any) => p.value > 7.5);
+        // Use Number(p.value) to handle potential string types from database reliably
+        const neutralPoint = points.find((p: any) => Math.abs(Number(p.value) - 7.0) < 0.5);
+        const acidPoint = points.find((p: any) => Number(p.value) < 6.5);
+        const alkaliPoint = points.find((p: any) => Number(p.value) > 7.5);
 
         // Convert Point Raw to mV (Assuming they were saved with the same ADC/VRef context)
-        const getMv = (p: any) => (p.raw / adcMax) * (vRef * 1000);
+        const getMv = (p: any) => (Number(p.raw) / adcMax) * (vRef * 1000);
 
         // 5. Establish Neutral Reference (Offset)
         const neutralMv = neutralPoint ? getMv(neutralPoint) : 1500.0; // Ideal 1500mV @ pH 7
-        const neutralValue = neutralPoint ? neutralPoint.value : 7.0;
+        const neutralValue = neutralPoint ? Number(neutralPoint.value) : 7.0;
 
         // 6. Calculate Slopes with Temperature Compensation
         // Theoretical Nernst Slope @ 25°C is ~59.16 mV/pH
@@ -49,7 +50,7 @@ export class PhSmartStrategy implements IConversionStrategy {
         // Acid Slope (4.0 - 7.0 range)
         let acidSlope;
         if (acidPoint && neutralPoint) {
-            acidSlope = Math.abs(getMv(neutralPoint) - getMv(acidPoint)) / Math.abs(neutralPoint.value - acidPoint.value);
+            acidSlope = Math.abs(getMv(neutralPoint) - getMv(acidPoint)) / Math.abs(neutralValue - Number(acidPoint.value));
         } else {
             acidSlope = theoreticalSlope25;
         }
@@ -57,8 +58,8 @@ export class PhSmartStrategy implements IConversionStrategy {
         // Alkali Slope (7.0 - 10.0 range)
         let alkaliSlope;
         if (alkaliPoint && neutralPoint) {
-            alkaliSlope = Math.abs(getMv(alkaliPoint) - getMv(neutralPoint)) / Math.abs(alkaliPoint.value - neutralPoint.value);
-        } else if (points.length === 2 && !alkaliPoint) {
+            alkaliSlope = Math.abs(getMv(alkaliPoint) - getMv(neutralPoint)) / Math.abs(Number(alkaliPoint.value) - neutralValue);
+        } else if (points.length === 2 && !alkaliPoint && acidPoint) {
             // If only 2 points (e.g. 7 and 4), use Acid Slope for everything
             alkaliSlope = acidSlope;
         } else {
@@ -104,9 +105,9 @@ export class PhSmartStrategy implements IConversionStrategy {
         const finalPh = parseFloat(resultPh.toFixed(2));
 
         // 8. Debug Logging
-        console.log(`🧪 [PhSmart] Raw:${raw} | V_Ref:${vRef}V | ADC:${adcMax} | V_Meas:${voltageMs.toFixed(1)}mV | Temp:${temperature}°C | pH:${finalPh}`);
+        console.log(`🧪 [PhSmart] Raw:${raw} | Points:${points.length} | NeutralMV:${neutralMv.toFixed(1)} | Polarity:${isStandardPolarity ? 'STD' : 'INV'} | V_Meas:${voltageMs.toFixed(1)}mV | Temp:${temperature}°C | pH:${finalPh}`);
 
-        return finalPh;
+        return { value: finalPh, unit: 'pH' };
     }
 
     /**
