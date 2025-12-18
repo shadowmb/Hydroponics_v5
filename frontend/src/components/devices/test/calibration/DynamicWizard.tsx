@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PhSmartWizard } from './PhSmartWizard';
+import { EcSmartWizard } from './EcSmartWizard';
 
 import {
     Dialog,
@@ -108,6 +109,10 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
     const strategy = StrategyRegistry.get(strategyId);
     if (strategy?.calibration?.component === 'PhSmartWizard' && onRunCommand) {
         return <PhSmartWizard onSave={onSave} onRunCommand={onRunCommand} />;
+    }
+
+    if (strategy?.calibration?.component === 'EcSmartWizard' && onRunCommand) {
+        return <EcSmartWizard onSave={onSave} onRunCommand={onRunCommand} />;
     }
 
 

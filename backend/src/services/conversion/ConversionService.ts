@@ -5,6 +5,7 @@ import { EcDfrStrategy } from './strategies/EcDfrStrategy';
 import { VolumetricFlowStrategy } from './strategies/VolumetricFlowStrategy';
 import { PhDfrStrategy } from './strategies/PhDfrStrategy';
 import { PhSmartStrategy } from './strategies/PhSmartStrategy';
+import { EcSmartStrategy } from './strategies/EcSmartStrategy';
 
 export class ConversionService {
     private strategies: Map<string, IConversionStrategy> = new Map();
@@ -18,6 +19,7 @@ export class ConversionService {
 
         // Complex sensors with special physics need dedicated strategies
         this.registerStrategy('ec-dfr-analog', new EcDfrStrategy());
+        this.registerStrategy('ec_smart', new EcSmartStrategy());
         this.registerStrategy('ph_dfr', new PhDfrStrategy());
         this.registerStrategy('ph_smart', new PhSmartStrategy());
     }

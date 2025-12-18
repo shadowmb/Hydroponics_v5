@@ -169,6 +169,56 @@
         }
     },
     {
+        "id": "ec_smart",
+        "name": "Smart EC Tracker (Segmented)",
+        "description": "Advanced 1, 2 or 3-point segmented linear conversion with temperature compensation.",
+        "category": "SENSOR",
+        "compatibility": [
+            "ec"
+        ],
+        "storageSchema": {
+            "points": {
+                "type": "array",
+                "required": true,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "raw": {
+                            "type": "number"
+                        },
+                        "value": {
+                            "type": "number"
+                        }
+                    }
+                }
+            }
+        },
+        "wizard": {
+            "component": "EcSmartWizard",
+            "steps": [
+                {
+                    "type": "points_table",
+                    "label": "EC Calibration Points",
+                    "instructions": "Place sensor in buffer solution (e.g. 1413, 12880). Click 'READ' to capture raw value, then enter buffer EC.",
+                    "key": "points",
+                    "headers": [
+                        {
+                            "label": "Raw Reading",
+                            "key": "raw",
+                            "readOnly": false,
+                            "action": "READ"
+                        },
+                        {
+                            "label": "Buffer EC",
+                            "key": "value",
+                            "readOnly": false
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
         "id": "ph_dfr",
         "name": "DFRobot pH (Pro/V2) [Legacy]",
         "description": "Traditional pH conversion using Neutral (7.0) and Acid (4.0) voltage offsets.",

@@ -130,6 +130,22 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
             yLabel: 'pH Value (Buffer)'
         }
     },
+    'ec_smart': {
+        id: 'ec_smart',
+        label: 'Smart EC Tracker',
+        type: 'SENSOR',
+        description: 'Advanced 3-point segmented linear conversion with automatic temperature compensation and K-Factor diagnostics.',
+        inputUnit: 'any',
+        outputUnit: 'mS/cm',
+        calibration: {
+            calibrationKey: 'ec_smart',
+            component: 'EcSmartWizard',
+
+            minPoints: 1,
+            xLabel: 'Raw Input',
+            yLabel: 'EC Value (uS/cm)'
+        }
+    },
 
     // --- ACTUATORS ---
     'actuator_manual': {

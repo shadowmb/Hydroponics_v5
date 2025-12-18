@@ -62,14 +62,20 @@ graph TD
 
 ---
 
-## 🔄 Data Pipeline (Stage 1-4)
-
-| Stage | Name | Description | Source | Output |
-| :--- | :--- | :--- | :--- | :--- |
-| **Stage 1** | **WIRE** | Raw bytes/JSON from the firmware. | Hardware | `rawResponse` |
-| **Stage 2** | **NORMALIZED** | Hardware-level scaling (e.g., cm -> mm). | `template.commands.READ.outputs` | `hwValue` (logical raw) |
-| **Stage 3** | **BASIC** | System-truth (Standardized/Calibrated). | `CalibrationStrategy` | `baseLogValue` (DB Truth) |
 | **Stage 4** | **DISPLAY** | UI presentation scaling (e.g., mm -> inch). | `UnitRegistry` | `displayValue` (UI) |
+
+---
+
+## 🛰️ Status Cascading (Health Flow)
+
+To ensure system truth, status updates flow from the physical source upwards:
+
+1. **Controller Refresh**: Triggers a hardware `checkHealth` (Stage 1).
+2. **Relay Update**: If Controller status changes, all associated Relays are updated (Stage 2).
+3. **Device Update**: All Devices (direct or relay-connected) inherit the Controller/Relay status (Stage 2).
+
+> [!NOTE]
+> Refreshing a single `Device` or `Relay` automatically triggers its parent `Controller` refresh to guarantee consistent state across the whole branch.
 
 ---
 

@@ -46,7 +46,7 @@ register('temperature', 'C', 'F', 'K');
 register('distance', 'mm', 'cm', 'm', 'in', 'ft', 'inch');
 
 // Conductivity
-register('conductivity', 'uS/cm', 'uS_cm', 'µS/cm', 'mS/cm', 'ppm');
+register('conductivity', 'µS/cm', 'uS/cm', 'uS_cm', 'mS/cm', 'ppm');
 
 // Pressure
 register('pressure', 'psi', 'bar', 'kPa', 'Pa');
@@ -58,7 +58,7 @@ register('flow', 'l/min', 'L/min', 'l/h', 'L/h', 'ml/min', 'gpm');
 register('light', 'lux', 'lx', 'klux', 'umol/m2*s', 'W/m2');
 
 // Analytic (Chemistry/Environment)
-register('analytic', 'pH', 'mS/cm', 'uS/cm', 'ppm');
+register('analytic', 'pH', 'ORP', 'DO');
 
 // Generic / State
 register('generic', 'adc', 'mV', 'mv', '%', 'percent', 'boolean', 'on/off');
@@ -133,7 +133,13 @@ const FACTORS: Record<string, number | ((v: number) => number)> = {
     'l/h': 1 / 60,
     'L/h': 1 / 60,
     'ml/min': 0.001,
-    'gpm': 3.78541
+    'gpm': 3.78541,
+
+    // Conductivity (Base: µS/cm)
+    'uS/cm': 1,
+    'uS_cm': 1,
+    'mS/cm': 1000,
+    'ppm': 2.0 // Standard 500 scale: 1000 uS/cm = 500 ppm
 };
 
 /**
