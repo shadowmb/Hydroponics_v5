@@ -216,11 +216,77 @@ export class HardwareService {
         const device = await DeviceModel.findById(deviceId);
         if (!device) throw new Error('Device not found');
 
-        const context = {
+        // --- Context Resolution (Compensation & Hardware) ---
+        const context: any = {
             pins: device.hardware?.pins,
-            voltage: device.config?.voltage?.reference || 5.0,
-            temperature: device.config?.compensation?.temperature?.default || 25.0
+            adcMax: 1023, // Default
+            voltage: 5.0, // Default
+            temperature: 25.0 // Default
         };
+
+        try {
+            // 1. Resolve ADC & System Voltage from Controller
+            const { Controller } = await import('../../models/Controller');
+            let controllerId = device.hardware?.parentId as unknown as string;
+
+            if (!controllerId && device.hardware?.relayId) {
+                const { Relay } = await import('../../models/Relay');
+                const relay = await Relay.findById(device.hardware.relayId);
+                if (relay && relay.controllerId) controllerId = relay.controllerId.toString();
+            }
+
+            if (controllerId) {
+                const controller = await Controller.findById(controllerId);
+                if (controller && (controller as any).hardwareConfig) {
+                    context.adcMax = (controller as any).hardwareConfig.adcResolution || 1023;
+                    context.voltage = (controller as any).hardwareConfig.voltageReference || 5.0;
+                }
+            }
+
+            // 2. Resolve Voltage Override (Device Config)
+            if (device.config?.voltage?.reference) {
+                context.voltage = device.config.voltage.reference;
+            }
+
+            // 3. Resolve Temperature (Compensation)
+            const comp = device.config?.compensation?.temperature;
+            if (comp?.enabled) {
+                let temp = comp.default || 25.0;
+
+                if (comp.source === 'external' && comp.externalDeviceId) {
+                    const extDev = await DeviceModel.findById(comp.externalDeviceId);
+
+                    if (extDev) {
+                        // Check Freshness
+                        const lastRead = extDev.lastReading;
+                        const now = Date.now();
+                        const lastTs = lastRead?.timestamp ? new Date(lastRead.timestamp).getTime() : 0;
+                        const age = now - lastTs;
+                        const LIMIT = 5 * 60 * 1000; // 5 min default
+
+                        if (age < LIMIT && lastRead && lastRead.value !== null) {
+                            temp = lastRead.value;
+                            logger.info({ deviceId: device.id, temp, source: 'external', extDevId: extDev.id, freshness: 'fresh' }, '🌡️ [HardwareService] Using External Temperature for Compensation');
+                        } else {
+                            // Active Polling if stale
+                            logger.warn({ deviceId: device.id, extDev: extDev.name, age }, '⚠️ [HardwareService] Stale Temp Data. Polled...');
+                            try {
+                                const res = await this.readSensorValue(extDev.id);
+                                if (res && typeof res.value === 'number') {
+                                    temp = res.value;
+                                    logger.info({ deviceId: device.id, temp, source: 'external', extDevId: extDev.id, freshness: 'polled' }, '🌡️ [HardwareService] Using Polled External Temperature');
+                                }
+                            } catch (err) {
+                                logger.error({ err, deviceId: device.id }, '❌ [HardwareService] Active Poll Failed. Using Default.');
+                            }
+                        }
+                    }
+                }
+                context.temperature = temp;
+            }
+        } catch (ctxErr) {
+            logger.error({ err: ctxErr, deviceId: device.id }, '❌ [HardwareService] Context Resolution Failed');
+        }
 
         // Execute 'READ' command
         const rawResponse = await this.sendCommand(
@@ -487,7 +553,7 @@ export class HardwareService {
         // Stage 3: Logical Strategy (Calibration, Physics, etc)
         const smartInput = validPhysicalBaseValue;
         const targetUnit = device.displayUnit || device.displayUnits?.get('_primary');
-        const smartResult = conversionService.convertSmart(device, smartInput, targetUnit, context);
+        const smartResult = conversionService.convertSmart(device, smartInput, targetUnit, context, strategyOverride);
 
         let baseLogValue = smartResult.value;
         let baseLogUnit = smartResult.unit && smartResult.unit !== 'any' ? smartResult.unit : validPhysicalBaseUnit;
