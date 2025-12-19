@@ -13,7 +13,7 @@ import { IConversionStrategy, ConversionContext } from './IConversionStrategy';
 export class EcSmartStrategy implements IConversionStrategy {
     id = 'ec_smart';
 
-    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): { value: number; unit: string } {
+    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): { value: number; unit: string; details?: any } {
         // 1. Resolve Hardware Context
         const vRef = context?.voltage || 5.0;
         const adcMax = context?.adcMax || 1023;
@@ -87,9 +87,18 @@ export class EcSmartStrategy implements IConversionStrategy {
         // Result sanitization
         const finalEc = Math.max(0, parseFloat((ec25).toFixed(2)));
 
-        // 6. Debug Logging
+        // 6. Diagnostics
+        const diagnostics = {
+            vMeas: parseFloat(voltage.toFixed(1)),
+            temp: parseFloat(temperature.toFixed(1)),
+            ecRaw: parseFloat(ecRaw.toFixed(1)),
+            points: points.length,
+            beta
+        };
+
+        // 7. Debug Logging
         console.log(`⚡ [EcSmart] Raw:${raw} | V:${voltage.toFixed(0)}mV | T:${temperature}°C | EC_raw:${ecRaw.toFixed(1)} | EC_25:${finalEc} uS/cm`);
 
-        return { value: finalEc, unit: 'uS/cm' };
+        return { value: finalEc, unit: 'uS/cm', details: diagnostics };
     }
 }

@@ -59,7 +59,7 @@ export class HardwareContextResolver {
             // 3. Resolve Temperature (Compensation)
             const comp = device.config?.compensation?.temperature;
             if (comp?.enabled) {
-                let temp = comp.default || 25.0;
+                let temp = (typeof comp.default === 'number') ? comp.default : 25.0;
 
                 if (comp.source === 'external' && comp.externalDeviceId) {
                     const extDev = await DeviceModel.findById(comp.externalDeviceId);
