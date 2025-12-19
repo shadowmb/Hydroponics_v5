@@ -34,11 +34,8 @@ export class ConversionService {
 
         // Auto-detect strategy if not explicitly set
         if (!strategyName) {
-            if (device.config.driverId === 'dfrobot_ec_k1') {
-                strategyName = 'ec-dfr-analog';
-            } else {
-                strategyName = 'linear';
-            }
+            // Identity strategy (returns raw if not found)
+            return rawValue;
         }
 
         const strategy = this.strategies.get(strategyName);
@@ -71,11 +68,17 @@ export class ConversionService {
         // 1. Identify Default Strategy
         // Just like in convert(), explicit override > device config > default logic
         let defaultStrategyName = strategyOverride || device.config.conversionStrategy;
+
+        // 2. Handle cases where no strategy is selected
         if (!defaultStrategyName) {
-            defaultStrategyName = (device.config.driverId === 'dfrobot_ec_k1') ? 'ec-dfr-analog' : 'linear';
+            return {
+                value: rawValue,
+                unit: targetUnit,
+                strategyUsed: 'none',
+                details: { info: 'No active strategy selected' }
+            };
         }
 
-        // 2. Fallback if strategy doesn't exist
         let activeStrategyName = defaultStrategyName;
         if (!this.strategies.has(activeStrategyName)) {
             console.warn(`Strategy '${activeStrategyName}' not registered, falling back to 'linear'`);

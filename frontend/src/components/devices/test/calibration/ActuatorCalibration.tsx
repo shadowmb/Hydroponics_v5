@@ -15,8 +15,15 @@ interface ActuatorCalibrationProps {
 
 export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device, onUpdate }) => {
     const [strategies, setStrategies] = useState<CalibrationStrategy[]>([]);
-    const [selectedStrategyId, setSelectedStrategyId] = useState<string | undefined>(undefined);
+    const [selectedStrategyId, setSelectedStrategyId] = useState<string | undefined>(device.config?.conversionStrategy || undefined);
     const [loading, setLoading] = useState(true);
+
+    // Update selectedStrategyId if device config changes (e.g., active role change clears strategy)
+    useEffect(() => {
+        if (device.config?.conversionStrategy) {
+            setSelectedStrategyId(device.config.conversionStrategy);
+        }
+    }, [device.config?.conversionStrategy]);
     const [detectedBaseUnit, setDetectedBaseUnit] = useState<string | undefined>(undefined);
 
 
@@ -253,13 +260,10 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
     const handleRoleChange = async (roleKey: string) => {
         try {
             const selectedRole = roles[roleKey];
-            const body: any = { "config.activeRole": roleKey };
-
-            // Auto-Update Strategy if Role defines a default
-            if (selectedRole?.defaultStrategy) {
-                body["config.conversionStrategy"] = selectedRole.defaultStrategy;
-                setSelectedStrategyId(selectedRole.defaultStrategy);
-            }
+            const body: any = {
+                "config.activeRole": roleKey,
+                "config.conversionStrategy": "" // Reset strategy on role change (Explicit Selection)
+            };
 
             const res = await fetch(`/api/hardware/devices/${device._id}`, {
                 method: 'PUT',
@@ -274,6 +278,24 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
         } catch (e) {
             console.error(e);
             toast.error('Failed to update role');
+        }
+    };
+
+    const handleActiveStrategyChange = async (strategyId: string) => {
+        try {
+            const res = await fetch(`/api/hardware/devices/${device._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ "config.conversionStrategy": strategyId })
+            });
+
+            if (!res.ok) throw new Error('Failed to update active strategy');
+
+            toast.success(`Active strategy set to ${strategyId}`);
+            if (onUpdate) onUpdate();
+        } catch (e) {
+            console.error(e);
+            toast.error('Failed to update active strategy');
         }
     };
 
@@ -354,11 +376,14 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
                     </div>
                 </div>
             ) : (
-                <div className="max-w-md">
+                <div className="space-y-4">
+                    <h4 className="font-semibold text-sm">Calibration Strategies</h4>
                     <StrategySelector
                         strategies={strategies}
                         selectedId={selectedStrategyId}
                         onSelect={setSelectedStrategyId}
+                        activeStrategyId={device.config?.conversionStrategy}
+                        onActiveSelect={handleActiveStrategyChange}
                         existingCalibrations={existingCalibrationsList}
                     />
                 </div>

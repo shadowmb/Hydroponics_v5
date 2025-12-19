@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Play, Square } from 'lucide-react';
+import { Play, Square, AlertTriangle } from 'lucide-react';
 import { hardwareService } from '../../../services/hardwareService';
 import { DeviceTestHeader } from './DeviceTestHeader';
 import { toast } from 'sonner';
@@ -306,6 +306,60 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                             <TabsContent value="monitor" className="m-0 flex flex-col items-center space-y-8">
                                 {device.config?.driverId?.category !== 'ACTUATOR' && (
                                     <>
+                                        {/* WARNING: No Active Strategy Selected */}
+                                        {!device.config?.conversionStrategy && (
+                                            <div className="w-full max-w-2xl bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                                                <div className="p-2 bg-yellow-500/20 rounded-full text-yellow-600">
+                                                    <AlertTriangle className="w-6 h-6" />
+                                                </div>
+                                                <div className="flex-1 space-y-1">
+                                                    <h4 className="font-bold text-yellow-800 text-sm">No Active Strategy Selected</h4>
+                                                    <p className="text-yellow-700/80 text-xs leading-relaxed">
+                                                        This sensor is currently returning raw data. To apply calibration (pH, EC, etc.),
+                                                        please go to the <strong>Calibration</strong> tab and select an <strong>Active Strategy</strong>.
+                                                    </p>
+                                                    <div className="pt-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-7 text-[10px] bg-yellow-500/10 border-yellow-500/30 text-yellow-700 hover:bg-yellow-500/20"
+                                                            onClick={() => setActiveTab('calibration')}
+                                                        >
+                                                            Go to Calibration
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* WARNING: Active Strategy NO Calibration data */}
+                                        {device.config?.conversionStrategy &&
+                                            device.config.conversionStrategy !== 'linear' &&
+                                            !device.config?.calibrations?.[device.config.conversionStrategy] && (
+                                                <div className="w-full max-w-2xl bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                                                    <div className="p-2 bg-orange-500/20 rounded-full text-orange-600">
+                                                        <AlertTriangle className="w-6 h-6" />
+                                                    </div>
+                                                    <div className="flex-1 space-y-1">
+                                                        <h4 className="font-bold text-orange-800 text-sm">Calibration Required</h4>
+                                                        <p className="text-orange-700/80 text-xs leading-relaxed font-medium">
+                                                            The active strategy <strong>{device.config.conversionStrategy}</strong> has no calibration data.
+                                                            Readings may be significantly inaccurate or illogical.
+                                                        </p>
+                                                        <div className="pt-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-7 text-[10px] bg-orange-500/10 border-orange-500/30 text-orange-700 hover:bg-orange-500/20"
+                                                                onClick={() => setActiveTab('calibration')}
+                                                            >
+                                                                Calibrate Now
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                         <div className="text-center space-y-2">
                                             <h2 className="text-2xl font-semibold tracking-tight">Live Monitor</h2>
                                             <p className="text-muted-foreground">

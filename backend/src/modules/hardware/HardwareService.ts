@@ -299,6 +299,31 @@ export class HardwareService {
         return newStatus;
     }
 
+    /**
+     * Updates device configuration and performs role-strategy synchronization.
+     * IF the activeRole changes, the conversionStrategy is explicitly cleared to
+     * prevent old calibration math from affecting a different physical measurement context.
+     * This follows the "Explicit over Implicit" strategy selection philosophy.
+     */
+    public async updateDeviceConfig(deviceId: string, config: any): Promise<any> {
+        const { DeviceModel } = await import('../../models/Device');
+        const device = await DeviceModel.findById(deviceId);
+        if (!device) throw new Error('Device not found');
+
+        // Check if role is changing
+        const oldRole = device.config?.activeRole;
+        const newRole = config?.activeRole;
+
+        if (newRole !== undefined && newRole !== oldRole) {
+            logger.info({ deviceId, oldRole, newRole }, '🔄 [HardwareService] Role changed, clearing conversion strategy');
+            config.conversionStrategy = ''; // Reset strategy to force explicit selection
+        }
+
+        device.config = { ...device.config, ...config };
+        await device.save();
+        return device;
+    }
+
     public async refreshDeviceStatus(deviceId: string): Promise<void> {
         const { DeviceModel } = await import('../../models/Device');
         const device = await DeviceModel.findById(deviceId);
