@@ -13,7 +13,7 @@ import { IConversionStrategy, ConversionContext } from './IConversionStrategy';
 export class PhSmartStrategy implements IConversionStrategy {
     id = 'ph_smart';
 
-    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): { value: number; unit: string } {
+    convert(raw: number, device: IDevice, strategyOverride?: string, context?: ConversionContext): { value: number; unit: string; details?: any } {
         // 1. Resolve Hardware Context
         const vRef = context?.voltage || 5.0; // Default to 5V if not provided
         const adcMax = context?.adcMax || 1023; // Default to 10-bit if not provided
@@ -81,7 +81,6 @@ export class PhSmartStrategy implements IConversionStrategy {
             isStandardPolarity = getMv(alkaliPoint) < getMv(neutralPoint);
         }
 
-
         if (isStandardPolarity) {
             if (voltageMs > neutralMv) {
                 // Acidic Range
@@ -101,13 +100,26 @@ export class PhSmartStrategy implements IConversionStrategy {
             }
         }
 
+        // 7.5. Robust Clamping & Diagnostics
+        const diagnostics = {
+            vMeas: parseFloat(voltageMs.toFixed(1)),
+            vRef: parseFloat(vRef.toFixed(2)),
+            neutralMv: parseFloat(neutralMv.toFixed(1)),
+            temp: parseFloat(temperature.toFixed(1)),
+            isPolStd: isStandardPolarity,
+            points: points.length,
+            slopeAcid: parseFloat(correctedAcidSlope.toFixed(2)),
+            slopeAlkali: parseFloat(correctedAlkaliSlope.toFixed(2)),
+            raw_pH: parseFloat(resultPh.toFixed(2))
+        };
 
-        const finalPh = parseFloat(resultPh.toFixed(2));
+        // Clamp pH to sane physical range (-2.0 to 16.0)
+        const finalPh = Math.max(-2.0, Math.min(16.0, parseFloat(resultPh.toFixed(2))));
 
         // 8. Debug Logging
         console.log(`🧪 [PhSmart] Raw:${raw} | Points:${points.length} | NeutralMV:${neutralMv.toFixed(1)} | Polarity:${isStandardPolarity ? 'STD' : 'INV'} | V_Meas:${voltageMs.toFixed(1)}mV | Temp:${temperature}°C | pH:${finalPh}`);
 
-        return { value: finalPh, unit: 'pH' };
+        return { value: finalPh, unit: 'pH', details: diagnostics };
     }
 
     /**

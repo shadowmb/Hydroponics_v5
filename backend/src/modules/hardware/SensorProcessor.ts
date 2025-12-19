@@ -65,7 +65,7 @@ export class SensorProcessor {
         driverDoc: any,
         context: any,
         strategyOverride?: string
-    ): Promise<{ value: number, unit: string, hwValue: number, hwUnit: string, activeStrategy: string }> {
+    ): Promise<{ value: number, unit: string, hwValue: number, hwUnit: string, activeStrategy: string, details?: any }> {
         let val = raw;
         let unit = driverDoc.commands?.READ?.sourceUnit || 'raw';
 
@@ -117,7 +117,8 @@ export class SensorProcessor {
             unit: bUnit,
             hwValue: val,
             hwUnit: unit,
-            activeStrategy: smartResult.strategyUsed
+            activeStrategy: smartResult.strategyUsed,
+            details: smartResult.details
         };
     }
 

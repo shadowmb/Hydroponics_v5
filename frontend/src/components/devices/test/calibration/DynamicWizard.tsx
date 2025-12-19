@@ -123,7 +123,7 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
             <OffsetWizard
                 onSave={onSave}
                 onRunCommand={onRunCommand}
-                role={template?.roles?.[device?.config?.activeRole]?.label || Object.values(template?.roles || {})[0]?.label || 'Generic'}
+                role={(template?.roles as any)?.[device?.config?.activeRole]?.label || Object.values(template?.roles || {})[0]?.['label' as keyof {}] || 'Generic'}
                 unit={targetUnit || baseUnit}
             />
         );

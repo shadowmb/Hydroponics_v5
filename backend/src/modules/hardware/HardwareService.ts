@@ -193,7 +193,7 @@ export class HardwareService {
         if (isNaN(raw)) raw = 0;
 
         const basicResult = await sensorProcessor.processRawToBasic(raw, device, driverDoc, context, strategyOverride);
-        const { value: baseLogValue, unit: baseLogUnit, hwValue: baseHwValue, hwUnit: baseHwUnit, activeStrategy } = basicResult;
+        const { value: baseLogValue, unit: baseLogUnit, hwValue: baseHwValue, hwUnit: baseHwUnit, activeStrategy, details: conversionDetails } = basicResult;
 
         try {
             device.lastReading = { value: isNaN(baseLogValue) ? null : baseLogValue, raw, timestamp: new Date() };
@@ -212,7 +212,7 @@ export class HardwareService {
             value: isNaN(displayVal) ? null : displayVal, raw, unit: displayUnitFinal,
             baseValue: isNaN(baseLogValue) ? null : baseLogValue, baseUnit: baseLogUnit,
             hwValue: baseHwValue, hwUnit: baseHwUnit, readings,
-            details: { ...rawResponse, baseHwValue, baseHwUnit, baseLogValue, baseLogUnit, activeStrategy },
+            details: { ...rawResponse, baseHwValue, baseHwUnit, baseLogValue, baseLogUnit, activeStrategy, ...conversionDetails },
             timestamp: new Date()
         });
 
@@ -220,7 +220,7 @@ export class HardwareService {
             raw, value: isNaN(displayVal) ? null : displayVal, unit: displayUnitFinal,
             baseValue: isNaN(baseLogValue) ? null : baseLogValue, baseUnit: baseLogUnit,
             hwValue: baseHwValue, hwUnit: baseHwUnit,
-            details: { ...(typeof rawResponse === 'object' ? rawResponse : { rawResponse }), baseHwValue, baseHwUnit, baseLogValue, baseLogUnit, activeStrategy }
+            details: { ...(typeof rawResponse === 'object' ? rawResponse : { rawResponse }), baseHwValue, baseHwUnit, baseLogValue, baseLogUnit, activeStrategy, ...conversionDetails }
         };
     }
 
