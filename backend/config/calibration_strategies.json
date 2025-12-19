@@ -284,6 +284,32 @@
         }
     },
     {
+        "id": "offset",
+        "name": "Offset Correction",
+        "description": "Single-point zeroing or correction. Ideal for fixing sensor placement errors.",
+        "category": "SENSOR",
+        "compatibility": [
+            "any"
+        ],
+        "storageSchema": {
+            "offset": {
+                "type": "number",
+                "required": true
+            }
+        },
+        "wizard": {
+            "component": "OffsetWizard",
+            "steps": [
+                {
+                    "type": "measure",
+                    "label": "Reference Value",
+                    "refKey": "reference",
+                    "instructions": "Place sensor at known reference or zero point."
+                }
+            ]
+        }
+    },
+    {
         "id": "volumetric_flow",
         "name": "Volumetric Flow (Dosing)",
         "description": "Calibrate pumps by measuring output volume over a specific time to determine flow rate.",

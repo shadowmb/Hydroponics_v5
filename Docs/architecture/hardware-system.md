@@ -79,6 +79,24 @@ To ensure system truth, status updates flow from the physical source upwards:
 
 ---
 
+## 🧪 Conversion & Strategy Governance
+
+The system follows an "Explicit over Implicit" philosophy for sensor data processing:
+
+### 1. Explicit Selection Required
+Calibration strategies (e.g., pH, EC, Tank Volume) are **NEVER** automatically activated. After calibration, the user must explicitly set the strategy as **Active** in the UI. Until then, the system returns raw normalized data.
+
+### 2. Role-Strategy Synchronization
+To prevent data contamination, `HardwareService` enforces strict role-based isolation:
+- Changing a device's `activeRole` (e.g., from generic Analog to pH) automatically clears the `activeStrategy`.
+- This forces the user to choose a relevant strategy for the new role, preventing "phantom" calibration math from affecting different physical measurements.
+
+### 3. Strategy Fallback
+- If no strategy is active, `ConversionService` returns a `none` status and bypasses processing.
+- If an active strategy is missing calibration data, the UI displays a pulsating **Calibration Required** warning to the user.
+
+---
+
 ## 🛠️ Maintenance Notes (For Agent)
 
 ### Adding a New Transport:

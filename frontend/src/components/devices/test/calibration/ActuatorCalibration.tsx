@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 import { StrategySelector } from './StrategySelector';
+import { RoleSelector } from './RoleSelector';
 import { DynamicWizard } from './DynamicWizard';
 import { calibrationService } from '../../../../services/calibrationService';
 import type { CalibrationStrategy } from '../../../../types/Calibration';
 import { hardwareService } from '../../../../services/hardwareService';
 import { toast } from 'sonner';
+import { Shield } from 'lucide-react';
 
 interface ActuatorCalibrationProps {
     device: any;
@@ -15,8 +15,15 @@ interface ActuatorCalibrationProps {
 
 export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device, onUpdate }) => {
     const [strategies, setStrategies] = useState<CalibrationStrategy[]>([]);
-    const [selectedStrategyId, setSelectedStrategyId] = useState<string | undefined>(undefined);
+    const [selectedStrategyId, setSelectedStrategyId] = useState<string | undefined>(device.config?.conversionStrategy || undefined);
     const [loading, setLoading] = useState(true);
+
+    // Update selectedStrategyId if device config changes (e.g., active role change clears strategy)
+    useEffect(() => {
+        if (device.config?.conversionStrategy) {
+            setSelectedStrategyId(device.config.conversionStrategy);
+        }
+    }, [device.config?.conversionStrategy]);
     const [detectedBaseUnit, setDetectedBaseUnit] = useState<string | undefined>(undefined);
 
 
@@ -252,14 +259,11 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
 
     const handleRoleChange = async (roleKey: string) => {
         try {
-            const selectedRole = roles[roleKey];
-            const body: any = { "config.activeRole": roleKey };
-
-            // Auto-Update Strategy if Role defines a default
-            if (selectedRole?.defaultStrategy) {
-                body["config.conversionStrategy"] = selectedRole.defaultStrategy;
-                setSelectedStrategyId(selectedRole.defaultStrategy);
-            }
+            const selectedRole = (roles as any)?.[roleKey];
+            const body: any = {
+                "config.activeRole": roleKey,
+                "config.conversionStrategy": selectedRole?.defaultStrategy || "" // Apply default or reset
+            };
 
             const res = await fetch(`/api/hardware/devices/${device._id}`, {
                 method: 'PUT',
@@ -274,6 +278,24 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
         } catch (e) {
             console.error(e);
             toast.error('Failed to update role');
+        }
+    };
+
+    const handleActiveStrategyChange = async (strategyId: string) => {
+        try {
+            const res = await fetch(`/api/hardware/devices/${device._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ "config.conversionStrategy": strategyId })
+            });
+
+            if (!res.ok) throw new Error('Failed to update active strategy');
+
+            toast.success(`Active strategy set to ${strategyId}`);
+            if (onUpdate) onUpdate();
+        } catch (e) {
+            console.error(e);
+            toast.error('Failed to update active strategy');
         }
     };
 
@@ -306,59 +328,44 @@ export const ActuatorCalibration: React.FC<ActuatorCalibrationProps> = ({ device
         <div className="space-y-6 p-4">
             {/* Header: Role Selection */}
             {hasRoles && (
-                <div className="space-y-4 max-w-2xl border rounded-lg p-5 bg-card/50 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-md text-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                            <Shield className="w-5 h-5" />
                         </div>
-                        <div>
-                            <h4 className="font-semibold">Device Function (Role)</h4>
-                            <p className="text-xs text-muted-foreground">Define how this sensor is currently used to unlock specific strategies.</p>
-                        </div>
+                        <h3 className="font-bold text-lg">Device Function (Role)</h3>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                        <Select
-                            value={activeRole || ""}
-                            onValueChange={handleRoleChange}
-                        >
-                            <SelectTrigger className="w-full h-11">
-                                <SelectValue placeholder="--- Select Active Role ---" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {Object.entries(roles).map(([key, role]: any) => (
-                                    <SelectItem key={key} value={key}>
-                                        <div className="flex flex-col items-start py-0.5">
-                                            <span className="font-medium text-sm">{role.label}</span>
-                                            {role.description && <span className="text-[10px] opacity-70 leading-tight">{role.description}</span>}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <RoleSelector
+                        roles={roles}
+                        activeRole={activeRole}
+                        onSelect={handleRoleChange}
+                    />
+
+                    {!activeRole && (
+                        <div className="flex flex-col items-center justify-center p-8 mt-4 space-y-4 text-center border-2 border-dashed rounded-xl bg-muted/5">
+                            <div className="p-3 bg-yellow-500/10 rounded-full text-yellow-500 animate-pulse">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="font-bold text-base">Role Selection Required</h3>
+                                <p className="text-muted-foreground text-xs max-w-sm mx-auto">
+                                    Please select a role above to unlock relevant calibration strategies.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
-
-            {!activeRole && hasRoles ? (
-                <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center border-2 border-dashed rounded-xl bg-muted/5">
-                    <div className="p-4 bg-yellow-500/10 rounded-full text-yellow-500 animate-pulse">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
-                    </div>
-                    <div className="space-y-2">
-                        <h3 className="font-bold text-xl">Action Required: Define Role</h3>
-                        <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-                            To start calibration, you must first select the <strong>Device Function</strong> above.
-                            This tells the system what physics to apply (e.g., pH, EC or Volume).
-                        </p>
-                    </div>
-                </div>
-            ) : (
-                <div className="max-w-md">
+            {activeRole && (
+                <div className="space-y-4">
+                    <h4 className="font-semibold text-sm">Calibration Strategies</h4>
                     <StrategySelector
                         strategies={strategies}
                         selectedId={selectedStrategyId}
                         onSelect={setSelectedStrategyId}
+                        activeStrategyId={device.config?.conversionStrategy}
+                        onActiveSelect={handleActiveStrategyChange}
                         existingCalibrations={existingCalibrationsList}
                     />
                 </div>

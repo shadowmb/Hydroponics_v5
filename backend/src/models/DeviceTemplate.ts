@@ -7,6 +7,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
     category: 'CONTROLLER' | 'SENSOR' | 'ACTUATOR';
     supportedStrategies?: string[]; // Legacy / Computed Union
     conversionStrategy?: string; // Default conversion strategy key
+    defaultRole?: string; // Default active role to select on creation
     roles?: Record<string, {
         label: string;
         description?: string;
@@ -81,6 +82,7 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     category: { type: String, enum: ['CONTROLLER', 'SENSOR', 'ACTUATOR'], default: 'SENSOR' },
     supportedStrategies: [{ type: String }],
     conversionStrategy: { type: String },
+    defaultRole: { type: String },
     roles: { type: Map, of: Schema.Types.Mixed }, // Store as Mix map or strict structure
     capabilities: [{ type: String }],
     commands: { type: Map, of: Schema.Types.Mixed },

@@ -795,7 +795,26 @@ export class HardwareController {
                 }
             }
 
-            // 4. Create Device
+            // 4. Apply Template-Driven Defaults
+            if (!body.config) body.config = {};
+
+            // Apply defaultRole if not provided
+            if (!body.config.activeRole && template.defaultRole) {
+                body.config.activeRole = template.defaultRole;
+                req.log.info({ role: body.config.activeRole }, '🔄 [HardwareController] Applied defaultRole from template');
+
+                // If role was applied, also check for its defaultStrategy
+                const roleDef = template.roles instanceof Map
+                    ? template.roles.get(body.config.activeRole)
+                    : (template.roles as any)?.[body.config.activeRole];
+
+                if (roleDef?.defaultStrategy && !body.config.conversionStrategy) {
+                    body.config.conversionStrategy = roleDef.defaultStrategy;
+                    req.log.info({ strategy: body.config.conversionStrategy }, '🔄 [HardwareController] Applied defaultStrategy from template');
+                }
+            }
+
+            // 5. Create Device
             // Merge tags: User tags + Template tags (deduplicated)
             const templateTags = template.uiConfig?.tags || [];
             const userTags = body.tags || [];
