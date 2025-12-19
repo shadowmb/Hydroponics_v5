@@ -9,6 +9,7 @@
             "baseUnit": "µmol/m²/s"
         }
     },
+    "defaultRole": "par",
     "roles": {
         "par": {
             "label": "PAR Meter",

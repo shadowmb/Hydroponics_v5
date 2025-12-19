@@ -68,6 +68,7 @@ const DeviceTemplateSchema = z.object({
     supportedStrategies: z.array(z.string()).optional(),
     conversionStrategy: z.string().optional(),
     measurements: z.record(MeasurementSchema).optional(), // Physical measurements with rawUnit/baseUnit
+    defaultRole: z.string().optional(), // Default active role to select on creation
     roles: z.record(z.object({
         label: z.string(),
         description: z.string().optional(),

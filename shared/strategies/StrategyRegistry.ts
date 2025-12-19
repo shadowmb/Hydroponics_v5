@@ -76,6 +76,21 @@ const STRATEGIES: Record<string, StrategyDefinition> = {
             yLabel: 'Sensor Reading'
         }
     },
+    'offset': {
+        id: 'offset',
+        label: 'Offset Correction',
+        type: 'SENSOR',
+        description: 'Single-point zeroing or correction. Ideal for fixing sensor placement errors.',
+        inputUnit: 'any',
+        outputUnit: 'any',
+        calibration: {
+            calibrationKey: 'offset',
+            component: 'OffsetWizard',
+            minPoints: 1,
+            xLabel: 'Reference Value',
+            yLabel: 'Sensor Reading'
+        }
+    },
     'tank_volume': {
         id: 'tank_volume',
         label: 'Tank Volume (Liters)',

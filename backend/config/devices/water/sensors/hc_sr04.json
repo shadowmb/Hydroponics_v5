@@ -9,14 +9,16 @@
             "baseUnit": "mm"
         }
     },
+    "defaultRole": "distance",
     "roles": {
         "distance": {
             "label": "Distance Monitor",
             "description": "Measure linear distance (mm, cm, m). Ideal for proximity or clearance monitoring.",
-            "defaultStrategy": "linear",
+            "defaultStrategy": "tank_volume",
             "strategies": [
                 "linear",
-                "offset"
+                "offset",
+                "tank_volume"
             ],
             "units": [
                 "mm",
