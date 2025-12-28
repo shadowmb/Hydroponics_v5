@@ -36,6 +36,7 @@ export interface IPortState {
     };
     deviceId?: string; // Deprecated
     pwm?: boolean; // Capability from template
+    triggerLogic?: 'HIGH' | 'LOW';
 }
 
 export interface IController {

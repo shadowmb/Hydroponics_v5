@@ -10,6 +10,7 @@ export interface IPortState {
         name: string;
     };
     deviceId?: mongoose.Types.ObjectId; // Deprecated but kept for backward compatibility
+    triggerLogic?: 'HIGH' | 'LOW'; // Only for relay/digital ports
 }
 
 export interface IController extends SoftDeleteDocument {
@@ -42,7 +43,8 @@ const PortStateSchema = new Schema({
     },
     deviceId: { type: Schema.Types.ObjectId, ref: 'Device' },
     pwm: { type: Boolean, default: false },
-    interface: { type: String }
+    interface: { type: String },
+    triggerLogic: { type: String, enum: ['HIGH', 'LOW'], default: 'HIGH' }
 }, { _id: false });
 
 const ControllerSchema = new Schema({

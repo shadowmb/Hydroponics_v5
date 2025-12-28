@@ -52,6 +52,7 @@ export interface IDevice extends SoftDeleteDocument {
         voltage?: {
             reference?: number;
         };
+        invertedLogic?: boolean; // For NC/NO or software inversion
     };
 
     metadata?: {
@@ -138,7 +139,8 @@ const DeviceSchema = new Schema<IDevice>(
             },
             voltage: {
                 reference: Number
-            }
+            },
+            invertedLogic: { type: Boolean, default: false }
         },
 
         metadata: {
