@@ -110,14 +110,55 @@ export class HardwareService {
             resolvedPin = channel.controllerPortId;
 
             if (command === 'RELAY_SET' || command === 'DIGITAL_WRITE') {
-                const newState = params.state === 1 || params.state === true;
+                // 1. Determine Logical State (ON/OFF)
+                let finalStateValue = params.state === 1 || params.state === true ? 1 : 0;
+
+                // 2. Apply Device Inversion (NC/NO)
+                if (deviceDoc.config?.invertedLogic) {
+                    finalStateValue = finalStateValue === 1 ? 0 : 1;
+                }
+
+                // 3. Apply Hardware Trigger Logic (Active High/Low)
+                const triggerLogic = relay.triggerLogic || 'HIGH';
+                if (triggerLogic === 'LOW') {
+                    finalStateValue = finalStateValue === 1 ? 0 : 1;
+                }
+
+                // 4. Update Params for Hardware
+                params.state = finalStateValue;
+
+                // Sync internal Relay state (normalized to boolean for model compatibility)
+                const modelState = finalStateValue === 1;
                 await Relay.updateOne(
                     { _id: relay._id, "channels.channelIndex": channelIndex },
-                    { $set: { "channels.$.state": newState } }
+                    { $set: { "channels.$.state": modelState } }
                 );
             }
         } else if (deviceDoc.hardware?.parentId) {
             controllerId = deviceDoc.hardware.parentId.toString();
+
+            // Handle Direct Controller Digital Write Polarity
+            if (command === 'RELAY_SET' || command === 'DIGITAL_WRITE') {
+                const { Controller } = await import('../../models/Controller');
+                const controller = await Controller.findById(controllerId);
+                const portId = deviceDoc.hardware.port;
+                const port = controller?.ports.get(portId as string);
+
+                let finalStateValue = params.state === 1 || params.state === true ? 1 : 0;
+
+                // 1. Apply Device Inversion
+                if (deviceDoc.config?.invertedLogic) {
+                    finalStateValue = finalStateValue === 1 ? 0 : 1;
+                }
+
+                // 2. Apply Port Trigger Logic
+                const triggerLogic = port?.triggerLogic || 'HIGH';
+                if (triggerLogic === 'LOW') {
+                    finalStateValue = finalStateValue === 1 ? 0 : 1;
+                }
+
+                params.state = finalStateValue;
+            }
         } else {
             throw new Error(`Device ${deviceId} not linked to a controller or relay`);
         }

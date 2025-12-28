@@ -81,6 +81,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         channel: '',
         isEnabled: true,
         tags: [] as string[],
+        invertedLogic: false,
         settings: {} as Record<string, any>
     });
 
@@ -135,25 +136,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     relayId: initialData.hardware?.relayId || '',
                     channel: initialData.hardware?.channel !== undefined ? String(initialData.hardware.channel) : '',
                     isEnabled: initialData.isEnabled !== undefined ? initialData.isEnabled : true,
-                    tags: (() => {
-                        // Separate user tags from template tags
-                        const allTags = initialData.tags || [];
-                        // We need the template to know which tags are system tags
-                        // But selectedTemplate might not be set yet.
-                        // However, we can try to find it here or rely on the fact that
-                        // we will render system tags from the template separately.
-                        // Ideally, we filter them out here.
-
-                        // Strategy: We'll filter them in the rendering/logic, 
-                        // but for formData, we should probably keep only user tags 
-                        // IF we are sure we can identify system tags.
-
-                        // Actually, let's keep ALL tags in formData for now, 
-                        // and filter them dynamically in the UI to avoid data loss 
-                        // if the template is missing or changed.
-                        // if the template is missing or changed.
-                        return allTags;
-                    })(),
+                    tags: initialData.tags || [],
+                    invertedLogic: initialData.config?.invertedLogic || false,
                     settings: {
                         compensation: initialData.config?.compensation || {},
                         voltage: initialData.config?.voltage || {}
@@ -178,6 +162,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     channel: '',
                     isEnabled: true,
                     tags: [],
+                    invertedLogic: false,
                     settings: {} // Dynamic settings container
                 });
                 setSelectedCategory('');
@@ -303,8 +288,9 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     pollInterval: 5000,
                     conversionStrategy: effectiveTemplate?.conversionStrategy, // Propagate strategy from template
                     variantId: selectedVariant?.id,
-                    compensation: formData.settings?.compensation, // New
-                    voltage: formData.settings?.voltage           // New
+                    compensation: formData.settings?.compensation,
+                    voltage: formData.settings?.voltage,
+                    invertedLogic: formData.invertedLogic
                 },
                 metadata: {
                     description: formData.description
@@ -706,6 +692,30 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                                 onCheckedChange={checked => setFormData({ ...formData, isEnabled: checked })}
                                             />
                                         </div>
+                                        {selectedTemplate?.category === 'ACTUATOR' && (
+                                            <div className="flex items-center space-x-2">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <div className="flex items-center gap-2 cursor-help">
+                                                                <Label htmlFor="invert-logic" className="text-sm text-muted-foreground">Invert Logic</Label>
+                                                                <Info className="h-3 w-3 text-muted-foreground" />
+                                                            </div>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p className="max-w-xs text-xs">
+                                                                Useful if the device is connected to a Normally Closed (NC) relay terminal.
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                                <Switch
+                                                    id="invert-logic"
+                                                    checked={formData.invertedLogic}
+                                                    onCheckedChange={checked => setFormData({ ...formData, invertedLogic: checked })}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

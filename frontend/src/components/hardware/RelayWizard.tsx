@@ -32,6 +32,7 @@ export const RelayWizard: React.FC<RelayWizardProps> = ({ open, onOpenChange, on
         name: '',
         type: '4-channel',
         controllerId: '',
+        triggerLogic: 'HIGH' as 'HIGH' | 'LOW',
         channelMapping: {} as Record<number, string> // channelIndex -> portId
     });
 
@@ -48,11 +49,12 @@ export const RelayWizard: React.FC<RelayWizardProps> = ({ open, onOpenChange, on
                     name: editRelay.name,
                     type: editRelay.type,
                     controllerId: editRelay.controllerId?._id || '',
+                    triggerLogic: (editRelay as any).triggerLogic || 'HIGH',
                     channelMapping: mapping
                 });
             } else {
                 // Create Mode
-                setFormData({ name: '', type: '4-channel', controllerId: '', channelMapping: {} });
+                setFormData({ name: '', type: '4-channel', controllerId: '', triggerLogic: 'HIGH', channelMapping: {} });
             }
             setStep(1);
         }
@@ -134,6 +136,7 @@ export const RelayWizard: React.FC<RelayWizardProps> = ({ open, onOpenChange, on
                 name: formData.name,
                 type: formData.type,
                 controllerId: formData.controllerId,
+                triggerLogic: formData.triggerLogic,
                 channels
             };
 
@@ -201,6 +204,22 @@ export const RelayWizard: React.FC<RelayWizardProps> = ({ open, onOpenChange, on
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="space-y-2">
+                            <Label>Trigger Logic (Hardware Level)</Label>
+                            <Select
+                                value={formData.triggerLogic}
+                                onValueChange={v => setFormData({ ...formData, triggerLogic: v as any })}
+                            >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="HIGH">Active HIGH (Trigger on 1)</SelectItem>
+                                    <SelectItem value="LOW">Active LOW (Trigger on 0)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground italic">
+                                Most generic relay boards are Active LOW.
+                            </p>
+                        </div>
                         <DialogFooter>
                             <Button
                                 className="w-full sm:w-auto"
@@ -260,6 +279,6 @@ export const RelayWizard: React.FC<RelayWizardProps> = ({ open, onOpenChange, on
                     </div>
                 )}
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };

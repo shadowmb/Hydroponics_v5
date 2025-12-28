@@ -18,6 +18,7 @@ export interface IRelay extends SoftDeleteDocument {
     name: string;
     controllerId: mongoose.Types.ObjectId; // The controller this relay board is connected to
     type: '1-channel' | '2-channel' | '4-channel' | '8-channel' | '16-channel';
+    triggerLogic: 'HIGH' | 'LOW'; // Physical trigger logic of the relay module
     channels: IRelayChannel[];
     description?: string;
 }
@@ -39,6 +40,7 @@ const RelaySchema = new Schema({
     name: { type: String, required: true },
     controllerId: { type: Schema.Types.ObjectId, ref: 'Controller', required: false },
     type: { type: String, enum: ['1-channel', '2-channel', '4-channel', '8-channel', '16-channel'], required: true },
+    triggerLogic: { type: String, enum: ['HIGH', 'LOW'], default: 'HIGH' },
     channels: [RelayChannelSchema],
     description: { type: String }
 }, {

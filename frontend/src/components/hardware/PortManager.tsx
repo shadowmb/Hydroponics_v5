@@ -15,6 +15,13 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { hardwareService, type IController, type IPortState } from '../../services/hardwareService';
 import { toast } from 'sonner';
 
@@ -40,32 +47,32 @@ export const PortManager: React.FC<PortManagerProps> = ({
         }
     }, [controller, open]);
 
-    const handleTogglePort = async (portId: string, currentState: boolean) => {
+    const handleUpdatePort = async (portId: string, updates: Partial<IPortState>) => {
         if (!controller) return;
 
         // Optimistic update
         setLocalPorts(prev => ({
             ...prev,
-            [portId]: { ...prev[portId], isActive: !currentState }
+            [portId]: { ...prev[portId], ...updates }
         }));
 
         try {
             const updatedPorts = {
                 ...controller.ports,
-                [portId]: { ...controller.ports[portId], isActive: !currentState }
+                [portId]: { ...controller.ports[portId], ...updates }
             };
 
             await hardwareService.updateController(controller._id, {
                 ports: updatedPorts
             });
 
-            toast.success(`Port ${portId} ${!currentState ? 'enabled' : 'disabled'}`);
+            toast.success(`Port ${portId} updated`);
             if (onUpdate) onUpdate();
         } catch (error) {
             // Revert optimistic update
             setLocalPorts(prev => ({
                 ...prev,
-                [portId]: { ...prev[portId], isActive: currentState }
+                [portId]: { ...prev[portId], ...controller.ports[portId] }
             }));
             toast.error('Failed to update port');
         }
@@ -137,10 +144,30 @@ export const PortManager: React.FC<PortManagerProps> = ({
                                             </Tooltip>
                                         </TooltipProvider>
                                     ) : (
-                                        <Switch
-                                            checked={state.isActive}
-                                            onCheckedChange={() => handleTogglePort(portId, state.isActive)}
-                                        />
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-muted-foreground uppercase font-semibold">Logic</span>
+                                                <Select
+                                                    value={state.triggerLogic || 'HIGH'}
+                                                    onValueChange={(val) => handleUpdatePort(portId, { triggerLogic: val as any })}
+                                                >
+                                                    <SelectTrigger className="h-7 text-xs w-[80px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="HIGH">HIGH</SelectItem>
+                                                        <SelectItem value="LOW">LOW</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <span className="text-[10px] text-muted-foreground uppercase font-semibold">Port</span>
+                                                <Switch
+                                                    checked={state.isActive}
+                                                    onCheckedChange={() => handleUpdatePort(portId, { isActive: !state.isActive })}
+                                                />
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>

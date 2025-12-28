@@ -115,6 +115,7 @@ export const RelayManager: React.FC = () => {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Controller</TableHead>
+                                <TableHead>Trigger Logic</TableHead>
                                 <TableHead>Channels (Mapped Ports)</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -139,6 +140,11 @@ export const RelayManager: React.FC = () => {
                                                     Unassigned
                                                 </Badge>
                                             )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary">
+                                                {(relay as any).triggerLogic || 'HIGH'}
+                                            </Badge>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1">
