@@ -26,7 +26,8 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
 
             // 2. Determine Action Logic
             let targetState = 0;
-            let pulseDuration = 0;
+            let pulseDuration = 0; // Internal duration in milliseconds
+            let inputDurationSec = params.duration ? Number(params.duration) : 0;
             let logUnit = '';
 
             // Handle Legacy 'value' (boolean) if 'action' is not set or default
@@ -38,11 +39,11 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                     case 'OFF': targetState = 0; break;
                     case 'PULSE_ON':
                         targetState = 1;
-                        pulseDuration = Number(duration);
+                        pulseDuration = inputDurationSec * 1000;
                         break;
                     case 'PULSE_OFF':
                         targetState = 0;
-                        pulseDuration = Number(duration);
+                        pulseDuration = inputDurationSec * 1000;
                         break;
                     case 'DOSE':
                         targetState = 1;
@@ -81,7 +82,7 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                 if (action === 'DOSE') {
                     console.log(`[ActuatorSet] ⏳ Starting Dose: ${amount}${logUnit || ''} (~${(pulseDuration / 1000).toFixed(1)}s)...`);
                 } else {
-                    console.log(`[ActuatorSet] ⏳ Starting Pulse: ${pulseDuration}ms...`);
+                    console.log(`[ActuatorSet] ⏳ Starting Pulse: ${inputDurationSec}s (${pulseDuration}ms)...`);
                 }
 
                 // Turn to Target State
@@ -116,7 +117,7 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                 const revertState = targetState === 1 ? 0 : 1;
                 await hardware.sendCommand(deviceId, driverId, command, { state: revertState });
 
-                console.log(`[ActuatorSet] ✔️ Pulsed '${action}' for ${pulseDuration}ms`);
+                console.log(`[ActuatorSet] ✔️ Pulsed '${action}' for ${(pulseDuration / 1000).toFixed(2)}s`);
             } else {
                 // SIMPLE Logic
                 await hardware.sendCommand(deviceId, driverId, command, { state: targetState });
@@ -128,7 +129,7 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
             if (action === 'DOSE') {
                 summary = `Dosed ${amount}${logUnit}`;
             } else if (action === 'PULSE_ON' || action === 'PULSE_OFF') {
-                summary = `Pulsed ${action === 'PULSE_ON' ? 'ON' : 'OFF'} for ${duration || pulseDuration / 1000}s`;
+                summary = `Pulsed ${action === 'PULSE_ON' ? 'ON' : 'OFF'} for ${(pulseDuration / 1000).toFixed(1)}s`;
             } else {
                 summary = `Set ${action} (State: ${targetState})`;
             }
