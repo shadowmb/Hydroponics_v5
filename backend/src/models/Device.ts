@@ -93,7 +93,7 @@ const DeviceSchema = new Schema<IDevice>(
                 portId: String,
                 gpio: Number
             }], // New: Multi-pin support with resolved GPIO
-            parentId: { type: String, ref: 'Device' }, // Controller ID
+            parentId: { type: String, ref: 'Controller' }, // Controller ID
             relayId: { type: String, ref: 'Relay' },   // Relay ID (if connected via relay)
             channel: Number,                           // Relay Channel Index (if connected via relay)
         },

@@ -935,7 +935,7 @@ export class HardwareController {
                         // Free Single Port
                         if (oldHardware.port) {
                             const portState = oldController.ports.get(oldHardware.port);
-                            if (portState && portState.occupiedBy?.id === device._id.toString()) {
+                            if (portState && portState.occupiedBy?.id?.toString() === device._id.toString()) {
                                 updates[`ports.${oldHardware.port}.isOccupied`] = false;
                                 unsets[`ports.${oldHardware.port}.occupiedBy`] = 1;
                             }
@@ -945,7 +945,7 @@ export class HardwareController {
                         if (oldHardware.pins && Array.isArray(oldHardware.pins)) {
                             oldHardware.pins.forEach((pin: any) => {
                                 const portState = oldController.ports.get(pin.portId);
-                                if (portState && portState.occupiedBy?.id === device._id.toString()) {
+                                if (portState && portState.occupiedBy?.id?.toString() === device._id.toString()) {
                                     updates[`ports.${pin.portId}.isOccupied`] = false;
                                     unsets[`ports.${pin.portId}.occupiedBy`] = 1;
                                 }
@@ -964,7 +964,7 @@ export class HardwareController {
                     const relay = await Relay.findById(oldHardware.relayId);
                     if (relay) {
                         const channel = relay.channels.find((c: any) => c.channelIndex === oldHardware.channel);
-                        if (channel && channel.occupiedBy?.id === device._id.toString()) {
+                        if (channel && channel.occupiedBy?.id?.toString() === device._id.toString()) {
                             await Relay.updateOne(
                                 { _id: oldHardware.relayId, 'channels.channelIndex': oldHardware.channel },
                                 {
@@ -1032,10 +1032,14 @@ export class HardwareController {
             // Update device fields
             // Use set() to handle dot notation (e.g. 'config.validation') correctly
             Object.keys(body).forEach(key => {
-                if (key !== 'hardware') { // Hardware is handled specially above
-                    device.set(key, body[key]);
-                }
+                device.set(key, body[key]);
             });
+
+            // CRITICAL FIX: Mark hardware as modified to ensure it saves!
+            if (body.hardware) {
+                device.markModified('hardware');
+            }
+
             await device.save();
 
             return reply.send({ success: true, data: device });
