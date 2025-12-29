@@ -72,12 +72,10 @@ String handleModbusRtuRead(const char* params) {
   // Check if configuration changed
   if (modbusStream == nullptr || modbusRxPin != rxPin || modbusTxPin != txPin) {
      // Cleanup old
-     #if !defined(ARDUINO_UNOR4_WIFI) && !defined(ARDUINO_UNOR4_MINIMA)
      if (modbusSoftwareSerial != nullptr) {
        delete modbusSoftwareSerial;
        modbusSoftwareSerial = nullptr;
      }
-     #endif
      modbusStream = nullptr;
 
      // Initialize New
@@ -87,7 +85,11 @@ String handleModbusRtuRead(const char* params) {
          modbusStream = &Serial1;
          modbusIsHardware = true;
        } else {
-         return F("{\"ok\":0,\"error\":\"ERR_R4_REQUIRES_HW_SERIAL_ON_0_1\"}");
+         // Enable SoftwareSerial on R4 (same as UART_READ_DISTANCE)
+         modbusSoftwareSerial = new SoftwareSerial(rxPin, txPin);
+         modbusSoftwareSerial->begin(baudRate);
+         modbusStream = modbusSoftwareSerial;
+         modbusIsHardware = false;
        }
      #else
        // AVR / ESP fallback

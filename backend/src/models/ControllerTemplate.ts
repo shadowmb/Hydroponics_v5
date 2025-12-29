@@ -61,6 +61,14 @@ export interface IControllerTemplate extends Omit<Document, '_id'> {
         };
     };
     constraints?: string[];
+    interfaceConstraints?: {
+        uart?: {
+            maxSoftwareSerial: number;
+            hardwareSerialPins: string[];
+            twoDevicesRequireHardwareSerial: boolean;
+            twoDevicesRequireWifi: boolean;
+        };
+    };
     ports: IPortTemplate[];
 }
 
@@ -131,6 +139,14 @@ const ControllerTemplateSchema = new Schema({
         }
     },
     constraints: [{ type: String }],
+    interfaceConstraints: {
+        uart: {
+            maxSoftwareSerial: { type: Number },
+            hardwareSerialPins: [{ type: String }],
+            twoDevicesRequireHardwareSerial: { type: Boolean },
+            twoDevicesRequireWifi: { type: Boolean }
+        }
+    },
     ports: [PortTemplateSchema]
 }, {
     timestamps: true

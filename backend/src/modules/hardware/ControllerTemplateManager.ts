@@ -70,6 +70,14 @@ const ControllerTemplateSchema = z.object({
         })
     }).optional(),
     constraints: z.array(z.string()).optional(),
+    interfaceConstraints: z.object({
+        uart: z.object({
+            maxSoftwareSerial: z.number(),
+            hardwareSerialPins: z.array(z.string()),
+            twoDevicesRequireHardwareSerial: z.boolean(),
+            twoDevicesRequireWifi: z.boolean()
+        }).optional()
+    }).optional(),
     ports: z.array(PortTemplateSchema)
 });
 

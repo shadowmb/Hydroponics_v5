@@ -3,9 +3,10 @@ import { hardwareService } from '../../services/hardwareService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu, RefreshCw } from 'lucide-react';
+import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu, RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DeviceTestDialog } from '../devices/test/DeviceTestDialog';
 
 interface DeviceListProps {
@@ -123,6 +124,31 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
         return `${Math.floor(diffHours / 24)} d`;
     };
 
+    // Check if device's required command exists in controller's capabilities
+    const getConfigStatus = (device: any): { type: 'enabled' | 'disabled' | 'warning', label: string, tooltip?: string } => {
+        if (!device.isEnabled) return { type: 'disabled', label: 'Disabled' };
+
+        // Only check for controller-connected devices (not relay-connected)
+        if (!device.hardware?.parentId) return { type: 'enabled', label: 'Enabled' };
+
+        const ctrl = controllers.find(c => c._id === device.hardware.parentId);
+        if (!ctrl || !ctrl.capabilities || ctrl.capabilities.length === 0) {
+            // Controller has no capabilities info - can't validate
+            return { type: 'enabled', label: 'Enabled' };
+        }
+
+        // Get required command from device template
+        const requiredCmd = device.config?.driverId?.commands?.READ?.hardwareCmd?.toLowerCase();
+        if (!requiredCmd) return { type: 'enabled', label: 'Enabled' };
+
+        const hasCapability = ctrl.capabilities.includes(requiredCmd);
+        if (!hasCapability) {
+            return { type: 'warning', label: 'Missing Cmd', tooltip: requiredCmd.toUpperCase() };
+        }
+
+        return { type: 'enabled', label: 'Enabled' };
+    };
+
     return (
         <div className="space-y-4">
             <div className="rounded-md border">
@@ -231,9 +257,34 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={device.isEnabled ? 'outline' : 'secondary'} className={device.isEnabled ? "border-green-500 text-green-600" : ""}>
-                                                {device.isEnabled ? 'Enabled' : 'Disabled'}
-                                            </Badge>
+                                            {(() => {
+                                                const status = getConfigStatus(device);
+                                                if (status.type === 'warning') {
+                                                    return (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Badge variant="outline" className="border-yellow-500 text-yellow-600 cursor-help">
+                                                                        <AlertTriangle className="h-3 w-3 mr-1" />
+                                                                        {status.label}
+                                                                    </Badge>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="text-xs">Controller missing: <code className="font-mono">{status.tooltip}</code></p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    );
+                                                }
+                                                return (
+                                                    <Badge
+                                                        variant={status.type === 'enabled' ? 'outline' : 'secondary'}
+                                                        className={status.type === 'enabled' ? "border-green-500 text-green-600" : ""}
+                                                    >
+                                                        {status.label}
+                                                    </Badge>
+                                                );
+                                            })()}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">

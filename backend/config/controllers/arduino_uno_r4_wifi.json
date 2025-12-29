@@ -80,6 +80,17 @@
         "Lower current limit per pin (8mA) vs Uno R3",
         "Some AVR-specific libraries may not work"
     ],
+    "interfaceConstraints": {
+        "uart": {
+            "maxSoftwareSerial": 1,
+            "hardwareSerialPins": [
+                "D0",
+                "D1"
+            ],
+            "twoDevicesRequireHardwareSerial": true,
+            "twoDevicesRequireWifi": true
+        }
+    },
     "ports": [
         {
             "id": "D0",

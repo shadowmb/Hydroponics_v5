@@ -39,7 +39,7 @@ const Hardware: React.FC = () => {
             // Allow React to render the overlay before starting the work
             await new Promise(resolve => setTimeout(resolve, 100));
 
-            toast.info('Syncing controller status...');
+            toast.info('Syncing hardware status...');
 
             // Run sync and a 1-second timer in parallel. 
             await Promise.allSettled([
@@ -48,7 +48,9 @@ const Hardware: React.FC = () => {
             ]);
 
             toast.success('Status synced');
+            // Refresh BOTH controllers AND devices
             setControllerRefreshTrigger(prev => prev + 1);
+            setRefreshTrigger(prev => prev + 1);
         } catch (error) {
             console.error('Sync failed', error);
             toast.error('Failed to sync status');
