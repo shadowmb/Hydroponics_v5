@@ -1,6 +1,63 @@
 
+// Modbus RTU Read Handler with EEPROM Config + Auto-Reset
+// Prevents Bus Fault on Arduino Uno R4 when pins change at runtime
+
 // Note: Globals (modbusStream, modbusSoftwareSerial, modbusRxPin, modbusTxPin, modbusIsHardware) 
-// are provided by the command definition JSON file (modbus_rtu_read.json)
+// are provided by the command definition JSON file
+
+// EEPROM addresses for Modbus config (different from UART to avoid conflicts)
+#define EEPROM_MODBUS_MAGIC_ADDR 110
+#define EEPROM_MODBUS_RX_ADDR    111
+#define EEPROM_MODBUS_TX_ADDR    112
+#define EEPROM_MODBUS_MAGIC_VALUE 0xCD
+
+#if defined(ARDUINO_UNOR4_WIFI) || defined(ARDUINO_UNOR4_MINIMA)
+  #include <EEPROM.h>
+#endif
+
+// Save Modbus config to EEPROM (R4 only)
+void saveModbusConfig(int rxPin, int txPin) {
+  #if defined(ARDUINO_UNOR4_WIFI) || defined(ARDUINO_UNOR4_MINIMA)
+    EEPROM.write(EEPROM_MODBUS_MAGIC_ADDR, EEPROM_MODBUS_MAGIC_VALUE);
+    EEPROM.write(EEPROM_MODBUS_RX_ADDR, (uint8_t)rxPin);
+    EEPROM.write(EEPROM_MODBUS_TX_ADDR, (uint8_t)txPin);
+  #endif
+}
+
+// Load Modbus config from EEPROM (R4 only)
+bool loadModbusConfig(int* rxPin, int* txPin) {
+  #if defined(ARDUINO_UNOR4_WIFI) || defined(ARDUINO_UNOR4_MINIMA)
+    if (EEPROM.read(EEPROM_MODBUS_MAGIC_ADDR) == EEPROM_MODBUS_MAGIC_VALUE) {
+      *rxPin = EEPROM.read(EEPROM_MODBUS_RX_ADDR);
+      *txPin = EEPROM.read(EEPROM_MODBUS_TX_ADDR);
+      return true;
+    }
+  #endif
+  return false;
+}
+
+// Initialize Modbus from saved config at boot (call from setup())
+void initModbusFromEeprom(unsigned long baudRate) {
+  #if defined(ARDUINO_UNOR4_WIFI) || defined(ARDUINO_UNOR4_MINIMA)
+    int rxPin, txPin;
+    if (loadModbusConfig(&rxPin, &txPin)) {
+      if (rxPin == 0 && txPin == 1) {
+        Serial1.begin(baudRate);
+        modbusStream = &Serial1;
+        modbusIsHardware = true;
+      } else if (rxPin >= 0 && txPin >= 0 && rxPin != txPin) {
+        modbusSoftwareSerial = new SoftwareSerial(rxPin, txPin);
+        if (modbusSoftwareSerial) {
+          modbusSoftwareSerial->begin(baudRate);
+          modbusStream = modbusSoftwareSerial;
+          modbusIsHardware = false;
+        }
+      }
+      modbusRxPin = rxPin;
+      modbusTxPin = txPin;
+    }
+  #endif
+}
 
 unsigned int calculateModbusCRC16(unsigned char *buf, int len) {
   unsigned int crc = 0xFFFF;
@@ -44,19 +101,19 @@ String handleModbusRtuRead(const char* params) {
     return F("{\"ok\":0,\"error\":\"JSON_PARSE_ERROR\"}");
   }
 
-  int rxPin = 2;
-  int txPin = 3;
+  int rxPin = 0;
+  int txPin = 1;
 
   if (doc.containsKey("pins")) {
     JsonArray pins = doc["pins"];
     for (JsonObject pin : pins) {
       const char* role = pin["role"];
-      if (role && strcmp(role, "RX") == 0) rxPin = pin["gpio"] | 2;
-      else if (role && strcmp(role, "TX") == 0) txPin = pin["gpio"] | 3;
+      if (role && strcmp(role, "RX") == 0) rxPin = pin["gpio"] | 0;
+      else if (role && strcmp(role, "TX") == 0) txPin = pin["gpio"] | 1;
     }
   } else {
-     rxPin = doc["rxPin"] | 2;
-     txPin = doc["txPin"] | 3;
+     rxPin = doc["rxPin"] | 0;
+     txPin = doc["txPin"] | 1;
   }
 
   unsigned long baudRate = doc["baudRate"] | 4800;
@@ -68,40 +125,63 @@ String handleModbusRtuRead(const char* params) {
 
   if (deviceAddress < 1 || deviceAddress > 247) return F("{\"ok\":0,\"error\":\"ERR_INVALID_ADDR\"}");
   if (registerCount < 1 || registerCount > 125) return F("{\"ok\":0,\"error\":\"ERR_INVALID_COUNT\"}");
+  if (rxPin == txPin) return F("{\"ok\":0,\"error\":\"ERR_SAME_PIN\"}");
 
-  // Check if configuration changed
-  if (modbusStream == nullptr || modbusRxPin != rxPin || modbusTxPin != txPin) {
-     // Cleanup old
-     if (modbusSoftwareSerial != nullptr) {
-       delete modbusSoftwareSerial;
-       modbusSoftwareSerial = nullptr;
-     }
-     modbusStream = nullptr;
+  // === R4 EEPROM + AUTO-RESET LOGIC ===
+  #if defined(ARDUINO_UNOR4_WIFI) || defined(ARDUINO_UNOR4_MINIMA)
+    // Check if Modbus is already initialized with different pins
+    if (modbusStream != nullptr && (rxPin != modbusRxPin || txPin != modbusTxPin)) {
+      // Pins changed! Save new config and trigger auto-reset
+      saveModbusConfig(rxPin, txPin);
+      delay(50);
+      NVIC_SystemReset();
+      return F("{\"ok\":0,\"error\":\"ERR_RESTARTING\"}");
+    }
+    
+    // First-time initialization
+    if (modbusStream == nullptr) {
+      saveModbusConfig(rxPin, txPin);
+      
+      if (rxPin == 0 && txPin == 1) {
+        Serial1.begin(baudRate);
+        modbusStream = &Serial1;
+        modbusIsHardware = true;
+      } else {
+        modbusSoftwareSerial = new SoftwareSerial(rxPin, txPin);
+        if (modbusSoftwareSerial == nullptr) {
+          return F("{\"ok\":0,\"error\":\"ERR_MEMORY\"}");
+        }
+        modbusSoftwareSerial->begin(baudRate);
+        modbusStream = modbusSoftwareSerial;
+        modbusIsHardware = false;
+      }
+      
+      modbusRxPin = rxPin;
+      modbusTxPin = txPin;
+      delay(100);
+    }
+  #else
+    // Non-R4 platforms: allow runtime pin changes
+    if (modbusStream == nullptr || modbusRxPin != rxPin || modbusTxPin != txPin) {
+      if (modbusSoftwareSerial != nullptr) {
+        delete modbusSoftwareSerial;
+        modbusSoftwareSerial = nullptr;
+      }
+      modbusStream = nullptr;
 
-     // Initialize New
-     #if defined(ARDUINO_UNOR4_WIFI) || defined(ARDUINO_UNOR4_MINIMA)
-       if (rxPin == 0 && txPin == 1) {
-         Serial1.begin(baudRate);
-         modbusStream = &Serial1;
-         modbusIsHardware = true;
-       } else {
-         // Enable SoftwareSerial on R4 (same as UART_READ_DISTANCE)
-         modbusSoftwareSerial = new SoftwareSerial(rxPin, txPin);
-         modbusSoftwareSerial->begin(baudRate);
-         modbusStream = modbusSoftwareSerial;
-         modbusIsHardware = false;
-       }
-     #else
-       // AVR / ESP fallback
-       modbusSoftwareSerial = new SoftwareSerial(rxPin, txPin);
-       modbusSoftwareSerial->begin(baudRate);
-       modbusStream = modbusSoftwareSerial;
-       modbusIsHardware = false;
-     #endif
-     
-     modbusRxPin = rxPin;
-     modbusTxPin = txPin;
-     delay(100); 
+      modbusSoftwareSerial = new SoftwareSerial(rxPin, txPin);
+      modbusSoftwareSerial->begin(baudRate);
+      modbusStream = modbusSoftwareSerial;
+      modbusIsHardware = false;
+      
+      modbusRxPin = rxPin;
+      modbusTxPin = txPin;
+      delay(100);
+    }
+  #endif
+
+  if (modbusStream == nullptr) {
+    return F("{\"ok\":0,\"error\":\"ERR_STREAM_NULL\"}");
   }
 
   // Clear buffer
@@ -134,7 +214,6 @@ String handleModbusRtuRead(const char* params) {
     modbusStream->flush(); 
     delay(100); 
 
-    // size_t expectedLen = 5 + (registerCount * 2); -- variable unused warning
     uint8_t ch;
     
     if (readN(&ch, 1, timeout) == 1 && ch == deviceAddress) {
@@ -142,7 +221,7 @@ String handleModbusRtuRead(const char* params) {
       if (readN(&ch, 1, timeout) == 1 && ch == functionCode) {
         response[1] = ch;
         if (readN(&ch, 1, timeout) == 1) {
-          uint8_t byteCount = ch; // variable shadow warning if declared above
+          uint8_t byteCount = ch;
           response[2] = ch;
           if (readN(&response[3], byteCount + 2, timeout) == byteCount + 2) {
              uint16_t receivedCRC = response[byteCount + 4] << 8 | response[byteCount + 3]; 
@@ -164,7 +243,6 @@ String handleModbusRtuRead(const char* params) {
   doc["ok"] = 1;
   JsonArray regs = doc.createNestedArray("registers");
   
-  // uint8_t byteCount = response[2]; -- unused variable
   for (int i = 0; i < registerCount; i++) {
      uint16_t val = (response[3 + i*2] << 8) | response[4 + i*2];
      regs.add(val);

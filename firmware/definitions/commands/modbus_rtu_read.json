@@ -5,8 +5,18 @@
         "*"
     ],
     "code": {
-        "includes": "#include <SoftwareSerial.h>\n#include <ArduinoJson.h>",
+        "includes": {
+            "*": "#include <SoftwareSerial.h>\n#include <ArduinoJson.h>",
+            "renesas_uno": [
+                "#include <SoftwareSerial.h>",
+                "#include <ArduinoJson.h>",
+                "#include <EEPROM.h>"
+            ]
+        },
         "globals": "Stream* modbusStream = nullptr;\nSoftwareSerial* modbusSoftwareSerial = nullptr;\nint modbusRxPin = -1;\nint modbusTxPin = -1;\nbool modbusIsHardware = false;",
+        "setup": {
+            "renesas_uno": "initModbusFromEeprom(4800);"
+        },
         "functions": "@file:commands/src/modbus_generic.cpp",
         "loop": "// Modbus loop logic if needed",
         "dispatcher": "else if (strcmp(cmd, \"MODBUS_RTU_READ\") == 0) { return handleModbusRtuRead(delimiter ? delimiter + 1 : \"{}\"); }"

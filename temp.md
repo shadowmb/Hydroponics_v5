@@ -2,7 +2,7 @@
  * Hydroponics v5 Firmware
  * Board: Arduino Uno R4 WiFi
  * Transport: wifi_native
- * Generated: 2025-12-29T10:42:20.966Z
+ * Generated: 2025-12-29T18:08:55.722Z
  */
 
 // === INCLUDES ===
@@ -15,8 +15,8 @@
 #include <malloc.h>
 
 // === GLOBALS ===
-const char* CAPABILITIES[] = { "DHT_READ", "MODBUS_RTU_READ", "DIGITAL_WRITE", "DIGITAL_READ", "PWM_WRITE", "UART_READ_DISTANCE", "ANALOG", "ULTRASONIC_TRIG_ECHO", "ONEWIRE_READ_TEMP" };
-const int CAPABILITIES_COUNT = 9;
+const char* CAPABILITIES[] = { "MODBUS_RTU_READ", "DIGITAL_WRITE", "DIGITAL_READ", "PWM_WRITE", "UART_READ_DISTANCE", "ANALOG", "ONEWIRE_READ_TEMP" };
+const int CAPABILITIES_COUNT = 7;
 WiFiUDP udp;
 char packetBuffer[255];
 Stream* modbusStream = nullptr;
@@ -123,111 +123,6 @@ int parsePin(String pinStr) {
 
   // 4. Handle raw number "5"
   return pinStr.toInt();
-}
-
-
-
-String handleDHTRead(const char* params) {
-  // Parse pin from params (e.g., "D4")
-  if (!params || strlen(params) < 2) {
-    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
-  }
-
-  int dataPin = parsePin(String(params));
-  if (dataPin == -1) {
-    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
-  }
-
-  // DHT22 protocol parameters
-  const unsigned long START_LOW_DURATION = 18000;  // 18ms
-  const unsigned long START_HIGH_DURATION = 40;     // 40μs
-  const unsigned long BIT_THRESHOLD = 40;           // 40μs threshold
-  const int NUM_BITS = 40;                          // 40 bits (5 bytes)
-  const unsigned long TIMEOUT = 5000;               // 5s timeout
-
-  byte data[5] = {0};  // 5 bytes: humidity_int, humidity_dec, temp_int, temp_dec, checksum
-
-  // Send start signal
-  pinMode(dataPin, OUTPUT);
-  digitalWrite(dataPin, LOW);
-  delayMicroseconds(START_LOW_DURATION);
-  digitalWrite(dataPin, HIGH);
-  delayMicroseconds(START_HIGH_DURATION);
-  pinMode(dataPin, INPUT);
-
-  unsigned long timeoutStart = millis();
-
-  // Wait for sensor response (pull low)
-  while (digitalRead(dataPin) == HIGH) {
-    if (millis() - timeoutStart > TIMEOUT) {
-      return "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}";
-    }
-  }
-
-  // Wait for sensor ready (pull high)
-  while (digitalRead(dataPin) == LOW) {
-    if (millis() - timeoutStart > TIMEOUT) {
-      return "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}";
-    }
-  }
-
-  // Wait for data start (pull low)
-  while (digitalRead(dataPin) == HIGH) {
-    if (millis() - timeoutStart > TIMEOUT) {
-      return "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}";
-    }
-  }
-
-  // Read 40 bits of data
-  for (int i = 0; i < NUM_BITS; i++) {
-    // Wait for bit start (high pulse)
-    while (digitalRead(dataPin) == LOW) {
-      if (millis() - timeoutStart > TIMEOUT) {
-        return "{\"ok\":0,\"error\":\"ERR_READ_TIMEOUT\"}";
-      }
-    }
-
-    // Measure high pulse duration
-    unsigned long pulseStart = micros();
-    while (digitalRead(dataPin) == HIGH) {
-      if (millis() - timeoutStart > TIMEOUT) {
-        return "{\"ok\":0,\"error\":\"ERR_READ_TIMEOUT\"}";
-      }
-    }
-    unsigned long pulseDuration = micros() - pulseStart;
-
-    // Decode bit: >40μs = 1, <40μs = 0
-    int byteIndex = i / 8;
-    int bitIndex = 7 - (i % 8);
-    if (pulseDuration > BIT_THRESHOLD) {
-      data[byteIndex] |= (1 << bitIndex);
-    }
-  }
-
-  // Verify checksum
-  byte checksum = data[0] + data[1] + data[2] + data[3];
-  if (checksum != data[4]) {
-    return "{\"ok\":0,\"error\":\"ERR_CHECKSUM_FAILED\"}";
-  }
-
-  // Parse DHT22 data (high precision: 0.1°C, 0.1% RH)
-  // For DHT11, data[1] and data[3] will be 0
-  float humidity = ((data[0] << 8) | data[1]) / 10.0;
-  float temperature = (((data[2] & 0x7F) << 8) | data[3]) / 10.0;
-  
-  // Handle negative temperature (DHT22 only)
-  if (data[2] & 0x80) {
-    temperature = -temperature;
-  }
-
-  // Build and return JSON response
-  String response = "{\"ok\":1,\"temp\":";
-  response += String(temperature, 1);
-  response += ",\"humidity\":";
-  response += String(humidity, 1);
-  response += "}";
-  
-  return response;
 }
 
 
@@ -546,6 +441,7 @@ String handlePWMWrite(const char* params) {
 // Note: Globals (uartStream, uartSoftwareSerial, uartRxPin, uartTxPin, uartIsHardware) 
 // are provided by the command definition JSON file (uart_read_distance.json)
 
+// Robust UART Handler - Prevents Bus Fault on Uno R4
 String handleUARTReadDistance(const char* params) {
   if (!params || strlen(params) < 3) {
     return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
@@ -571,43 +467,88 @@ String handleUARTReadDistance(const char* params) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
   }
 
-  if (uartStream == nullptr || rxPin != uartRxPin || txPin != uartTxPin) {
-    // Cleanup
+  // Validate pins are different
+  if (rxPin == txPin) {
+    return "{\"ok\":0,\"error\":\"ERR_SAME_PIN\"}";
+  }
+
+  // Check if we need to reinitialize (pins changed or first call)
+  bool needsReinit = (uartStream == nullptr || rxPin != uartRxPin || txPin != uartTxPin);
+  
+  if (needsReinit) {
+    // === CRITICAL: Safe cleanup for Uno R4 ===
+    // Disable interrupts during cleanup to prevent corruption
+    noInterrupts();
+    
+    // Cleanup old SoftwareSerial instance
     if (uartSoftwareSerial != nullptr) {
+      // End the stream first (if method exists - SoftwareSerial doesn't have end() on all platforms)
+      // On R4, we just delete and hope for the best
       delete uartSoftwareSerial;
       uartSoftwareSerial = nullptr;
     }
     uartStream = nullptr;
+    uartIsHardware = false;
+    
+    // Reset pin modes to INPUT to release any held state
+    if (uartRxPin >= 0) pinMode(uartRxPin, INPUT);
+    if (uartTxPin >= 0) pinMode(uartTxPin, INPUT);
+    
+    interrupts();
+    
+    // Small delay to let hardware settle after cleanup
+    delay(50);
 
-    // Initialize
+    // Initialize new configuration
     #if defined(ARDUINO_UNOR4_WIFI) || defined(ARDUINO_UNOR4_MINIMA)
-       if (rxPin == 0 && txPin == 1) {
-         Serial1.begin(9600);
-         uartStream = &Serial1;
-         uartIsHardware = true;
-       } else {
-         uartSoftwareSerial = new SoftwareSerial(rxPin, txPin);
-         uartSoftwareSerial->begin(9600);
-         uartStream = uartSoftwareSerial;
-         uartIsHardware = false;
-       }
-     #else
-       uartSoftwareSerial = new SoftwareSerial(rxPin, txPin);
-       uartSoftwareSerial->begin(9600);
-       uartStream = uartSoftwareSerial;
-       uartIsHardware = false;
-     #endif
+      if (rxPin == 0 && txPin == 1) {
+        // Hardware Serial1 (D0/D1)
+        Serial1.begin(9600);
+        uartStream = &Serial1;
+        uartIsHardware = true;
+      } else {
+        // SoftwareSerial - use noInterrupts during creation for safety
+        noInterrupts();
+        uartSoftwareSerial = new SoftwareSerial(rxPin, txPin);
+        interrupts();
+        
+        if (uartSoftwareSerial == nullptr) {
+          return "{\"ok\":0,\"error\":\"ERR_MEMORY\"}";
+        }
+        
+        uartSoftwareSerial->begin(9600);
+        uartStream = uartSoftwareSerial;
+        uartIsHardware = false;
+      }
+    #else
+      // AVR / ESP fallback
+      uartSoftwareSerial = new SoftwareSerial(rxPin, txPin);
+      if (uartSoftwareSerial == nullptr) {
+        return "{\"ok\":0,\"error\":\"ERR_MEMORY\"}";
+      }
+      uartSoftwareSerial->begin(9600);
+      uartStream = uartSoftwareSerial;
+      uartIsHardware = false;
+    #endif
      
     uartRxPin = rxPin;
     uartTxPin = txPin;
-    delay(100);
+    
+    // Longer delay after init for sensor to stabilize
+    delay(150);
   }
 
-  // Clear any old data
+  // Safety check - stream must be valid
+  if (uartStream == nullptr) {
+    return "{\"ok\":0,\"error\":\"ERR_STREAM_NULL\"}";
+  }
+
+  // Clear any old data from buffer
   while (uartStream->available()) {
     uartStream->read();
   }
 
+  // Wait for sensor data (4 bytes expected)
   unsigned long startTime = millis();
   while (uartStream->available() < 4 && (millis() - startTime) < 1000) {
     delay(10);
@@ -617,21 +558,30 @@ String handleUARTReadDistance(const char* params) {
     return "{\"ok\":0,\"error\":\"ERR_SENSOR_TIMEOUT\"}";
   }
 
+  // Read 4-byte frame
   uint8_t frame[4];
   for (int i = 0; i < 4; i++) {
     frame[i] = uartStream->read();
   }
 
+  // Validate header (DFRobot A02YYUW uses 0xFF as header)
   if (frame[0] != 0xFF) {
     return "{\"ok\":0,\"error\":\"ERR_INVALID_HEADER\"}";
   }
 
+  // Validate checksum
   uint8_t checksum = (frame[0] + frame[1] + frame[2]) & 0xFF;
   if (checksum != frame[3]) {
     return "{\"ok\":0,\"error\":\"ERR_CHECKSUM_FAILED\"}";
   }
 
+  // Parse distance (mm)
   uint16_t distance = (frame[1] << 8) | frame[2];
+
+  // Sanity check - A02YYUW range is 30-4500mm
+  if (distance < 30 || distance > 4500) {
+    return "{\"ok\":0,\"error\":\"ERR_OUT_OF_RANGE\"}";
+  }
 
   String response = "{\"ok\":1,\"distance\":";
   response += distance;
@@ -639,6 +589,7 @@ String handleUARTReadDistance(const char* params) {
   
   return response;
 }
+
 
 
 
@@ -666,68 +617,6 @@ String handleAnalog(const char* params) {
   response += value;
   response += "}";
   
-  return response;
-}
-
-
-
-String handleUltrasonicTrigEcho(const char* params) {
-  // Expected params: "D2_2|D3_3" (Trig|Echo)
-  
-  if (!params) {
-    return "{\"ok\":0,\"error\":\"ERR_MISSING_PARAMETER\"}";
-  }
-
-  // Parse Trig Pin
-  char paramsCopy[64];
-  strncpy(paramsCopy, params, sizeof(paramsCopy) - 1);
-  paramsCopy[sizeof(paramsCopy) - 1] = '\0';
-
-  char* pipe = strchr(paramsCopy, '|');
-  if (!pipe) {
-    return "{\"ok\":0,\"error\":\"ERR_INVALID_FORMAT\"}";
-  }
-  *pipe = '\0';
-  
-  const char* trigPinStr = paramsCopy;
-  const char* echoPinStr = pipe + 1;
-
-  int trigPin = parsePin(String(trigPinStr));
-  int echoPin = parsePin(String(echoPinStr));
-
-  if (trigPin == -1 || echoPin == -1) {
-    return "{\"ok\":0,\"error\":\"ERR_INVALID_PIN\"}";
-  }
-
-  // Perform Measurement
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-
-  // Clear Trig
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-
-  // Send 10us Pulse
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-
-  // Read Echo
-  long duration = pulseIn(echoPin, HIGH, 30000); // 30ms timeout (~5m)
-
-  if (duration == 0) {
-    return "{\"ok\":0,\"error\":\"ERR_TIMEOUT\"}";
-  }
-
-  // Calculate Distance (cm)
-  // Speed of sound = 343 m/s = 0.0343 cm/us
-  // Distance = (duration * 0.0343) / 2
-  float distance = (duration * 0.0343) / 2.0;
-
-  String response = "{\"ok\":1,\"distance\":";
-  response += String(distance, 1);
-  response += "}";
-
   return response;
 }
 
@@ -955,14 +844,12 @@ String processCommand(String input) {
   }
   
   // === DYNAMIC DISPATCHERS ===
-  else if (strcmp(cmd, "DHT_READ") == 0) { return handleDHTRead(delimiter ? delimiter + 1 : NULL); }
   else if (strcmp(cmd, "MODBUS_RTU_READ") == 0) { return handleModbusRtuRead(delimiter ? delimiter + 1 : "{}"); }
   else if (strcmp(cmd, "DIGITAL_WRITE") == 0) { return handleDigitalWrite(delimiter ? delimiter + 1 : NULL); }
   else if (strcmp(cmd, "DIGITAL_READ") == 0) { return handleDigitalRead(delimiter ? delimiter + 1 : NULL); }
   else if (strcmp(cmd, "PWM_WRITE") == 0) { return handlePWMWrite(delimiter ? delimiter + 1 : NULL); }
   else if (strcmp(cmd, "UART_READ_DISTANCE") == 0) { return handleUARTReadDistance(delimiter ? delimiter + 1 : NULL); }
   else if (strcmp(cmd, "ANALOG") == 0) { return handleAnalog(delimiter ? delimiter + 1 : NULL); }
-  else if (strcmp(cmd, "ULTRASONIC_TRIG_ECHO") == 0) { return handleUltrasonicTrigEcho(delimiter ? delimiter + 1 : NULL); }
   else if (strcmp(cmd, "ONEWIRE_READ_TEMP") == 0) { return handleOneWireReadTemp(delimiter ? delimiter + 1 : NULL); }
   
   else {

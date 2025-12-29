@@ -1113,6 +1113,30 @@ export class HardwareController {
 
             await device.save();
 
+            // === INSTANT RESTART TRIGGER FOR UART DEVICES ===
+            // If UART pins changed, send a READ command immediately to trigger controller auto-reset
+            if (newHardware && JSON.stringify(oldHardware?.pins) !== JSON.stringify(newHardware.pins)) {
+                try {
+                    // Populate device template to check interface
+                    await device.populate('config.driverId');
+                    const template = device.config?.driverId as any;
+
+                    if (template?.requirements?.interface === 'uart') {
+                        req.log.info({ deviceId: id }, '🔄 [UpdateDevice] UART pins changed, triggering instant restart...');
+
+                        // Send a dummy read command to trigger the restart
+                        // The controller will see different pins and auto-reset
+                        await hardware.refreshDeviceStatus(device._id.toString()).catch((err: any) => {
+                            // Expected to timeout/fail due to restart - that's OK
+                            req.log.info({ deviceId: id, error: err.message }, '⚡ [UpdateDevice] Controller restarting (expected timeout)');
+                        });
+                    }
+                } catch (triggerError: any) {
+                    // Non-critical - log but don't fail the update
+                    req.log.warn({ deviceId: id, error: triggerError.message }, '⚠️ [UpdateDevice] Could not trigger instant restart');
+                }
+            }
+
             return reply.send({ success: true, data: device });
         } catch (error: any) {
             req.log.error(error);

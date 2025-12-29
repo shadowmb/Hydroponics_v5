@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, X, Settings2, Wind, Lightbulb, Ruler, Info } from 'lucide-react';
+import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, X, Settings2, Wind, Lightbulb, Ruler, Info, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     Table,
@@ -86,6 +86,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     });
 
     const [openCombobox, setOpenCombobox] = useState(false);
+    const [showRestartDialog, setShowRestartDialog] = useState(false);
 
     // Device Selection State
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -274,7 +275,39 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         setFormData({ ...formData, tags: formData.tags.filter(tag => tag !== tagToRemove) });
     };
 
+    // Check if this is a UART device and pins have changed (triggers controller restart on R4)
+    const checkUartPinChange = (): boolean => {
+        if (!isEditMode) return false;
 
+        // Check if device uses UART interface
+        const deviceInterface = effectiveTemplate?.requirements?.interface;
+        if (deviceInterface !== 'uart') return false;
+
+        // Get original pins from initialData
+        const originalPins = Array.isArray(initialData?.hardware?.pins)
+            ? initialData.hardware.pins.reduce((acc: any, pin: any) => ({ ...acc, [pin.role]: pin.portId }), {})
+            : initialData?.hardware?.pins || {};
+
+        // Compare with current formData pins
+        const currentPins = formData.pins;
+
+        // Check if any pin has changed
+        for (const role of Object.keys(currentPins)) {
+            if (originalPins[role] !== currentPins[role]) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    const handleSaveClick = () => {
+        if (checkUartPinChange()) {
+            setShowRestartDialog(true);
+        } else {
+            handleSubmit();
+        }
+    };
 
     const handleSubmit = async () => {
         try {
@@ -1199,7 +1232,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                         </Button>
                     ) : (
                         <Button
-                            onClick={handleSubmit}
+                            onClick={handleSaveClick}
                             disabled={!isFormValid() || loading}
                         >
                             {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Device' : 'Create Device')}
@@ -1207,6 +1240,37 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     )}
                 </DialogFooter>
             </DialogContent>
+
+            {/* UART Pin Change Confirmation Dialog */}
+            <Dialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                            Controller Restart Required
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <p className="text-sm text-muted-foreground">
+                            Changing UART pins requires a controller restart. The controller will automatically restart after saving.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                            This may cause a brief interruption in communication (2-3 seconds).
+                        </p>
+                        <p className="text-sm text-yellow-600 mt-3 font-medium">
+                            ⚠️ If an automation flow is running, it may be temporarily blocked.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowRestartDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={() => { setShowRestartDialog(false); handleSubmit(); }}>
+                            Restart & Save
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Dialog>
     );
 };
