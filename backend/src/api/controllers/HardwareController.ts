@@ -1124,9 +1124,9 @@ export class HardwareController {
                     if (template?.requirements?.interface === 'uart') {
                         req.log.info({ deviceId: id }, '🔄 [UpdateDevice] UART pins changed, triggering instant restart...');
 
-                        // Send a dummy read command to trigger the restart
-                        // The controller will see different pins and auto-reset
-                        await hardware.refreshDeviceStatus(device._id.toString()).catch((err: any) => {
+                        // Send actual sensor read command to trigger the restart
+                        // readSensorValue will send UART_READ_DISTANCE with the new pins
+                        await hardware.readSensorValue(device._id.toString()).catch((err: any) => {
                             // Expected to timeout/fail due to restart - that's OK
                             req.log.info({ deviceId: id, error: err.message }, '⚡ [UpdateDevice] Controller restarting (expected timeout)');
                         });
