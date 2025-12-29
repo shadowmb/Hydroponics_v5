@@ -718,6 +718,7 @@ export class HardwareController {
     static async createDevice(req: FastifyRequest, reply: FastifyReply) {
         try {
             const body = req.body as any;
+            console.log('🔍 [createDevice] CALLED with body:', JSON.stringify(body, null, 2));
             req.log.info({ body }, 'Create Device Body');
             const { DeviceModel } = await import('../../models/Device');
 
@@ -728,6 +729,7 @@ export class HardwareController {
 
             // 2. Validate Template
             const template = await DeviceTemplate.findById(body.config.driverId);
+            console.log('🔍 [createDevice] Template lookup:', template ? 'FOUND' : 'NOT FOUND', 'for driverId:', body.config.driverId);
             if (!template) {
                 return reply.status(400).send({ success: false, error: 'Invalid device template' });
             }
@@ -792,6 +794,75 @@ export class HardwareController {
                 }
                 if (channel.isOccupied) {
                     return reply.status(400).send({ success: false, error: `Relay channel ${channelIndex} is already occupied` });
+                }
+            }
+
+            // 3b. UART Interface Constraint Validation (Uno R4 specific)
+            // DEBUG: Remove after testing
+            console.log('🔍 UART Validation Debug:', {
+                hasController: !!controller,
+                controllerType: controller?.type,
+                hardwarePins: body.hardware?.pins,
+                templateRequirements: (template as any).requirements,
+                templateId: template._id?.toString()
+            });
+
+            if (controller && body.hardware?.pins) {
+                const controllerTemplate = await ControllerTemplate.findOne({ key: controller.type });
+                const uartConstraints = (controllerTemplate as any)?.interfaceConstraints?.uart;
+
+                console.log('🔍 UART Constraints Debug:', {
+                    controllerTemplateFound: !!controllerTemplate,
+                    controllerTemplateKey: controllerTemplate?.key,
+                    uartConstraints
+                });
+
+                if (uartConstraints) {
+                    // Check if new device uses UART interface (from requirements.interface)
+                    const newDeviceIsUart = (template as any).requirements?.interface === 'uart';
+
+                    if (newDeviceIsUart) {
+                        const { DeviceModel } = await import('../../models/Device');
+
+                        // Count existing UART devices on this controller
+                        const existingDevices = await DeviceModel.find({ 'hardware.parentId': controller._id });
+                        let existingUartCount = 0;
+                        let hasHardwareSerialDevice = false;
+
+                        for (const dev of existingDevices) {
+                            const devTemplate = await DeviceTemplate.findById(dev.config.driverId);
+                            if ((devTemplate as any)?.requirements?.interface === 'uart') {
+                                existingUartCount++;
+                                // Check if on hardware serial pins (D0/D1)
+                                const hwPins = uartConstraints.hardwareSerialPins || ['D0', 'D1'];
+                                if (dev.hardware?.pins?.some((p: any) => hwPins.includes(p.portId))) {
+                                    hasHardwareSerialDevice = true;
+                                }
+                            }
+                        }
+
+                        // Check if new device is on hardware serial pins
+                        const hwPins = uartConstraints.hardwareSerialPins || ['D0', 'D1'];
+                        const newDeviceOnHwSerial = body.hardware.pins.some((p: any) => hwPins.includes(p.portId));
+
+                        // Validate: If this would be 2nd UART device
+                        if (existingUartCount >= 1 && uartConstraints.twoDevicesRequireHardwareSerial) {
+                            // Either existing or new device must be on hardware serial
+                            if (!hasHardwareSerialDevice && !newDeviceOnHwSerial) {
+                                return reply.status(400).send({
+                                    success: false,
+                                    error: `Two UART devices require one to be on pins ${hwPins.join('/')}. Move one device to hardware serial pins.`,
+                                    code: 'UART_CONSTRAINT_VIOLATION'
+                                });
+                            }
+
+                            // Check WiFi requirement (warning only, not blocking)
+                            if (uartConstraints.twoDevicesRequireWifi && controller.communication_by !== 'wifi') {
+                                req.log.warn({ controllerId: controller._id },
+                                    '⚠️ Two UART devices work best in WiFi mode (Serial mode uses D0/D1 for USB)');
+                            }
+                        }
+                    }
                 }
             }
 
