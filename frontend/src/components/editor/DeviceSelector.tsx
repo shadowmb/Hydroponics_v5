@@ -252,41 +252,64 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
 
                 <Command>
                     <CommandInput placeholder="Search devices..." />
-                    <CommandList>
+                    <CommandList className="max-h-[300px] overflow-y-auto p-2">
                         <CommandEmpty>No device found.</CommandEmpty>
                         {groupedDevices.map(([category, categoryDevices]) => (
-                            <CommandGroup key={category} heading={category}>
-                                {categoryDevices.map((device) => (
-                                    <CommandItem
-                                        key={device.id}
-                                        value={`${device.name} ${device.tags?.join(' ') || ''}`} // Search by name AND tags
-                                        onSelect={() => {
-                                            onChange(device.id);
-                                            setOpen(false);
-                                        }}
-                                    >
-                                        <Check
+                            <React.Fragment key={category}>
+                                {/* Visual Group Header */}
+                                <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground bg-muted/50 rounded-md mb-1 mt-2 sticky top-0 backdrop-blur-sm z-10 border border-transparent shadow-sm">
+                                    {category}
+                                </div>
+                                <CommandGroup>
+                                    {categoryDevices.map((device) => (
+                                        <CommandItem
+                                            key={device.id}
+                                            value={`${device.name} ${device.tags?.join(' ') || ''}`}
+                                            onSelect={() => {
+                                                onChange(device.id);
+                                                setOpen(false);
+                                            }}
                                             className={cn(
-                                                "mr-2 h-4 w-4",
-                                                value === device.id ? "opacity-100" : "opacity-0"
+                                                "mb-1 border border-transparent aria-selected:border-primary/20 aria-selected:bg-primary/5 rounded-md p-2 transition-all cursor-pointer",
+                                                value === device.id && "border-primary bg-primary/5 shadow-sm"
                                             )}
-                                        />
-                                        <div className="flex flex-col w-full overflow-hidden">
-                                            <span className="truncate">{device.name}</span>
-                                            <div className="flex flex-wrap gap-1 items-center mt-1">
-                                                <span className="text-[10px] text-muted-foreground uppercase bg-muted px-1 rounded">
-                                                    {device.type}
-                                                </span>
-                                                {device.tags && device.tags.map(tag => (
-                                                    <span key={tag} className="text-[10px] text-primary bg-primary/5 px-1 rounded border border-primary/10">
-                                                        {tag}
-                                                    </span>
-                                                ))}
+                                        >
+                                            <div className="flex items-start gap-3 w-full">
+                                                {/* Icon Column */}
+                                                <div className={cn(
+                                                    "mt-1 p-1.5 rounded-md bg-background shadow-sm border",
+                                                    value === device.id ? "text-primary border-primary/20" : "text-muted-foreground"
+                                                )}>
+                                                    {getCategoryIcon(device.group || 'Other')}
+                                                </div>
+
+                                                {/* Content Column */}
+                                                <div className="flex flex-col flex-1 min-w-0 gap-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-bold text-sm truncate text-foreground">
+                                                            {device.name}
+                                                        </span>
+                                                        {value === device.id && <Check className="h-3 w-3 text-primary" />}
+                                                    </div>
+
+                                                    {/* Tags Row */}
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {device.tags && device.tags.length > 0 ? (
+                                                            device.tags.map(tag => (
+                                                                <span key={tag} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/50">
+                                                                    {tag}
+                                                                </span>
+                                                            ))
+                                                        ) : (
+                                                            <span className="text-[10px] text-muted-foreground opacity-50 italic">No tags</span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </React.Fragment>
                         ))}
                     </CommandList>
                 </Command>
