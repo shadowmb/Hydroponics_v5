@@ -31,6 +31,20 @@ export interface ExecutionContext {
 
     // State persisted across Pause/Resume for each block
     resumeState: Record<string, any>;
+
+    /**
+     * Safety Stop Registry
+     * Tracks devices modified by the flow to allow reversion on stop/error.
+     */
+    activeResources: Record<string, ActiveResource>;
+}
+
+export interface ActiveResource {
+    deviceId: string;
+    driverId: string;
+    initialState: number; // The value before the flow touched it (0 or 1)
+    lastCommand: string;  // For logging
+    revertOnStop: boolean; // Policy
 }
 
 export interface Edge {

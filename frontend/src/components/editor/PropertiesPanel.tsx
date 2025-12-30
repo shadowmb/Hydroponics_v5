@@ -6,7 +6,7 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Copy, AlertCircle } from 'lucide-react';
+import { Copy, AlertCircle, Settings2, Monitor, BookOpen, Pencil, ShieldAlert } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { StrategyRegistry, validateBlockStrategy, validateStrategyCalibration } from '@shared/strategies/StrategyRegistry'; // Import Registry
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
@@ -531,35 +531,55 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         }
     };
 
-    // CollapsibleSection definition moved outside
+    // --- CONTEXTUAL STYLING HELPERS ---
+    const getBlockColorContext = (type: string) => {
+        if (type === 'SENSOR_READ') return { border: 'border-l-4 border-l-cyan-500', text: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-950/20', icon: 'text-cyan-500' };
+        if (type === 'ACTUATOR_SET') return { border: 'border-l-4 border-l-blue-500', text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/20', icon: 'text-blue-500' };
+        if (type === 'IF') return { border: 'border-l-4 border-l-purple-500', text: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/20', icon: 'text-purple-500' };
+        if (type === 'LOOP') return { border: 'border-l-4 border-l-orange-500', text: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/20', icon: 'text-orange-500' };
+        if (type === 'FLOW_CONTROL') return { border: 'border-l-4 border-l-indigo-500', text: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-950/20', icon: 'text-indigo-500' };
+        return { border: 'border-l-4 border-l-slate-500', text: 'text-slate-600', bg: 'bg-slate-50', icon: 'text-slate-500' };
+    };
+
+    const blockContext = getBlockColorContext(nodeType);
 
     return (
         <div className="w-80 border-l bg-card flex flex-col h-full">
             <div className="p-4 border-b">
-                <h3 className="font-semibold">Properties</h3>
-                <p className="text-xs text-muted-foreground">ID: {selectedNode.id}</p>
-                <p className="text-xs text-muted-foreground">Type: {nodeType}</p>
+                <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Properties</h3>
+                <div className="flex justify-between items-center mt-1">
+                    <span className="text-xs font-mono text-muted-foreground opacity-70">ID: {selectedNode.id}</span>
+                </div>
             </div>
 
-            <div className="p-4 space-y-4 overflow-y-auto flex-1">
-                {/* 1. HEADER (Label) */}
-                <div className="space-y-2">
-                    <Label className="text-muted-foreground">Label</Label>
-                    <Input
-                        type="text"
-                        value={formData.label || ''}
-                        onChange={(e) => handleChange('label', e.target.value)}
-                        disabled={isMirror}
-                    />
+            <div className="p-4 space-y-5 overflow-y-auto flex-1">
+                {/* 1. HEADER (Label) - REDESIGNED */}
+                <div className="pb-2">
+                    <div className="relative flex items-center gap-2 group">
+                        <Pencil className="h-4 w-4 text-muted-foreground shrink-0 opacity-70" />
+                        <Input
+                            type="text"
+                            value={formData.label || ''}
+                            onChange={(e) => handleChange('label', e.target.value)}
+                            disabled={isMirror}
+                            className={cn(
+                                "text-lg font-bold border-transparent px-2 h-auto rounded-md focus-visible:ring-1 focus-visible:ring-primary transition-all placeholder:text-muted-foreground/40 hover:bg-muted/30",
+                                !formData.label && "italic"
+                            )}
+                            placeholder={definition?.label || "Name this block..."}
+                        />
+                    </div>
                 </div>
 
-                {/* 2. MIRROR CONFIGURATION (If applicable) */}
+                {/* 2. MIRROR CONFIGURATION (Gray Border) */}
                 {isMirrorable && (
                     <CollapsibleSection
                         key={`${selectedNode.id}-mirror`}
                         title="Mirror Configuration"
+                        icon={Monitor}
                         defaultOpen={isMirror}
-                        className={isMirror ? "border-blue-200 bg-blue-50/10" : ""}
+                        className={cn("border bg-card shadow-sm overflow-hidden border-l-4 border-l-slate-400", isMirror && "bg-slate-50/50")}
+                        headerClassName="text-slate-700 dark:text-slate-300"
                     >
                         <div className="space-y-3 pt-3">
                             {/* ... Content remains same ... */}
@@ -622,11 +642,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                         return (
                             <>
-                                {/* 3. MAIN CONFIGURATION */}
+                                {/* 3. MAIN CONFIGURATION - STYLED */}
                                 <CollapsibleSection
                                     key={`${selectedNode.id}-config`}
                                     title="Configuration"
-                                    defaultOpen={false}
+                                    icon={Settings2}
+                                    defaultOpen={true}
+                                    className={cn("border bg-card shadow-sm overflow-hidden", blockContext.border)}
+                                    headerClassName={cn(blockContext.bg, blockContext.text)}
                                 >
                                     <div className="space-y-3 pt-3">
                                         {mainFields.map(([key, field]) => (
@@ -647,7 +670,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                             const driverId = typeof device.config?.driverId === 'object' ? (device.config.driverId as any)._id : device.config?.driverId;
                                                             const template = deviceTemplates?.find(t => t._id === driverId || t._id === device.driverId);
 
-                                                            // NEW: Centralized Unit Check
                                                             const check = validateBlockStrategy(formData.readingType || 'linear', variable.unit, { device, template });
 
                                                             if (!check.isValid) {
@@ -668,15 +690,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                     })()
                                                 )}
 
-                                                {/* MISSING CALIBRATION WARNING (Generic) */}
+                                                {/* MISSING CALIBRATION WARNING */}
                                                 {(key === 'readingType' || key === 'strategy') && formData.deviceId && (
                                                     (() => {
                                                         const { devices } = useStore.getState();
                                                         const device = devices.get(formData.deviceId);
-                                                        const strategyId = formData[key] || 'linear'; // default to linear
+                                                        const strategyId = formData[key] || 'linear';
 
                                                         if (device) {
-                                                            // NEW: Centralized Calibration Check
                                                             const check = validateStrategyCalibration(strategyId, device.config);
                                                             if (!check.isValid) {
                                                                 return (
@@ -700,23 +721,21 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                     </div>
                                 </CollapsibleSection>
 
-                                {/* 4. ERROR HANDLING */}
+                                {/* 4. ERROR HANDLING - RED BORDER */}
                                 {errorFields.length > 0 && !isMirror && (
                                     <CollapsibleSection
                                         key={`${selectedNode.id}-error`}
                                         title="Error Handling"
-                                        icon={AlertCircle}
-                                        className="border-red-100 dark:border-red-900/50"
+                                        icon={ShieldAlert}
+                                        className="border-l-4 border-l-red-500 border-red-100 dark:border-red-900/30 overflow-hidden"
+                                        headerClassName="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20"
                                     >
                                         <div className="space-y-3 pt-3">
                                             {errorFields.map(([key, field]) => {
-                                                // Visibility Check logic moved inside the map
                                                 if (key === 'errorTargetLabel') {
                                                     const onFailure = formData['onFailure'] || formData['onMaxIterations'];
                                                     if (onFailure !== 'GOTO_LABEL') return null;
                                                 }
-                                                // Reuse renderField's internal check for others (simplified here or just rely on renderField returning null? 
-                                                // If renderField returns null, we show empty label. Better to check first.)
 
                                                 const content = key === 'errorTargetLabel' ? (
                                                     <Select
@@ -768,8 +787,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                     </div>
                 )}
 
-                {/* 5. DOCUMENTATION (Bottom) */}
-                <CollapsibleSection title="Documentation" key={`${selectedNode.id}-docs`}>
+                {/* 5. DOCUMENTATION (Bottom) - GRAY BORDER */}
+                <CollapsibleSection
+                    title="Documentation"
+                    icon={BookOpen}
+                    key={`${selectedNode.id}-docs`}
+                    className="border-l-4 border-l-slate-400"
+                    headerClassName="text-slate-700 dark:text-slate-300"
+                >
                     <div className="pt-3">
                         <Label className="text-muted-foreground mb-2 block">Comment</Label>
                         <Textarea
@@ -838,30 +863,29 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
 
 // Helper Component for Collapsible Sections
-const CollapsibleSection = ({ title, icon: Icon, defaultOpen = false, children, className }: { title: string, icon?: any, defaultOpen?: boolean, children: React.ReactNode, className?: string }) => {
+const CollapsibleSection = ({ title, icon: Icon, defaultOpen = false, children, className, headerClassName }: { title: string, icon?: any, defaultOpen?: boolean, children: React.ReactNode, className?: string, headerClassName?: string }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
-    // Sync internal state if defaultOpen changes (optional but good for reset)
     useEffect(() => {
         setIsOpen(defaultOpen);
     }, [defaultOpen]);
 
     return (
-        <div className={cn("rounded-md border bg-card", className)}>
+        <div className={cn("rounded-md border bg-card transition-all", className)}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-between w-full p-3 text-sm font-medium hover:bg-muted/50 transition-colors"
+                className={cn("flex items-center justify-between w-full p-3 text-sm font-medium hover:bg-muted/50 transition-colors rounded-t-md", headerClassName)}
             >
                 <div className="flex items-center gap-2">
-                    {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                    {Icon && <Icon className="h-4 w-4 opacity-70" />}
                     <span>{title}</span>
                 </div>
-                <span className={cn("text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")}>
+                <span className={cn("text-muted-foreground transition-transform duration-200 text-[10px]", isOpen && "rotate-180")}>
                     ▼
                 </span>
             </button>
             {isOpen && (
-                <div className="p-3 pt-0 border-t bg-muted/5 space-y-3">
+                <div className="p-3 pt-0 border-t bg-muted/5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                     {children}
                 </div>
             )}
