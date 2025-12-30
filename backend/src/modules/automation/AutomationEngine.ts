@@ -452,12 +452,24 @@ export class AutomationEngine {
                     finalSummary = `Total Time: ${mins}m ${secs}s`;
                 }
 
+                if (params.notificationChannelId) {
+                    logger.info({ blockId, channel: params.notificationChannelId, mode: params.notificationMode }, '🔔 AutomationEngine: Prepared Notification Payload');
+                } else {
+                    // logger.debug({ blockId }, '🔕 AutomationEngine: No Notification Channel Configured');
+                }
+
                 events.emit('automation:block_end', {
                     blockId,
                     success: true,
                     output: result.output,
                     summary: finalSummary, // Pass Summary
-                    sessionId: this.currentSessionId
+                    sessionId: this.currentSessionId,
+                    // Pass Notification Config
+                    notification: {
+                        channelId: params.notificationChannelId,
+                        mode: params.notificationMode,
+                        config: params // Pass full params just in case for templates
+                    }
                 });
 
                 // Loop Safety Check
@@ -525,7 +537,12 @@ export class AutomationEngine {
             blockId,
             success: false,
             error: lastError?.message || 'Block Failed',
-            sessionId: this.currentSessionId
+            sessionId: this.currentSessionId,
+            // Pass Notification Config
+            notification: {
+                channelId: params.notificationChannelId,
+                mode: params.notificationMode
+            }
         });
 
         logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');

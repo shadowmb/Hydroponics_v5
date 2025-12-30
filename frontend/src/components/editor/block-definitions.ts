@@ -132,6 +132,23 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 defaultValue: false,
                 description: 'Alert on failure'
             },
+            notificationChannelId: {
+                label: 'Notification Channel',
+                type: 'select',
+                options: [], // populated dynamically
+                defaultValue: '',
+                description: 'Channel to send alerts to'
+            },
+            notificationMode: {
+                label: 'Notification Mode',
+                type: 'select',
+                options: [
+                    { label: 'Auto (Errors Only)', value: 'AUTO' },
+                    { label: 'Always Alert', value: 'ALWAYS' },
+                    { label: 'Mute', value: 'MUTE' }
+                ],
+                defaultValue: 'AUTO'
+            },
             revertOnStop: {
                 label: 'Safety Revert on Stop',
                 type: 'boolean',
@@ -197,6 +214,23 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'boolean',
                 defaultValue: false,
                 description: 'Send alert on failure'
+            },
+            notificationChannelId: {
+                label: 'Notification Channel',
+                type: 'select',
+                options: [],
+                defaultValue: '',
+                description: 'Channel to send alerts to'
+            },
+            notificationMode: {
+                label: 'Notification Mode',
+                type: 'select',
+                options: [
+                    { label: 'Auto (Errors Only)', value: 'AUTO' },
+                    { label: 'Always Alert', value: 'ALWAYS' },
+                    { label: 'Mute', value: 'MUTE' }
+                ],
+                defaultValue: 'AUTO'
             }
         }
     },
@@ -250,6 +284,23 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'boolean',
                 defaultValue: false,
                 description: 'Alert on error'
+            },
+            notificationChannelId: {
+                label: 'Notification Channel',
+                type: 'select',
+                options: [],
+                defaultValue: '',
+                description: 'Channel to send alerts to'
+            },
+            notificationMode: {
+                label: 'Notification Mode',
+                type: 'select',
+                options: [
+                    { label: 'Auto (Errors Only)', value: 'AUTO' },
+                    { label: 'Always Alert', value: 'ALWAYS' },
+                    { label: 'Mute', value: 'MUTE' }
+                ],
+                defaultValue: 'AUTO'
             }
         }
     },
@@ -340,6 +391,23 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'boolean',
                 defaultValue: false,
                 description: 'Alert if limit reached or condition fails'
+            },
+            notificationChannelId: {
+                label: 'Notification Channel',
+                type: 'select',
+                options: [],
+                defaultValue: '',
+                description: 'Channel to send alerts to'
+            },
+            notificationMode: {
+                label: 'Notification Mode',
+                type: 'select',
+                options: [
+                    { label: 'Auto (Errors Only)', value: 'AUTO' },
+                    { label: 'Always Alert', value: 'ALWAYS' },
+                    { label: 'Mute', value: 'MUTE' }
+                ],
+                defaultValue: 'AUTO'
             }
         }
     },

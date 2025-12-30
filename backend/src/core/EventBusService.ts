@@ -31,7 +31,15 @@ export interface SystemEvents {
 
     // Automation Events
     'automation:block_start': { blockId: string; type: string; sessionId?: string | null };
-    'automation:block_end': { blockId: string; success: boolean; output?: any; summary?: string; sessionId?: string | null; error?: string };
+    'automation:block_end': {
+        blockId: string;
+        success: boolean;
+        output?: any;
+        summary?: string;
+        sessionId?: string | null;
+        error?: string;
+        notification?: { channelId: string; mode: string; config?: any };
+    };
     'automation:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null; error?: string | null };
     'automation:execution_step': { blockId: string; type: string; sessionId?: string | null; label: string; duration?: number; timestamp: number; params?: any };
     'log': { timestamp: Date | string; level: string; message: string; blockId?: string; data?: any; sessionId?: string | null };
@@ -48,6 +56,10 @@ export class EventBusService {
             maxListeners: 20,         // Slightly higher than default 10
             verboseMemoryLeak: true,  // Warn if we mess up
         });
+
+        const id = Math.random().toString(36).substring(7);
+        console.log(`⚡ EventBusService Created: ${id}`);
+        logger.info(`⚡ EventBusService Created: ${id}`);
 
         // Global Error Handler for the Bus itself
         this.bus.on('error', (err) => {

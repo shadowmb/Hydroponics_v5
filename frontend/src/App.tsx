@@ -15,6 +15,7 @@ import { History } from './pages/History';
 import { Programs } from './pages/Programs';
 import { ProgramEditor } from './pages/ProgramEditor';
 import { ActiveProgramPage } from './pages/ActiveProgramPage';
+import { Settings } from './pages/Settings';
 import { useStore } from './core/useStore';
 import { hardwareService } from './services/hardwareService';
 import { socketService } from './core/SocketService';
@@ -54,7 +55,7 @@ function App() {
             <Route path="/active-program" element={<ActiveProgramPage />} />
             <Route path="/hardware" element={<Hardware />} />
             <Route path="/history" element={<History />} />
-            <Route path="/settings" element={<div>Settings Page</div>} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

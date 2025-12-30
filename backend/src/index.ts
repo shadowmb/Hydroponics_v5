@@ -12,6 +12,7 @@ import { seedControllerTemplates } from './utils/seedTemplates';
 // import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
 import { hardware } from './modules/hardware/HardwareService';
 import { historyService } from './services/HistoryService';
+import { notifications } from './services/NotificationService';
 
 const app = Fastify({
     logger: false // We use our own Pino instance
@@ -66,9 +67,19 @@ async function bootstrap() {
         console.log('Initializing Hardware Service...');
         await hardware.initialize();
 
-        // 5.1 Initialize History Service
         console.log('Initializing History Service...');
         historyService.initialize();
+
+        // 5.2 Initialize Notification Service (Listeners)
+        console.log('Initializing Notification Service...');
+        notifications.initialize();
+        logger.info('🔔 Notification Service Active');
+
+        // DEBUG: Verify Event Bus Connection
+        const { events } = require('./core/EventBusService');
+        events.on('automation:block_end', (payload: any) => {
+            console.log('✅ DEBUG LISTENER: automation:block_end received!', payload?.blockId);
+        });
 
         // 6. Start Server
         console.log('Starting Server...');
