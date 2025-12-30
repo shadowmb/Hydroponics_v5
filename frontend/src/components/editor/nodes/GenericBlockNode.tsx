@@ -1,10 +1,14 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Handle, Position, useNodes } from '@xyflow/react';
-import { Zap, Thermometer, Clock, FileText, Activity, Play, Square, Link as LinkIcon, AlertCircle } from 'lucide-react';
+import {
+    Zap, Thermometer, Clock, FileText, Activity, Play, Square,
+    Link as LinkIcon, AlertCircle, Power, PowerOff, RefreshCw, Droplets
+} from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { cn } from '../../../lib/utils';
 import { useStore } from '../../../core/useStore';
+import { useFlowContext } from '../../../context/FlowContext';
 
 const getIcon = (type: string, isMirror: boolean) => {
     if (isMirror) return <LinkIcon className="h-4 w-4" />;
@@ -20,13 +24,59 @@ const getIcon = (type: string, isMirror: boolean) => {
     }
 };
 
-export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
+const getActuatorConfig = (action: string): { header: string; icon: any; headerClass: string } => {
+    switch (String(action).toUpperCase()) {
+        case 'ON': return {
+            header: 'TURN ON',
+            icon: <Power className="h-4 w-4" />,
+            headerClass: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-b-green-200 dark:border-green-800'
+        };
+        case 'OFF': return {
+            header: 'TURN OFF',
+            icon: <PowerOff className="h-4 w-4" />,
+            headerClass: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-b-red-200 dark:border-red-800'
+        };
+        case 'TOGGLE': return {
+            header: 'TOGGLE',
+            icon: <RefreshCw className="h-4 w-4" />,
+            headerClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-b-blue-200 dark:border-blue-800'
+        };
+        case 'PULSE_ON': return {
+            header: 'PULSE (ON ➔ OFF)',
+            icon: <Activity className="h-4 w-4" />,
+            headerClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-b-purple-200 dark:border-purple-800'
+        };
+        case 'PULSE_OFF': return {
+            header: 'PULSE (OFF ➔ ON)',
+            icon: <Activity className="h-4 w-4" />,
+            headerClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-b-purple-200 dark:border-purple-800'
+        };
+        case 'PULSE': return {
+            header: 'PULSE',
+            icon: <Activity className="h-4 w-4" />,
+            headerClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-b-purple-200 dark:border-purple-800'
+        };
+        case 'DOSE': return {
+            header: 'DOSE',
+            icon: <Droplets className="h-4 w-4" />,
+            headerClass: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border-b-cyan-200 dark:border-cyan-800'
+        };
+        default: return {
+            header: action || 'SET ACTUATOR',
+            icon: <Zap className="h-4 w-4" />,
+            headerClass: 'bg-muted text-muted-foreground border-b-border'
+        };
+    }
+};
+
+export const GenericBlockNode = memo(({ data, selected }: NodeProps<any>) => {
     const { devices } = useStore();
+    const { variables } = useFlowContext();
     const isStart = data.type === 'START';
     const isEnd = data.type === 'END';
-    const nodes = useNodes(); // Access all nodes to find mirror source
+    const nodes = useNodes();
 
-    // Resolve Mirror Logic: If this is a mirror, try to find the source node and use its data for display
+    // Resolve Mirror Logic
     let displayData = data;
     const isMirror = !!data.mirrorOf;
 
@@ -43,6 +93,144 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
         return device ? device.name : id;
     };
 
+    // Helper to resolve Variable Name
+    const resolveVarName = (val: any) => {
+        const s = String(val || '');
+        if (s.startsWith('{{') && s.endsWith('}}')) {
+            const varId = s.slice(2, -2);
+            const found = variables?.find((v: any) => v.id === varId);
+            return found ? found.name : varId;
+        }
+        const foundDirect = variables?.find((v: any) => v.id === s);
+        return foundDirect ? foundDirect.name : s;
+    };
+
+    // Render Logic
+    if (displayData.type === 'ACTUATOR_SET') {
+        const action = String(displayData.action || '');
+        const config = getActuatorConfig(action);
+        const deviceName = displayData.deviceId ? getDeviceName(String(displayData.deviceId)) : 'Select Device';
+        const isUnknownDevice = displayData.deviceId && deviceName === displayData.deviceId; // ID shown means not found
+
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div className={cn(
+                        "flex flex-col shadow-md rounded-md bg-card border-2 min-w-[180px] overflow-hidden transition-all",
+                        selected ? "border-primary ring-1 ring-primary" : "border-border",
+                        !!displayData.hasError && "border-destructive ring-destructive ring-1"
+                    )}>
+                        <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
+
+                        {/* Header */}
+                        <div className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 border-b text-xs font-bold uppercase tracking-wide",
+                            config.headerClass
+                        )}>
+                            {config.icon}
+                            <span className="truncate max-w-[150px]" title={String(displayData.label || config.header)}>
+                                {displayData.label || config.header}
+                            </span>
+                            {isMirror && <LinkIcon className="ml-auto w-3 h-3 opacity-50" />}
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-3 bg-card">
+                            <div className={cn(
+                                "text-sm font-semibold truncate",
+                                isUnknownDevice ? "text-muted-foreground font-mono text-xs" : "text-foreground"
+                            )} title={deviceName}>
+                                {deviceName}
+                            </div>
+                        </div>
+
+                        {/* Footer (Optional Params) */}
+                        {((action.includes('PULSE') && displayData.duration) || (action === 'DOSE' && displayData.amount)) && (
+                            <div className="px-3 py-1.5 bg-muted/30 border-t text-[10px] font-mono text-muted-foreground flex justify-between">
+                                {action.includes('PULSE') && <span>Time: {String(displayData.duration)}ms</span>}
+                                {action === 'DOSE' && <span>Vol: {resolveVarName(displayData.amount)}{String(displayData.amountUnit || 'ml')}</span>}
+                            </div>
+                        )}
+
+                        <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground" />
+
+                        {!!displayData.hasError && (
+                            <div className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 animate-pulse" title={String(displayData.error)}>
+                                <AlertCircle className="w-3 h-3" />
+                            </div>
+                        )}
+                    </div>
+                </TooltipTrigger>
+                {!!displayData.comment && (
+                    <TooltipContent className="max-w-[200px] text-xs">
+                        <p>{displayData.comment as string}</p>
+                    </TooltipContent>
+                )}
+            </Tooltip>
+        )
+    }
+
+
+    if (displayData.type === 'SENSOR_READ') {
+        const deviceName = displayData.deviceId ? getDeviceName(String(displayData.deviceId)) : 'Select Device';
+        const isUnknownDevice = displayData.deviceId && deviceName === displayData.deviceId;
+
+        const varName = resolveVarName(displayData.variable);
+
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div className={cn(
+                        "flex flex-col shadow-md rounded-md bg-card border-2 min-w-[200px] overflow-hidden transition-all",
+                        selected ? "border-primary ring-1 ring-primary" : "border-border",
+                        !!displayData.hasError && "border-destructive ring-destructive ring-1"
+                    )}>
+                        <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
+
+                        {/* Header */}
+                        <div className="flex items-center gap-2 px-3 py-1.5 border-b text-xs font-bold uppercase tracking-wide bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border-b-cyan-200 dark:border-cyan-800">
+                            <Thermometer className="h-4 w-4" />
+                            <span className="truncate max-w-[150px]" title={String(displayData.label || 'READ SENSOR')}>
+                                {displayData.label || 'READ SENSOR'}
+                            </span>
+                            {isMirror && <LinkIcon className="ml-auto w-3 h-3 opacity-50" />}
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-3 bg-card flex flex-col gap-2">
+                            <div className={cn(
+                                "text-sm font-semibold truncate flex items-center gap-2",
+                                isUnknownDevice ? "text-muted-foreground font-mono text-xs" : "text-foreground"
+                            )} title={deviceName}>
+                                {deviceName}
+                            </div>
+                        </div>
+
+                        {/* Footer (Output Variable) */}
+                        <div className="px-3 py-1.5 bg-muted/30 border-t text-[10px] font-mono text-muted-foreground flex items-center gap-2">
+                            <span>Save to:</span>
+                            <span className="text-cyan-600 font-bold truncate">➜ [{varName || '?'}]</span>
+                        </div>
+
+                        <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground" />
+
+                        {!!displayData.hasError && (
+                            <div className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 animate-pulse" title={String(displayData.error)}>
+                                <AlertCircle className="w-3 h-3" />
+                            </div>
+                        )}
+                    </div>
+                </TooltipTrigger>
+                {!!displayData.comment && (
+                    <TooltipContent className="max-w-[200px] text-xs">
+                        <p>{displayData.comment as string}</p>
+                    </TooltipContent>
+                )}
+            </Tooltip>
+        );
+    }
+
+    // Default Generic Render
     return (
         <Tooltip>
             <TooltipTrigger asChild>
@@ -84,17 +272,6 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps) => {
                             {!!displayData.variable && (
                                 <span className="text-[10px] text-orange-600 font-mono">
                                     Var: {String(displayData.variable)}
-                                </span>
-                            )}
-
-                            {/* ACTUATOR_SET Specifics */}
-                            {displayData.type === 'ACTUATOR_SET' && !!displayData.action && (
-                                <span className="text-[10px] text-purple-600 font-mono mt-1">
-                                    Action: {String(displayData.action)}
-                                    {/* Show Duration only for Pulse actions */}
-                                    {(String(displayData.action) === 'PULSE_ON' || String(displayData.action) === 'PULSE_OFF') && !!displayData.duration && ` (${String(displayData.duration)}ms)`}
-                                    {/* Show Amount only for Dose action, with correct unit */}
-                                    {String(displayData.action) === 'DOSE' && !!displayData.amount && ` (${String(displayData.amount)}${displayData.amountUnit || 'ml'})`}
                                 </span>
                             )}
 

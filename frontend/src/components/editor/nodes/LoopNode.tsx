@@ -72,26 +72,53 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
                             {isTimeMode ? <Hourglass className="h-4 w-4" /> : <Repeat className="h-4 w-4" />}
                         </div>
 
-                        <div className="flex flex-col leading-tight">
-                            {isTimeMode ? (
+                        <div className="flex flex-col leading-tight w-full">
+                            {data.label ? (
                                 <>
-                                    <span className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">Running For</span>
-                                    <span className="font-bold text-sm text-foreground">{timeout}s</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">Repeat</span>
-                                    <div className="font-bold text-sm text-foreground flex items-center gap-1">
-                                        {isCountVar ? (
-                                            <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs font-mono border border-primary/20">
-                                                {countVar}
-                                            </span>
+                                    <span className="font-bold text-xs uppercase text-foreground truncate max-w-[150px]" title={String(data.label)}>
+                                        {String(data.label)}
+                                    </span>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        <span className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">
+                                            {isTimeMode ? 'Timer:' : 'Count:'}
+                                        </span>
+                                        {isTimeMode ? (
+                                            <span className="font-mono text-xs text-foreground">{timeout}s</span>
                                         ) : (
-                                            <span>{data.count as string}</span>
+                                            <div className="font-mono text-xs text-foreground flex items-center gap-1">
+                                                {isCountVar ? (
+                                                    <span className="px-1 py-0.5 rounded bg-primary/10 text-primary text-[10px] border border-primary/20">
+                                                        {countVar}
+                                                    </span>
+                                                ) : (
+                                                    <span>{data.count as string}</span>
+                                                )}
+                                                <span className="opacity-80">x</span>
+                                            </div>
                                         )}
-                                        <span className="font-normal opacity-80 text-xs">Times</span>
                                     </div>
                                 </>
+                            ) : (
+                                isTimeMode ? (
+                                    <>
+                                        <span className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">Running For</span>
+                                        <span className="font-bold text-sm text-foreground">{timeout}s</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">Repeat</span>
+                                        <div className="font-bold text-sm text-foreground flex items-center gap-1">
+                                            {isCountVar ? (
+                                                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs font-mono border border-primary/20">
+                                                    {countVar}
+                                                </span>
+                                            ) : (
+                                                <span>{data.count as string}</span>
+                                            )}
+                                            <span className="font-normal opacity-80 text-xs">Times</span>
+                                        </div>
+                                    </>
+                                )
                             )}
                         </div>
                     </div>
