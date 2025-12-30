@@ -128,10 +128,18 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
     const getConfigStatus = (device: any): { type: 'enabled' | 'disabled' | 'warning', label: string, tooltip?: string } => {
         if (!device.isEnabled) return { type: 'disabled', label: 'Disabled' };
 
-        // Only check for controller-connected devices (not relay-connected)
-        if (!device.hardware?.parentId) return { type: 'enabled', label: 'Enabled' };
+        // Get controller ID - either directly or via relay
+        let controllerId = device.hardware?.parentId;
 
-        const ctrl = controllers.find(c => c._id === device.hardware.parentId);
+        // If connected via relay, get controller from relay
+        if (!controllerId && device.hardware?.relayId) {
+            const relay = relays.find(r => r._id === device.hardware.relayId);
+            controllerId = relay?.controllerId?._id || relay?.controllerId;
+        }
+
+        if (!controllerId) return { type: 'enabled', label: 'Enabled' };
+
+        const ctrl = controllers.find(c => c._id === controllerId);
         if (!ctrl || !ctrl.capabilities || ctrl.capabilities.length === 0) {
             // Controller has no capabilities info - can't validate
             return { type: 'enabled', label: 'Enabled' };
