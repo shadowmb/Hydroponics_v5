@@ -1,72 +1,107 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
-import { Handle, Position } from '@xyflow/react';
-import { Flag, ArrowRightCircle, DoorOpen, AlertCircle, RefreshCw } from 'lucide-react';
+import { Handle, Position, useNodes } from '@xyflow/react';
+import { Flag, DoorOpen, AlertCircle, RefreshCw, Anchor, FastForward } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { cn } from '../../../lib/utils';
 
-export const FlowControlNode = memo(({ data, selected }: NodeProps) => {
+export const FlowControlNode = memo(({ data, selected }: NodeProps<any>) => {
+    const nodes = useNodes();
     const controlType = data.controlType as string || 'LABEL';
     const labelName = data.labelName as string || 'Unknown';
-    const targetLabel = data.targetLabel as string || 'Unknown';
+    const targetLabelId = data.targetLabel as string || '';
 
-    // Visual configuration based on type
+    // Helper to resolve target name
+    const getTargetName = (id: string) => {
+        if (!id) return 'Unknown';
+        const targetNode = nodes.find(n => n.id === id);
+        // Priority: User Label > Node Type/ID
+        return targetNode?.data?.label ? String(targetNode.data.label) : id;
+    };
+
+    const targetName = getTargetName(targetLabelId);
+
+    // User Label Priority (for THIS block)
+    const userLabel = data.label; // The "Name" given by user in properties
+    const hasUserLabel = !!userLabel;
+
+    // Visual configuration
     let Icon = Flag;
-    let bgColor = 'bg-slate-100';
-    let borderColor = 'border-slate-300';
-    let label = 'Label';
-    let value = labelName;
+    let headerText = 'LABEL';
+    let bodyText = labelName;
+    let headerClass = 'bg-slate-100 text-slate-700 border-b-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+    let cardBorderClass = 'border-slate-300 dark:border-slate-600';
 
-    if (controlType === 'GOTO') {
-        Icon = ArrowRightCircle;
-        bgColor = 'bg-blue-50';
-        borderColor = 'border-blue-300';
-        label = 'Go To';
-        value = targetLabel;
+    if (controlType === 'LABEL') {
+        Icon = Anchor;
+        headerText = 'ANCHOR';
+        bodyText = labelName;
+        headerClass = 'bg-indigo-100 text-indigo-700 border-b-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800';
+        cardBorderClass = 'border-indigo-200 dark:border-indigo-800';
+    } else if (controlType === 'GOTO') {
+        Icon = FastForward;
+        headerText = 'JUMP TO';
+        bodyText = `➜ ${targetName}`;
+        headerClass = 'bg-amber-100 text-amber-700 border-b-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
+        cardBorderClass = 'border-amber-200 dark:border-amber-800 border-dashed';
     } else if (controlType === 'LOOP_BACK') {
         Icon = RefreshCw;
-        bgColor = 'bg-orange-50';
-        borderColor = 'border-orange-300';
-        label = 'Loop Back To';
-        value = targetLabel;
+        headerText = 'LOOP BACK';
+        bodyText = `↻ ${targetName}`;
+        headerClass = 'bg-orange-100 text-orange-700 border-b-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800';
+        cardBorderClass = 'border-orange-200 dark:border-orange-800 border-dashed';
     } else if (controlType === 'LOOP_BREAK') {
         Icon = DoorOpen;
-        bgColor = 'bg-red-50';
-        borderColor = 'border-red-300';
-        label = 'Break Loop';
-        value = 'Exit';
+        headerText = 'BREAK LOOP';
+        bodyText = 'EXIT LOOP';
+        headerClass = 'bg-red-100 text-red-700 border-b-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
+        cardBorderClass = 'border-red-200 dark:border-red-800';
     }
+
+    // If User Label is present, implementation:
+    // Header -> User Label
+    // Body -> Technical Type + Value
+    const displayHeader = hasUserLabel ? userLabel : headerText;
+    const displayBody = hasUserLabel ? (controlType === 'LABEL' ? `ID: ${labelName}` : `${headerText}: ${bodyText}`) : bodyText;
 
     return (
         <Tooltip>
             <TooltipTrigger asChild>
                 <div className={cn(
-                    "px-4 py-2 shadow-sm rounded-full border-2 min-w-[120px] flex items-center gap-3",
-                    bgColor,
-                    selected ? "border-primary" : borderColor,
-                    !!data.hasError && "border-destructive bg-destructive/10"
+                    "flex flex-col shadow-sm rounded-md bg-card border-2 min-w-[140px] overflow-hidden transition-all",
+                    cardBorderClass,
+                    selected ? "border-primary ring-1 ring-primary" : "",
+                    !!data.hasError && "border-destructive ring-destructive ring-1"
                 )}>
-                    {/* Input Handle (All except START-like labels might need inputs, but LABEL is a passthrough usually) */}
-                    <Handle type="target" position={Position.Left} className="w-2 h-2 bg-muted-foreground" />
+                    {/* Input Handle - Always present */}
+                    <Handle type="target" position={Position.Left} className="w-3 h-3 bg-muted-foreground" />
 
-                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-
-                    <div className="flex flex-col leading-none">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">{label}</span>
-                        <span className="text-sm font-bold truncate max-w-[150px]">{value}</span>
+                    {/* Header */}
+                    <div className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 border-b text-[10px] font-bold uppercase tracking-wide",
+                        headerClass
+                    )}>
+                        <Icon className="h-3 w-3" />
+                        <span className="truncate max-w-[120px]" title={String(displayHeader)}>{displayHeader}</span>
                     </div>
 
-                    {/* Output Handle */}
-                    {/* GOTO/BREAK/LOOP_BACK are terminal/jumps, so they effectively end the linear flow here visually, 
-                        but technically might connect to nothing if they are pure jumps. 
-                        However, LABEL acts as a passthrough or anchor. */}
+                    {/* Body */}
+                    <div className="p-2 bg-card flex justify-center">
+                        <span className={cn(
+                            "text-xs font-mono font-semibold truncate max-w-[130px]",
+                            hasUserLabel ? "text-muted-foreground" : "text-foreground"
+                        )} title={String(displayBody)}>
+                            {displayBody}
+                        </span>
+                    </div>
+
+                    {/* Output Handle - ONLY for LABEL (Passthrough) */}
                     {controlType === 'LABEL' && (
-                        <Handle type="source" position={Position.Right} className="w-2 h-2 bg-muted-foreground" />
+                        <Handle type="source" position={Position.Right} className="w-3 h-3 bg-muted-foreground" />
                     )}
 
-                    {/* Error Indicator */}
                     {!!data.hasError && (
-                        <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1" title={String(data.error)}>
+                        <div className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5" title={String(data.error)}>
                             <AlertCircle className="w-3 h-3" />
                         </div>
                     )}

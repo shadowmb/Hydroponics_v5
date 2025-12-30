@@ -91,14 +91,35 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
             validate: (val) => !val || ['COUNT', 'TIME'].includes(val)
         },
         {
-            field: 'maxIterations',
-            message: 'Max iterations is required for Count mode',
-            validate: (val, data) => {
+            field: 'count',
+            message: 'Invalid Iterations count (must be positive number or compatible variable)',
+            validate: (val, data, context) => {
                 const mode = data?.limitMode || 'COUNT';
-                if (mode === 'COUNT') {
-                    return val > 0;
+                if (mode !== 'COUNT') return true;
+
+                // 1. Check if Variable
+                if (typeof val === 'string' && val.startsWith('{{')) {
+                    if (!context || !context.variables) return true; // Can't validate without context
+
+                    const varName = val.slice(2, -2);
+                    const variable = context.variables.find((v: any) => v.id === varName);
+
+                    if (variable && variable.unit) {
+                        // Strict Whitelist: Only allow explicit counting units
+                        // The user requested: "only if it is iteration do not give error"
+                        const allowedUnits = ['count', 'iterations', 'integer', 'index', '#'];
+
+                        // If the variable has a unit, it MUST be one of the allowed counting types.
+                        // Any physical unit (C, L, pH) or other generic unit will fail.
+                        if (!allowedUnits.includes(variable.unit)) {
+                            return false;
+                        }
+                    }
+                    return true;
                 }
-                return true; // Ignore if Time mode
+
+                // 2. Check if Number
+                return Number(val) > 0;
             }
         },
         {

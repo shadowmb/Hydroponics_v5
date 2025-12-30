@@ -29,6 +29,7 @@ import { useStore } from '../core/useStore';
 import { VariableManager } from '../components/editor/VariableManager';
 import { slugify } from '../lib/string-utils';
 import { FlowValidator } from '../lib/validation/FlowValidator';
+import { FlowProvider } from '../context/FlowContext';
 
 const nodeTypes = {
     action: ActionNode,
@@ -416,24 +417,26 @@ const FlowEditorContent: React.FC = () => {
                 <Sidebar />
 
                 <div className="flex-1 h-full relative" ref={reactFlowWrapper}>
-                    <ReactFlow
-                        nodes={nodes}
-                        edges={edges}
-                        onNodesChange={onNodesChange}
-                        onEdgesChange={onEdgesChange}
-                        onConnect={onConnect}
-                        onInit={setReactFlowInstance}
-                        onDrop={onDrop}
-                        onDragOver={onDragOver}
-                        onNodeClick={onNodeClick}
-                        onEdgeClick={onEdgeClick}
-                        onPaneClick={onPaneClick}
-                        nodeTypes={nodeTypes}
-                        fitView
-                    >
-                        <Background />
-                        <Controls />
-                    </ReactFlow>
+                    <FlowProvider value={{ variables }}>
+                        <ReactFlow
+                            nodes={nodes}
+                            edges={edges}
+                            onNodesChange={onNodesChange}
+                            onEdgesChange={onEdgesChange}
+                            onConnect={onConnect}
+                            onInit={setReactFlowInstance}
+                            onDrop={onDrop}
+                            onDragOver={onDragOver}
+                            onNodeClick={onNodeClick}
+                            onEdgeClick={onEdgeClick}
+                            onPaneClick={onPaneClick}
+                            nodeTypes={nodeTypes}
+                            fitView
+                        >
+                            <Background />
+                            <Controls />
+                        </ReactFlow>
+                    </FlowProvider>
                 </div>
 
                 <PropertiesPanel
