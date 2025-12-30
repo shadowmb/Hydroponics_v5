@@ -131,6 +131,12 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'boolean',
                 defaultValue: false,
                 description: 'Alert on failure'
+            },
+            revertOnStop: {
+                label: 'Safety Revert on Stop',
+                type: 'boolean',
+                defaultValue: true,
+                description: 'Revert to initial state if flow stops/fails'
             }
         }
     },

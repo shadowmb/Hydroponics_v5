@@ -6,6 +6,7 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Switch } from '../ui/switch';
 import { Copy, AlertCircle, Settings2, Monitor, BookOpen, Pencil, ShieldAlert } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { StrategyRegistry, validateBlockStrategy, validateStrategyCalibration } from '@shared/strategies/StrategyRegistry'; // Import Registry
@@ -526,6 +527,16 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                         variables={variables}
                     />
                 );
+            case 'boolean':
+                return (
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            checked={!!value}
+                            onCheckedChange={(checked) => handleChange(key, checked)}
+                        />
+                        <span className="text-xs text-muted-foreground">{field.description || field.label}</span>
+                    </div>
+                );
             default:
                 return null;
         }
@@ -636,7 +647,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                 {definition ? (
                     (() => {
-                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel'];
+                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel', 'revertOnStop'];
                         const mainFields = Object.entries(definition.fields).filter(([key]) => !errorKeys.includes(key));
                         const errorFields = Object.entries(definition.fields).filter(([key]) => errorKeys.includes(key));
 
