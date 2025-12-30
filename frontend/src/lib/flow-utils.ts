@@ -78,10 +78,12 @@ export const flowToReactFlow = (flow: Partial<Flow>): { nodes: Node[]; edges: Ed
         // 1. Create Node
         const isCondition = block.type === 'IF';
         const isLoop = block.type === 'LOOP';
+        const isFlowControl = block.type === 'FLOW_CONTROL';
         let nodeType = 'generic';
 
         if (isCondition) nodeType = 'condition';
         else if (isLoop) nodeType = 'loop';
+        else if (isFlowControl) nodeType = 'flowControl';
 
         // Determine Label
         let label = block.type;
