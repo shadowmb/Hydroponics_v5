@@ -224,7 +224,8 @@ String handleModbusRtuRead(const char* params) {
           uint8_t byteCount = ch;
           response[2] = ch;
           if (readN(&response[3], byteCount + 2, timeout) == byteCount + 2) {
-             uint16_t receivedCRC = response[byteCount + 4] << 8 | response[byteCount + 3]; 
+             // Modbus CRC is Little Endian: low byte first, high byte second
+             uint16_t receivedCRC = response[byteCount + 3] | (response[byteCount + 4] << 8); 
              uint16_t calculatedCRC = calculateModbusCRC16(response, byteCount + 3);
              if (receivedCRC == calculatedCRC) {
                success = true;
