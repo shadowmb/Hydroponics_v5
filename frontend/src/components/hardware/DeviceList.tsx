@@ -18,7 +18,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
     const [devices, setDevices] = useState<any[]>([]);
     const [controllers, setControllers] = useState<any[]>([]);
     const [relays, setRelays] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
     const [testDialogOpen, setTestDialogOpen] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
@@ -29,7 +28,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
 
     const loadData = async () => {
         try {
-            setLoading(true);
             const [devicesData, controllersData, relaysData] = await Promise.all([
                 hardwareService.getDevices(),
                 hardwareService.getControllers(),
@@ -40,8 +38,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
             setRelays(relaysData);
         } catch (error) {
             toast.error('Failed to load data');
-        } finally {
-            setLoading(false);
         }
     };
 

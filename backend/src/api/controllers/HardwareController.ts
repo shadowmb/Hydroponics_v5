@@ -581,8 +581,14 @@ export class HardwareController {
     static async getTemplateUnits(req: FastifyRequest, reply: FastifyReply) {
         try {
             const { templates } = await import('../../modules/hardware/DeviceTemplateManager');
-            const units = templates.getAllUnits();
-            return reply.send({ success: true, data: units });
+            // Get units strictly from loaded device templates (Sensors/Actuators)
+            const templateUnits = templates.getAllUnits();
+
+            // Add specific generic units that don't come from hardware but are useful
+            const extraUnits = ['count', 'iterations', '%'];
+
+            const merged = Array.from(new Set([...templateUnits, ...extraUnits])).sort();
+            return reply.send({ success: true, data: merged });
         } catch (error) {
             req.log.error(error);
             return reply.status(500).send({ success: false, error: 'Failed to fetch template units' });

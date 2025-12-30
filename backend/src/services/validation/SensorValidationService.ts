@@ -120,7 +120,7 @@ export class SensorValidationService {
         }
 
         if (fallbackAction === 'useLastValid') {
-            if (device.lastReading && device.lastReading.value !== undefined) {
+            if (device.lastReading && device.lastReading.value != null) {
                 // Check Staleness Age
                 const age = Date.now() - new Date(device.lastReading.timestamp).getTime();
                 if (age > staleTimeoutMs) {
@@ -129,7 +129,7 @@ export class SensorValidationService {
 
                 return {
                     success: true,
-                    value: device.lastReading.value,
+                    value: device.lastReading.value as number,
                     isFallback: true,
                     fallbackType: 'useLastValid'
                 };

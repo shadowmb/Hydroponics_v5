@@ -61,7 +61,7 @@ register('light', 'lux', 'lx', 'klux', 'umol/m2*s', 'W/m2');
 register('analytic', 'pH', 'ORP', 'DO');
 
 // Generic / State
-register('generic', 'adc', 'mV', 'mv', '%', 'percent', 'boolean', 'on/off');
+register('generic', 'adc', 'mV', 'mv', '%', 'percent', 'boolean', 'on/off', 'count', 'iterations', 'integer', 'index', '#');
 
 
 
