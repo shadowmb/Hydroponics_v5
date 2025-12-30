@@ -35,7 +35,8 @@ export const automationMachine = createMachine({
             stepCount: 0,
             startTime: 0,
             errors: [],
-            resumeState: {}
+            resumeState: {},
+            activeResources: {}
         },
         blocks: new Map(),
         edges: [],
@@ -63,7 +64,8 @@ export const automationMachine = createMachine({
                                 stepCount: 0,
                                 variables: event.execContext?.variables || {},
                                 variableDefinitions: event.execContext?.variableDefinitions || {},
-                                errors: []
+                                errors: [],
+                                activeResources: {}
                             }
                         };
                     })
@@ -171,7 +173,8 @@ export const automationMachine = createMachine({
                                 stepCount: 0,
                                 variables: event.execContext?.variables || {},
                                 variableDefinitions: event.execContext?.variableDefinitions || {},
-                                errors: []
+                                errors: [],
+                                activeResources: {}
                             }
                         };
                     })
@@ -199,7 +202,8 @@ export const automationMachine = createMachine({
                                 startTime: 0, // Not started yet
                                 stepCount: 0,
                                 variables: {},
-                                errors: []
+                                errors: [],
+                                activeResources: {}
                             }
                         };
                     })
@@ -239,7 +243,8 @@ export const automationMachine = createMachine({
                                 startTime: 0, // Not started yet
                                 stepCount: 0,
                                 variables: {},
-                                errors: []
+                                errors: [],
+                                activeResources: {}
                             }
                         };
                     })

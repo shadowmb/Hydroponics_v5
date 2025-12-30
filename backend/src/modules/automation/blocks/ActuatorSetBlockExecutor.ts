@@ -8,9 +8,37 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
     async execute(ctx: ExecutionContext, params: any, signal?: AbortSignal): Promise<BlockResult> {
         const { deviceId, value, action = 'ON', duration, amount } = params;
 
+
         if (!deviceId) {
             return { success: false, error: 'Missing required param: deviceId' };
         }
+
+        // --- SAFETY STOP REGISTRY ---
+        // Register device usage if not already present
+        if (!ctx.activeResources) ctx.activeResources = {};
+
+        if (!ctx.activeResources[deviceId]) {
+            // First touch: Recorcd Initial State
+            const currentVal = ctx.devices[deviceId]?.value;
+            // Default to 0 (OFF) if unknown, otherwise trust the snapshot
+            const initialState = (typeof currentVal === 'number') ? currentVal : (currentVal ? 1 : 0);
+
+            ctx.activeResources[deviceId] = {
+                deviceId,
+                driverId: '', // Placeholder, populated below
+                initialState: initialState,
+                lastCommand: action,
+                revertOnStop: true
+            };
+        } else {
+            // Update tracking
+            ctx.activeResources[deviceId].lastCommand = action;
+            // Update policy if optionally passed (future proofing)
+            if (params.revertOnStop !== undefined) {
+                ctx.activeResources[deviceId].revertOnStop = params.revertOnStop;
+            }
+        }
+        // ----------------------------
 
         try {
             // 1. Fetch Device to get Driver ID
@@ -22,6 +50,11 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
             const driverId = device.config?.driverId;
             if (!driverId) {
                 return { success: false, error: `Device ${deviceId} has no driver configured` };
+            }
+
+            // Update Registry with valid Driver ID
+            if (ctx.activeResources[deviceId]) {
+                ctx.activeResources[deviceId].driverId = driverId;
             }
 
             // 2. Determine Action Logic

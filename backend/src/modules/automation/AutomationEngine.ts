@@ -79,6 +79,15 @@ export class AutomationEngine {
         this.actor.subscribe(async (snapshot) => {
             const stateValue = snapshot.value as string;
             logger.debug({ state: stateValue, block: snapshot.context.currentBlockId }, '⚙️ Automation State Transition');
+
+            // --- SAFETY STOP CLEANUP ---
+            if (stateValue === 'stopped' || stateValue === 'error') {
+                if (snapshot.context.execContext) {
+                    await this.cleanupResources(snapshot.context.execContext);
+                }
+            }
+            // ---------------------------
+
             // ... (skip purely existing code references if possible, or use larger chunks)
 
             // Sync with DB Session
@@ -295,6 +304,39 @@ export class AutomationEngine {
             ...snapshot,
             sessionId: this.currentSessionId
         };
+    }
+
+    /**
+     * Safety Stop Mechanism
+     * Reverts active resources to their initial state if they are flagged for revert.
+     */
+    private async cleanupResources(context: ExecutionContext) {
+        if (!context.activeResources) return;
+
+        const resources = Object.values(context.activeResources);
+        if (resources.length === 0) return;
+
+        logger.info({ count: resources.length }, '🛡️ Safety Stop: Checking active resources for cleanup...');
+
+        for (const res of resources) {
+            if (res.revertOnStop) {
+                try {
+                    // Only revert if we define "Active=1" and "Initial=0" or vice versa.
+                    // For now, we blindly revert to initialState.
+                    // We also check if the driverId was captured successfully.
+                    if (!res.driverId) continue;
+
+                    logger.info({ deviceId: res.deviceId, restoreTo: res.initialState }, '🔄 Safety Stop: Reverting Device Status');
+
+                    // We use RELAY_SET as the universal "Set State" command for actuators.
+                    // If complex devices need other commands, this logic might need expansion.
+                    await this.deviceService.sendCommand(res.deviceId, res.driverId, 'RELAY_SET', { state: res.initialState });
+
+                } catch (err: any) {
+                    logger.error({ err: err.message, deviceId: res.deviceId }, '❌ Failed to revert device state during Safety Stop');
+                }
+            }
+        }
     }
 
     /**
