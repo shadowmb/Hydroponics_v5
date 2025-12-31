@@ -4,6 +4,7 @@ import { NotificationChannel, INotificationChannel } from '../models/Notificatio
 import { NotificationRule } from '../models/NotificationRule';
 import { NotificationProvider } from '../models/NotificationProvider';
 import { telegramService } from './TelegramBotService';
+import mongoose from 'mongoose';
 
 // Rate Limiting Types
 interface RateLimitEntry {
@@ -33,6 +34,21 @@ export class NotificationService {
     public async initialize() {
         this.initializeListeners();
         await this.seedDefaultRules();
+        await this.startProviders();
+    }
+
+    private async startProviders() {
+        try {
+            const providers = await NotificationProvider.find({ isEnabled: true, type: 'telegram' });
+            for (const p of providers) {
+                if (!await telegramService.hasBot(p._id.toString())) {
+                    logger.info({ provider: p.name }, '🚀 Booting Telegram Bot...');
+                    await telegramService.registerBot(p);
+                }
+            }
+        } catch (err) {
+            logger.warn({ err }, 'Failed to auto-start notification providers');
+        }
     }
 
     private async seedDefaultRules() {
@@ -107,6 +123,112 @@ export class NotificationService {
 
         // Startup
         this.handleSystemEvent('SYSTEM_STARTUP', { timestamp: new Date() });
+
+        // 5. Listen for Telegram Commands
+        events.on('telegram:command' as any, async (payload) => {
+            await this.handleCommand(payload);
+        });
+    }
+
+    /**
+     * Handle Incoming Commands (e.g. from Telegram)
+     */
+    private async handleCommand(payload: any) {
+        const { command, providerId, chatId, user, params } = payload;
+
+        logger.info({ command, user }, '🤖 Processing Bot Command');
+
+        try {
+            let response = '';
+
+            if (command === 'STATUS') {
+                // Lazy import to avoid circular dep if any
+                const { automation } = require('../modules/automation/AutomationEngine');
+                const state = automation.getSnapshot().value;
+                const isRunning = state === 'running' || state === 'paused';
+
+                const { activeProgramService } = require('../modules/scheduler/ActiveProgramService');
+                const active = await activeProgramService.getActive();
+                const programName = active?.programId || 'None';
+
+                response = `🤖 **System Status**\n` +
+                    `State: ${isRunning ? '🟢 RUNNING' : '⚪ ' + state.toUpperCase()}\n` +
+                    `Program: ${programName}\n` +
+                    `Time: ${new Date().toLocaleTimeString()}`;
+            }
+            else if (command === 'STOP') {
+                const { automation } = require('../modules/automation/AutomationEngine');
+                await automation.stopProgram();
+                response = `🛑 **EMERGENCY STOP**\nRequested by: ${user}`;
+            }
+            else if (command === 'SENSORS') {
+                const { DeviceModel } = require('../models/Device');
+                const sensors = await DeviceModel.find({ type: 'SENSOR', isEnabled: true });
+
+                if (sensors.length === 0) {
+                    response = '📭 No active sensors found.';
+                } else {
+                    response = `📡 **Active Sensors:**\n\n`;
+                    for (const s of sensors) {
+                        const val = s.lastReading?.value !== undefined ? s.lastReading.value.toFixed(2) : '--';
+                        const unit = s.displayUnit || ''; // Basic unit fallback
+                        response += `• ${s.name}: **${val} ${unit}**\n`;
+                    }
+                }
+            }
+            else if (command === 'SENSOR') {
+                const nameOrId = params?.args ? params.args.trim() : ''; // We need to ensure params.args is passed
+                if (!nameOrId) {
+                    response = '⚠️ Please specify a sensor name or ID.\nUsage: /sensor <name>';
+                } else {
+                    const { DeviceModel } = require('../models/Device');
+                    const mongoose = require('mongoose');
+                    // Case-insensitive search by name or exact ID
+                    const sensor = await DeviceModel.findOne({
+                        $or: [
+                            { _id: mongoose.isValidObjectId(nameOrId) ? nameOrId : null },
+                            { name: { $regex: new RegExp(`^${nameOrId}$`, 'i') } }
+                        ]
+                    });
+
+                    if (!sensor) {
+                        response = `❌ Sensor not found: "${nameOrId}"`;
+                    } else {
+                        const val = sensor.lastReading?.value !== undefined ? sensor.lastReading.value : '--';
+                        const raw = sensor.lastReading?.raw !== undefined ? sensor.lastReading.raw : '--';
+                        const time = sensor.lastReading?.timestamp ? new Date(sensor.lastReading.timestamp).toLocaleTimeString() : 'Never';
+                        const unit = sensor.displayUnit || '';
+
+                        response = `🔎 **Sensor Details**\n\n` +
+                            `Name: ${sensor.name}\n` +
+                            `Status: ${sensor.status.toUpperCase()}\n` +
+                            `Value: **${val} ${unit}**\n` +
+                            `Raw: ${raw}\n` +
+                            `Last Update: ${time}\n` +
+                            `ID: \`${sensor._id}\``;
+                    }
+                }
+            }
+            else if (command === 'HELP') {
+                response = `🤖 **Available Commands**\n\n` +
+                    `/status - Check system health & program\n` +
+                    `/sensors - List all active sensors\n` +
+                    `/sensor <name> - details for specific sensor\n` +
+                    `/stop - EMERGENCY STOP automation\n` +
+                    `/start <name> - Start a program\n` +
+                    `/help - Show this message`;
+            }
+            else {
+                response = `❓ Unknown command: ${command}`;
+            }
+
+            // Send Reply
+            await telegramService.sendMessage(providerId, chatId, response);
+
+        } catch (err: any) {
+            logger.error({ err }, 'Command Processing Failed');
+            await telegramService.sendMessage(providerId, chatId, `⚠️ Error: ${err.message}`);
+        }
     }
 
     /**

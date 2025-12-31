@@ -122,25 +122,45 @@ export class TelegramBotService {
             ctx.reply('🛑 Sending STOP signal...');
         });
 
+        bot.command('help', (ctx) => {
+            this.emitCommand(providerId, 'HELP', ctx);
+        });
+
+        bot.command('sensors', (ctx) => {
+            this.emitCommand(providerId, 'SENSORS', ctx);
+        });
+
+        bot.command('sensor', (ctx) => {
+            const args = ctx.message.text.split(' ').slice(1).join(' ');
+            this.emitCommand(providerId, 'SENSOR', ctx, { args });
+        });
+
         bot.on('text', (ctx) => {
             // General text handler if needed
         });
     }
 
     private async checkWhitelist(providerId: string, chatId: string): Promise<boolean> {
-        // In v1, we check the Provider config in DB directly if we don't have it cached.
-        // For efficiency, we might want to cache this in the service instance.
-        // For now, let's fetch purely for correctness or assume we pass it during register.
-
         try {
             const provider = await NotificationProvider.findById(providerId);
-            if (!provider || !provider.config.whitelist) return false;
+            if (!provider || !provider.config.whitelist) {
+                logger.warn({ providerId }, '⛔ Whitelist empty or provider missing');
+                return false;
+            }
 
+            // Normalize whitelist to array of strings
             const allowedIds = Array.isArray(provider.config.whitelist)
-                ? provider.config.whitelist.map(String)
-                : [String(provider.config.whitelist)];
+                ? provider.config.whitelist.map(id => String(id).trim())
+                : String(provider.config.whitelist).split(',').map(s => s.trim());
 
-            return allowedIds.includes(chatId);
+            const incomingId = String(chatId).trim();
+            const isAllowed = allowedIds.includes(incomingId);
+
+            if (!isAllowed) {
+                logger.warn({ incomingId, allowedIds }, '⛔ Whitelist Mismatch');
+            }
+
+            return isAllowed;
         } catch (err) {
             logger.error({ err }, 'Security Check Failed');
             return false;
