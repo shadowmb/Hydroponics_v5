@@ -5,6 +5,7 @@ import { SessionController } from './controllers/SessionController';
 import { FlowController } from './controllers/FlowController';
 import { ProgramController } from './controllers/ProgramController';
 import { NotificationController } from './controllers/NotificationController';
+import { NotificationRuleController } from './controllers/NotificationRuleController';
 
 export async function apiRoutes(app: FastifyInstance) {
 
@@ -131,4 +132,8 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/active-program/schedule/:itemId/restore', ActiveProgramController.restoreCycle);
     app.post('/api/active-program/schedule/:itemId/retry', ActiveProgramController.retryCycle);
     app.post('/api/active-program/schedule/:itemId/force-start', ActiveProgramController.forceStartCycle);
+
+    // Notification Rules (System)
+    app.get('/api/notifications/rules', NotificationRuleController.list);
+    app.put('/api/notifications/rules/:event', NotificationRuleController.update);
 }

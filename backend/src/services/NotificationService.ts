@@ -1,6 +1,7 @@
 import { events } from '../core/EventBusService';
 import { logger } from '../core/LoggerService';
 import { NotificationChannel, INotificationChannel } from '../models/NotificationChannel';
+import { NotificationRule } from '../models/NotificationRule';
 import { NotificationProvider } from '../models/NotificationProvider';
 import { telegramService } from './TelegramBotService';
 
@@ -29,8 +30,38 @@ export class NotificationService {
         return NotificationService.instance;
     }
 
-    public initialize() {
+    public async initialize() {
         this.initializeListeners();
+        await this.seedDefaultRules();
+    }
+
+    private async seedDefaultRules() {
+        try {
+            const count = await NotificationRule.countDocuments();
+            if (count === 0) {
+                // Find a channel to bind to
+                const channel = await NotificationChannel.findOne();
+                if (channel) {
+                    await NotificationRule.create({
+                        event: 'PROGRAM_START',
+                        channelId: channel._id,
+                        template: '🚀 Application Started: {{programName}}',
+                        isEnabled: true
+                    });
+
+                    await NotificationRule.create({
+                        event: 'CYCLE_COMPLETE',
+                        channelId: channel._id,
+                        template: '✅ Cycle Finished: {{cycleId}}',
+                        isEnabled: true
+                    });
+
+                    logger.info('🌱 Seeded Default Notification Rules');
+                }
+            }
+        } catch (err) {
+            logger.warn({ err }, 'Failed to seed default rules');
+        }
     }
 
     private initializeListeners() {
@@ -51,7 +82,73 @@ export class NotificationService {
         // 3. Listen for Critical System Errors
         events.on('error:critical', async (payload) => {
             await this.dispatchToChannel('System Alerts', `🚨 CRITICAL: ${payload.message}`, 'CRITICAL');
+            // Also try Rule Engine
+            await this.handleSystemEvent('CRITICAL_ERROR', payload);
         });
+
+        // 4. System / Automation Events
+        // We need to verify exact event names emitted by AutomationEngine
+        // 'automation:state_change' -> check state
+        // OR better: AutomationEngine emits new atomic events? 
+        // Currently it emits: automation:block_start, automation:block_end, automation:state_change
+
+        // We might need to Hook into 'automation:state_change' or add specific events in AutomationEngine.
+        // Let's assume we will add/use:
+        // 'automation:program_start' -> emitted by ProgramController/Engine
+        // 'automation:program_stop'
+        // 'scheduler:cycle_start' 
+        // 'scheduler:cycle_complete'
+
+        // For now, let's catch generic ones or add them.
+        events.on('automation:program_start' as any, (p) => this.handleSystemEvent('PROGRAM_START', p));
+        events.on('automation:program_stop' as any, (p) => this.handleSystemEvent('PROGRAM_STOP', p));
+        events.on('scheduler:cycle_start' as any, (p) => this.handleSystemEvent('CYCLE_START', p));
+        events.on('scheduler:cycle_complete' as any, (p) => this.handleSystemEvent('CYCLE_COMPLETE', p));
+
+        // Startup
+        this.handleSystemEvent('SYSTEM_STARTUP', { timestamp: new Date() });
+    }
+
+    /**
+     * Handle Global System Events via Rules
+     */
+    private async handleSystemEvent(eventType: string, payload: any) {
+        try {
+            // 1. Find Rule
+            const rule = await NotificationRule.findOne({ event: eventType });
+
+            if (!rule || !rule.isEnabled || !rule.channelId) {
+                return; // No rule or disabled
+            }
+
+            // 2. Format Message (Simple Template)
+            // Default Templates if none provided
+            let message = rule.template || `ℹ️ Event: ${eventType}`;
+
+            // Simple Variable Substitution
+            if (payload) {
+                if (payload.programName) message = message.replace('{{programName}}', payload.programName);
+                if (payload.cycleId) message = message.replace('{{cycleId}}', payload.cycleId);
+                if (payload.cycleName) message = message.replace('{{cycleName}}', payload.cycleName); // NEW
+                if (payload.reason) message = message.replace('{{reason}}', payload.reason);
+                if (payload.message) message = message.replace('{{error}}', payload.message); // Payload often has 'message' for errors
+                if (payload.error) message = message.replace('{{error}}', payload.error);     // OR 'error'
+
+                // Timestamp support
+                const timeStr = new Date().toLocaleTimeString();
+                message = message.replace('{{timestamp}}', timeStr);
+            }
+
+            // Fallback for empty template
+            if (eventType === 'PROGRAM_START') message = message.includes('Event:') ? `🚀 Program Started` : message;
+            if (eventType === 'PROGRAM_STOP') message = message.includes('Event:') ? `🛑 Program Stopped` : message;
+
+            // 3. Dispatch
+            await this.dispatchToChannelById(rule.channelId, message, eventType);
+
+        } catch (error) {
+            logger.warn({ error, eventType }, 'Failed to process system notification rule');
+        }
     }
 
     /**

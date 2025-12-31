@@ -43,6 +43,12 @@ export interface SystemEvents {
     'automation:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null; error?: string | null };
     'automation:execution_step': { blockId: string; type: string; sessionId?: string | null; label: string; duration?: number; timestamp: number; params?: any };
     'log': { timestamp: Date | string; level: string; message: string; blockId?: string; data?: any; sessionId?: string | null };
+
+    // System Lifecycle Events
+    'automation:program_start': { programId: string; sessionId: string; programName?: string };
+    'automation:program_stop': { sessionId: string; reason?: string };
+    'scheduler:cycle_start': { cycleId: string; programId?: string; timestamp: Date; cycleName?: string };
+    'scheduler:cycle_complete': { cycleId: string; programId?: string; duration?: number; timestamp: Date; cycleName?: string };
 }
 
 export class EventBusService {

@@ -94,12 +94,13 @@ export class TelegramBotService {
         // Universal Security Middleware
         bot.use(async (ctx, next) => {
             const chatId = ctx.chat?.id.toString();
+            // Log for discovery
+            logger.info({ chatId, from: ctx.from?.username }, '📨 [Telegram] Message Received');
+
             if (chatId && await this.checkWhitelist(providerId, chatId)) {
                 return next();
             } else {
-                logger.warn({ chatId, providerId }, '⛔ Unauthorized Telegram Access Attempt');
-                // Optional: ctx.reply('⛔ Unauthorized');
-                // Silence is golden for security.
+                logger.warn({ chatId, providerId }, '⛔ Unauthorized Telegram Access Attempt (Not in Whitelist)');
             }
         });
 

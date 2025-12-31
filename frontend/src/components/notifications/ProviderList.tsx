@@ -21,9 +21,10 @@ export function ProviderList() {
     const [isLoading, setIsLoading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
 
-    // Form State
+    const [editingId, setEditingId] = useState<string | null>(null);
+
     const [newName, setNewName] = useState('');
-    const [newType] = useState<'telegram' | 'email'>('telegram');
+    const [newType, setNewType] = useState<'telegram' | 'email'>('telegram');
     const [newToken, setNewToken] = useState('');
     const [newChatId, setNewChatId] = useState('');
 
@@ -44,7 +45,16 @@ export function ProviderList() {
         fetchProviders();
     }, []);
 
-    const handleCreate = async () => {
+    const handleEdit = (p: Provider) => {
+        setNewName(p.name);
+        setNewType(p.type);
+        setNewToken(p.config.token || '');
+        setNewChatId(p.config.chatId || '');
+        setEditingId(p._id);
+        setIsCreating(true);
+    };
+
+    const handleSave = async () => {
         if (!newName || !newToken) {
             toast.error("Name and Token are required");
             return;
@@ -62,22 +72,29 @@ export function ProviderList() {
                 isEnabled: true
             };
 
-            const res = await fetch('http://localhost:3000/api/notifications/providers', {
-                method: 'POST',
+            const url = editingId
+                ? `http://localhost:3000/api/notifications/providers/${editingId}`
+                : 'http://localhost:3000/api/notifications/providers';
+
+            const method = editingId ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
-            if (!res.ok) throw new Error('Failed to create');
+            if (!res.ok) throw new Error('Failed to save');
 
-            toast.success("Provider created");
+            toast.success(editingId ? "Provider updated" : "Provider created");
             setIsCreating(false);
+            setEditingId(null);
             setNewName('');
             setNewToken('');
             setNewChatId('');
             fetchProviders();
         } catch (err) {
-            toast.error("Error creating provider");
+            toast.error("Error saving provider");
         }
     };
 
@@ -140,6 +157,9 @@ export function ProviderList() {
                                 <Button size="sm" variant="outline" onClick={() => handleTest(p._id)}>
                                     Test
                                 </Button>
+                                <Button size="icon" variant="ghost" onClick={() => handleEdit(p)}>
+                                    <Badge className="h-4 w-4 bg-transparent text-foreground hover:bg-muted p-0"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg></Badge>
+                                </Button>
                                 <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(p._id)}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -176,12 +196,12 @@ export function ProviderList() {
                             <Input placeholder="123456789" value={newChatId} onChange={e => setNewChatId(e.target.value)} />
                         </div>
                         <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={() => setIsCreating(false)}>Cancel</Button>
-                            <Button onClick={handleCreate}>Save Provider</Button>
+                            <Button variant="ghost" onClick={() => { setIsCreating(false); setEditingId(null); }}>Cancel</Button>
+                            <Button onClick={handleSave}>{editingId ? 'Update Provider' : 'Save Provider'}</Button>
                         </div>
                     </div>
                 ) : (
-                    <Button className="w-full" variant="outline" onClick={() => setIsCreating(true)}>
+                    <Button className="w-full" variant="outline" onClick={() => { setIsCreating(true); setEditingId(null); setNewName(''); setNewToken(''); setNewChatId(''); }}>
                         <Plus className="mr-2 h-4 w-4" /> Add Provider
                     </Button>
                 )}

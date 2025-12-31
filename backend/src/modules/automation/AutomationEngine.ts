@@ -27,6 +27,7 @@ export class AutomationEngine {
     private actor!: Actor<any>;
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
+    private currentProgramName: string | null = null;
     private executionStartTime: number = 0;
 
     private instanceId = Math.random().toString(36).substring(7);
@@ -116,6 +117,14 @@ export class AutomationEngine {
                 // @ts-ignore - Triggered by BlockResult properties
                 summary: (snapshot.event as any)?.output?.summary
             });
+
+            // Emit Program Stop on Terminal States
+            if (['stopped', 'error', 'completed'].includes(stateValue)) {
+                events.emit('automation:program_stop', {
+                    sessionId: this.currentSessionId!,
+                    reason: stateValue
+                });
+            }
         });
     }
 
@@ -141,6 +150,7 @@ export class AutomationEngine {
         if (!flow) {
             throw new Error(`Flow not found: ${programId}`);
         }
+        this.currentProgramName = flow.name;
 
         if (!flow.isActive) {
             throw new Error(`Flow is not active: ${programId}`);
@@ -279,6 +289,12 @@ export class AutomationEngine {
 
         this.executionStartTime = Date.now();
         this.actor.send({ type: 'START' });
+
+        events.emit('automation:program_start', {
+            programId: 'unknown', // We don't store ID in class prop, but sessionId links it.
+            sessionId: this.currentSessionId!,
+            programName: this.currentProgramName || 'Unknown Program'
+        });
     }
 
     public async unloadProgram() {

@@ -24,7 +24,8 @@ const config = {
 
 try {
     console.log('Building firmware...');
-    const source = builder.build(config);
+    console.log('Building firmware...');
+    const source = builder.build(config, {});
 
     const outputPath = path.join(__dirname, '../test_output.ino');
     fs.writeFileSync(outputPath, source);

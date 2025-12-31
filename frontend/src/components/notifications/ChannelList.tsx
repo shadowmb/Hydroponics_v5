@@ -27,7 +27,7 @@ export function ChannelList() {
     const [isLoading, setIsLoading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
 
-    // Form
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [newName, setNewName] = useState('');
     const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
 
@@ -55,15 +55,28 @@ export function ChannelList() {
         fetchData();
     }, []);
 
-    const handleCreate = async () => {
+    const handleEdit = (c: Channel) => {
+        setNewName(c.name);
+        setSelectedProviders(c.providerIds.map((p: any) => p._id));
+        setEditingId(c._id);
+        setIsCreating(true);
+    };
+
+    const handleSave = async () => {
         if (!newName) {
             toast.error("Name is required");
             return;
         }
 
         try {
-            const res = await fetch('http://localhost:3000/api/notifications/channels', {
-                method: 'POST',
+            const url = editingId
+                ? `http://localhost:3000/api/notifications/channels/${editingId}`
+                : 'http://localhost:3000/api/notifications/channels';
+
+            const method = editingId ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: newName,
@@ -71,15 +84,16 @@ export function ChannelList() {
                 })
             });
 
-            if (!res.ok) throw new Error('Failed to create');
+            if (!res.ok) throw new Error('Failed to save');
 
-            toast.success("Channel created");
+            toast.success(editingId ? "Channel updated" : "Channel created");
             setIsCreating(false);
+            setEditingId(null);
             setNewName('');
             setSelectedProviders([]);
             fetchData();
         } catch (err) {
-            toast.error("Error creating channel");
+            toast.error("Error saving channel");
         }
     };
 
@@ -132,9 +146,14 @@ export function ChannelList() {
                                     </div>
                                 </div>
                             </div>
-                            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(c._id)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button size="icon" variant="ghost" onClick={() => handleEdit(c)}>
+                                    <Badge className="h-4 w-4 bg-transparent text-foreground hover:bg-muted p-0"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg></Badge>
+                                </Button>
+                                <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(c._id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -162,12 +181,12 @@ export function ChannelList() {
                             {providers.length === 0 && <p className="text-xs text-destructive">No providers available. Add a provider first.</p>}
                         </div>
                         <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={() => setIsCreating(false)}>Cancel</Button>
-                            <Button onClick={handleCreate} disabled={providers.length === 0}>Save Channel</Button>
+                            <Button variant="ghost" onClick={() => { setIsCreating(false); setEditingId(null); }}>Cancel</Button>
+                            <Button onClick={handleSave} disabled={providers.length === 0}>{editingId ? 'Update Channel' : 'Save Channel'}</Button>
                         </div>
                     </div>
                 ) : (
-                    <Button className="w-full" variant="outline" onClick={() => setIsCreating(true)}>
+                    <Button className="w-full" variant="outline" onClick={() => { setIsCreating(true); setEditingId(null); setNewName(''); setSelectedProviders([]); }}>
                         <Plus className="mr-2 h-4 w-4" /> Add Channel
                     </Button>
                 )}

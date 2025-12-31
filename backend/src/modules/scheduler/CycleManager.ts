@@ -35,7 +35,7 @@ export class CycleManager {
         });
     }
 
-    public async startCycle(cycleId: string, steps: { flowId: string, overrides: any }[], overrides: Record<string, any> = {}): Promise<string> {
+    public async startCycle(cycleId: string, cycleName: string, steps: { flowId: string, overrides: any }[], overrides: Record<string, any> = {}): Promise<string> {
         // 1. Check if busy
         if (this.currentSession && this.currentSession.status === 'running') {
             throw new Error('A cycle is already running');
@@ -51,13 +51,19 @@ export class CycleManager {
             currentStepIndex: 0,
             logs: [],
             steps: steps, // Store steps in session
-            context: overrides // Store global overrides in context
+            context: { ...overrides, cycleName } // Store cycleName in context for retrieval later
         });
 
-        logger.info({ cycleId, sessionId: this.currentSession.id, stepsCount: steps.length, overrides }, '🚀 Starting Cycle (Trace Overrides)');
+        logger.info({ cycleId, cycleName, sessionId: this.currentSession.id, stepsCount: steps.length, overrides }, '🚀 Starting Cycle (Trace Overrides)');
 
         // 3. Start First Step
         await this.executeStep(0);
+
+        events.emit('scheduler:cycle_start', {
+            cycleId,
+            cycleName, // Emit Name
+            timestamp: new Date()
+        });
 
         return this.currentSession.id;
     }
@@ -149,13 +155,21 @@ export class CycleManager {
                 endTime: new Date()
             });
 
-            // Capture ID before nulling
+            // Capture ID and Name before nulling
             const cycleId = this.currentSession.cycleId;
+            const cycleName = this.currentSession.context?.cycleName || 'Unknown';
+
             this.currentSession = null;
 
             // Notify ActiveProgramService
             const activeProgramService = require('./ActiveProgramService').activeProgramService;
             await activeProgramService.markCycleCompleted(cycleId);
+
+            events.emit('scheduler:cycle_complete', {
+                cycleId,
+                cycleName,
+                timestamp: new Date()
+            });
         }
     }
 

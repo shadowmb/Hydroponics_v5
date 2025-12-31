@@ -93,7 +93,8 @@ export class FlowController {
                 flow.name = name;
             }
 
-            await flow.restore();
+            // @ts-ignore
+            await (flow as any).restore();
             return reply.send({ success: true, message: 'Flow restored' });
         } catch (error: any) {
             logger.error({ error }, 'Failed to restore flow');

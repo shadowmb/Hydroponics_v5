@@ -3,17 +3,31 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { ChannelList } from "./ChannelList";
 import { ProviderList } from "./ProviderList";
+import { SystemRulesList } from './SystemRulesList';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function NotificationCenter() {
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <div className="col-span-4">
-                <ChannelList />
-            </div>
+        <div className="grid gap-4">
+            <Tabs defaultValue="channels" className="col-span-7">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="channels">Channels</TabsTrigger>
+                    <TabsTrigger value="rules">System Events</TabsTrigger>
+                    <TabsTrigger value="providers">Providers</TabsTrigger>
+                </TabsList>
 
-            <div className="col-span-3">
-                <ProviderList />
-            </div>
+                <TabsContent value="channels">
+                    <ChannelList />
+                </TabsContent>
+
+                <TabsContent value="rules">
+                    <SystemRulesList />
+                </TabsContent>
+
+                <TabsContent value="providers">
+                    <ProviderList />
+                </TabsContent>
+            </Tabs>
 
             <div className="col-span-7">
                 <Alert>
