@@ -35,7 +35,7 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
                     // Use the unit returned by HardwareService (normalized base unit)
                     const sourceUnit = result.unit;
 
-                    if (sourceUnit) {
+                    if (sourceUnit && typeof valueToSave === 'number') {
                         const { unitConversionService } = await import('../../../services/conversion/UnitConversionService');
                         try {
                             const converted = unitConversionService.convert(valueToSave, sourceUnit, varDef.unit);
@@ -65,10 +65,14 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
                 finalUnit = ctx.variableDefinitions[variable].unit;
             }
 
+            const formattedValue = (typeof valueToSave === 'number')
+                ? valueToSave.toFixed(Number.isInteger(valueToSave) ? 0 : 2)
+                : String(valueToSave);
+
             return {
                 success: true,
                 output: valueToSave, // Return the FINAL (possibly converted) value as output
-                summary: `Read ${valueToSave.toFixed(typeof valueToSave === 'number' && Number.isInteger(valueToSave) ? 0 : 2)} ${finalUnit || ''}`.trim()
+                summary: `Read ${formattedValue} ${finalUnit || ''}`.trim()
             };
         } catch (error: any) {
             return { success: false, error: error.message };

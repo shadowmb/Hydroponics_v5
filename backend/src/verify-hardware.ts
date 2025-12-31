@@ -11,9 +11,11 @@ async function runHardwareVerification() {
         await templates.loadTemplates();
 
         // 2. Initialize Hardware Service
-        const mockTransport = new MockTransport();
-        await hardware.initialize(mockTransport);
-        await hardware.connect('COM_MOCK');
+        // 2. Initialize Hardware Service
+        // MockTransport injection is not supported in this version of HardwareService
+        // It uses internal drivers/transports based on DB config
+        await hardware.initialize();
+        logger.info('✅ Hardware Service Initialized');
 
         // 3. Send Valid Command (Relay ON)
         logger.info('🚀 Sending RELAY ON...');

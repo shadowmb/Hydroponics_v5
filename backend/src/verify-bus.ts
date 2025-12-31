@@ -29,7 +29,9 @@ async function runBusVerification() {
             stepCount: 0,
             startTime: Date.now(),
             errors: [],
-            resumeState: {}
+            resumeState: {},
+            variableDefinitions: {},
+            activeResources: {}
         }
     });
 }

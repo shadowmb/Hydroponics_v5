@@ -27,6 +27,7 @@ export class AutomationEngine {
     private actor!: Actor<any>;
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
+    private currentProgramName: string | null = null;
     private executionStartTime: number = 0;
 
     private instanceId = Math.random().toString(36).substring(7);
@@ -116,6 +117,14 @@ export class AutomationEngine {
                 // @ts-ignore - Triggered by BlockResult properties
                 summary: (snapshot.event as any)?.output?.summary
             });
+
+            // Emit Program Stop on Terminal States
+            if (['stopped', 'error', 'completed'].includes(stateValue)) {
+                events.emit('automation:program_stop', {
+                    sessionId: this.currentSessionId!,
+                    reason: stateValue
+                });
+            }
         });
     }
 
@@ -141,6 +150,7 @@ export class AutomationEngine {
         if (!flow) {
             throw new Error(`Flow not found: ${programId}`);
         }
+        this.currentProgramName = flow.name;
 
         if (!flow.isActive) {
             throw new Error(`Flow is not active: ${programId}`);
@@ -279,6 +289,12 @@ export class AutomationEngine {
 
         this.executionStartTime = Date.now();
         this.actor.send({ type: 'START' });
+
+        events.emit('automation:program_start', {
+            programId: 'unknown', // We don't store ID in class prop, but sessionId links it.
+            sessionId: this.currentSessionId!,
+            programName: this.currentProgramName || 'Unknown Program'
+        });
     }
 
     public async unloadProgram() {
@@ -452,12 +468,24 @@ export class AutomationEngine {
                     finalSummary = `Total Time: ${mins}m ${secs}s`;
                 }
 
+                if (params.notificationChannelId) {
+                    logger.info({ blockId, channel: params.notificationChannelId, mode: params.notificationMode }, '🔔 AutomationEngine: Prepared Notification Payload');
+                } else {
+                    // logger.debug({ blockId }, '🔕 AutomationEngine: No Notification Channel Configured');
+                }
+
                 events.emit('automation:block_end', {
                     blockId,
                     success: true,
                     output: result.output,
                     summary: finalSummary, // Pass Summary
-                    sessionId: this.currentSessionId
+                    sessionId: this.currentSessionId,
+                    // Pass Notification Config
+                    notification: {
+                        channelId: params.notificationChannelId,
+                        mode: params.notificationMode,
+                        config: params // Pass full params just in case for templates
+                    }
                 });
 
                 // Loop Safety Check
@@ -525,7 +553,12 @@ export class AutomationEngine {
             blockId,
             success: false,
             error: lastError?.message || 'Block Failed',
-            sessionId: this.currentSessionId
+            sessionId: this.currentSessionId,
+            // Pass Notification Config
+            notification: {
+                channelId: params.notificationChannelId,
+                mode: params.notificationMode
+            }
         });
 
         logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');

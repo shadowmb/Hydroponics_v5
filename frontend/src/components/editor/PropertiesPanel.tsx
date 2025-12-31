@@ -6,7 +6,8 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Copy, AlertCircle, Settings2, Monitor, BookOpen, Pencil, ShieldAlert } from 'lucide-react';
+import { Switch } from '../ui/switch';
+import { Copy, AlertCircle, Settings2, Monitor, BookOpen, Pencil, ShieldAlert, Bell } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { StrategyRegistry, validateBlockStrategy, validateStrategyCalibration } from '@shared/strategies/StrategyRegistry'; // Import Registry
 import { BLOCK_DEFINITIONS, type FieldDefinition } from './block-definitions';
@@ -60,6 +61,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const { devices, deviceTemplates } = useStore();
+    const [channels, setChannels] = useState<{ _id: string, name: string }[]>([]);
+
+    useEffect(() => {
+        fetch('http://localhost:3000/api/notifications/channels')
+            .then(res => res.json())
+            .then(data => setChannels(data))
+            .catch(err => console.error("Failed to load channels", err));
+    }, []);
 
     // --- VISUAL DEBUGGER REMOVED ---
 
@@ -526,6 +535,16 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                         variables={variables}
                     />
                 );
+            case 'boolean':
+                return (
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            checked={!!value}
+                            onCheckedChange={(checked) => handleChange(key, checked)}
+                        />
+                        <span className="text-xs text-muted-foreground">{field.description || field.label}</span>
+                    </div>
+                );
             default:
                 return null;
         }
@@ -636,7 +655,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                 {definition ? (
                     (() => {
-                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel'];
+                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel', 'revertOnStop'];
                         const mainFields = Object.entries(definition.fields).filter(([key]) => !errorKeys.includes(key));
                         const errorFields = Object.entries(definition.fields).filter(([key]) => errorKeys.includes(key));
 
@@ -720,6 +739,58 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                         ))}
                                     </div>
                                 </CollapsibleSection>
+
+                                {/* 3.5 NOTIFICATION CONFIGURATION  */}
+                                {(!isMirror) && (
+                                    <CollapsibleSection
+                                        key={`${selectedNode.id}-notify`}
+                                        title="Notifications"
+                                        icon={Bell}
+                                        className="border bg-card shadow-sm overflow-hidden"
+                                        headerClassName="text-slate-700 dark:text-slate-300"
+                                    >
+                                        <div className="space-y-3 pt-3">
+                                            <div className="space-y-2">
+                                                <Label className="text-muted-foreground text-xs">Notification Channel</Label>
+                                                <Select
+                                                    value={formData.notificationChannelId || "default"}
+                                                    onValueChange={(val) => handleChange('notificationChannelId', val === "default" ? "" : val)}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Inherit (Global Rules)" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="default">
+                                                            <span className="text-muted-foreground italic">Inherit (Global Rules)</span>
+                                                        </SelectItem>
+                                                        {channels.map((c: any) => (
+                                                            <SelectItem key={c._id} value={c._id}>
+                                                                {c.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label className="text-muted-foreground text-xs">Behavior</Label>
+                                                <Select
+                                                    value={formData.notificationMode || "AUTO"}
+                                                    onValueChange={(val) => handleChange('notificationMode', val)}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="AUTO">Auto (Errors Only)</SelectItem>
+                                                        <SelectItem value="ALWAYS">Always Alert (Success & Error)</SelectItem>
+                                                        <SelectItem value="MUTE">Mute (No Alerts)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
 
                                 {/* 4. ERROR HANDLING - RED BORDER */}
                                 {errorFields.length > 0 && !isMirror && (

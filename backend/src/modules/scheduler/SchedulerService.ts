@@ -117,7 +117,8 @@ export class SchedulerService {
 
                 if (scheduledItem) {
                     logger.info({ cycleId: scheduledItem.cycleId, time: timeString }, '⏰ Scheduled Cycle Triggered');
-                    await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.steps, scheduledItem.overrides);
+                    // Pass cycleId as name for now, or fetch if available in scheduledItem
+                    await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.steps, scheduledItem.overrides, scheduledItem.cycleId);
 
                     // Mark as running/completed in ActiveProgram
                     // Note: CycleManager events will update the status to 'completed' later
@@ -165,7 +166,7 @@ export class SchedulerService {
         });
     }
 
-    public async handleScheduledCycle(cycleId: string, steps: any[], overrides: Record<string, any> = {}) {
+    public async handleScheduledCycle(cycleId: string, steps: any[], overrides: Record<string, any> = {}, cycleName?: string) {
         // Priority: Cycle > Monitoring
 
         // Check automation state.
@@ -192,7 +193,10 @@ export class SchedulerService {
             }));
             logger.info({ cycleId, steps: sanitizedSteps }, 'Attempting to start cycle with sanitized steps');
 
-            await cycleManager.startCycle(cycleId, sanitizedSteps, overrides);
+            // Use name if provided, else ID
+            const name = cycleName || cycleId;
+
+            await cycleManager.startCycle(cycleId, name, sanitizedSteps, overrides);
         } catch (error: any) {
             logger.error({
                 err: { message: error.message, stack: error.stack, name: error.name },

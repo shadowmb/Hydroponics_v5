@@ -73,9 +73,15 @@ export class CycleController {
     }
 
     // POST /api/cycles/:id/start
-    async start(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    async start(req: FastifyRequest<{ Params: { id: string }, Body: any }>, reply: FastifyReply) {
         try {
-            await cycleManager.startCycle(req.params.id);
+            const cycle = await CycleModel.findOne({ id: req.params.id });
+            if (!cycle) return reply.status(404).send({ message: 'Cycle not found' });
+
+            // Allow overrides from body
+            const overrides = req.body || {};
+
+            await cycleManager.startCycle(req.params.id, cycle.name, cycle.steps, overrides);
             return reply.send({ success: true });
         } catch (error: any) {
             logger.error({ error }, 'Failed to start cycle');

@@ -4,8 +4,22 @@ import { AutomationController } from './controllers/AutomationController';
 import { SessionController } from './controllers/SessionController';
 import { FlowController } from './controllers/FlowController';
 import { ProgramController } from './controllers/ProgramController';
+import { NotificationController } from './controllers/NotificationController';
+import { NotificationRuleController } from './controllers/NotificationRuleController';
 
 export async function apiRoutes(app: FastifyInstance) {
+
+    // Notification Routes
+    app.get('/api/notifications/channels', NotificationController.getChannels);
+    app.post('/api/notifications/channels', NotificationController.createChannel);
+    app.put('/api/notifications/channels/:id', NotificationController.updateChannel);
+    app.delete('/api/notifications/channels/:id', NotificationController.deleteChannel);
+
+    app.get('/api/notifications/providers', NotificationController.getProviders);
+    app.post('/api/notifications/providers', NotificationController.createProvider);
+    app.put('/api/notifications/providers/:id', NotificationController.updateProvider);
+    app.delete('/api/notifications/providers/:id', NotificationController.deleteProvider);
+    app.post('/api/notifications/providers/test', NotificationController.testProvider);
 
     // Hardware Routes
     app.get('/api/hardware/serial-ports', HardwareController.getSerialPorts);
@@ -118,4 +132,8 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/active-program/schedule/:itemId/restore', ActiveProgramController.restoreCycle);
     app.post('/api/active-program/schedule/:itemId/retry', ActiveProgramController.retryCycle);
     app.post('/api/active-program/schedule/:itemId/force-start', ActiveProgramController.forceStartCycle);
+
+    // Notification Rules (System)
+    app.get('/api/notifications/rules', NotificationRuleController.list);
+    app.put('/api/notifications/rules/:event', NotificationRuleController.update);
 }

@@ -28,7 +28,7 @@ export class MockTransport implements IHardwareTransport {
         logger.info('🔌 [Mock] Disconnected');
     }
 
-    public async send(packet: HardwarePacket): Promise<void> {
+    public async send(packet: HardwarePacket): Promise<string> {
         if (!this.connected) throw new Error('Not connected');
 
         logger.debug({ packet }, '📤 [Mock] Sending Packet');
@@ -49,6 +49,8 @@ export class MockTransport implements IHardwareTransport {
 
             if (this.messageHandler) this.messageHandler(response);
         }, 100);
+
+        return 'ok';
     }
 
     public onMessage(handler: (msg: HardwareResponse | any) => void): void {

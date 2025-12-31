@@ -97,7 +97,8 @@ export class ProgramController {
                 program.name = name;
             }
 
-            await program.restore();
+            // Cast doc to any to access restore.
+            await (program as any).restore();
             return reply.send({ success: true, message: 'Program restored' });
         } catch (error: any) {
             logger.error({ error }, 'Failed to restore program');
@@ -154,7 +155,7 @@ export class ProgramController {
                 if (targetEvent) {
                     nextRun = {
                         time: targetEvent.time,
-                        cycleId: targetEvent.cycleId
+                        cycleId: (targetEvent as any).cycleId || (targetEvent as any).id || 'unknown'
                     };
                 }
 
