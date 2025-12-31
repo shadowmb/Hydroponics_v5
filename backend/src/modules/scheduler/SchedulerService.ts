@@ -4,7 +4,10 @@ import { monitoringRepository } from '../persistence/repositories/MonitoringRepo
 import { cycleManager } from './CycleManager';
 import { automation } from '../automation/AutomationEngine';
 import { activeProgramService } from './ActiveProgramService';
+import { triggerEvaluator } from './TriggerEvaluator';
 import { logger } from '../../core/LoggerService';
+import { ITimeWindow } from '../persistence/schemas/Program.schema';
+import { IWindowState } from '../persistence/schemas/ActiveProgram.schema';
 
 interface QueueItem {
     type: 'monitoring';
@@ -111,19 +114,22 @@ export class SchedulerService {
             }
 
             if (activeProgram && activeProgram.status === 'running') {
-                const scheduledItem = activeProgram.schedule.find(s =>
-                    s.time === timeString && s.status === 'pending'
-                );
+                // Handle based on program type
+                if (activeProgram.type === 'ADVANCED') {
+                    // ADVANCED MODE: Time Windows with Triggers
+                    await this.processAdvancedProgram(activeProgram, timeString);
+                } else {
+                    // BASIC MODE: Exact time matching (existing logic)
+                    const scheduledItem = activeProgram.schedule.find(s =>
+                        s.time === timeString && s.status === 'pending'
+                    );
 
-                if (scheduledItem) {
-                    logger.info({ cycleId: scheduledItem.cycleId, time: timeString }, '⏰ Scheduled Cycle Triggered');
-                    // Pass cycleId as name for now, or fetch if available in scheduledItem
-                    await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.steps, scheduledItem.overrides, scheduledItem.cycleId);
-
-                    // Mark as running/completed in ActiveProgram
-                    // Note: CycleManager events will update the status to 'completed' later
-                    scheduledItem.status = 'running';
-                    await activeProgram.save();
+                    if (scheduledItem) {
+                        logger.info({ cycleId: scheduledItem.cycleId, time: timeString }, '⏰ Scheduled Cycle Triggered');
+                        await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.steps, scheduledItem.overrides, scheduledItem.cycleId);
+                        scheduledItem.status = 'running';
+                        await activeProgram.save();
+                    }
                 }
             }
 
@@ -231,6 +237,113 @@ export class SchedulerService {
         } catch (error) {
             logger.error({ error, item }, '❌ Failed to process queue item');
         }
+    }
+
+    // =============================================
+    // ADVANCED PROGRAM METHODS
+    // =============================================
+
+    /**
+     * Process an Advanced Program - evaluate time windows and triggers.
+     */
+    private async processAdvancedProgram(activeProgram: any, timeString: string): Promise<void> {
+        if (!activeProgram.windows || !activeProgram.windowsState) {
+            logger.warn('⚠️ Advanced program has no windows or windowsState');
+            return;
+        }
+
+        for (let i = 0; i < activeProgram.windows.length; i++) {
+            const window = activeProgram.windows[i] as ITimeWindow;
+            const state = activeProgram.windowsState.find((s: IWindowState) => s.windowId === window.id);
+
+            if (!state) {
+                logger.warn({ windowId: window.id }, '⚠️ No state found for window');
+                continue;
+            }
+
+            // Skip completed windows
+            if (state.status === 'completed') continue;
+
+            // Check if we're in the time window
+            if (this.isInTimeWindow(timeString, window.startTime, window.endTime)) {
+                state.status = 'active';
+
+                // Check if it's time to poll (based on checkInterval)
+                if (this.shouldCheck(state.lastCheck, window.checkInterval)) {
+                    logger.info({ windowId: window.id, windowName: window.name }, '🔄 Evaluating triggers for window');
+
+                    const result = await triggerEvaluator.evaluateWindow(window, state);
+                    state.lastCheck = new Date();
+
+                    if (result === 'triggered' || result === 'all_done') {
+                        state.status = 'completed';
+                        logger.info({ windowId: window.id, result }, '✅ Window completed');
+                    }
+
+                    // Save after each window evaluation
+                    await activeProgram.save();
+                }
+            }
+            // Check if we're past the window (fallback time)
+            else if (this.isPastTimeWindow(timeString, window.endTime) && state.status !== 'completed') {
+                logger.info({ windowId: window.id }, '⏰ Window time expired - checking fallback');
+
+                // Execute fallback if no break trigger was executed
+                const hasBreakExecuted = window.triggers.some(
+                    t => t.behavior === 'break' && state.triggersExecuted.includes(t.id)
+                );
+
+                if (!hasBreakExecuted && window.fallbackFlowId) {
+                    await triggerEvaluator.executeFallback(window);
+                }
+
+                state.status = 'completed';
+                await activeProgram.save();
+            }
+        }
+
+        // Check if all windows are completed
+        const allCompleted = activeProgram.windowsState.every((s: IWindowState) => s.status === 'completed');
+        if (allCompleted) {
+            logger.info('🏁 All windows completed - Advanced Program finished for today');
+            // Note: We don't stop the program, it will reset at midnight or on next load
+        }
+    }
+
+    /**
+     * Check if current time is within a time window.
+     */
+    private isInTimeWindow(currentTime: string, startTime: string, endTime: string): boolean {
+        const current = this.timeToMinutes(currentTime);
+        const start = this.timeToMinutes(startTime);
+        const end = this.timeToMinutes(endTime);
+        return current >= start && current < end;
+    }
+
+    /**
+     * Check if current time is past a time window.
+     */
+    private isPastTimeWindow(currentTime: string, endTime: string): boolean {
+        const current = this.timeToMinutes(currentTime);
+        const end = this.timeToMinutes(endTime);
+        return current >= end;
+    }
+
+    /**
+     * Convert HH:mm string to minutes since midnight.
+     */
+    private timeToMinutes(time: string): number {
+        const [hours, minutes] = time.split(':').map(Number);
+        return hours * 60 + minutes;
+    }
+
+    /**
+     * Check if enough time has passed for next poll.
+     */
+    private shouldCheck(lastCheck: Date | undefined, intervalMinutes: number): boolean {
+        if (!lastCheck) return true;
+        const elapsed = (Date.now() - new Date(lastCheck).getTime()) / 1000 / 60;
+        return elapsed >= intervalMinutes;
     }
 }
 

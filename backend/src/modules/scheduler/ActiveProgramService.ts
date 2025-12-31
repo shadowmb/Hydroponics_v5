@@ -1,14 +1,14 @@
-import { ActiveProgramModel, IActiveProgram, IActiveScheduleItem } from '../persistence/schemas/ActiveProgram.schema';
+import { ActiveProgramModel, IActiveProgram, IActiveScheduleItem, IWindowState } from '../persistence/schemas/ActiveProgram.schema';
 import { programRepository } from '../persistence/repositories/ProgramRepository';
 import { logger } from '../../core/LoggerService';
 import { cycleManager } from './CycleManager';
-// import { CycleModel } from '../persistence/schemas/Cycle.schema'; // Removed
 
 export class ActiveProgramService {
 
     /**
      * Load a program template into the active state.
      * Replaces any existing active program.
+     * Supports both BASIC and ADVANCED program types.
      */
     async loadProgram(programId: string, globalOverrides: Record<string, any> = {}, minCycleInterval: number = 0): Promise<IActiveProgram> {
         // 1. Check if running
@@ -24,35 +24,53 @@ export class ActiveProgramService {
         // 3. Clear existing
         await ActiveProgramModel.deleteMany({});
 
-        // 4. Create Schedule Items
-        const scheduleItems = template.schedule.map(item => {
-            // Generate a unique ID for this schedule instance if not present
-            // We use this as 'cycleId' for tracking purposes
-            const cycleId = (item as any)._id?.toString() || Math.random().toString(36).substring(7);
+        // 4. Determine program type
+        const programType = template.type || 'BASIC';
 
-            return {
-                time: item.time,
-                name: item.name,
-                description: item.description,
-                cycleId: cycleId,
-                cycleName: item.name, // Use event name as cycle name for backward compat
-                cycleDescription: item.description,
-                steps: item.steps, // Copy embedded steps
-                overrides: { ...globalOverrides, ...((item as any).overrides || {}) }, // Merge global and item overrides
-                status: 'pending'
-            } as IActiveScheduleItem;
-        });
-
-        // 5. Create Active Program
-        const activeProgram = await ActiveProgramModel.create({
+        // 5. Build active program data
+        const activeProgramData: any = {
             sourceProgramId: template.id,
             name: template.name,
             status: 'loaded',
-            minCycleInterval: template.minCycleInterval ?? 60,
-            schedule: scheduleItems
-        });
+            type: programType,
+            minCycleInterval: template.minCycleInterval ?? 60
+        };
 
-        logger.info({ program: template.name }, '📥 Active Program Loaded');
+        if (programType === 'ADVANCED' && template.windows) {
+            // ADVANCED MODE: Initialize windows and windowsState
+            activeProgramData.windows = template.windows;  // Snapshot from template
+            activeProgramData.windowsState = template.windows.map(w => ({
+                windowId: w.id,
+                status: 'pending',
+                triggersExecuted: [],
+                lastCheck: undefined
+            } as IWindowState));
+            activeProgramData.schedule = [];  // Empty for advanced mode
+
+            logger.info({ program: template.name, windowCount: template.windows.length }, '📥 Advanced Program Loaded');
+        } else {
+            // BASIC MODE: Create Schedule Items (existing logic)
+            const scheduleItems = template.schedule.map(item => {
+                const cycleId = (item as any)._id?.toString() || Math.random().toString(36).substring(7);
+                return {
+                    time: item.time,
+                    name: item.name,
+                    description: item.description,
+                    cycleId: cycleId,
+                    cycleName: item.name,
+                    cycleDescription: item.description,
+                    steps: item.steps,
+                    overrides: { ...globalOverrides, ...((item as any).overrides || {}) },
+                    status: 'pending'
+                } as IActiveScheduleItem;
+            });
+            activeProgramData.schedule = scheduleItems;
+
+            logger.info({ program: template.name }, '📥 Basic Program Loaded');
+        }
+
+        // 6. Create Active Program
+        const activeProgram = await ActiveProgramModel.create(activeProgramData);
         return activeProgram;
     }
 

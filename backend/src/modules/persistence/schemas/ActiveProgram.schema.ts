@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { ProgramType, ITimeWindow } from './Program.schema';
 
 export type ActiveProgramStatus = 'loaded' | 'ready' | 'running' | 'paused' | 'stopped' | 'completed' | 'scheduled';
+export type WindowStatus = 'pending' | 'active' | 'completed';
 
 export interface IActiveScheduleItem {
     _id?: string;
@@ -19,6 +21,14 @@ export interface IActiveScheduleItem {
     skipUntil?: Date; // If skipped, until when
 }
 
+// --- Advanced Mode: Window State ---
+export interface IWindowState {
+    windowId: string;
+    status: WindowStatus;
+    triggersExecuted: string[];  // IDs of executed triggers
+    lastCheck?: Date;
+}
+
 export interface IActiveProgram extends Document {
     sourceProgramId: string; // Reference to the template Program
     name: string; // Snapshot of name
@@ -26,8 +36,17 @@ export interface IActiveProgram extends Document {
     minCycleInterval: number; // Minutes
     startTime?: Date;
     endTime?: Date;
+
+    // Program Type (BASIC or ADVANCED)
+    type?: ProgramType;
+
+    // BASIC mode: schedule items
     schedule: IActiveScheduleItem[];
     currentScheduleItemId?: string; // ID of the currently running item
+
+    // ADVANCED mode: window states (runtime tracking)
+    windows?: ITimeWindow[];  // Snapshot from template
+    windowsState?: IWindowState[];  // Runtime state
 }
 
 const ActiveScheduleItemSchema = new Schema<IActiveScheduleItem>({
@@ -50,6 +69,14 @@ const ActiveScheduleItemSchema = new Schema<IActiveScheduleItem>({
     skipUntil: { type: Date }
 });
 
+// --- Window State Sub-Schema (Advanced Mode) ---
+const WindowStateSchema = new Schema({
+    windowId: { type: String, required: true },
+    status: { type: String, enum: ['pending', 'active', 'completed'], default: 'pending' },
+    triggersExecuted: [{ type: String }],
+    lastCheck: { type: Date }
+}, { _id: false });
+
 const ActiveProgramSchema = new Schema<IActiveProgram>({
     sourceProgramId: { type: String, required: true },
     name: { type: String, required: true },
@@ -61,8 +88,17 @@ const ActiveProgramSchema = new Schema<IActiveProgram>({
     minCycleInterval: { type: Number, default: 0 },
     startTime: { type: Date },
     endTime: { type: Date },
+
+    // Program Type
+    type: { type: String, enum: ['BASIC', 'ADVANCED'], default: 'BASIC' },
+
+    // BASIC mode
     schedule: [ActiveScheduleItemSchema],
-    currentScheduleItemId: { type: String }
+    currentScheduleItemId: { type: String },
+
+    // ADVANCED mode
+    windows: { type: Schema.Types.Mixed },  // Snapshot of ITimeWindow[]
+    windowsState: [WindowStateSchema]
 }, {
     timestamps: true,
     toJSON: {
