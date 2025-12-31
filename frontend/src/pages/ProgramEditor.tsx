@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ScrollArea } from '../components/ui/scroll-area';
 import { TimePicker24 } from '../components/ui/time-picker-24';
 import { slugify } from '../lib/string-utils';
+import { AdvancedProgramEditor } from '../components/programs';
+import type { ITimeWindow, ProgramType } from '../components/programs';
 import type { IProgram, IFlow } from '../../../shared/types';
 
 export const ProgramEditor: React.FC = () => {
@@ -18,8 +20,11 @@ export const ProgramEditor: React.FC = () => {
     const [programName, setProgramName] = useState('');
     const [description, setDescription] = useState('');
     const [minCycleInterval, setMinCycleInterval] = useState(60);
-    // Initialize schedule with empty array
+    const [programType, setProgramType] = useState<ProgramType>('BASIC');
+    // Basic mode state
     const [schedule, setSchedule] = useState<IProgram['schedule']>([]);
+    // Advanced mode state
+    const [windows, setWindows] = useState<ITimeWindow[]>([]);
 
     useEffect(() => {
         fetchFlows();
@@ -44,10 +49,9 @@ export const ProgramEditor: React.FC = () => {
             setProgramName(data.name);
             setDescription(data.description || '');
             setMinCycleInterval(data.minCycleInterval ?? 60);
-            // Ensure schedule has steps array even if backend returns old format (though backend should be updated)
-            // We might need to migrate old data or handle it gracefully.
-            // For now assume new format or empty.
+            setProgramType(data.type || 'BASIC');
             setSchedule(data.schedule || []);
+            setWindows(data.windows || []);
         } catch (error) {
             toast.error('Failed to load program');
         }
@@ -156,15 +160,27 @@ export const ProgramEditor: React.FC = () => {
 
     const handleSave = async () => {
         if (!programName) return toast.error('Program name is required');
-        if (schedule.length === 0) return toast.error('Add at least one scheduled event');
 
-        // Validate steps
-        for (let i = 0; i < schedule.length; i++) {
-            if (schedule[i].steps.length === 0) {
-                return toast.error(`Event at ${schedule[i].time} has no steps`);
+        // Validate based on program type
+        if (programType === 'BASIC') {
+            if (schedule.length === 0) return toast.error('Add at least one scheduled event');
+            // Validate steps
+            for (let i = 0; i < schedule.length; i++) {
+                if (schedule[i].steps.length === 0) {
+                    return toast.error(`Event at ${schedule[i].time} has no steps`);
+                }
+                if (schedule[i].steps.some(s => !s.flowId)) {
+                    return toast.error(`Event at ${schedule[i].time} has a step with no flow selected`);
+                }
             }
-            if (schedule[i].steps.some(s => !s.flowId)) {
-                return toast.error(`Event at ${schedule[i].time} has a step with no flow selected`);
+        } else {
+            // ADVANCED mode validation
+            if (windows.length === 0) return toast.error('Add at least one time window');
+            // Validate windows have at least one trigger
+            for (const win of windows) {
+                if (win.triggers.length === 0) {
+                    return toast.error(`Window "${win.name}" has no triggers`);
+                }
             }
         }
 
@@ -172,9 +188,10 @@ export const ProgramEditor: React.FC = () => {
             name: programName,
             description,
             minCycleInterval,
-            schedule,
+            type: programType,
+            schedule: programType === 'BASIC' ? schedule : [],
+            windows: programType === 'ADVANCED' ? windows : [],
             isActive: true,
-            // If creating new program, generate slug ID
             ...(id ? {} : { id: `prog_${slugify(programName)}` })
         };
 
@@ -213,141 +230,171 @@ export const ProgramEditor: React.FC = () => {
                     />
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 mr-4">
-                        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Min Interval (min):</span>
-                        <Input
-                            type="number"
-                            value={minCycleInterval}
-                            onChange={(e) => setMinCycleInterval(Number(e.target.value))}
-                            className="w-20"
-                        />
-                        <Button
-                            variant={conflicts.size > 0 ? "destructive" : "outline"}
-                            size="sm"
-                            onClick={handleAutoFix}
-                            title={conflicts.size > 0 ? "Fix detected interval conflicts" : "Auto-adjust all times based on interval"}
-                        >
-                            {conflicts.size > 0 ? "Fix Conflicts" : "Auto-Fix"}
-                        </Button>
+                    {/* Mode Toggle */}
+                    <div className="flex items-center gap-2 mr-4 border-r pr-4">
+                        <span className="text-sm font-medium text-muted-foreground">Режим:</span>
+                        <div className="flex rounded-md border">
+                            <button
+                                onClick={() => setProgramType('BASIC')}
+                                className={`px-3 py-1.5 text-sm font-medium transition-colors ${programType === 'BASIC'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted'
+                                    }`}
+                            >
+                                Basic
+                            </button>
+                            <button
+                                onClick={() => setProgramType('ADVANCED')}
+                                className={`px-3 py-1.5 text-sm font-medium transition-colors ${programType === 'ADVANCED'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted'
+                                    }`}
+                            >
+                                Advanced
+                            </button>
+                        </div>
                     </div>
+                    {programType === 'BASIC' && (
+                        <div className="flex items-center gap-2 mr-4">
+                            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Min Interval (min):</span>
+                            <Input
+                                type="number"
+                                value={minCycleInterval}
+                                onChange={(e) => setMinCycleInterval(Number(e.target.value))}
+                                className="w-20"
+                            />
+                            <Button
+                                variant={conflicts.size > 0 ? "destructive" : "outline"}
+                                size="sm"
+                                onClick={handleAutoFix}
+                                title={conflicts.size > 0 ? "Fix detected interval conflicts" : "Auto-adjust all times based on interval"}
+                            >
+                                {conflicts.size > 0 ? "Fix Conflicts" : "Auto-Fix"}
+                            </Button>
+                        </div>
+                    )}
                     <Button onClick={handleSave}>
                         <Save className="mr-2 h-4 w-4" /> Save Program
                     </Button>
                 </div>
             </div>
 
-            <Card className="flex-1 flex flex-col">
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm">Daily Schedule</CardTitle>
-                    <Button size="sm" variant="outline" onClick={handleAddScheduleItem}>
-                        <Plus className="mr-2 h-4 w-4" /> Add Event
-                    </Button>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-hidden p-0 bg-muted/20">
-                    <ScrollArea className="h-full">
-                        <div className="p-4 space-y-4">
-                            {schedule.map((item, index) => (
-                                <div key={index} className={`p-4 border rounded-md bg-card shadow-sm ${conflicts.has(index) ? 'border-destructive border-2' : ''}`}>
-                                    <div className="flex flex-col gap-3 mb-4">
-                                        {/* Row 1: Name */}
-                                        <Input
-                                            value={item.name}
-                                            onChange={(e) => handleScheduleChange(index, 'name', e.target.value)}
-                                            placeholder="Event Name"
-                                            className="font-medium text-lg border-none px-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50"
-                                        />
-
-                                        {/* Row 2: Time, Description, Controls */}
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                                <TimePicker24
-                                                    value={item.time}
-                                                    onChange={(val) => handleScheduleChange(index, 'time', val)}
-                                                />
-                                            </div>
-
+            {/* Conditional Editor based on mode */}
+            {programType === 'ADVANCED' ? (
+                <AdvancedProgramEditor
+                    windows={windows}
+                    onWindowsChange={setWindows}
+                    flows={flows.map(f => ({ id: f.id, name: f.name }))}
+                />
+            ) : (
+                <Card className="flex-1 flex flex-col">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="text-sm">Daily Schedule</CardTitle>
+                        <Button size="sm" variant="outline" onClick={handleAddScheduleItem}>
+                            <Plus className="mr-2 h-4 w-4" /> Add Event
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-hidden p-0 bg-muted/20">
+                        <ScrollArea className="h-full">
+                            <div className="p-4 space-y-4">
+                                {schedule.map((item, index) => (
+                                    <div key={index} className={`p-4 border rounded-md bg-card shadow-sm ${conflicts.has(index) ? 'border-destructive border-2' : ''}`}>
+                                        <div className="flex flex-col gap-3 mb-4">
+                                            {/* Row 1: Name */}
                                             <Input
-                                                value={item.description || ''}
-                                                onChange={(e) => handleScheduleChange(index, 'description', e.target.value)}
-                                                placeholder="Description (optional)"
-                                                className="flex-1 h-9"
+                                                value={item.name}
+                                                onChange={(e) => handleScheduleChange(index, 'name', e.target.value)}
+                                                placeholder="Event Name"
+                                                className="font-medium text-lg border-none px-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50"
                                             />
 
-                                            <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                                {item.steps.length} steps
-                                            </span>
-
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-destructive"
-                                                onClick={() => handleRemoveScheduleItem(index)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    {/* Steps List */}
-                                    <div className="space-y-2 pl-4 border-l-2 border-muted ml-2">
-                                        {item.steps.map((step, stepIndex) => (
-                                            <div key={stepIndex} className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                                                    {stepIndex + 1}
+                                            {/* Row 2: Time, Description, Controls */}
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                                    <TimePicker24
+                                                        value={item.time}
+                                                        onChange={(val) => handleScheduleChange(index, 'time', val)}
+                                                    />
                                                 </div>
-                                                <Select
-                                                    value={step.flowId}
-                                                    onValueChange={(value) => handleStepChange(index, stepIndex, 'flowId', value)}
-                                                >
-                                                    <SelectTrigger className="w-[300px]">
-                                                        <SelectValue placeholder="Select Flow" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {flows.map(flow => (
-                                                            <SelectItem key={flow.id} value={flow.id}>
-                                                                {flow.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
 
-                                                {/* Placeholder for Overrides (Future) */}
-                                                {/* <Button variant="ghost" size="icon" title="Configure Overrides">
-                                                    <Settings className="h-4 w-4" />
-                                                </Button> */}
+                                                <Input
+                                                    value={item.description || ''}
+                                                    onChange={(e) => handleScheduleChange(index, 'description', e.target.value)}
+                                                    placeholder="Description (optional)"
+                                                    className="flex-1 h-9"
+                                                />
+
+                                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                                    {item.steps.length} steps
+                                                </span>
 
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="text-muted-foreground hover:text-destructive"
-                                                    onClick={() => handleRemoveStep(index, stepIndex)}
+                                                    className="text-destructive"
+                                                    onClick={() => handleRemoveScheduleItem(index)}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
-                                        ))}
+                                        </div>
 
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-muted-foreground hover:text-primary mt-2"
-                                            onClick={() => handleAddStep(index)}
-                                        >
-                                            <Plus className="h-3 w-3 mr-1" /> Add Step
-                                        </Button>
+                                        {/* Steps List */}
+                                        <div className="space-y-2 pl-4 border-l-2 border-muted ml-2">
+                                            {item.steps.map((step, stepIndex) => (
+                                                <div key={stepIndex} className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                                                        {stepIndex + 1}
+                                                    </div>
+                                                    <Select
+                                                        value={step.flowId}
+                                                        onValueChange={(value) => handleStepChange(index, stepIndex, 'flowId', value)}
+                                                    >
+                                                        <SelectTrigger className="w-[300px]">
+                                                            <SelectValue placeholder="Select Flow" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {flows.map(flow => (
+                                                                <SelectItem key={flow.id} value={flow.id}>
+                                                                    {flow.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-muted-foreground hover:text-destructive"
+                                                        onClick={() => handleRemoveStep(index, stepIndex)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-muted-foreground hover:text-primary mt-2"
+                                                onClick={() => handleAddStep(index)}
+                                            >
+                                                <Plus className="h-3 w-3 mr-1" /> Add Step
+                                            </Button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                            {schedule.length === 0 && (
-                                <div className="text-center py-12 text-muted-foreground">
-                                    No events scheduled. Add an event to define the daily routine.
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
+                                ))}
+                                {schedule.length === 0 && (
+                                    <div className="text-center py-12 text-muted-foreground">
+                                        No events scheduled. Add an event to define the daily routine.
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 };

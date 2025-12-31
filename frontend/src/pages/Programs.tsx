@@ -172,6 +172,7 @@ export const Programs: React.FC = () => {
                                 <thead className="bg-muted/50 text-muted-foreground [&_th]:px-4 [&_th]:py-3 [&_th]:font-medium">
                                     <tr>
                                         <th>Name</th>
+                                        <th>Type</th>
                                         <th>Description</th>
                                         <th>Events</th>
                                         <th>Status</th>
@@ -187,9 +188,23 @@ export const Programs: React.FC = () => {
                                                     {program.name}
                                                 </div>
                                             </td>
+                                            <td className="px-4 py-3">
+                                                {(program as any).type === 'ADVANCED' ? (
+                                                    <span className="text-xs px-2 py-1 rounded-full bg-purple-500/10 text-purple-600 font-medium">
+                                                        Advanced
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 font-medium">
+                                                        Basic
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-3 text-muted-foreground">{program.description || '-'}</td>
                                             <td className="px-4 py-3 text-muted-foreground">
-                                                {program.schedule?.length || 0} cycles
+                                                {(program as any).type === 'ADVANCED'
+                                                    ? `${(program as any).windows?.length || 0} windows`
+                                                    : `${program.schedule?.length || 0} cycles`
+                                                }
                                             </td>
                                             <td className="px-4 py-3">
                                                 {viewDeleted ? (
