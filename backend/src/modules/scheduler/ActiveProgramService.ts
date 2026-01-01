@@ -81,7 +81,11 @@ export class ActiveProgramService {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
-        if (active.status !== 'loaded' && active.status !== 'ready') {
+        // For ADVANCED programs, allow window updates even when running
+        // (so users can edit trigger values during execution)
+        const isAdvancedWindowUpdate = active.type === 'ADVANCED' && updates.windows && Object.keys(updates).length === 1;
+
+        if (!isAdvancedWindowUpdate && active.status !== 'loaded' && active.status !== 'ready') {
             throw new Error('Cannot update program settings after it has started');
         }
 
@@ -221,6 +225,21 @@ export class ActiveProgramService {
         });
 
         await active.save();
+
+        // For ADVANCED programs, trigger immediate check (don't wait for next tick)
+        if (active.type === 'ADVANCED' && active.status === 'running') {
+            // Use setImmediate to avoid blocking, but execute before next tick
+            setImmediate(async () => {
+                try {
+                    // Dynamic import to avoid circular dependency
+                    const { schedulerService } = await import('./SchedulerService');
+                    await schedulerService.triggerImmediateCheck();
+                } catch (error: any) {
+                    logger.error({ error: error.message }, '❌ Failed to trigger immediate check');
+                }
+            });
+        }
+
         return active;
     }
 

@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import {
     Play, Pause, Square, Clock, Zap, CheckCircle2,
     Circle, Timer, ChevronDown, ChevronRight,
-    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil
+    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Progress } from '../ui/progress';
@@ -28,7 +28,7 @@ interface AdvancedProgramManagerProps {
 // Window state from backend
 interface IWindowState {
     windowId: string;
-    status: 'pending' | 'active' | 'completed';
+    status: 'pending' | 'active' | 'completed' | 'skipped';
     triggersExecuted: string[];
     lastCheck?: Date;
 }
@@ -55,13 +55,25 @@ const formatOperator = (op: string): string => {
     return map[op] || op;
 };
 
-// Get status color
+// Get status color for badge
 const getStatusColor = (status: string) => {
     switch (status) {
         case 'active': return 'text-green-600 bg-green-500/10';
         case 'completed': return 'text-blue-600 bg-blue-500/10';
+        case 'skipped': return 'text-purple-500 bg-purple-500/10';
         case 'pending':
         default: return 'text-gray-500 bg-gray-500/10';
+    }
+};
+
+// Get border color for window card
+const getBorderColor = (status: string) => {
+    switch (status) {
+        case 'active': return 'border-l-green-500';
+        case 'completed': return 'border-l-blue-500';
+        case 'skipped': return 'border-l-purple-500';
+        case 'pending':
+        default: return 'border-l-gray-400';
     }
 };
 
@@ -70,6 +82,7 @@ const getStatusIcon = (status: string) => {
     switch (status) {
         case 'active': return <Play className="h-3 w-3" />;
         case 'completed': return <CheckCircle2 className="h-3 w-3" />;
+        case 'skipped': return <ArrowRight className="h-3 w-3" />;
         case 'pending':
         default: return <Circle className="h-3 w-3" />;
     }
@@ -437,9 +450,11 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
     // Calculate progress
     const completedCount = windowsState.filter(s => s.status === 'completed').length;
+    const skippedCount = windowsState.filter(s => s.status === 'skipped').length;
     const activeCount = windowsState.filter(s => s.status === 'active').length;
+    const doneCount = completedCount + skippedCount;  // Both count as done
     const totalCount = localWindows.length;
-    const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+    const progressPercent = totalCount > 0 ? (doneCount / totalCount) * 100 : 0;
 
     // Current time string
     const timeString = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}`;
@@ -610,11 +625,11 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                     <CardContent>
                         <div className="space-y-3">
                             <div className="flex justify-between text-sm">
-                                <span>{completedCount} от {totalCount} прозорци завършени</span>
+                                <span>{doneCount} от {totalCount} прозорци завършени</span>
                                 <span>{Math.round(progressPercent)}%</span>
                             </div>
                             <Progress value={progressPercent} className="h-2" />
-                            <div className="flex gap-4 text-sm">
+                            <div className="flex gap-4 text-sm flex-wrap">
                                 <span className="flex items-center gap-1 text-green-600">
                                     <div className="w-2 h-2 rounded-full bg-green-500" />
                                     {activeCount} активни
@@ -623,9 +638,15 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                     <div className="w-2 h-2 rounded-full bg-blue-500" />
                                     {completedCount} завършени
                                 </span>
+                                {skippedCount > 0 && (
+                                    <span className="flex items-center gap-1 text-purple-500">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                        {skippedCount} пропуснати
+                                    </span>
+                                )}
                                 <span className="flex items-center gap-1 text-gray-500">
                                     <div className="w-2 h-2 rounded-full bg-gray-400" />
-                                    {totalCount - completedCount - activeCount} чакащи
+                                    {totalCount - doneCount - activeCount} чакащи
                                 </span>
                             </div>
                         </div>
@@ -651,8 +672,9 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                 <div
                                     key={window.id}
                                     className={cn(
-                                        "border rounded-lg overflow-hidden transition-all",
-                                        state?.status === 'active' && "border-green-500 shadow-sm shadow-green-500/20"
+                                        "border rounded-lg overflow-hidden transition-all border-l-4",
+                                        getBorderColor(state?.status || 'pending'),
+                                        state?.status === 'active' && "shadow-sm shadow-green-500/20"
                                     )}
                                 >
                                     {/* Window Header */}
@@ -703,7 +725,8 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                 {getStatusIcon(state?.status || 'pending')}
                                                 {state?.status === 'active' ? 'Активен' :
                                                     state?.status === 'completed' ? 'Завършен' :
-                                                        'Чакащ'}
+                                                        state?.status === 'skipped' ? 'Пропуснат' :
+                                                            'Чакащ'}
                                             </span>
 
                                             {/* Edit button - only when window is not active */}
@@ -755,6 +778,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                 <span className="text-xs text-muted-foreground">
                                                                     #{triggerIndex + 1}
                                                                 </span>
+                                                                <Activity className="h-3.5 w-3.5 text-cyan-500" />
                                                                 <span className={cn("font-medium", isExecuted && "line-through")}>
                                                                     {getSensorName(trigger.sensorId)}
                                                                 </span>
@@ -816,7 +840,8 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                 )}
 
                                                                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                                                <span className="text-sm text-primary">
+                                                                <Zap className="h-3.5 w-3.5 text-yellow-500" />
+                                                                <span className="text-sm text-primary font-medium">
                                                                     {getFlowName(trigger.flowId)}
                                                                 </span>
                                                             </div>

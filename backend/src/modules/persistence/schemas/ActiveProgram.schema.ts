@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { ProgramType, ITimeWindow } from './Program.schema';
 
 export type ActiveProgramStatus = 'loaded' | 'ready' | 'running' | 'paused' | 'stopped' | 'completed' | 'scheduled';
-export type WindowStatus = 'pending' | 'active' | 'completed';
+export type WindowStatus = 'pending' | 'active' | 'completed' | 'skipped';
 
 export interface IActiveScheduleItem {
     _id?: string;
@@ -72,7 +72,7 @@ const ActiveScheduleItemSchema = new Schema<IActiveScheduleItem>({
 // --- Window State Sub-Schema (Advanced Mode) ---
 const WindowStateSchema = new Schema({
     windowId: { type: String, required: true },
-    status: { type: String, enum: ['pending', 'active', 'completed'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'active', 'completed', 'skipped'], default: 'pending' },
     triggersExecuted: [{ type: String }],
     lastCheck: { type: Date }
 }, { _id: false });

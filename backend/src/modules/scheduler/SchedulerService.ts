@@ -77,6 +77,28 @@ export class SchedulerService {
         this.job.stop();
     }
 
+    /**
+     * Trigger an immediate Advanced Program check.
+     * Used when a program starts so we don't wait for the next tick (1 min).
+     */
+    public async triggerImmediateCheck(): Promise<void> {
+        try {
+            const activeProgram = await activeProgramService.getActive();
+            if (!activeProgram || activeProgram.status !== 'running') {
+                return;
+            }
+
+            if (activeProgram.type === 'ADVANCED') {
+                const now = new Date();
+                const timeString = now.toTimeString().slice(0, 5);
+                logger.info({ time: timeString }, '⚡ Immediate Advanced Program Check');
+                await this.processAdvancedProgram(activeProgram, timeString);
+            }
+        } catch (error: any) {
+            logger.error({ error: error.message }, '❌ Immediate check failed');
+        }
+    }
+
     private async tick() {
         this._lastTick = new Date();
         if (this._state === 'STOPPED') {
@@ -252,6 +274,9 @@ export class SchedulerService {
             return;
         }
 
+        // Get program start time to determine if we were active during a window
+        const programStartTime = activeProgram.startTime ? new Date(activeProgram.startTime) : null;
+
         for (let i = 0; i < activeProgram.windows.length; i++) {
             const window = activeProgram.windows[i] as ITimeWindow;
             const state = activeProgram.windowsState.find((s: IWindowState) => s.windowId === window.id);
@@ -261,8 +286,8 @@ export class SchedulerService {
                 continue;
             }
 
-            // Skip completed windows
-            if (state.status === 'completed') continue;
+            // Skip completed or skipped windows
+            if (state.status === 'completed' || state.status === 'skipped') continue;
 
             // Check if we're in the time window
             if (this.isInTimeWindow(timeString, window.startTime, window.endTime)) {
@@ -270,6 +295,15 @@ export class SchedulerService {
 
                 // Check if it's time to poll (based on checkInterval)
                 if (this.shouldCheck(state.lastCheck, window.checkInterval)) {
+                    // BUGFIX: Check if a cycle is already running - skip this tick if so
+                    const snapshot = automation.getSnapshot();
+                    const isCycleRunning = snapshot.value === 'running' || snapshot.value === 'paused';
+
+                    if (isCycleRunning) {
+                        logger.debug({ windowId: window.id }, '⏳ Cycle running, skipping trigger evaluation');
+                        continue;
+                    }
+
                     logger.info({ windowId: window.id, windowName: window.name }, '🔄 Evaluating triggers for window');
 
                     const result = await triggerEvaluator.evaluateWindow(window, state);
@@ -286,7 +320,36 @@ export class SchedulerService {
             }
             // Check if we're past the window (fallback time)
             else if (this.isPastTimeWindow(timeString, window.endTime) && state.status !== 'completed') {
+                // BUGFIX: Check if the program was active during this window's time range
+                // If program started AFTER the window ended, skip fallback (window was missed)
+                const wasActiveForWindow = this.wasProgramActiveForWindow(
+                    programStartTime,
+                    window.startTime,
+                    window.endTime
+                );
+
+                if (!wasActiveForWindow) {
+                    logger.info({
+                        windowId: window.id,
+                        windowName: window.name,
+                        programStart: programStartTime?.toISOString(),
+                        windowEnd: window.endTime
+                    }, '⏭️ Skipping window - program started after window ended');
+                    state.status = 'skipped'; // Mark as skipped (not completed)
+                    await activeProgram.save();
+                    continue;
+                }
+
                 logger.info({ windowId: window.id }, '⏰ Window time expired - checking fallback');
+
+                // BUGFIX: Check if a cycle is already running before executing fallback
+                const snapshot = automation.getSnapshot();
+                const isCycleRunning = snapshot.value === 'running' || snapshot.value === 'paused';
+
+                if (isCycleRunning) {
+                    logger.debug({ windowId: window.id }, '⏳ Cycle running, delaying fallback to next tick');
+                    continue; // Don't mark as completed, try again next tick
+                }
 
                 // Execute fallback if no break trigger was executed
                 const hasBreakExecuted = window.triggers.some(
@@ -308,6 +371,27 @@ export class SchedulerService {
             logger.info('🏁 All windows completed - Advanced Program finished for today');
             // Note: We don't stop the program, it will reset at midnight or on next load
         }
+    }
+
+    /**
+     * Check if the program was active during a window's time range.
+     * Returns false if program started after the window ended.
+     */
+    private wasProgramActiveForWindow(
+        programStartTime: Date | null,
+        windowStartTime: string,
+        windowEndTime: string
+    ): boolean {
+        if (!programStartTime) return true; // No start time, assume active
+
+        // Convert window end time to a Date object for today
+        const [endHours, endMinutes] = windowEndTime.split(':').map(Number);
+        const windowEndDate = new Date(programStartTime);
+        windowEndDate.setHours(endHours, endMinutes, 0, 0);
+
+        // If the window end time is before program start on the same day,
+        // the window was never active for this program session
+        return programStartTime < windowEndDate;
     }
 
     /**
