@@ -46,7 +46,7 @@ register('temperature', 'C', 'F', 'K');
 register('distance', 'mm', 'cm', 'm', 'in', 'ft', 'inch');
 
 // Conductivity
-register('conductivity', 'µS/cm', 'uS/cm', 'uS_cm', 'mS/cm', 'ppm');
+register('conductivity', 'µS/cm', 'uS/cm', 'uS_cm', 'mS/cm', 'ppm', 'mg/L');
 
 // Pressure
 register('pressure', 'psi', 'bar', 'kPa', 'Pa');
@@ -139,7 +139,8 @@ const FACTORS: Record<string, number | ((v: number) => number)> = {
     'uS/cm': 1,
     'uS_cm': 1,
     'mS/cm': 1000,
-    'ppm': 2.0 // Standard 500 scale: 1000 uS/cm = 500 ppm
+    'ppm': 2.0, // Standard 500 scale: 1000 uS/cm = 500 ppm
+    'mg/L': 2.0 // Identical to ppm
 };
 
 /**

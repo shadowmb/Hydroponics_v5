@@ -99,6 +99,6 @@ export class EcSmartStrategy implements IConversionStrategy {
         // 7. Debug Logging
         console.log(`⚡ [EcSmart] Raw:${raw} | V:${voltage.toFixed(0)}mV | T:${temperature}°C | EC_raw:${ecRaw.toFixed(1)} | EC_25:${finalEc} uS/cm`);
 
-        return { value: finalEc, unit: 'uS/cm', details: diagnostics };
+        return { value: finalEc, unit: 'µS/cm', details: diagnostics };
     }
 }

@@ -37,7 +37,11 @@
         ]
     },
     "uiConfig": {
-        "icon": "droplet"
+        "icon": "droplet",
+        "units": [
+            "L/min",
+            "Hz"
+        ]
     },
     "initialState": {
         "value": 0

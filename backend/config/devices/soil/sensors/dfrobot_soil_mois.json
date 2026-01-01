@@ -29,7 +29,11 @@
         }
     ],
     "uiConfig": {
-        "icon": "sprout"
+        "icon": "sprout",
+        "units": [
+            "%",
+            "adc"
+        ]
     },
     "initialState": {
         "value": 0
