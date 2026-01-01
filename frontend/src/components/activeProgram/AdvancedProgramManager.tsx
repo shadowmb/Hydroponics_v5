@@ -408,30 +408,59 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     };
 
     // Save edited window with auto-overlap adjustment
-    const handleWindowSave = async (updatedWindow: ITimeWindow) => {
+    const handleWindowSave = async (updatedWindow: ITimeWindow, autoShift: boolean = false) => {
         try {
             setProcessing(true);
 
-            // Sort windows by startTime
+            // Update the window in the list (preserving original order for logic)
             let newWindows = localWindows.map(w =>
                 w.id === updatedWindow.id ? updatedWindow : { ...w }
             );
-            newWindows.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 
-            // Auto-adjust overlapping windows
-            for (let i = 0; i < newWindows.length - 1; i++) {
-                const current = newWindows[i];
-                const next = newWindows[i + 1];
+            if (autoShift) {
+                // If Auto-Shift is ON: Enforce sequence based on existing order.
+                // Do NOT sort by time yet, as we want W1 to push W2 even if W1 jumps ahead of W2.
+                for (let i = 0; i < newWindows.length - 1; i++) {
+                    const current = newWindows[i];
+                    const next = newWindows[i + 1];
 
-                const currentEnd = timeToMinutes(current.endTime);
-                const nextStart = timeToMinutes(next.startTime);
+                    const currentEnd = timeToMinutes(current.endTime);
+                    const nextStart = timeToMinutes(next.startTime);
 
-                if (currentEnd > nextStart) {
-                    // Overlap detected - shift next window
-                    const nextDuration = timeToMinutes(next.endTime) - nextStart;
-                    next.startTime = current.endTime;
-                    next.endTime = minutesToTime(timeToMinutes(current.endTime) + nextDuration);
+                    // If order is violated (Next starts before Current ends), Push Next.
+                    // This covers both "Overlap" and "Jump Over".
+                    if (nextStart < currentEnd) {
+                        const nextDuration = timeToMinutes(next.endTime) - nextStart;
+                        next.startTime = current.endTime;
+                        next.endTime = minutesToTime(timeToMinutes(current.endTime) + nextDuration);
+                    }
                 }
+            }
+
+            // Now Sort windows by startTime (so they are stored/displayed chronologically)
+            // But only after we applied the pushes.
+            // Note: If autoShift was FALSE, we do standard sorting first, then overlap check.
+            if (!autoShift) {
+                newWindows.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+
+                // Standard Overlap check (if any slipped through validation) - mostly redundant if validation is strict
+                for (let i = 0; i < newWindows.length - 1; i++) {
+                    const current = newWindows[i];
+                    const next = newWindows[i + 1];
+
+                    const currentEnd = timeToMinutes(current.endTime);
+                    const nextStart = timeToMinutes(next.startTime);
+
+                    if (currentEnd > nextStart) {
+                        // Overlap detected - shift next window
+                        const nextDuration = timeToMinutes(next.endTime) - nextStart;
+                        next.startTime = current.endTime;
+                        next.endTime = minutesToTime(timeToMinutes(current.endTime) + nextDuration);
+                    }
+                }
+            } else {
+                // Even after push, we want final sort
+                newWindows.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
             }
 
             // Update via API

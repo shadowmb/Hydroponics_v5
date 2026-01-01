@@ -20,7 +20,7 @@ import type { ITimeWindow, DataSource } from './types';
 interface TimeWindowModalProps {
     open: boolean;
     onClose: () => void;
-    onSave: (window: ITimeWindow) => void;
+    onSave: (window: ITimeWindow, autoShift?: boolean) => void;
     window?: ITimeWindow | null;
     flows: { id: string; name: string }[];
     existingWindows: ITimeWindow[];  // For smart defaults
@@ -119,7 +119,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
             triggers: editingWindow?.triggers || [],
             fallbackFlowId: fallbackFlowId || undefined
         };
-        onSave(windowData);
+        onSave(windowData, autoAdjust);
         onClose();
     };
 
