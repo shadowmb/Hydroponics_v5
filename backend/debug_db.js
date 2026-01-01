@@ -1,28 +1,56 @@
 const mongoose = require('mongoose');
-const { Schema } = mongoose;
+const path = require('path');
+const fs = require('fs');
 
-// Define minimal schemas to read data
-const CycleSchema = new Schema({ id: String, name: String }, { strict: false });
-const ProgramSchema = new Schema({ id: String, name: String, schedule: [{ cycleId: String }] }, { strict: false });
+// Mock a simple template schema to read the ports
+const PortSchema = new mongoose.Schema({
+    id: String,
+    label: String,
+    type: String,
+    pin: Number
+}, { _id: false });
 
-const Cycle = mongoose.model('Cycle', CycleSchema);
-const Program = mongoose.model('Program', ProgramSchema);
+const ControllerTemplateSchema = new mongoose.Schema({
+    _id: String,
+    key: String,
+    label: String,
+    ports: [PortSchema]
+}, { collection: 'controllertemplates' });
 
-async function run() {
-    await mongoose.connect('mongodb://127.0.0.1:27017/hydroponics');
+const ControllerTemplate = mongoose.model('ControllerTemplate', ControllerTemplateSchema);
 
-    console.log('--- CYCLES ---');
-    const cycles = await Cycle.find({});
-    cycles.forEach(c => console.log(`ID: ${c.id}, Name: ${c.name}`));
+async function debug() {
+    // Try to find MONGO_URI from .env manually
+    const dotEnvPath = path.join(__dirname, '.env');
+    let mongoUri = 'mongodb://localhost:27017/hydroponics'; // Default
 
-    console.log('\n--- PROGRAMS ---');
-    const programs = await Program.find({});
-    programs.forEach(p => {
-        console.log(`Program: ${p.name} (${p.id})`);
-        p.schedule.forEach((s, i) => console.log(`  Item ${i}: cycleId=${s.cycleId}`));
-    });
+    if (fs.existsSync(dotEnvPath)) {
+        const content = fs.readFileSync(dotEnvPath, 'utf-8');
+        const match = content.match(/MONGO_URI=(.*)/);
+        if (match) mongoUri = match[1].trim();
+    }
 
-    await mongoose.disconnect();
+    console.log(`Connecting to: ${mongoUri}`);
+
+    try {
+        await mongoose.connect(mongoUri);
+        const template = await ControllerTemplate.findById('lilygo_t_relay_4');
+
+        if (!template) {
+            console.log('❌ Template lilygo_t_relay_4 not found in DB');
+        } else {
+            console.log(`✅ Template: ${template.label}`);
+            console.log(`📡 Ports Count: ${template.ports.length}`);
+            template.ports.forEach((p) => {
+                console.log(`   - [${p.id}] ${p.label} (GPIO ${p.pin})`);
+            });
+        }
+
+        await mongoose.disconnect();
+    } catch (err) {
+        console.error('🔥 Debug Error:', err);
+        process.exit(1);
+    }
 }
 
-run().catch(console.error);
+debug();
