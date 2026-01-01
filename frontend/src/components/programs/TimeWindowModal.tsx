@@ -12,6 +12,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { TimePicker24 } from '../ui/time-picker-24';
 import type { ITimeWindow, DataSource } from './types';
 
 interface TimeWindowModalProps {
@@ -120,18 +121,14 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right">Време</Label>
                         <div className="col-span-3 flex items-center gap-2">
-                            <Input
-                                type="time"
+                            <TimePicker24
                                 value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                                className="w-28"
+                                onChange={setStartTime}
                             />
                             <span className="text-muted-foreground">до</span>
-                            <Input
-                                type="time"
+                            <TimePicker24
                                 value={endTime}
-                                onChange={(e) => setEndTime(e.target.value)}
-                                className="w-28"
+                                onChange={setEndTime}
                             />
                         </div>
                     </div>

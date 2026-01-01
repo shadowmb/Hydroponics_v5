@@ -77,7 +77,7 @@ export class ActiveProgramService {
     /**
      * Update the active program settings (before starting).
      */
-    async updateProgram(updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any> }): Promise<IActiveProgram> {
+    async updateProgram(updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any>, windows?: any[] }): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
@@ -88,11 +88,22 @@ export class ActiveProgramService {
         if (updates.minCycleInterval !== undefined) active.minCycleInterval = updates.minCycleInterval;
         if (updates.schedule) active.schedule = updates.schedule;
 
-        // Apply global overrides to ALL schedule items
+        // Update windows for ADVANCED mode
+        if (updates.windows && active.type === 'ADVANCED') {
+            (active as any).windows = updates.windows;
+        }
+
+        // Apply global overrides
         if (updates.globalOverrides) {
-            active.schedule.forEach(item => {
-                item.overrides = { ...item.overrides, ...updates.globalOverrides };
-            });
+            if (active.type === 'ADVANCED') {
+                // For ADVANCED: store in dedicated field (will be used by scheduler when executing flows)
+                (active as any).variableOverrides = updates.globalOverrides;
+            } else {
+                // For BASIC: apply to ALL schedule items
+                active.schedule.forEach(item => {
+                    item.overrides = { ...item.overrides, ...updates.globalOverrides };
+                });
+            }
         }
 
         // If we are saving changes, we can mark it as ready
@@ -104,51 +115,78 @@ export class ActiveProgramService {
     }
 
     /**
-     * Get variables defined in the cycles of the active program, grouped by Cycle ID.
+     * Get variables defined in the flows of the active program.
+     * For BASIC mode: grouped by Cycle ID.
+     * For ADVANCED mode: grouped by Flow ID from triggers.
      */
     async getProgramVariables(): Promise<Record<string, any[]>> {
         const active = await this.getActive();
         if (!active) return {};
 
-        const variablesByCycle: Record<string, any[]> = {};
+        const FlowModel = require('../persistence/schemas/Flow.schema').FlowModel;
+        const variablesMap: Record<string, any[]> = {};
+        const seenVars = new Set<string>();
 
-        for (const item of active.schedule) {
-            const cycleId = item.cycleId;
-            if (!item.steps || item.steps.length === 0) continue;
-
-            const cycleVars: any[] = [];
-            const seenVars = new Set<string>();
-
-            for (const step of item.steps) {
-                const FlowModel = require('../persistence/schemas/Flow.schema').FlowModel;
-                const flow = await FlowModel.findOne({ id: step.flowId });
-
-                if (flow && flow.variables) {
-                    flow.variables.forEach((v: any) => {
-                        if (v.scope === 'global' && !seenVars.has(v.name)) {
-                            cycleVars.push({
-                                name: v.name,
-                                type: v.type,
-                                default: v.value,
-                                unit: v.unit,
-                                hasTolerance: v.hasTolerance,
-                                description: v.description,
-                                cycleId: cycleId,
-                                flowId: flow.id,
-                                flowName: flow.name || 'Unknown Flow',
-                                flowDescription: flow.description
-                            });
-                            seenVars.add(v.name);
-                        }
-                    });
+        // Helper to extract variables from a flow
+        const extractFlowVariables = async (flowId: string, keyId: string) => {
+            const flow = await FlowModel.findOne({ id: flowId });
+            if (flow && flow.variables) {
+                const flowVars: any[] = [];
+                flow.variables.forEach((v: any) => {
+                    if (v.scope === 'global' && !seenVars.has(v.name)) {
+                        flowVars.push({
+                            name: v.name,
+                            type: v.type,
+                            default: v.value,
+                            unit: v.unit,
+                            hasTolerance: v.hasTolerance,
+                            description: v.description,
+                            flowId: flow.id,
+                            flowName: flow.name || 'Unknown Flow',
+                            flowDescription: flow.description
+                        });
+                        seenVars.add(v.name);
+                    }
+                });
+                if (flowVars.length > 0) {
+                    if (!variablesMap[keyId]) {
+                        variablesMap[keyId] = [];
+                    }
+                    variablesMap[keyId].push(...flowVars);
                 }
             }
-            if (cycleVars.length > 0) {
-                variablesByCycle[cycleId] = cycleVars;
+        };
+
+        // ADVANCED MODE: Extract from windows/triggers
+        if (active.type === 'ADVANCED' && (active as any).windows) {
+            for (const window of (active as any).windows) {
+                if (window.triggers) {
+                    for (const trigger of window.triggers) {
+                        if (trigger.flowId) {
+                            await extractFlowVariables(trigger.flowId, trigger.flowId);
+                        }
+                    }
+                }
+                if (window.fallbackFlowId) {
+                    await extractFlowVariables(window.fallbackFlowId, window.fallbackFlowId);
+                }
             }
         }
-        return variablesByCycle;
+        // BASIC MODE: Extract from schedule/cycles
+        else {
+            for (const item of active.schedule) {
+                const cycleId = item.cycleId;
+                if (!item.steps || item.steps.length === 0) continue;
+
+                for (const step of item.steps) {
+                    await extractFlowVariables(step.flowId, cycleId);
+                }
+            }
+        }
+
+        return variablesMap;
     }
+
 
     /**
      * Start the loaded program.
