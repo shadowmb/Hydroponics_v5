@@ -655,7 +655,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
                 {definition ? (
                     (() => {
-                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel', 'revertOnStop'];
+                        const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel', 'revertOnStop', 'notificationChannelId', 'notificationMode'];
                         const mainFields = Object.entries(definition.fields).filter(([key]) => !errorKeys.includes(key));
                         const errorFields = Object.entries(definition.fields).filter(([key]) => errorKeys.includes(key));
 
@@ -807,6 +807,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                     const onFailure = formData['onFailure'] || formData['onMaxIterations'];
                                                     if (onFailure !== 'GOTO_LABEL') return null;
                                                 }
+                                                // Skip notification fields in Error section (they have their own section)
+                                                if (key === 'notificationChannelId' || key === 'notificationMode') return null;
 
                                                 const content = key === 'errorTargetLabel' ? (
                                                     <Select

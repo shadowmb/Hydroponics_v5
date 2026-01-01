@@ -90,10 +90,30 @@ const formatMessage = (entry: LogEntry): string => {
     }
 };
 
-export function AdvancedExecutionLog({ className }: AdvancedExecutionLogProps) {
+export function AdvancedExecutionLog({ className, programId }: AdvancedExecutionLogProps) {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const [autoScroll, setAutoScroll] = useState(true);
+
+    const storageKey = `advanced_logs_${programId || 'default'}`;
+
+    // Load logs from storage
+    useEffect(() => {
+        try {
+            const saved = sessionStorage.getItem(storageKey);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Hydrate dates
+                const hydrated = parsed.map((entry: any) => ({
+                    ...entry,
+                    timestamp: new Date(entry.timestamp)
+                }));
+                setLogs(hydrated);
+            }
+        } catch (error) {
+            console.error('Failed to load logs from storage:', error);
+        }
+    }, [storageKey]);
 
     // Generate unique ID
     const generateId = () => `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -102,8 +122,12 @@ export function AdvancedExecutionLog({ className }: AdvancedExecutionLogProps) {
     const addLog = (entry: Omit<LogEntry, 'id'>) => {
         setLogs(prev => {
             const newLogs = [...prev, { ...entry, id: generateId() }];
-            // Keep only last 200 entries
-            return newLogs.slice(-200);
+            const sliced = newLogs.slice(-200); // Keep last 200
+
+            // Persist to storage
+            sessionStorage.setItem(storageKey, JSON.stringify(sliced));
+
+            return sliced;
         });
     };
 
@@ -156,6 +180,15 @@ export function AdvancedExecutionLog({ className }: AdvancedExecutionLogProps) {
             });
         };
 
+        const handleTriggerSkipped = (data: any) => {
+            addLog({
+                type: 'trigger_skipped',
+                windowId: data.windowId,
+                timestamp: new Date(data.timestamp),
+                data
+            });
+        };
+
         const handleFallbackExecuted = (data: any) => {
             addLog({
                 type: 'fallback_executed',
@@ -187,6 +220,7 @@ export function AdvancedExecutionLog({ className }: AdvancedExecutionLogProps) {
         socketService.on('advanced:window_skipped', handleWindowSkipped);
         socketService.on('advanced:window_completed', handleWindowCompleted);
         socketService.on('advanced:trigger_matched', handleTriggerMatched);
+        socketService.on('advanced:trigger_skipped', handleTriggerSkipped);
         socketService.on('advanced:fallback_executed', handleFallbackExecuted);
         socketService.on('automation:block_end', handleBlockEnd);
         socketService.on('advanced:program_day_complete', handleDayComplete);
@@ -197,6 +231,7 @@ export function AdvancedExecutionLog({ className }: AdvancedExecutionLogProps) {
             socketService.off('advanced:window_skipped', handleWindowSkipped);
             socketService.off('advanced:window_completed', handleWindowCompleted);
             socketService.off('advanced:trigger_matched', handleTriggerMatched);
+            socketService.off('advanced:trigger_skipped', handleTriggerSkipped);
             socketService.off('advanced:fallback_executed', handleFallbackExecuted);
             socketService.off('automation:block_end', handleBlockEnd);
             socketService.off('advanced:program_day_complete', handleDayComplete);
@@ -204,17 +239,19 @@ export function AdvancedExecutionLog({ className }: AdvancedExecutionLogProps) {
     }, []);
 
     // Clear logs at midnight
+    // Clear logs at midnight
     useEffect(() => {
         const checkMidnight = () => {
             const now = new Date();
             if (now.getHours() === 0 && now.getMinutes() === 0) {
                 setLogs([]);
+                sessionStorage.removeItem(storageKey);
             }
         };
 
         const interval = setInterval(checkMidnight, 60000); // Check every minute
         return () => clearInterval(interval);
-    }, []);
+    }, [storageKey]);
 
     return (
         <Card className={cn("mt-6", className)}>

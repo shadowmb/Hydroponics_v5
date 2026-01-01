@@ -41,31 +41,31 @@ export class TriggerEvaluator {
         // Evaluate triggers in order (priority is implicit by array order)
         for (const trigger of pendingTriggers) {
             try {
+                // Get sensor name first (needed for logging/events)
+                const sensorDevice = await DeviceModel.findById(trigger.sensorId);
+                const sensorName = sensorDevice?.name || trigger.sensorId;
+
                 const sensorValue = await this.readSensor(trigger.sensorId, window.dataSource);
 
                 if (sensorValue === null) {
                     logger.warn({ triggerId: trigger.id, sensorId: trigger.sensorId },
                         '⚠️ Sensor read returned null, skipping trigger');
+
+                    // Emit skipped event for visibility
+                    events.emit('advanced:trigger_skipped', {
+                        windowId: window.id,
+                        triggerId: trigger.id,
+                        sensorName,
+                        sensorValue: 0, // Placeholder
+                        condition: 'SENSOR ERROR',
+                        timestamp: new Date()
+                    });
                     continue;
                 }
 
                 const matches = this.matchesCondition(sensorValue, trigger);
 
-                logger.debug({
-                    triggerId: trigger.id,
-                    sensorId: trigger.sensorId,
-                    sensorValue,
-                    operator: trigger.operator,
-                    targetValue: trigger.value,
-                    targetValueMax: trigger.valueMax,
-                    matches
-                }, '🔍 Trigger evaluation');
-
                 if (matches) {
-                    // Get sensor name for UI display
-                    const sensorDevice = await DeviceModel.findById(trigger.sensorId);
-                    const sensorName = sensorDevice?.name || trigger.sensorId;
-
                     logger.info({
                         triggerId: trigger.id,
                         flowId: trigger.flowId,
@@ -103,6 +103,16 @@ export class TriggerEvaluator {
                     }, '🚀 Trigger flow started - waiting for completion');
 
                     return 'executing';
+                } else {
+                    // Trigger condition NOT met
+                    events.emit('advanced:trigger_skipped', {
+                        windowId: window.id,
+                        triggerId: trigger.id,
+                        sensorName,
+                        sensorValue,
+                        condition: `${trigger.operator} ${trigger.value}${trigger.valueMax ? `-${trigger.valueMax}` : ''}`,
+                        timestamp: new Date()
+                    });
                 }
             } catch (error: any) {
                 logger.error({

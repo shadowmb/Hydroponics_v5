@@ -54,7 +54,7 @@ export interface SystemEvents {
     'advanced:window_skipped': { windowId: string; windowName: string; reason: string; timestamp: Date };
     'advanced:window_active': { windowId: string; windowName: string; timestamp: Date };
     'advanced:trigger_matched': { windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; flowName: string; timestamp: Date };
-    'advanced:trigger_skipped': { windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; reason: string; timestamp: Date };
+    'advanced:trigger_skipped': { windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; timestamp: Date };
     'advanced:window_completed': { windowId: string; windowName: string; result: 'triggered' | 'fallback' | 'no_trigger'; timestamp: Date };
     'advanced:fallback_executed': { windowId: string; windowName: string; flowName: string; timestamp: Date };
     'advanced:program_day_complete': { timestamp: Date };
