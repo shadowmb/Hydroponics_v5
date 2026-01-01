@@ -43,10 +43,14 @@ int parsePin(String pinStr) {
     int pin = pinStr.substring(1).toInt();
     #if defined(ESP8266)
       return A0; // ESP8266 only has A0
-    #else
+    #elif defined(A1)
+      // Standard Arduino boards with multiple analog pins
       static const uint8_t analog_pins[] = {A0, A1, A2, A3, A4, A5};
       if (pin >= 0 && pin < 6) return analog_pins[pin];
+    #elif defined(A0)
+      if (pin == 0) return A0;
     #endif
+    return pin; // Fallback to raw index if A-aliases are missing
   }
 
   // 4. Handle raw number "5"

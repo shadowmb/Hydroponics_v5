@@ -1,0 +1,219 @@
+{
+    "key": "lilygo_t_relay_4",
+    "label": "LilyGO T-Relay (4-Port ESP32)",
+    "description": "ESP32 based board with 4 onboard relays.",
+    "architecture": "esp32",
+    "memory": {
+        "flash": 4194304,
+        "sram": 524288
+    },
+    "communication_by": [
+        "wifi",
+        "serial"
+    ],
+    "communication_type": [
+        "raw_serial",
+        "http",
+        "mqtt"
+    ],
+    "pin_counts": {
+        "digital": 4,
+        "analog": 0,
+        "pwm": 0,
+        "i2c": 1,
+        "spi": 1,
+        "uart": 1
+    },
+    "electrical_specs": {
+        "logic_voltage": "3.3V",
+        "input_voltage": "12V-24V",
+        "max_current_per_pin": "12mA",
+        "analog_resolution": "12-bit",
+        "adc_range": "0-3.3V"
+    },
+    "firmware_config": {
+        "voltage": 3.3,
+        "clock_speed_hz": 240000000,
+        "requirements": {
+            "core": "esp32:esp32",
+            "libraries": []
+        },
+        "defines": [
+            "ESP32",
+            "LILYGO_T_RELAY"
+        ],
+        "interfaces": {
+            "serial": {
+                "hardware": [
+                    "Serial"
+                ],
+                "usb": "Serial"
+            },
+            "wifi": {
+                "type": "native",
+                "chipset": "ESP32"
+            }
+        },
+        "pins": {
+            "mappings": {
+                "RELAY_1": 21,
+                "RELAY_2": 19,
+                "RELAY_3": 18,
+                "RELAY_4": 5
+            }
+        }
+    },
+    "constraints": [
+        "4 Built-in Relays",
+        "ESP32 Architecture"
+    ],
+    "ports": [
+        {
+            "id": "R1",
+            "label": "Relay 1 (GPIO 21)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 21
+        },
+        {
+            "id": "R2",
+            "label": "Relay 2 (GPIO 19)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 19
+        },
+        {
+            "id": "R3",
+            "label": "Relay 3 (GPIO 18)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 18
+        },
+        {
+            "id": "R4",
+            "label": "Relay 4 (GPIO 5)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 5
+        },
+        {
+            "id": "D32",
+            "label": "D32 (IO32) - ADC/DAC",
+            "type": "digital",
+            "reserved": false,
+            "pin": 32
+        },
+        {
+            "id": "D33",
+            "label": "D33 (IO33) - ADC/DAC",
+            "type": "digital",
+            "reserved": false,
+            "pin": 33
+        },
+        {
+            "id": "D25",
+            "label": "D25 (IO25) - Red LED / DAC",
+            "type": "digital",
+            "reserved": false,
+            "pin": 25
+        },
+        {
+            "id": "D22",
+            "label": "D22 (IO22) - SCL",
+            "type": "digital",
+            "reserved": false,
+            "pin": 22
+        },
+        {
+            "id": "D23",
+            "label": "D23 (IO23) - SDA",
+            "type": "digital",
+            "reserved": false,
+            "pin": 23
+        },
+        {
+            "id": "D26",
+            "label": "D26 (IO26)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 26
+        },
+        {
+            "id": "D4",
+            "label": "D4 (IO4)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 4
+        },
+        {
+            "id": "D15",
+            "label": "D15 (IO15)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 15
+        },
+        {
+            "id": "D2",
+            "label": "D2 (IO2)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 2
+        },
+        {
+            "id": "D13",
+            "label": "D13 (IO13)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 13
+        },
+        {
+            "id": "D12",
+            "label": "D12 (IO12)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 12
+        },
+        {
+            "id": "D14",
+            "label": "D14 (IO14)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 14
+        },
+        {
+            "id": "D27",
+            "label": "D27 (IO27)",
+            "type": "digital",
+            "reserved": false,
+            "pin": 27
+        },
+        {
+            "id": "A34",
+            "label": "A34 (IO34) - Input Only",
+            "type": "analog",
+            "reserved": false,
+            "pin": 34
+        },
+        {
+            "id": "A35",
+            "label": "A35 (IO35) - Input Only",
+            "type": "analog",
+            "reserved": false,
+            "pin": 35
+        },
+        {
+            "id": "A36",
+            "label": "A36 (IO36) - Input Only",
+            "type": "analog",
+            "reserved": false,
+            "pin": 36
+        },
+        {
+            "id": "A39",
+            "label": "A39 (IO39) - Input Only",
+            "type": "analog",
+            "reserved": false,
+            "pin": 39
+        }
+    ]
+}

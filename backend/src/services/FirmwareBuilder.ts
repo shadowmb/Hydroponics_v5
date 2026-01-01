@@ -140,11 +140,7 @@ export class FirmwareBuilder {
         // 6. Load Skeleton
         let skeleton = fs.readFileSync(path.join(this.templatesPath, 'base/skeleton.ino'), 'utf-8');
 
-        // 7. Replace Placeholders
-        skeleton = skeleton.replace('{{BOARD_NAME}}', board.name);
-        skeleton = skeleton.replace('{{TRANSPORT_NAME}}', transport.id);
-        skeleton = skeleton.replace('{{DATE}}', new Date().toISOString());
-
+        // 7. Replace Code Section Placeholders
         skeleton = skeleton.replace('{{INCLUDES}}', Array.from(includes).join('\n'));
         skeleton = skeleton.replace('{{GLOBALS}}', Array.from(globals).join('\n'));
         skeleton = skeleton.replace('{{SETUP_CODE}}', setup.join('\n  '));
@@ -156,6 +152,11 @@ export class FirmwareBuilder {
         functionsCode = functionsCode.replace('{{COMMAND_DISPATCHERS}}', dispatchersCode);
 
         skeleton = skeleton.replace('{{FUNCTIONS_CODE}}', functionsCode);
+
+        // 8. Replace Metadata Placeholders (MUST be last to catch placeholders within injected code)
+        skeleton = skeleton.split('{{BOARD_NAME}}').join(board.name);
+        skeleton = skeleton.split('{{TRANSPORT_NAME}}').join(transport.id);
+        skeleton = skeleton.split('{{DATE}}').join(new Date().toISOString());
 
         return skeleton;
     }

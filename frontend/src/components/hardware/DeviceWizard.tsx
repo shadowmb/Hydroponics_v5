@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, X, Settings2, Wind, Lightbulb, Ruler, Info, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, X, Settings2, Wind, Lightbulb, Ruler, Info, AlertTriangle, Sprout } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     Table,
@@ -46,6 +46,7 @@ import {
 const categoryConfig: Record<string, { color: string }> = {
     'water': { color: 'bg-blue-100 text-blue-600' },
     'air': { color: 'bg-sky-100 text-sky-600' },
+    'soil': { color: 'bg-green-100 text-green-600' },
     'light': { color: 'bg-yellow-100 text-yellow-600' },
     'power': { color: 'bg-orange-100 text-orange-600' },
     'other': { color: 'bg-gray-100 text-gray-600' }
@@ -375,6 +376,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             case 'wind': return <Wind className="h-6 w-6" />;
             case 'light': return <Lightbulb className="h-6 w-6" />;
             case 'ruler': return <Ruler className="h-6 w-6" />;
+            case 'sprout': return <Sprout className="h-6 w-6" />;
             default: return <Cpu className="h-6 w-6" />;
         }
     };
@@ -445,6 +447,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const categories = [
         { id: 'water', label: 'Water Systems', icon: 'droplet', description: 'Pumps, Valves, pH, EC, Level' },
         { id: 'air', label: 'Climate & Air', icon: 'wind', description: 'Fans, Temperature, Humidity, CO2' },
+        { id: 'soil', label: 'Soil Systems', icon: 'sprout', description: 'Moisture, Soil Temp, NPK Sensors' },
         { id: 'light', label: 'Lighting', icon: 'light', description: 'Grow Lights, Dimmers, PAR Sensors' },
         { id: 'power', label: 'Power Control', icon: 'power', description: 'Relays, Contactors, Power Meters' },
         { id: 'other', label: 'Other', icon: 'cpu', description: 'Generic Sensors & Actuators' }

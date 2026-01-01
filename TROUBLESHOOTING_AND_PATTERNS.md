@@ -122,3 +122,12 @@ The Mongoose schema for `Device` (`backend/src/models/Device.ts`) was missing th
 3.  **Critical:** Restart the backend server process to apply the schema change.
 ### Lesson
 Always verify that new fields added to the Frontend payload are explicitly defined in the Backend Mongoose Schema. Mongoose is strict by default.
+## 12. Backend: Category Enums (500 Error)
+### Problem
+Adding a new device in a newly created folder (e.g., `soil/`) fails with a `500 Internal Server Error`.
+### Cause
+The `Device` model (`backend/src/models/Device.ts`) has a strict `enum` for the `group` field. When a new folder is added to `backend/config/devices/`, the system automatically assigns that folder name (Title Case) as the category. If this name is not in the model's enum, the save operation fails.
+### Solution
+1.  Update the `group` enum in `backend/src/models/Device.ts` to include the new category name.
+2.  Update the `IDevice` interface to include the new literal type.
+3.  Register the new category in the frontend wizard (`DeviceWizard.tsx`).

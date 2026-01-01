@@ -3,6 +3,7 @@ import { logger } from '../../core/LoggerService';
 import { HardwarePacket } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { templates } from './DeviceTemplateManager';
+import { controllerTemplates } from './ControllerTemplateManager';
 import { Controller } from '../../models/Controller';
 import { conversionService } from '../../services/conversion/ConversionService';
 import { CalibrationService } from '../calibration/CalibrationService';
@@ -136,6 +137,7 @@ export class HardwareService {
             }
         } else if (deviceDoc.hardware?.parentId) {
             controllerId = deviceDoc.hardware.parentId.toString();
+            resolvedPin = deviceDoc.hardware.port;
 
             // Handle Direct Controller Digital Write Polarity
             if (command === 'RELAY_SET' || command === 'DIGITAL_WRITE') {
@@ -161,6 +163,29 @@ export class HardwareService {
             }
         } else {
             throw new Error(`Device ${deviceId} not linked to a controller or relay`);
+        }
+
+        // --- HARDWARE PIN RESOLUTION (Port ID -> Label_GPIO) ---
+        // If we have a resolvedPin (e.g. "R1" or "D5"), we must ensure the firmware knows the GPIO.
+        // We resolve it to "Label_GPIO" format (e.g. "R1_21") using the controller template.
+        if (resolvedPin && !resolvedPin.includes('_')) {
+            try {
+                const { Controller } = await import('../../models/Controller');
+                const controller = await Controller.findById(controllerId);
+                if (controller) {
+                    const template = controllerTemplates.getTemplate(controller.type);
+                    if (template) {
+                        const port = template.ports.find(p => p.id === resolvedPin);
+                        if (port && port.pin !== undefined) {
+                            const originalPin = resolvedPin;
+                            resolvedPin = `${port.id}_${port.pin}`;
+                            logger.debug({ originalPin, resolvedPin, controllerId }, '🔄 Resolved Port ID to Hardware Pin');
+                        }
+                    }
+                }
+            } catch (err) {
+                logger.warn({ err, resolvedPin }, '⚠️ Failed to resolve hardware pin mapping');
+            }
         }
 
         const driver = templates.getDriver(driverId);
@@ -306,6 +331,33 @@ export class HardwareService {
         const isOnline = controller.isActive !== false && await this.checkHealth(controllerId);
         const newStatus = isOnline ? 'online' : 'offline';
         const statusChanged = controller.status !== newStatus;
+
+        // --- PORT SYNC LOGIC ---
+        // Synchronize instance ports with template ports if new ones were added
+        try {
+            const { ControllerTemplate } = await import('../../models/ControllerTemplate');
+            const template = await ControllerTemplate.findById(controller.type);
+            if (template) {
+                let portsAdded = false;
+                template.ports.forEach((p: any) => {
+                    if (!controller.ports.has(p.id)) {
+                        controller.ports.set(p.id, {
+                            isActive: !p.reserved,
+                            isOccupied: false,
+                            pwm: p.pwm || false,
+                            interface: p.interface
+                        });
+                        portsAdded = true;
+                    }
+                });
+                if (portsAdded) {
+                    logger.info({ controllerId: controller._id, type: controller.type }, '🔄 Synced new ports from template');
+                }
+            }
+        } catch (err) {
+            logger.warn({ err, controllerId }, '⚠️ Failed to sync ports with template during refresh');
+        }
+
         controller.status = newStatus;
         controller.lastConnectionCheck = new Date();
         await controller.save();

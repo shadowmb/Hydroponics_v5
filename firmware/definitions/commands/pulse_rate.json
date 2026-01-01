@@ -1,0 +1,9 @@
+{
+    "id": "pulse_rate",
+    "name": "Pulse Rate",
+    "description": "Measures pulse frequency (Hz) for flow sensors and tachometers.",
+    "code": {
+        "functions": "@file:commands/src/pulse_rate.cpp",
+        "dispatcher": "else if (strcmp(cmd, \"PULSE_RATE\") == 0) { return handlePulseRate(delimiter ? delimiter + 1 : NULL); }"
+    }
+}

@@ -10,6 +10,8 @@ export interface IPortState {
         name: string;
     };
     deviceId?: mongoose.Types.ObjectId; // Deprecated but kept for backward compatibility
+    pwm?: boolean;
+    interface?: string;
     triggerLogic?: 'HIGH' | 'LOW'; // Only for relay/digital ports
 }
 

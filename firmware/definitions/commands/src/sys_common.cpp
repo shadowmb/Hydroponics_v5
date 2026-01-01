@@ -10,6 +10,7 @@ String getMacAddress();
 
 // === COMMAND PARSER ===
 String processCommand(String input) {
+  input.trim();
   char cmdBuffer[120];
   strncpy(cmdBuffer, input.c_str(), sizeof(cmdBuffer) - 1);
   cmdBuffer[sizeof(cmdBuffer) - 1] = '\0';
@@ -30,7 +31,11 @@ String processCommand(String input) {
   else if (strcmp(cmd, "HYDROPONICS_DISCOVERY") == 0) {
     String response = F("{\"type\":\"ANNOUNCE\",\"mac\":\"");
     response += getMacAddress();
-    response += F("\",\"model\":\"Hydroponics Controller\",\"firmware\":\"");
+    #if defined(ESP8266) || defined(ESP32) || defined(ARDUINO_UNOR4_WIFI)
+    response += F("\",\"ip\":\"");
+    response += WiFi.localIP().toString();
+    #endif
+    response += F("\",\"model\":\"{{BOARD_NAME}}\",\"firmware\":\"");
     response += FIRMWARE_VERSION;
     response += F("\",\"capabilities\":[");
     for (int i = 0; i < CAPABILITIES_COUNT; i++) {

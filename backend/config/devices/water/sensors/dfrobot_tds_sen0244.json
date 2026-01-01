@@ -1,0 +1,109 @@
+{
+    "id": "dfrobot_tds_sen0244",
+    "name": "DFRobot Analog TDS Sensor",
+    "description": "Analog TDS sensor for measuring water quality. Conceptually identical to EC sensor but optimized for ppm readings.",
+    "category": "SENSOR",
+    "measurements": {
+        "tds": {
+            "rawUnit": "adc",
+            "baseUnit": "ppm"
+        }
+    },
+    "roles": {
+        "tds": {
+            "label": "TDS Meter",
+            "description": "Measure total dissolved solids.",
+            "defaultStrategy": "linear",
+            "strategies": [
+                "linear",
+                "ec_smart"
+            ],
+            "units": [
+                "ppm",
+                "µS/cm",
+                "mg/L"
+            ]
+        }
+    },
+    "supportedStrategies": [
+        "linear",
+        "ec_smart"
+    ],
+    "conversionStrategy": "linear",
+    "capabilities": [
+        "READ"
+    ],
+    "requirements": {
+        "interface": "analog",
+        "voltage": [
+            3.3,
+            5.0
+        ],
+        "pin_count": {
+            "analog": 1
+        }
+    },
+    "settingsSchema": {
+        "compensation": {
+            "temperature": {
+                "enabled": true,
+                "source": "default",
+                "default": 25.0
+            }
+        },
+        "voltage": {
+            "reference": 5.0
+        }
+    },
+    "sampling": {
+        "count": 5,
+        "delayMs": 50
+    },
+    "commands": {
+        "READ": {
+            "hardwareCmd": "ANALOG",
+            "valuePath": "value",
+            "sourceUnit": "adc",
+            "outputs": [
+                {
+                    "key": "tds",
+                    "label": "TDS",
+                    "unit": "ppm"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "Signal",
+            "type": "ANALOG_IN"
+        }
+    ],
+    "initialState": {
+        "value": 0
+    },
+    "uiConfig": {
+        "icon": "droplet",
+        "units": [
+            "ppm",
+            "µS/cm",
+            "mg/L"
+        ],
+        "tags": [
+            "TDS",
+            "Water Quality",
+            "Nutrients"
+        ],
+        "recommendedPins": [
+            "A0",
+            "A1"
+        ],
+        "capabilities": {
+            "READ": {
+                "label": "TDS Reading",
+                "icon": "activity",
+                "tooltip": "Measures total dissolved solids in ppm."
+            }
+        }
+    }
+}

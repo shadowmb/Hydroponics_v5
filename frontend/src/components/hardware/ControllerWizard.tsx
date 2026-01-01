@@ -55,7 +55,8 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
         'Arduino Uno': 'Arduino_Uno',
         'ESP32': 'ESP32',
         'WeMos D1 R2': 'WeMos_D1_R2',
-        'WeMos D1 R2 V2.1.0': 'WeMos_D1_R2'
+        'WeMos D1 R2 V2.1.0': 'WeMos_D1_R2',
+        'LilyGO T-Relay': 'lilygo_t_relay_4'
     };
 
     useEffect(() => {
