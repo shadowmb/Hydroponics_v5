@@ -49,7 +49,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps<any>) => {
         <Tooltip>
             <TooltipTrigger asChild>
                 <div className={cn(
-                    "flex flex-col shadow-md rounded-md bg-card border-2 min-w-[200px] overflow-hidden transition-all",
+                    "flex flex-col shadow-md rounded-md bg-card border-2 min-w-[200px] transition-all",
                     selected ? "border-primary ring-1 ring-primary" : "border-border",
                     !!data.hasError && "border-destructive ring-destructive ring-1",
                     !!data.mirrorOf && "border-blue-400 border-dashed bg-blue-50/10"
@@ -57,7 +57,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps<any>) => {
                     <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
 
                     {/* Header */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-t-sm">
                         {data.mirrorOf ? <Link className="h-4 w-4 text-blue-500" /> : <GitBranch className="h-4 w-4" />}
                         <span className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                             {displayData.label || 'Check Condition'}
@@ -98,7 +98,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps<any>) => {
                     {/* Exit Paths Footer */}
                     <div className="flex text-[10px] font-bold h-7 border-t">
                         {/* TRUE Path */}
-                        <div className="flex-1 flex items-center justify-center gap-1 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-500 border-r relative">
+                        <div className="flex-1 flex items-center justify-center gap-1 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-500 border-r relative rounded-bl-sm">
                             <CheckCircle2 className="h-3 w-3" />
                             TRUE
                             <Handle
@@ -110,7 +110,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps<any>) => {
                         </div>
 
                         {/* FALSE Path */}
-                        <div className="flex-1 flex items-center justify-center gap-1 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-500 relative">
+                        <div className="flex-1 flex items-center justify-center gap-1 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-500 relative rounded-br-sm">
                             <XCircle className="h-3 w-3" />
                             FALSE
                             <Handle

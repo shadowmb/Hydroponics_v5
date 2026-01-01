@@ -1,80 +1,107 @@
-[2026-01-01 14:00:47.033 +0200] INFO: ЁЯУе Advanced Program Loaded
+[2026-01-01 15:07:12.614 +0200] INFO: ≡ƒôÑ Advanced Program Loaded
     env: "development"
-    program: "NewProgramADvanced"
+    program: "ProgramAdvancet"
     windowCount: 2
-[2026-01-01 14:00:52.981 +0200] INFO: ЁЯУЭ Active Program Updated
+[2026-01-01 15:07:20.845 +0200] INFO: ≡ƒô¥ Active Program Updated
     env: "development"
-[2026-01-01 14:00:54.593 +0200] INFO: тЦ╢я╕П Active Program Started
+[2026-01-01 15:07:42.369 +0200] INFO: ≡ƒô¥ Active Program Updated
     env: "development"
-[14:00] INFO: тЪб Immediate Advanced Program Check
+[2026-01-01 15:07:53.499 +0200] INFO: ≡ƒô¥ Active Program Updated
     env: "development"
-✅ DEBUG LISTENER: automation:block_end received! start
-[SensorRead] Conversion failed: Unknown source unit: L
-[SensorRead] ✔️ Saved to 'var_1': 182 l
-✅ DEBUG LISTENER: automation:block_end received! SENSOR_READ_1767135796826
-✅ DEBUG LISTENER: automation:block_end received! end
-[14:01] INFO: ЁЯХТ Scheduler Tick
+[15:08] INFO: ≡ƒòÆ Scheduler Tick
     env: "development"
-[2026-01-01 14:01:00.017 +0200] INFO: ЁЯФД Evaluating triggers for window
+[2026-01-01 15:08:04.950 +0200] INFO: ≡ƒô¥ Active Program Updated
     env: "development"
-    windowId: "tw_1767194603750_o135w1fzt"
-    windowName: "╨Я╤А╨╛╨╖╨╛╤А╨╡╤Ж 1"
-[2026-01-01 14:01:00.103 +0200] INFO: тЪб Trigger condition matched - executing flow
+[2026-01-01 15:08:14.482 +0200] INFO: ≡ƒô¥ Active Program Updated
     env: "development"
-    triggerId: "tr_1767194626236_o2p3gd227"
-    flowId: "test3"
-    behavior: "continue"
-[2026-01-01 14:01:00.106 +0200] INFO: ЁЯЪА Starting Cycle (Trace Overrides)
+[2026-01-01 15:08:25.535 +0200] INFO: Γû╢∩╕Å Active Program Started
     env: "development"
-    cycleId: "tr_1767194626236_o2p3gd227"
-    cycleName: "Trigger: tr_1767194626236_o2p3gd227"
-    sessionId: "695661fcb7029bce599ec74e"
+[15:08] INFO: ΓÜí Immediate Advanced Program Check
+    env: "development"
+[15:09] INFO: ≡ƒòÆ Scheduler Tick
+    env: "development"
+[15:10] INFO: ≡ƒòÆ Scheduler Tick
+    env: "development"
+[2026-01-01 15:10:00.007 +0200] INFO: ≡ƒöä Evaluating triggers for window
+    env: "development"
+    windowId: "tw_1767270037947_psub82ett"
+    windowName: "╨ƒ╤Ç╨╛╨╖╨╛╤Ç╨╡╤å 1"
+[2026-01-01 15:10:00.203 +0200] ERROR: Γ¥î Failed to read sensor
+    env: "development"
+    sensorId: "6952bc2a3b5ab4f7e2676f7c"
+    error: "ERR_INVALID_HEADER"
+[2026-01-01 15:10:00.203 +0200] WARN: ΓÜá∩╕Å Sensor read returned null, skipping trigger
+    env: "development"
+    triggerId: "tr_1767270073003_9oukjl9fz"
+    sensorId: "6952bc2a3b5ab4f7e2676f7c"
+[2026-01-01 15:10:00.506 +0200] INFO: ΓÜí Trigger condition matched - executing flow
+    env: "development"
+    triggerId: "tr_1767272213313_6ejuv3qsr"
+    flowId: "pumpstart"
+    behavior: "break"
+[2026-01-01 15:10:00.508 +0200] INFO: ≡ƒÜÇ Starting Cycle (Trace Overrides)
+    env: "development"
+    cycleId: "tr_1767272213313_6ejuv3qsr"
+    cycleName: "Trigger: tr_1767272213313_6ejuv3qsr"
+    sessionId: "69567228c78821d72ad10796"
     stepsCount: 1
     overrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "razsto globalno": 60,
+      "PumpTimne": 10,
+      "razsto globalno_tolerance": 5
     }
-[2026-01-01 14:01:00.106 +0200] INFO: тЦ╢я╕П Executing Cycle Step
+[2026-01-01 15:10:00.508 +0200] INFO: Γû╢∩╕Å Executing Cycle Step
     env: "development"
     step: 0
-    flowId: "test3"
-[2026-01-01 14:01:00.106 +0200] INFO: ЁЯФз Cycle Step Overrides Resolution
+    flowId: "pumpstart"
+[2026-01-01 15:10:00.508 +0200] INFO: ≡ƒöº Cycle Step Overrides Resolution
     env: "development"
     step: 0
     sessionOverrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Trigger: tr_1767194626236_o2p3gd227"
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "razsto globalno": 60,
+      "PumpTimne": 10,
+      "razsto globalno_tolerance": 5,
+      "cycleName": "Trigger: tr_1767272213313_6ejuv3qsr"
     }
     finalOverrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Trigger: tr_1767194626236_o2p3gd227"
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "razsto globalno": 60,
+      "PumpTimne": 10,
+      "razsto globalno_tolerance": 5,
+      "cycleName": "Trigger: tr_1767272213313_6ejuv3qsr"
     }
-[2026-01-01 14:01:00.106 +0200] INFO: тЬи AutomationEngine Actor Initialized/Reset (Session: none)
+[2026-01-01 15:10:00.509 +0200] INFO: Γ£¿ AutomationEngine Actor Initialized/Reset (Session: none)
     env: "development"
-[2026-01-01 14:01:00.108 +0200] INFO: ЁЯзй AutomationEngine: Input Resolution
+[2026-01-01 15:10:00.510 +0200] INFO: ≡ƒº⌐ AutomationEngine: Input Resolution
     env: "development"
     overrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Trigger: tr_1767194626236_o2p3gd227"
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "razsto globalno": 60,
+      "PumpTimne": 10,
+      "razsto globalno_tolerance": 5,
+      "cycleName": "Trigger: tr_1767272213313_6ejuv3qsr"
     }
     variablesResolved: {}
-[2026-01-01 14:01:00.110 +0200] INFO: ЁЯУе Loading Program Session
+[2026-01-01 15:10:00.512 +0200] INFO: ≡ƒôÑ Loading Program Session
     env: "development"
-    sessionId: "695661fcb7029bce599ec753"
-    programId: "test3"
-    variables: {}
-[2026-01-01 14:01:00.116 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
+    sessionId: "69567228c78821d72ad1079d"
+    programId: "pumpstart"
+    variables: {
+      "global_2": 60,
+      "razsto globalno": 60,
+      "razsto globalno_tolerance": 5,
+      "global_2_tolerance": 5,
+      "global_3": 10,
+      "PumpTimne": 10
+    }
+✅ DEBUG LISTENER: automation:block_end received! start
+[2026-01-01 15:10:00.516 +0200] INFO: ≡ƒöö NotificationService: Received Block Event with Config
     env: "development"
     blockId: "start"
     config: {
@@ -83,241 +110,28 @@
         "hasError": false
       }
     }
-[2026-01-01 14:01:00.117 +0200] INFO: Graph Navigation Trace
+[2026-01-01 15:10:00.516 +0200] INFO: Graph Navigation Trace
     env: "development"
     blockId: "start"
     edgeFound: true
-    nextBlockId: "SENSOR_READ_1767135796826"
-[2026-01-01 14:01:00.118 +0200] INFO: ЁЯЪА Trigger flow started - waiting for completion
+    nextBlockId: "SENSOR_READ_1767272016514"
+[2026-01-01 15:10:00.517 +0200] INFO: ≡ƒÜÇ Trigger flow started - waiting for completion
     env: "development"
-    windowId: "tw_1767194603750_o135w1fzt"
-    triggerId: "tr_1767194626236_o2p3gd227"
-    flowSessionId: "695661fcb7029bce599ec74e"
-[2026-01-01 14:01:00.136 +0200] INFO: ЁЯУи Sending Notification: "ЁЯУв ╨Т╨╜╨╕╨╝╨░╨╜╨╕╨╡! ╨Ь╨░╤И╨╕╨╜╨░╤В╨░ ╤Б╤В╨░╤А╤В╨╕╤А╨░ ╨┐╤А╨╛╨│╤А╨░╨╝╨░: ╤В╨╡╤Б╤В3 14:01:00 ╤З. "
+    windowId: "tw_1767270037947_psub82ett"
+    triggerId: "tr_1767272213313_6ejuv3qsr"
+    flowSessionId: "69567228c78821d72ad10796"
+[2026-01-01 15:10:00.527 +0200] INFO: ≡ƒô¿ Sending Notification: "Γä╣∩╕Å Event: CYCLE_START"
     env: "development"
-    provider: "TelegramGroup"
+    provider: "Telegram"
     type: "telegram"
-[2026-01-01 14:01:00.137 +0200] INFO: ЁЯУи Sending Notification: " tr_1767194626236_o2p3gd227"
+[2026-01-01 15:10:00.530 +0200] INFO: ≡ƒô¿ Sending Notification: "≡ƒÜÇ Program Started"
     env: "development"
-    provider: "TelegramGroup"
+    provider: "Telegram"
     type: "telegram"
-[2026-01-01 14:01:00.212 +0200] INFO: ЁЯФФ AutomationEngine: Prepared Notification Payload
-    env: "development"
-    blockId: "SENSOR_READ_1767135796826"
-    channel: "6954567e758f275fb60815e2"
-    mode: "ALWAYS"
-[2026-01-01 14:01:00.212 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
-    env: "development"
-    blockId: "SENSOR_READ_1767135796826"
-    config: {
-      "channelId": "6954567e758f275fb60815e2",
-      "mode": "ALWAYS",
-      "config": {
-        "readingType": "tank_volume",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "6954567e758f275fb60815e2",
-        "notificationMode": "ALWAYS",
-        "label": "Read Sensor",
-        "hasError": false,
-        "deviceId": "694549a90352590f8322f050",
-        "variable": "var_1"
-      }
-    }
-[2026-01-01 14:01:00.212 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "SENSOR_READ_1767135796826"
-    edgeFound: true
-    nextBlockId: "end"
-[2026-01-01 14:01:00.213 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
-    env: "development"
-    blockId: "end"
-    config: {
-      "config": {
-        "label": "End",
-        "hasError": false
-      }
-    }
-[2026-01-01 14:01:00.236 +0200] INFO: тЬЕ Cycle Step Completed
-    env: "development"
-    cycleId: "tr_1767194626236_o2p3gd227"
-    step: 0
-[2026-01-01 14:01:00.236 +0200] INFO: ЁЯПБ Cycle Completed Successfully
-    env: "development"
-    sessionId: "695661fcb7029bce599ec74e"
-[2026-01-01 14:01:00.245 +0200] INFO: ЁЯУи Sending Notification: "тЬЕ Block Executed (SENSOR_READ_1767135796826)
-Summary: Read 182 l"
-    env: "development"
-    provider: "TelegramBot"
-    type: "telegram"
-[2026-01-01 14:01:00.254 +0200] INFO: ЁЯУи Sending Notification: "╨Я╤А╨╛╨│╤А╨░╨╝╤В╨░ ╤Б╨┐╨╕╤А╨░ ╨╖╨░╤А╨░╨┤╨╕  completed 14:01:00 ╤З."
-    env: "development"
-    provider: "TelegramGroup"
-    type: "telegram"
-[2026-01-01 14:01:00.264 +0200] INFO: ЁЯУи Sending Notification: "тЬЕ Cycle Finished: tr_1767194626236_o2p3gd227 14:01:00 ╤З."
-    env: "development"
-    provider: "TelegramGroup"
-    type: "telegram"
-[14:02] INFO: ЁЯХТ Scheduler Tick
-    env: "development"
-[2026-01-01 14:02:00.020 +0200] INFO: тЬЕ Trigger flow finished
-    env: "development"
-    windowId: "tw_1767194603750_o135w1fzt"
-    sessionId: "695661fcb7029bce599ec74e"
-✅ DEBUG LISTENER: automation:block_end received! start
-[SensorRead] Conversion failed: Unknown source unit: L
-[SensorRead] ✔️ Saved to 'var_1': 749 l
-✅ DEBUG LISTENER: automation:block_end received! SENSOR_READ_1767135796826
-✅ DEBUG LISTENER: automation:block_end received! end
-[14:03] INFO: ЁЯХТ Scheduler Tick
-    env: "development"
-[2026-01-01 14:03:00.017 +0200] INFO: тП░ Window time expired - checking fallback
-    env: "development"
-    windowId: "tw_1767194603750_o135w1fzt"
-[2026-01-01 14:03:00.017 +0200] INFO: ЁЯЫбя╕П Executing fallback flow
-    env: "development"
-    windowId: "tw_1767194603750_o135w1fzt"
-    fallbackFlowId: "test3"
-[2026-01-01 14:03:00.020 +0200] INFO: ЁЯЪА Starting Cycle (Trace Overrides)
-    env: "development"
-    cycleId: "fallback-tw_1767194603750_o135w1fzt"
-    cycleName: "Fallback: ╨Я╤А╨╛╨╖╨╛╤А╨╡╤Ж 1"
-    sessionId: "69566274b7029bce599ec79a"
-    stepsCount: 1
-    overrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0
-    }
-[2026-01-01 14:03:00.020 +0200] INFO: тЦ╢я╕П Executing Cycle Step
-    env: "development"
-    step: 0
-    flowId: "test3"
-[2026-01-01 14:03:00.020 +0200] INFO: ЁЯФз Cycle Step Overrides Resolution
-    env: "development"
-    step: 0
-    sessionOverrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Fallback: ╨Я╤А╨╛╨╖╨╛╤А╨╡╤Ж 1"
-    }
-    finalOverrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Fallback: ╨Я╤А╨╛╨╖╨╛╤А╨╡╤Ж 1"
-    }
-[2026-01-01 14:03:00.021 +0200] INFO: тЬи AutomationEngine Actor Initialized/Reset (Session: none)
-    env: "development"
-[2026-01-01 14:03:00.024 +0200] INFO: ЁЯзй AutomationEngine: Input Resolution
-    env: "development"
-    overrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Fallback: ╨Я╤А╨╛╨╖╨╛╤А╨╡╤Ж 1"
-    }
-    variablesResolved: {}
-[2026-01-01 14:03:00.026 +0200] INFO: ЁЯУе Loading Program Session
-    env: "development"
-    sessionId: "69566274b7029bce599ec79f"
-    programId: "test3"
-    variables: {}
-[2026-01-01 14:03:00.032 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
-    env: "development"
-    blockId: "start"
-    config: {
-      "config": {
-        "label": "Start",
-        "hasError": false
-      }
-    }
-[2026-01-01 14:03:00.032 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "start"
-    edgeFound: true
-    nextBlockId: "SENSOR_READ_1767135796826"
-[2026-01-01 14:03:00.049 +0200] INFO: ЁЯУи Sending Notification: "ЁЯУв ╨Т╨╜╨╕╨╝╨░╨╜╨╕╨╡! ╨Ь╨░╤И╨╕╨╜╨░╤В╨░ ╤Б╤В╨░╤А╤В╨╕╤А╨░ ╨┐╤А╨╛╨│╤А╨░╨╝╨░: ╤В╨╡╤Б╤В3 14:03:00 ╤З. "
-    env: "development"
-    provider: "TelegramGroup"
-    type: "telegram"
-[2026-01-01 14:03:00.050 +0200] INFO: ЁЯУи Sending Notification: " fallback-tw_1767194603750_o135w1fzt"
-    env: "development"
-    provider: "TelegramGroup"
-    type: "telegram"
-[2026-01-01 14:03:00.128 +0200] INFO: ЁЯФФ AutomationEngine: Prepared Notification Payload
-    env: "development"
-    blockId: "SENSOR_READ_1767135796826"
-    channel: "6954567e758f275fb60815e2"
-    mode: "ALWAYS"
-[2026-01-01 14:03:00.128 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
-    env: "development"
-    blockId: "SENSOR_READ_1767135796826"
-    config: {
-      "channelId": "6954567e758f275fb60815e2",
-      "mode": "ALWAYS",
-      "config": {
-        "readingType": "tank_volume",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "6954567e758f275fb60815e2",
-        "notificationMode": "ALWAYS",
-        "label": "Read Sensor",
-        "hasError": false,
-        "deviceId": "694549a90352590f8322f050",
-        "variable": "var_1"
-      }
-    }
-[2026-01-01 14:03:00.128 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "SENSOR_READ_1767135796826"
-    edgeFound: true
-    nextBlockId: "end"
-[2026-01-01 14:03:00.129 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
-    env: "development"
-    blockId: "end"
-    config: {
-      "config": {
-        "label": "End",
-        "hasError": false
-      }
-    }
-[2026-01-01 14:03:00.136 +0200] INFO: тЬЕ Cycle Step Completed
-    env: "development"
-    cycleId: "fallback-tw_1767194603750_o135w1fzt"
-    step: 0
-[2026-01-01 14:03:00.136 +0200] INFO: ЁЯПБ Cycle Completed Successfully
-    env: "development"
-    sessionId: "69566274b7029bce599ec79a"
-[2026-01-01 14:03:00.141 +0200] INFO: ЁЯУи Sending Notification: "тЬЕ Block Executed (SENSOR_READ_1767135796826)
-Summary: Read 749 l"
-    env: "development"
-    provider: "TelegramBot"
-    type: "telegram"
-[2026-01-01 14:03:00.159 +0200] INFO: ЁЯУи Sending Notification: "╨Я╤А╨╛╨│╤А╨░╨╝╤В╨░ ╤Б╨┐╨╕╤А╨░ ╨╖╨░╤А╨░╨┤╨╕  completed 14:03:00 ╤З."
-    env: "development"
-    provider: "TelegramGroup"
-    type: "telegram"
-[2026-01-01 14:03:00.165 +0200] INFO: ЁЯУи Sending Notification: "тЬЕ Cycle Finished: fallback-tw_1767194603750_o135w1fzt 14:03:00 ╤З."
-    env: "development"
-    provider: "TelegramGroup"
-    type: "telegram"
-[14:04] INFO: ЁЯХТ Scheduler Tick
-    env: "development"
-✅ DEBUG LISTENER: automation:block_end received! start
-[SensorRead] ✔️ Saved to 'var_1': 17.4 cm
-✅ DEBUG LISTENER: automation:block_end received! SENSOR_READ_1767198071666
+[SensorRead] ✔️ Saved to 'var_1': 188.5 cm
+✅ DEBUG LISTENER: automation:block_end received! SENSOR_READ_1767272016514
 [IfBlock DEBUG] Params: {
-  "operator": ">=",
+  "operator": "==",
   "onFailure": "STOP",
   "errorNotification": false,
   "notificationChannelId": "",
@@ -326,113 +140,16 @@ Summary: Read 749 l"
   "hasError": false,
   "variable": "var_1",
   "value": "{{global_2}}",
-  "_blockId": "IF_1767198104528"
+  "_blockId": "IF_1767272021401"
 }
 [IfBlock DEBUG] Checking Left Tolerance for: 'var_1'
 [IfBlock DEBUG] Checking Right Tolerance for: {{global_2}}
-[IfBlock Tolerance] Applied for 'global_2': 0 (Mode: symmetric)
-✅ DEBUG LISTENER: automation:block_end received! IF_1767198104528
-✅ DEBUG LISTENER: automation:block_end received! end
-[14:05] INFO: ЁЯХТ Scheduler Tick
+[IfBlock Tolerance] Applied for 'global_2': 5 (Mode: symmetric)
+✅ DEBUG LISTENER: automation:block_end received! IF_1767272021401
+[ActuatorSet] ⏳ Starting Pulse: 10s (10000ms)...
+[2026-01-01 15:10:01.224 +0200] INFO: ≡ƒöö NotificationService: Received Block Event with Config
     env: "development"
-[2026-01-01 14:05:00.022 +0200] INFO: ЁЯФД Evaluating triggers for window
-    env: "development"
-    windowId: "tw_1767194650547_0lf5tyf2u"
-    windowName: "╨Я╤А╨╛╨╖╨╛╤А╨╡╤Ж 2"
-[2026-01-01 14:05:00.030 +0200] INFO: тЪб Trigger condition matched - executing flow
-    env: "development"
-    triggerId: "tr_1767194660674_4to7h3jd0"
-    flowId: "advanced_1"
-    behavior: "break"
-[2026-01-01 14:05:00.034 +0200] INFO: ЁЯЪА Starting Cycle (Trace Overrides)
-    env: "development"
-    cycleId: "tr_1767194660674_4to7h3jd0"
-    cycleName: "Trigger: tr_1767194660674_4to7h3jd0"
-    sessionId: "695662ecb7029bce599ec7eb"
-    stepsCount: 1
-    overrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0
-    }
-[2026-01-01 14:05:00.034 +0200] INFO: тЦ╢я╕П Executing Cycle Step
-    env: "development"
-    step: 0
-    flowId: "advanced_1"
-[2026-01-01 14:05:00.034 +0200] INFO: ЁЯФз Cycle Step Overrides Resolution
-    env: "development"
-    step: 0
-    sessionOverrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Trigger: tr_1767194660674_4to7h3jd0"
-    }
-    finalOverrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Trigger: tr_1767194660674_4to7h3jd0"
-    }
-[2026-01-01 14:05:00.035 +0200] INFO: тЬи AutomationEngine Actor Initialized/Reset (Session: none)
-    env: "development"
-[2026-01-01 14:05:00.038 +0200] INFO: ЁЯзй AutomationEngine: Input Resolution
-    env: "development"
-    overrides: {
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "cycleName": "Trigger: tr_1767194660674_4to7h3jd0"
-    }
-    variablesResolved: {}
-[2026-01-01 14:05:00.040 +0200] INFO: ЁЯУе Loading Program Session
-    env: "development"
-    sessionId: "695662ecb7029bce599ec7f2"
-    programId: "advanced_1"
-    variables: {
-      "global_2": 5,
-      "Distancia": 5,
-      "Distancia_tolerance": 0,
-      "global_2_tolerance": 0,
-      "global_3": 5,
-      "TimePump": 5,
-      "TimePump_tolerance": 0,
-      "global_3_tolerance": 0
-    }
-[2026-01-01 14:05:00.045 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
-    env: "development"
-    blockId: "start"
-    config: {
-      "config": {
-        "label": "Start",
-        "hasError": false
-      }
-    }
-[2026-01-01 14:05:00.045 +0200] INFO: Graph Navigation Trace
-    env: "development"
-    blockId: "start"
-    edgeFound: true
-    nextBlockId: "SENSOR_READ_1767198071666"
-[2026-01-01 14:05:00.047 +0200] INFO: ЁЯЪА Trigger flow started - waiting for completion
-    env: "development"
-    windowId: "tw_1767194650547_0lf5tyf2u"
-    triggerId: "tr_1767194660674_4to7h3jd0"
-    flowSessionId: "695662ecb7029bce599ec7eb"
-[2026-01-01 14:05:00.069 +0200] INFO: ЁЯУи Sending Notification: "ЁЯУв ╨Т╨╜╨╕╨╝╨░╨╜╨╕╨╡! ╨Ь╨░╤И╨╕╨╜╨░╤В╨░ ╤Б╤В╨░╤А╤В╨╕╤А╨░ ╨┐╤А╨╛╨│╤А╨░╨╝╨░: advanced 1 14:05:00 ╤З. "
-    env: "development"
-    provider: "TelegramGroup"
-    type: "telegram"
-[2026-01-01 14:05:00.070 +0200] INFO: ЁЯУи Sending Notification: " tr_1767194660674_4to7h3jd0"
-    env: "development"
-    provider: "TelegramGroup"
-    type: "telegram"
-[2026-01-01 14:05:00.146 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
-    env: "development"
-    blockId: "SENSOR_READ_1767198071666"
+    blockId: "SENSOR_READ_1767272016514"
     config: {
       "channelId": "",
       "mode": "AUTO",
@@ -446,23 +163,23 @@ Summary: Read 749 l"
         "notificationMode": "AUTO",
         "label": "Read Sensor",
         "hasError": false,
-        "deviceId": "694549a90352590f8322f050",
+        "deviceId": "6952bc2a3b5ab4f7e2676f7c",
         "variable": "var_1"
       }
     }
-[2026-01-01 14:05:00.147 +0200] INFO: Graph Navigation Trace
+[2026-01-01 15:10:01.224 +0200] INFO: Graph Navigation Trace
     env: "development"
-    blockId: "SENSOR_READ_1767198071666"
+    blockId: "SENSOR_READ_1767272016514"
     edgeFound: true
-    nextBlockId: "IF_1767198104528"
-[2026-01-01 14:05:00.149 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
+    nextBlockId: "IF_1767272021401"
+[2026-01-01 15:10:01.226 +0200] INFO: ≡ƒöö NotificationService: Received Block Event with Config
     env: "development"
-    blockId: "IF_1767198104528"
+    blockId: "IF_1767272021401"
     config: {
       "channelId": "",
       "mode": "AUTO",
       "config": {
-        "operator": ">=",
+        "operator": "==",
         "onFailure": "STOP",
         "errorNotification": false,
         "notificationChannelId": "",
@@ -473,13 +190,44 @@ Summary: Read 749 l"
         "value": "{{global_2}}"
       }
     }
-[2026-01-01 14:05:00.149 +0200] INFO: тЭУ IF Block Navigation Trace
+[2026-01-01 15:10:01.227 +0200] INFO: Γ¥ô IF Block Navigation Trace
     env: "development"
-    blockId: "IF_1767198104528"
-    result: true
-    expectedHandle: "true"
+    blockId: "IF_1767272021401"
+    result: false
+    expectedHandle: "false"
+    nextBlockId: "ACTUATOR_SET_1767272078708"
+[ActuatorSet] ✔️ Pulsed 'PULSE_ON' for 10.00s
+✅ DEBUG LISTENER: automation:block_end received! ACTUATOR_SET_1767272078708
+✅ DEBUG LISTENER: automation:block_end received! end
+[2026-01-01 15:10:11.736 +0200] INFO: ≡ƒöö NotificationService: Received Block Event with Config
+    env: "development"
+    blockId: "ACTUATOR_SET_1767272078708"
+    config: {
+      "channelId": "",
+      "mode": "AUTO",
+      "config": {
+        "strategy": "actuator_manual",
+        "amountUnit": "ml",
+        "retryCount": 3,
+        "retryDelay": 1000,
+        "onFailure": "STOP",
+        "errorNotification": false,
+        "notificationChannelId": "",
+        "notificationMode": "AUTO",
+        "revertOnStop": true,
+        "label": "Set Actuator",
+        "hasError": false,
+        "deviceId": "69510af85bb60cca7130e750",
+        "action": "PULSE_ON",
+        "duration": "{{global_3}}"
+      }
+    }
+[2026-01-01 15:10:11.738 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "ACTUATOR_SET_1767272078708"
+    edgeFound: true
     nextBlockId: "end"
-[2026-01-01 14:05:00.149 +0200] INFO: ЁЯФФ NotificationService: Received Block Event with Config
+[2026-01-01 15:10:11.739 +0200] INFO: ≡ƒöö NotificationService: Received Block Event with Config
     env: "development"
     blockId: "end"
     config: {
@@ -488,18 +236,237 @@ Summary: Read 749 l"
         "hasError": false
       }
     }
-[2026-01-01 14:05:00.154 +0200] INFO: тЬЕ Cycle Step Completed
+[2026-01-01 15:10:11.742 +0200] INFO: Γ£à Cycle Step Completed
     env: "development"
-    cycleId: "tr_1767194660674_4to7h3jd0"
+    cycleId: "tr_1767272213313_6ejuv3qsr"
     step: 0
-[2026-01-01 14:05:00.154 +0200] INFO: ЁЯПБ Cycle Completed Successfully
+[2026-01-01 15:10:11.742 +0200] INFO: ≡ƒÅü Cycle Completed Successfully
     env: "development"
-    sessionId: "695662ecb7029bce599ec7eb"
-[2026-01-01 14:05:00.166 +0200] INFO: ЁЯУи Sending Notification: "╨Я╤А╨╛╨│╤А╨░╨╝╤В╨░ ╤Б╨┐╨╕╤А╨░ ╨╖╨░╤А╨░╨┤╨╕  completed 14:05:00 ╤З."
+    sessionId: "69567228c78821d72ad10796"
+[2026-01-01 15:10:11.750 +0200] INFO: ≡ƒô¿ Sending Notification: "≡ƒ¢æ Program Stopped"
     env: "development"
-    provider: "TelegramGroup"
+    provider: "Telegram"
     type: "telegram"
-[2026-01-01 14:05:00.173 +0200] INFO: ЁЯУи Sending Notification: "тЬЕ Cycle Finished: tr_1767194660674_4to7h3jd0 14:05:00 ╤З."
+[2026-01-01 15:10:11.754 +0200] INFO: ≡ƒô¿ Sending Notification: "Γä╣∩╕Å Event: CYCLE_COMPLETE"
     env: "development"
-    provider: "TelegramGroup"
+    provider: "Telegram"
     type: "telegram"
+[15:11] INFO: ≡ƒòÆ Scheduler Tick
+    env: "development"
+[2026-01-01 15:11:00.009 +0200] INFO: Γ£à Trigger flow finished
+    env: "development"
+    windowId: "tw_1767270037947_psub82ett"
+    sessionId: "69567228c78821d72ad10796"
+[2026-01-01 15:11:00.010 +0200] INFO: ≡ƒ¢æ BREAK trigger finished - closing window
+    env: "development"
+    windowId: "tw_1767270037947_psub82ett"
+[15:12] INFO: ≡ƒòÆ Scheduler Tick
+    env: "development"
+[15:13] INFO: ≡ƒòÆ Scheduler Tick
+    env: "development"
+[15:14] INFO: ≡ƒòÆ Scheduler Tick
+    env: "development"
+[15:15] INFO: ≡ƒòÆ Scheduler Tick
+    env: "development"
+[2026-01-01 15:15:00.013 +0200] INFO: ≡ƒöä Evaluating triggers for window
+    env: "development"
+    windowId: "tw_1767270057179_wrierh2c5"
+    windowName: "╨ƒ╤Ç╨╛╨╖╨╛╤Ç╨╡╤å 2"
+✅ DEBUG LISTENER: automation:block_end received! start
+[2026-01-01 15:15:00.228 +0200] INFO: ΓÜí Trigger condition matched - executing flow
+    env: "development"
+    triggerId: "tr_1767270090899_061us44v1"
+    flowId: "meri_razstoyanie"
+    behavior: "break"
+[2026-01-01 15:15:00.230 +0200] INFO: ≡ƒÜÇ Starting Cycle (Trace Overrides)
+    env: "development"
+    cycleId: "tr_1767270090899_061us44v1"
+    cycleName: "Trigger: tr_1767270090899_061us44v1"
+    sessionId: "69567354c78821d72ad10824"
+    stepsCount: 1
+    overrides: {
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "razsto globalno": 60,
+      "PumpTimne": 10,
+      "razsto globalno_tolerance": 5
+    }
+[2026-01-01 15:15:00.230 +0200] INFO: Γû╢∩╕Å Executing Cycle Step
+    env: "development"
+    step: 0
+    flowId: "meri_razstoyanie"
+[2026-01-01 15:15:00.230 +0200] INFO: ≡ƒöº Cycle Step Overrides Resolution
+    env: "development"
+    step: 0
+    sessionOverrides: {
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "razsto globalno": 60,
+      "PumpTimne": 10,
+      "razsto globalno_tolerance": 5,
+      "cycleName": "Trigger: tr_1767270090899_061us44v1"
+    }
+    finalOverrides: {
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "razsto globalno": 60,
+      "PumpTimne": 10,
+      "razsto globalno_tolerance": 5,
+      "cycleName": "Trigger: tr_1767270090899_061us44v1"
+    }
+[2026-01-01 15:15:00.231 +0200] INFO: Γ£¿ AutomationEngine Actor Initialized/Reset (Session: none)
+    env: "development"
+[2026-01-01 15:15:00.232 +0200] INFO: ≡ƒº⌐ AutomationEngine: Input Resolution
+    env: "development"
+    overrides: {
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "razsto globalno": 60,
+      "PumpTimne": 10,
+      "razsto globalno_tolerance": 5,
+      "cycleName": "Trigger: tr_1767270090899_061us44v1"
+    }
+    variablesResolved: {}
+[2026-01-01 15:15:00.234 +0200] INFO: ≡ƒôÑ Loading Program Session
+    env: "development"
+    sessionId: "69567354c78821d72ad1082a"
+    programId: "meri_razstoyanie"
+    variables: {
+      "global_2": 60,
+      "Global 2": 60,
+      "Global 2_tolerance": 5,
+      "global_2_tolerance": 5
+    }
+[2026-01-01 15:15:00.236 +0200] INFO: ≡ƒöö NotificationService: Received Block Event with Config
+    env: "development"
+    blockId: "start"
+    config: {
+      "config": {
+        "label": "Start",
+        "hasError": false
+      }
+    }
+[2026-01-01 15:15:00.236 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "start"
+    edgeFound: true
+    nextBlockId: "SENSOR_READ_1767271841791"
+[2026-01-01 15:15:00.237 +0200] INFO: ≡ƒÜÇ Trigger flow started - waiting for completion
+    env: "development"
+    windowId: "tw_1767270057179_wrierh2c5"
+    triggerId: "tr_1767270090899_061us44v1"
+    flowSessionId: "69567354c78821d72ad10824"
+[2026-01-01 15:15:00.249 +0200] INFO: ≡ƒô¿ Sending Notification: "≡ƒÜÇ Program Started"
+    env: "development"
+    provider: "Telegram"
+    type: "telegram"
+[2026-01-01 15:15:00.251 +0200] INFO: ≡ƒô¿ Sending Notification: "Γä╣∩╕Å Event: CYCLE_START"
+    env: "development"
+    provider: "Telegram"
+    type: "telegram"
+[2026-01-01 15:15:00.427 +0200] WARN: Block execution failed
+    env: "development"
+    blockId: "SENSOR_READ_1767271841791"
+    attempt: 1
+    err: "ERR_INVALID_HEADER"
+[SensorRead] ✔️ Saved to 'var_1': 188.6 cm
+✅ DEBUG LISTENER: automation:block_end received! SENSOR_READ_1767271841791
+✅ DEBUG LISTENER: automation:block_end received! end
+[2026-01-01 15:15:01.659 +0200] INFO: ≡ƒöö NotificationService: Received Block Event with Config
+    env: "development"
+    blockId: "SENSOR_READ_1767271841791"
+    config: {
+      "channelId": "",
+      "mode": "AUTO",
+      "config": {
+        "readingType": "linear",
+        "retryCount": 3,
+        "retryDelay": 1000,
+        "onFailure": "STOP",
+        "errorNotification": false,
+        "notificationChannelId": "",
+        "notificationMode": "AUTO",
+        "label": "Read Sensor",
+        "hasError": false,
+        "deviceId": "6952bc2a3b5ab4f7e2676f7c",
+        "variable": "var_1"
+      }
+    }
+[2026-01-01 15:15:01.659 +0200] INFO: Graph Navigation Trace
+    env: "development"
+    blockId: "SENSOR_READ_1767271841791"
+    edgeFound: true
+    nextBlockId: "end"
+[2026-01-01 15:15:01.659 +0200] INFO: ≡ƒöö NotificationService: Received Block Event with Config
+    env: "development"
+    blockId: "end"
+    config: {
+      "config": {
+        "label": "End",
+        "hasError": false
+      }
+    }
+[2026-01-01 15:15:01.662 +0200] INFO: Γ£à Cycle Step Completed
+    env: "development"
+    cycleId: "tr_1767270090899_061us44v1"
+    step: 0
+[2026-01-01 15:15:01.662 +0200] INFO: ≡ƒÅü Cycle Completed Successfully
+    env: "development"
+    sessionId: "69567354c78821d72ad10824"
+[2026-01-01 15:15:01.667 +0200] INFO: ≡ƒô¿ Sending Notification: "≡ƒ¢æ Program Stopped"
+    env: "development"
+    provider: "Telegram"
+    type: "telegram"
+[2026-01-01 15:15:01.670 +0200] INFO: ≡ƒô¿ Sending Notification: "Γä╣∩╕Å Event: CYCLE_COMPLETE"
+    env: "development"
+    provider: "Telegram"
+    type: "telegram"
+[15:16] INFO: ≡ƒòÆ Scheduler Tick
+    env: "development"
+[2026-01-01 15:16:00.015 +0200] INFO: Γ£à Trigger flow finished
+    env: "development"
+    windowId: "tw_1767270057179_wrierh2c5"
+    sessionId: "69567354c78821d72ad10824"
+[2026-01-01 15:16:00.015 +0200] INFO: ≡ƒ¢æ BREAK trigger finished - closing window
+    env: "development"
+    windowId: "tw_1767270057179_wrierh2c5"
+[2026-01-01 15:16:00.018 +0200] INFO: ≡ƒÅü All windows completed - Advanced Program finished for today
+    env: "development"
+
+
+
+
+    Live Monitor:
+
+    Лог на изпълнението
+15 записа
+15:10:00
+Прозорец "Прозорец 1" - Активен
+15:10:00
+📊 Ultra = 188.5 → ⚡ > 60 ✓
+15:10:00
+✓ start
+15:10:01
+✓ SENSOR: Read 188.50 cm
+15:10:01
+✓ IF: 188.50 == [55–65] => FALSE
+15:10:11
+✓ ACTUATOR: Pulsed ON for 10.0s
+15:10:11
+✓ end: Total Time: 0m 11.2s
+15:11:00
+Прозорец "Прозорец 1" - Завършен чрез тригер
+15:15:00
+Прозорец "Прозорец 2" - Активен
+15:15:00
+📊 Ultra = 188.6 → ⚡ > 150 ✓
+15:15:00
+✓ start
+15:15:01
+✓ SENSOR: Read 188.60 cm
+15:15:01
+✓ end: Total Time: 0m 1.4s
+15:16:00
+Прозорец "Прозорец 2" - Завършен чрез тригер
+15:16:00
+🏁 Програмата завърши за днес

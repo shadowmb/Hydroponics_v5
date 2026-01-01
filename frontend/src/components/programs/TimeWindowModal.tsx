@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import {
     Dialog,
     DialogContent,
@@ -12,6 +13,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Checkbox } from '../ui/checkbox';
 import { TimePicker24 } from '../ui/time-picker-24';
 import type { ITimeWindow, DataSource } from './types';
 
@@ -43,6 +45,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
     const [checkInterval, setCheckInterval] = useState(5);
     const [dataSource, setDataSource] = useState<DataSource>('cached');
     const [fallbackFlowId, setFallbackFlowId] = useState('');
+    const [autoAdjust, setAutoAdjust] = useState(false);
 
     // Reset form when modal opens
     useEffect(() => {
@@ -77,7 +80,35 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
         }
     }, [open, editingWindow, existingWindows]);
 
+    const toMinutes = (time: string) => {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
+    };
+
     const handleSave = () => {
+        const startMins = toMinutes(startTime);
+        const endMins = toMinutes(endTime);
+
+        // 1. Basic Validation: Start < End
+        if (startMins >= endMins) {
+            toast.error("Крайният час трябва да е след началния!");
+            return;
+        }
+
+        // 2. Overlap Validation
+        const hasOverlap = existingWindows.some(w => {
+            if (isEditing && w.id === editingWindow.id) return false;
+            const wStart = toMinutes(w.startTime);
+            const wEnd = toMinutes(w.endTime);
+            // Check if ranges overlap: (StartA < EndB) and (EndA > StartB)
+            return (startMins < wEnd && endMins > wStart);
+        });
+
+        if (hasOverlap && !autoAdjust) {
+            toast.error("Времевият прозорец се припокрива с друг съществуващ прозорец!");
+            return;
+        }
+
         const windowData: ITimeWindow = {
             id: editingWindow?.id || generateId(),
             name,
@@ -130,6 +161,20 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                                 value={endTime}
                                 onChange={setEndTime}
                             />
+                        </div>
+                    </div>
+
+                    {/* Auto Adjust */}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <div className="col-start-2 col-span-3 flex items-center space-x-2">
+                            <Checkbox
+                                id="autoAdjust"
+                                checked={autoAdjust}
+                                onCheckedChange={(checked) => setAutoAdjust(checked as boolean)}
+                            />
+                            <Label htmlFor="autoAdjust" className="text-sm font-normal text-muted-foreground cursor-pointer">
+                                Автоматично преместване на следващи прозорци при застъпване
+                            </Label>
                         </div>
                     </div>
 
