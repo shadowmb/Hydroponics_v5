@@ -1,0 +1,45 @@
+{
+    "id": "dfrobot_flow_sen0550",
+    "name": "DFRobot Water Flow (SEN0550)",
+    "category": "SENSOR",
+    "supportedStrategies": [
+        "linear"
+    ],
+    "conversionStrategy": "linear",
+    "capabilities": [
+        "READ"
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "PULSE_RATE",
+            "valuePath": "hz",
+            "sourceUnit": "Hz",
+            "outputs": [
+                {
+                    "key": "flow",
+                    "label": "Flow Rate",
+                    "unit": "L/min"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "Signal",
+            "type": "DIGITAL_IN"
+        }
+    ],
+    "requirements": {
+        "interface": "digital",
+        "voltage": [
+            3.3,
+            5
+        ]
+    },
+    "uiConfig": {
+        "icon": "droplet"
+    },
+    "initialState": {
+        "value": 0
+    }
+}

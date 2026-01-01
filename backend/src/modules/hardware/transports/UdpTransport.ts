@@ -89,7 +89,7 @@ export class UdpTransport implements IHardwareTransport {
 
             // Serialize Parameters based on Command Type
             // SENSORS (Single Pin)
-            if (['ANALOG', 'DIGITAL_READ', 'DHT_READ', 'ONEWIRE_READ_TEMP'].includes(packet.cmd)) {
+            if (['ANALOG', 'DIGITAL_READ', 'DHT_READ', 'ONEWIRE_READ_TEMP', 'PULSE_RATE'].includes(packet.cmd)) {
                 const pinStr = this.formatPin(packet);
                 if (pinStr) message += `|${pinStr}`;
             }
