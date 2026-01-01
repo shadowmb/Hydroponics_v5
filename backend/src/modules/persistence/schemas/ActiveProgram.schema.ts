@@ -25,7 +25,9 @@ export interface IActiveScheduleItem {
 export interface IWindowState {
     windowId: string;
     status: WindowStatus;
-    triggersExecuted: string[];  // IDs of executed triggers
+    triggersExecuted: string[];  // IDs of fully executed triggers
+    triggersExecuting: string[]; // IDs of currently executing triggers
+    currentFlowSessionId?: string; // Track active flow session
     lastCheck?: Date;
 }
 
@@ -39,6 +41,9 @@ export interface IActiveProgram extends Document {
 
     // Program Type (BASIC or ADVANCED)
     type?: ProgramType;
+
+    // Global overrides for the entire program execution
+    variableOverrides?: Record<string, any>;
 
     // BASIC mode: schedule items
     schedule: IActiveScheduleItem[];
@@ -75,6 +80,8 @@ const WindowStateSchema = new Schema({
     windowId: { type: String, required: true },
     status: { type: String, enum: ['pending', 'active', 'completed', 'skipped'], default: 'pending' },
     triggersExecuted: [{ type: String }],
+    triggersExecuting: [{ type: String }],
+    currentFlowSessionId: { type: String },
     lastCheck: { type: Date }
 }, { _id: false });
 
@@ -89,6 +96,9 @@ const ActiveProgramSchema = new Schema<IActiveProgram>({
     minCycleInterval: { type: Number, default: 0 },
     startTime: { type: Date },
     endTime: { type: Date },
+
+    // Global overrides
+    variableOverrides: { type: Schema.Types.Mixed, default: {} },
 
     // Program Type
     type: { type: String, enum: ['BASIC', 'ADVANCED'], default: 'BASIC' },

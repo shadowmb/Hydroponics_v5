@@ -303,6 +303,56 @@ export class SchedulerService {
                         timestamp: new Date()
                     });
                 }
+
+                // ---------------------------------------------------------
+                // ASYNC FLOW TRACKING (Variant C)
+                // Check if we are waiting for a flow to complete
+                // ---------------------------------------------------------
+                if (state.triggersExecuting && state.triggersExecuting.length > 0) {
+                    const snapshot = automation.getSnapshot();
+                    const currentSessionId = state.currentFlowSessionId;
+
+                    // Check if flow finished:
+                    // 1. Different session active (machine moved on)
+                    // 2. Or same session in final state
+                    const isFinished =
+                        snapshot.context?.sessionId !== currentSessionId ||
+                        ['completed', 'error', 'stopped', 'idle'].includes(snapshot.value as string);
+
+                    if (isFinished && currentSessionId) {
+                        logger.info({ windowId: window.id, sessionId: currentSessionId }, '✅ Trigger flow finished');
+
+                        // Move executing triggers to executed
+                        state.triggersExecuted.push(...state.triggersExecuting);
+                        state.triggersExecuting = []; // Clear executing
+                        state.currentFlowSessionId = undefined;
+
+                        // Check if any executed trigger was a BREAK trigger
+                        // We need to look up the trigger definition from the window
+                        const breakTrigger = window.triggers.find(t =>
+                            state.triggersExecuted.includes(t.id) && t.behavior === 'break'
+                        );
+
+                        // If it was a BREAK trigger, close the window NOW
+                        if (breakTrigger) {
+                            state.status = 'completed';
+                            logger.info({ windowId: window.id }, '🛑 BREAK trigger finished - closing window');
+                            events.emit('advanced:window_completed', {
+                                windowId: window.id,
+                                windowName: window.name,
+                                result: 'triggered',
+                                timestamp: new Date()
+                            });
+                        }
+
+                        await activeProgram.save();
+                    }
+
+                    // If still executing, SKIP further evaluation for this window
+                    // We wait for the current flow to finish before checking other triggers
+                    continue;
+                }
+
                 state.status = 'active';
 
                 // Check if it's time to poll (based on checkInterval)
@@ -320,6 +370,12 @@ export class SchedulerService {
 
                     const result = await triggerEvaluator.evaluateWindow(window, state, variableOverrides);
                     state.lastCheck = new Date();
+
+                    if (result === 'executing') {
+                        // Flow started, we will track completion in next ticks
+                        await activeProgram.save();
+                        continue;
+                    }
 
                     if (result === 'triggered' || result === 'all_done') {
                         state.status = 'completed';

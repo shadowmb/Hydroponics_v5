@@ -33,7 +33,8 @@ export class ActiveProgramService {
             name: template.name,
             status: 'loaded',
             type: programType,
-            minCycleInterval: template.minCycleInterval ?? 60
+            minCycleInterval: minCycleInterval || template.minCycleInterval || 60,
+            variableOverrides: globalOverrides // Store global variables!
         };
 
         if (programType === 'ADVANCED' && template.windows) {
@@ -43,6 +44,7 @@ export class ActiveProgramService {
                 windowId: w.id,
                 status: 'pending',
                 triggersExecuted: [],
+                triggersExecuting: [],
                 lastCheck: undefined
             } as IWindowState));
             activeProgramData.schedule = [];  // Empty for advanced mode

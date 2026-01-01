@@ -13,7 +13,7 @@ import { cycleManager } from './CycleManager';
 import { logger } from '../../core/LoggerService';
 import { events } from '../../core/EventBusService';
 
-export type EvaluationResult = 'pending' | 'triggered' | 'all_done';
+export type EvaluationResult = 'pending' | 'triggered' | 'executing' | 'all_done';
 
 export class TriggerEvaluator {
 
@@ -84,21 +84,25 @@ export class TriggerEvaluator {
                     });
 
                     // Execute the flow with variable overrides
-                    await cycleManager.startCycle(
+                    const flowSessionId = await cycleManager.startCycle(
                         trigger.id,  // cycleId
                         `Trigger: ${trigger.id}`,  // name
                         [{ flowId: trigger.flowId, overrides: variableOverrides }],  // steps with overrides
                         variableOverrides  // session overrides
                     );
 
-                    // Mark trigger as executed
-                    windowState.triggersExecuted.push(trigger.id);
+                    // Mark trigger as executing (will be moved to executed when flow completes)
+                    if (!windowState.triggersExecuting) windowState.triggersExecuting = [];
+                    windowState.triggersExecuting.push(trigger.id);
+                    windowState.currentFlowSessionId = flowSessionId;
 
-                    if (trigger.behavior === 'break') {
-                        logger.info({ windowId: window.id }, '🛑 BREAK trigger executed - closing window');
-                        return 'triggered';
-                    }
-                    // behavior === 'continue': keep checking other triggers
+                    logger.info({
+                        windowId: window.id,
+                        triggerId: trigger.id,
+                        flowSessionId
+                    }, '🚀 Trigger flow started - waiting for completion');
+
+                    return 'executing';
                 }
             } catch (error: any) {
                 logger.error({
