@@ -49,6 +49,15 @@ export interface SystemEvents {
     'automation:program_stop': { sessionId: string; reason?: string };
     'scheduler:cycle_start': { cycleId: string; programId?: string; timestamp: Date; cycleName?: string };
     'scheduler:cycle_complete': { cycleId: string; programId?: string; duration?: number; timestamp: Date; cycleName?: string };
+
+    // Advanced Program Events (for Live Execution Log)
+    'advanced:window_skipped': { windowId: string; windowName: string; reason: string; timestamp: Date };
+    'advanced:window_active': { windowId: string; windowName: string; timestamp: Date };
+    'advanced:trigger_matched': { windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; flowName: string; timestamp: Date };
+    'advanced:trigger_skipped': { windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; reason: string; timestamp: Date };
+    'advanced:window_completed': { windowId: string; windowName: string; result: 'triggered' | 'fallback' | 'no_trigger'; timestamp: Date };
+    'advanced:fallback_executed': { windowId: string; windowName: string; flowName: string; timestamp: Date };
+    'advanced:program_day_complete': { timestamp: Date };
 }
 
 export class EventBusService {

@@ -50,7 +50,15 @@ export class SocketService {
             'automation:state_change',
             'command:sent',
             'log',
-            'automation:execution_step'
+            'automation:execution_step',
+            // Advanced Program events
+            'advanced:window_skipped',
+            'advanced:window_active',
+            'advanced:trigger_matched',
+            'advanced:trigger_skipped',
+            'advanced:window_completed',
+            'advanced:fallback_executed',
+            'advanced:program_day_complete'
         ];
 
         eventsToForward.forEach(eventName => {
