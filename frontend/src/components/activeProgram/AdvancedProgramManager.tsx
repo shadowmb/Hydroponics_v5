@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { TimePicker24 } from '../ui/time-picker-24';
 import { TimeWindowModal } from '../programs/TimeWindowModal';
 import type { ITimeWindow } from '../programs/types';
+import { AdvancedExecutionLog } from './AdvancedExecutionLog';
 
 interface AdvancedProgramManagerProps {
     program: IActiveProgram;
@@ -899,6 +900,9 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                         })}
                     </CardContent>
                 </Card>
+
+                {/* Live Execution Log */}
+                <AdvancedExecutionLog programId={program.sourceProgramId} />
             </div>
 
             {/* TimeWindowModal for editing */}

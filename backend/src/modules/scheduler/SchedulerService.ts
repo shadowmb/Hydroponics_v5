@@ -6,6 +6,7 @@ import { automation } from '../automation/AutomationEngine';
 import { activeProgramService } from './ActiveProgramService';
 import { triggerEvaluator } from './TriggerEvaluator';
 import { logger } from '../../core/LoggerService';
+import { events } from '../../core/EventBusService';
 import { ITimeWindow } from '../persistence/schemas/Program.schema';
 import { IWindowState } from '../persistence/schemas/ActiveProgram.schema';
 
@@ -277,6 +278,9 @@ export class SchedulerService {
         // Get program start time to determine if we were active during a window
         const programStartTime = activeProgram.startTime ? new Date(activeProgram.startTime) : null;
 
+        // Get variable overrides for flow execution (global variables set by user)
+        const variableOverrides = activeProgram.variableOverrides || {};
+
         for (let i = 0; i < activeProgram.windows.length; i++) {
             const window = activeProgram.windows[i] as ITimeWindow;
             const state = activeProgram.windowsState.find((s: IWindowState) => s.windowId === window.id);
@@ -291,6 +295,14 @@ export class SchedulerService {
 
             // Check if we're in the time window
             if (this.isInTimeWindow(timeString, window.startTime, window.endTime)) {
+                // Emit window_active event only when status changes to active
+                if (state.status !== 'active') {
+                    events.emit('advanced:window_active', {
+                        windowId: window.id,
+                        windowName: window.name,
+                        timestamp: new Date()
+                    });
+                }
                 state.status = 'active';
 
                 // Check if it's time to poll (based on checkInterval)
@@ -306,12 +318,18 @@ export class SchedulerService {
 
                     logger.info({ windowId: window.id, windowName: window.name }, '🔄 Evaluating triggers for window');
 
-                    const result = await triggerEvaluator.evaluateWindow(window, state);
+                    const result = await triggerEvaluator.evaluateWindow(window, state, variableOverrides);
                     state.lastCheck = new Date();
 
                     if (result === 'triggered' || result === 'all_done') {
                         state.status = 'completed';
                         logger.info({ windowId: window.id, result }, '✅ Window completed');
+                        events.emit('advanced:window_completed', {
+                            windowId: window.id,
+                            windowName: window.name,
+                            result: result === 'triggered' ? 'triggered' : 'no_trigger',
+                            timestamp: new Date()
+                        });
                     }
 
                     // Save after each window evaluation
@@ -336,6 +354,12 @@ export class SchedulerService {
                         windowEnd: window.endTime
                     }, '⏭️ Skipping window - program started after window ended');
                     state.status = 'skipped'; // Mark as skipped (not completed)
+                    events.emit('advanced:window_skipped', {
+                        windowId: window.id,
+                        windowName: window.name,
+                        reason: 'Program started after window ended',
+                        timestamp: new Date()
+                    });
                     await activeProgram.save();
                     continue;
                 }
@@ -357,18 +381,35 @@ export class SchedulerService {
                 );
 
                 if (!hasBreakExecuted && window.fallbackFlowId) {
-                    await triggerEvaluator.executeFallback(window);
+                    events.emit('advanced:fallback_executed', {
+                        windowId: window.id,
+                        windowName: window.name,
+                        flowName: window.fallbackFlowId, // Will be resolved by frontend
+                        timestamp: new Date()
+                    });
+                    await triggerEvaluator.executeFallback(window, variableOverrides);
                 }
 
                 state.status = 'completed';
+                events.emit('advanced:window_completed', {
+                    windowId: window.id,
+                    windowName: window.name,
+                    result: hasBreakExecuted ? 'triggered' : (window.fallbackFlowId ? 'fallback' : 'no_trigger'),
+                    timestamp: new Date()
+                });
                 await activeProgram.save();
             }
         }
 
-        // Check if all windows are completed
-        const allCompleted = activeProgram.windowsState.every((s: IWindowState) => s.status === 'completed');
-        if (allCompleted) {
+        // Check if all windows are completed or skipped
+        const allDone = activeProgram.windowsState.every((s: IWindowState) =>
+            s.status === 'completed' || s.status === 'skipped'
+        );
+        if (allDone && !activeProgram.dayCompleteEmitted) {
             logger.info('🏁 All windows completed - Advanced Program finished for today');
+            events.emit('advanced:program_day_complete', { timestamp: new Date() });
+            activeProgram.dayCompleteEmitted = true;
+            await activeProgram.save();
             // Note: We don't stop the program, it will reset at midnight or on next load
         }
     }

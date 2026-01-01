@@ -47,6 +47,7 @@ export interface IActiveProgram extends Document {
     // ADVANCED mode: window states (runtime tracking)
     windows?: ITimeWindow[];  // Snapshot from template
     windowsState?: IWindowState[];  // Runtime state
+    dayCompleteEmitted?: boolean;  // Prevent duplicate day_complete events
 }
 
 const ActiveScheduleItemSchema = new Schema<IActiveScheduleItem>({
@@ -98,7 +99,8 @@ const ActiveProgramSchema = new Schema<IActiveProgram>({
 
     // ADVANCED mode
     windows: { type: Schema.Types.Mixed },  // Snapshot of ITimeWindow[]
-    windowsState: [WindowStateSchema]
+    windowsState: [WindowStateSchema],
+    dayCompleteEmitted: { type: Boolean, default: false }  // Prevent duplicate day_complete events
 }, {
     timestamps: true,
     toJSON: {

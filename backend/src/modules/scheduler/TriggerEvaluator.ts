@@ -11,6 +11,7 @@ import { DeviceModel } from '../../models/Device';
 import { hardware } from '../hardware/HardwareService';
 import { cycleManager } from './CycleManager';
 import { logger } from '../../core/LoggerService';
+import { events } from '../../core/EventBusService';
 
 export type EvaluationResult = 'pending' | 'triggered' | 'all_done';
 
@@ -24,7 +25,8 @@ export class TriggerEvaluator {
      */
     async evaluateWindow(
         window: ITimeWindow,
-        windowState: IWindowState
+        windowState: IWindowState,
+        variableOverrides: Record<string, any> = {}
     ): Promise<EvaluationResult> {
 
         const pendingTriggers = window.triggers.filter(
@@ -60,18 +62,33 @@ export class TriggerEvaluator {
                 }, '🔍 Trigger evaluation');
 
                 if (matches) {
+                    // Get sensor name for UI display
+                    const sensorDevice = await DeviceModel.findById(trigger.sensorId);
+                    const sensorName = sensorDevice?.name || trigger.sensorId;
+
                     logger.info({
                         triggerId: trigger.id,
                         flowId: trigger.flowId,
                         behavior: trigger.behavior
                     }, '⚡ Trigger condition matched - executing flow');
 
-                    // Execute the flow
+                    // Emit trigger_matched event for Live Execution Log
+                    events.emit('advanced:trigger_matched', {
+                        windowId: window.id,
+                        triggerId: trigger.id,
+                        sensorName,
+                        sensorValue,
+                        condition: `${trigger.operator} ${trigger.value}${trigger.valueMax ? `-${trigger.valueMax}` : ''}`,
+                        flowName: trigger.flowId, // Will be resolved by frontend
+                        timestamp: new Date()
+                    });
+
+                    // Execute the flow with variable overrides
                     await cycleManager.startCycle(
                         trigger.id,  // cycleId
                         `Trigger: ${trigger.id}`,  // name
-                        [{ flowId: trigger.flowId, overrides: {} }],  // steps
-                        {}  // overrides
+                        [{ flowId: trigger.flowId, overrides: variableOverrides }],  // steps with overrides
+                        variableOverrides  // session overrides
                     );
 
                     // Mark trigger as executed
@@ -98,7 +115,7 @@ export class TriggerEvaluator {
     /**
      * Execute the fallback flow for a window.
      */
-    async executeFallback(window: ITimeWindow): Promise<void> {
+    async executeFallback(window: ITimeWindow, variableOverrides: Record<string, any> = {}): Promise<void> {
         if (!window.fallbackFlowId) {
             logger.info({ windowId: window.id }, '⚠️ No fallback flow configured');
             return;
@@ -112,8 +129,8 @@ export class TriggerEvaluator {
         await cycleManager.startCycle(
             `fallback-${window.id}`,
             `Fallback: ${window.name}`,
-            [{ flowId: window.fallbackFlowId, overrides: {} }],
-            {}
+            [{ flowId: window.fallbackFlowId, overrides: variableOverrides }],
+            variableOverrides
         );
     }
 
