@@ -177,7 +177,24 @@ shared/
 2.  **Creation:** Create a device instance. Verify it saves without errors.
 3.  **Data Flow:** Connect hardware (or mock). Verify "Monitor & Test" shows live readings.
 
-## 9. Advanced: Custom Logic & UI
+## 9. Advanced: Creating a New Category
+
+If you are adding a folder that does not yet exist (e.g., `soil/`), additional steps are required:
+
+### Step A: Update Backend Model
+The `Device` model restricts the `group` field to specific values.
+1.  Open `backend/src/models/Device.ts`.
+2.  Add your new category (e.g., `Soil`) to the `IDevice` interface and the `group` schema enum.
+3.  **Failure to do this will result in a 500 Internal Server Error during device creation.**
+
+### Step B: Update UI Wizard
+New categories must be explicitly registered in the frontend wizard.
+1.  Open `frontend/src/components/hardware/DeviceWizard.tsx`.
+2.  Add your category to `categoryConfig` (assign a color).
+3.  Add an icon helper in `getIcon()`.
+4.  Add the category object to the `categories` array in Step 1.
+
+## 10. Advanced: Custom Logic & UI
 **Only required if the device needs a custom formula (non-linear) or specific calibration UI.**
 
 ### Step A: Create Conversion Strategy

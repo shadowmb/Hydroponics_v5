@@ -1,0 +1,37 @@
+{
+    "id": "dfrobot_soil_mois",
+    "name": "DFRobot Soil Moisture",
+    "category": "SENSOR",
+    "supportedStrategies": [
+        "linear"
+    ],
+    "capabilities": [
+        "READ"
+    ],
+    "commands": {
+        "READ": {
+            "hardwareCmd": "ANALOG",
+            "valuePath": "value",
+            "sourceUnit": "adc",
+            "outputs": [
+                {
+                    "key": "soil_moisture",
+                    "label": "Soil Moisture",
+                    "unit": "%"
+                }
+            ]
+        }
+    },
+    "pins": [
+        {
+            "name": "Signal",
+            "type": "ANALOG_IN"
+        }
+    ],
+    "uiConfig": {
+        "icon": "sprout"
+    },
+    "initialState": {
+        "value": 0
+    }
+}
