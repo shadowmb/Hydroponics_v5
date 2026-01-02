@@ -42,10 +42,22 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
         label: 'Wait / Delay',
         fields: {
             duration: {
-                label: 'Duration (s)',
+                label: 'Duration',
                 type: 'number',
                 defaultValue: 1,
-                description: 'Time to wait in seconds'
+                placeholder: 'e.g. 5',
+                description: 'Time to wait',
+                expectedUnit: 'sec'
+            },
+            durationUnit: {
+                label: 'Unit',
+                type: 'select',
+                options: [
+                    { label: 'Seconds', value: 'sec' },
+                    { label: 'Minutes', value: 'min' },
+                    { label: 'Hours', value: 'hours' }
+                ],
+                defaultValue: 'sec'
             }
         }
     },
@@ -74,17 +86,28 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 ],
             },
             duration: {
-                label: 'Duration (s)',
+                label: 'Duration',
                 type: 'number', // Can be toggled to variable in UI
                 placeholder: 'e.g. 5',
-                description: 'Time to keep the state (seconds)',
-                expectedUnit: 's' // Controller expects ms, conversion happens in executor
+                description: 'Time to keep the state',
+                expectedUnit: 'sec' // Controller expects ms, conversion happens in executor
+            },
+            durationUnit: {
+                label: 'Unit',
+                type: 'select',
+                options: [
+                    { label: 'Seconds', value: 'sec' },
+                    { label: 'Minutes', value: 'min' },
+                    { label: 'Hours', value: 'hours' }
+                ],
+                defaultValue: 'sec'
             },
             amount: {
                 label: 'Amount',
                 type: 'number', // Can be toggled to variable in UI
                 placeholder: 'e.g. 100',
-                description: 'Quantity to dose'
+                description: 'Quantity to dose',
+                expectedUnit: 'volume' // Triggers inline unit selector using amountUnit options
             },
             amountMode: {
                 label: 'Input Mode',

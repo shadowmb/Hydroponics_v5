@@ -213,13 +213,24 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
     const renderField = (key: string, field: FieldDefinition, readOnly: boolean = false) => {
         const value = formData[key] !== undefined ? formData[key] : field.defaultValue;
 
+        // --- Generic Unit Field Hiding ---
+        // If this is a Unit field (e.g. durationUnit) and the base field (duration) 
+        // has an expectedUnit property, it means the base field handles the Unit rendering inline.
+        if (key.endsWith('Unit')) {
+            const baseKey = key.replace('Unit', '');
+            const baseField = definition.fields[baseKey];
+            if (baseField && baseField.expectedUnit) {
+                return null;
+            }
+        }
+
         // --- Visibility Logic ---
         if (nodeType === 'ACTUATOR_SET') {
             const action = formData['action']; // No default 'ON'
             if (key === 'duration') {
                 if (action !== 'PULSE_ON' && action !== 'PULSE_OFF') return null;
             }
-            if (key === 'amount' || key === 'amountUnit') {
+            if (key === 'amount' || key === 'amountMode' || key === 'amountUnit') {
                 if (action !== 'DOSE') return null;
             }
         }
@@ -234,8 +245,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 if (key === 'count') return null;   // Hide Iterations
             }
 
-            // 2. Hide unit fields (rendered inline by number field)
-            if (['intervalUnit', 'timeoutUnit'].includes(key)) return null;
+
 
             // 3. SAFETY/LEGACY FIELDS
             if (['maxIterations', 'onMaxIterations'].includes(key)) return null;
@@ -468,18 +478,36 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 const isVariable = typeof value === 'string' && value.startsWith('{{');
                 const expectedUnit = (field as any).expectedUnit;
 
-                // Variable validation
+                // Resolve Unit Field Definition
+                const unitKey = key + 'Unit';
+                const unitDef = definition.fields[unitKey];
+                const unitOptions = unitDef?.options || [];
                 let varValidationError: string | null = null;
                 if (isVariable && expectedUnit) {
                     const varId = value.replace(/{{|}}/g, '');
                     const selectedVar = variables.find(v => v.id === varId);
                     if (selectedVar && selectedVar.unit) {
-                        const timeUnits = ['sec', 'min', 'hours', 's', 'seconds', 'minutes'];
-                        const countUnits = ['count', 'iterations', 'doses', 'integer', '#'];
-                        if (expectedUnit === 'sec' && !timeUnits.includes(selectedVar.unit)) {
-                            varValidationError = `"${selectedVar.name}" has unit "${selectedVar.unit}". Time fields need: sec, min, hours.`;
-                        } else if (expectedUnit === 'count' && !countUnits.includes(selectedVar.unit)) {
-                            varValidationError = `"${selectedVar.name}" has unit "${selectedVar.unit}". Count fields need: count, iterations.`;
+                        // Dynamically check against valid units for this field type
+                        const validUnits = unitOptions.map(o => String(o.value).toLowerCase());
+                        // Add common aliases if needed, or rely on options
+
+                        if (unitOptions.length > 0 && !validUnits.includes(String(selectedVar.unit).toLowerCase())) {
+                            // Basic validation: if var unit isn't in options
+                            // Note: This might be too strict if var unit aliases exist (e.g. 's' vs 'sec')
+                            // For now, let's keep the specific Time/Count checks if we want robust messages,
+                            // OR generalize. Generalized is better but harder with aliases.
+                            // Let's stick to the existing logic for Time/Count for better error messages,
+                            // but use unitOptions for the Selector.
+
+                            // Keep existing specific checks for better UX messages:
+                            const timeUnits = ['sec', 'min', 'hours', 's', 'seconds', 'minutes'];
+                            const countUnits = ['count', 'iterations', 'doses', 'integer', '#'];
+
+                            if (expectedUnit === 'sec' && !timeUnits.includes(selectedVar.unit)) {
+                                varValidationError = `"${selectedVar.name}" has unit "${selectedVar.unit}". Time fields need: sec, min, hours.`;
+                            } else if (expectedUnit === 'count' && !countUnits.includes(selectedVar.unit)) {
+                                varValidationError = `"${selectedVar.name}" has unit "${selectedVar.unit}". Count fields need: count, iterations.`;
+                            }
                         }
                     }
                 }
@@ -503,18 +531,20 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                         placeholder={field.placeholder}
                                         className="flex-1"
                                     />
-                                    {expectedUnit === 'sec' && (
+                                    {expectedUnit && unitOptions.length > 0 && (
                                         <Select
-                                            value={formData[key + 'Unit'] || 'sec'}
-                                            onValueChange={(val) => handleChange(key + 'Unit', val)}
+                                            value={formData[unitKey] || unitOptions[0].value}
+                                            onValueChange={(val) => handleChange(unitKey, val)}
                                         >
                                             <SelectTrigger className="w-[100px]">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="sec">Seconds</SelectItem>
-                                                <SelectItem value="min">Minutes</SelectItem>
-                                                <SelectItem value="hours">Hours</SelectItem>
+                                                {unitOptions.map(opt => (
+                                                    <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     )}
