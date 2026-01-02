@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { PhSmartWizard } from './PhSmartWizard';
 import { EcSmartWizard } from './EcSmartWizard';
 import { OffsetWizard } from './OffsetWizard';
+import { VolumetricFlowWizard } from './VolumetricFlowWizard';
 
 import {
     Dialog,
@@ -127,6 +128,11 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
                 unit={targetUnit || baseUnit}
             />
         );
+    }
+
+    // Volumetric Flow (Dosing) - dedicated single-screen wizard
+    if (strategyId === 'volumetric_flow' && onRunCommand) {
+        return <VolumetricFlowWizard onSave={onSave} onRunCommand={onRunCommand} />;
     }
 
 

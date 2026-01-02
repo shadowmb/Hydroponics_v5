@@ -86,16 +86,27 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 placeholder: 'e.g. 100',
                 description: 'Quantity to dose'
             },
+            amountMode: {
+                label: 'Input Mode',
+                type: 'select',
+                options: [
+                    { label: 'Volume', value: 'VOLUME' },
+                    { label: 'Doses', value: 'DOSES' }
+                ],
+                defaultValue: 'VOLUME',
+                description: 'Choose between absolute volume or dose count'
+            },
             amountUnit: {
                 label: 'Unit',
                 type: 'select',
                 options: [
                     { label: 'Milliliters (ml)', value: 'ml' },
                     { label: 'Liters (l)', value: 'l' },
-                    { label: 'Gallons (gal)', value: 'gal' }
+                    { label: 'Gallons (gal)', value: 'gal' },
+                    { label: 'Doses', value: 'doses' }
                 ],
                 defaultValue: 'ml',
-                description: 'Unit of measurement'
+                description: 'Unit of measurement (doses uses calibration doseSize)'
             },
             // Error Handling Policy
             retryCount: {

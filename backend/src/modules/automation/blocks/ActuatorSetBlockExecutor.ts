@@ -108,22 +108,41 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                         if (!calibration || !calibration.flowRate) {
                             return { success: false, error: `Device ${device.name} is not calibrated for dosing` };
                         }
-                        // flowRate is usually in unit/sec (e.g., ml/sec)
+                        // flowRate is in ml/sec (base unit)
                         const flowRate = Number(calibration.flowRate);
                         if (flowRate <= 0) return { success: false, error: 'Invalid flow rate calibration' };
 
-                        let targetAmount = Number(amount);
-                        if (isNaN(targetAmount) || targetAmount <= 0) {
-                            return { success: false, error: `Invalid amount: ${amount}` };
+                        let targetAmountMl: number;
+                        const amountMode = params.amountMode || 'VOLUME';
+                        const unit = params.amountUnit || 'ml';
+
+                        if (amountMode === 'DOSES' || unit === 'doses') {
+                            // DOSES mode: amount = number of doses, convert using doseSize
+                            const doseSize = calibration.doseSize;
+                            if (!doseSize || doseSize <= 0) {
+                                return { success: false, error: `Device ${device.name} has no doseSize defined. Please recalibrate.` };
+                            }
+                            const doseCount = Number(amount);
+                            if (isNaN(doseCount) || doseCount <= 0) {
+                                return { success: false, error: `Invalid dose count: ${amount}` };
+                            }
+                            // doseSize is stored in ml (base unit)
+                            targetAmountMl = doseCount * doseSize;
+                            logUnit = 'doses';
+                            console.log(`[ActuatorSet] 💧 Dose conversion: ${doseCount} doses × ${doseSize}ml = ${targetAmountMl}ml`);
+                        } else {
+                            // VOLUME mode: amount = volume in specified unit
+                            targetAmountMl = Number(amount);
+                            if (isNaN(targetAmountMl) || targetAmountMl <= 0) {
+                                return { success: false, error: `Invalid amount: ${amount}` };
+                            }
+                            logUnit = unit;
+                            // Unit Conversion to ml (base unit)
+                            if (unit === 'l') targetAmountMl *= 1000;
+                            else if (unit === 'gal') targetAmountMl *= 3785.41;
                         }
 
-                        // Unit Conversion (Default to 'ml' if not specified)
-                        const unit = params.amountUnit || 'ml';
-                        logUnit = unit;
-                        if (unit === 'l') targetAmount *= 1000;
-                        else if (unit === 'gal') targetAmount *= 3785.41;
-
-                        pulseDuration = (targetAmount / flowRate) * 1000; // Convert to ms
+                        pulseDuration = (targetAmountMl / flowRate) * 1000; // Convert to ms
                         break;
                     default:
                         return { success: false, error: `Unknown action: ${action}` };
