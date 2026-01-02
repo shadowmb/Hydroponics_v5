@@ -331,11 +331,22 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 description: 'How to limit the loop'
             },
             interval: {
-                label: 'Check Interval (s)',
+                label: 'Check Interval',
                 type: 'number',
                 placeholder: 'e.g. 1',
                 defaultValue: 1,
-                description: 'Delay between iterations'
+                description: 'Delay between iterations',
+                expectedUnit: 'sec'
+            },
+            intervalUnit: {
+                label: 'Interval Unit',
+                type: 'select',
+                options: [
+                    { label: 'Seconds', value: 'sec' },
+                    { label: 'Minutes', value: 'min' },
+                    { label: 'Hours', value: 'hours' }
+                ],
+                defaultValue: 'sec'
             },
 
             // Limit Parameters (Conditional)
@@ -344,14 +355,26 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'number',
                 placeholder: 'e.g. 5',
                 defaultValue: 1,
-                description: 'Stop after X iterations'
+                description: 'Stop after X iterations',
+                expectedUnit: 'count'
             },
             timeout: {
-                label: 'Timeout (Seconds)',
+                label: 'Timeout',
                 type: 'number',
                 placeholder: 'e.g. 60',
                 defaultValue: 60,
-                description: 'Stop after X seconds'
+                description: 'Stop after X time',
+                expectedUnit: 'sec'
+            },
+            timeoutUnit: {
+                label: 'Timeout Unit',
+                type: 'select',
+                options: [
+                    { label: 'Seconds', value: 'sec' },
+                    { label: 'Minutes', value: 'min' },
+                    { label: 'Hours', value: 'hours' }
+                ],
+                defaultValue: 'sec'
             },
 
             // Stop Condition (Optional)

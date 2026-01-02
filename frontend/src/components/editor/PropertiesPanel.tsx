@@ -229,17 +229,26 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
             // 1. LIMIT FIELDS (Based on Mode)
             if (limitMode === 'COUNT') {
-                if (key === 'timeout') return null; // Hide Timeout
+                if (key === 'timeout' || key === 'timeoutUnit') return null; // Hide Timeout fields
             } else {
                 if (key === 'count') return null;   // Hide Iterations
             }
 
-            // 2. SAFETY/LEGACY FIELDS
-            // 'maxIterations', 'onMaxIterations' are legacies/redundant now that we have unified logic.
-            // If they appear in definition, hide them.
+            // 2. Hide unit fields conditional on variable usage
+            // Logic: If the base field (e.g. 'interval') is a variable, hide the 'intervalUnit' field.
+            // Otherwise, let it render normally (on a new line).
+            if (['intervalUnit', 'timeoutUnit'].includes(key)) {
+                // Determine base key (remove 'Unit')
+                const baseKey = key.replace('Unit', '');
+                const baseVal = formData[baseKey];
+                // If base value is a variable (string starting with {{), HIDE this unit field
+                if (typeof baseVal === 'string' && baseVal.startsWith('{{')) return null;
+            }
+
+            // 3. SAFETY/LEGACY FIELDS
             if (['maxIterations', 'onMaxIterations'].includes(key)) return null;
 
-            // 3. ALL OTHER FIELDS (Condition, Interval, etc.) -> SHOW DEFAULT
+            // 4. ALL OTHER FIELDS (Condition, Interval, etc.) -> SHOW DEFAULT
         }
 
         if (nodeType === 'FLOW_CONTROL') {
@@ -465,40 +474,67 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             case 'number':
                 // Check if value is a variable reference (string starting with {{)
                 const isVariable = typeof value === 'string' && value.startsWith('{{');
+                const expectedUnit = (field as any).expectedUnit;
+
+                // Variable validation
+                let varValidationError: string | null = null;
+                if (isVariable && expectedUnit) {
+                    const varId = value.replace(/{{|}}/g, '');
+                    const selectedVar = variables.find(v => v.id === varId);
+                    if (selectedVar && selectedVar.unit) {
+                        const timeUnits = ['sec', 'min', 'hours', 's', 'seconds', 'minutes'];
+                        const countUnits = ['count', 'iterations', 'doses', 'integer', '#'];
+                        if (expectedUnit === 'sec' && !timeUnits.includes(selectedVar.unit)) {
+                            varValidationError = `"${selectedVar.name}" has unit "${selectedVar.unit}". Time fields need: sec, min, hours.`;
+                        } else if (expectedUnit === 'count' && !countUnits.includes(selectedVar.unit)) {
+                            varValidationError = `"${selectedVar.name}" has unit "${selectedVar.unit}". Count fields need: count, iterations.`;
+                        }
+                    }
+                }
 
                 return (
-                    <div className="flex gap-2">
-                        {isVariable ? (
-                            <VariableSelector
-                                value={value.replace(/{{|}}/g, '')}
-                                onChange={(val) => handleChange(key, `{{${val}}}`)}
-                                placeholder="Select variable"
-                                variables={variables}
-                            />
-                        ) : (
-                            <Input
-                                type="number"
-                                value={value || 0}
-                                onChange={(e) => handleChange(key, parseFloat(e.target.value))}
-                                placeholder={field.placeholder}
-                            />
-                        )}
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="shrink-0"
-                            title={isVariable ? "Switch to Static Value" : "Switch to Variable"}
-                            onClick={() => {
-                                if (isVariable) {
-                                    handleChange(key, 0); // Reset to number
-                                } else {
-                                    handleChange(key, '{{}}'); // Switch to variable format
-                                }
-                            }}
-                        >
-                            {isVariable ? <span className="font-mono text-xs">123</span> : <span className="font-mono text-xs">Var</span>}
-                        </Button>
-                    </div>
+                    <div className="space-y-1">
+                        <div className="flex gap-2">
+                            {isVariable ? (
+                                <VariableSelector
+                                    value={value.replace(/{{|}}/g, '')}
+                                    onChange={(val) => handleChange(key, `{{${val}}}`)}
+                                    placeholder="Select variable"
+                                    variables={variables}
+                                />
+                            ) : (
+                                <Input
+                                    type="number"
+                                    value={value || 0}
+                                    onChange={(e) => handleChange(key, parseFloat(e.target.value))}
+                                    placeholder={field.placeholder}
+                                    className="flex-1"
+                                />
+                            )}
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0"
+                                title={isVariable ? "Switch to Static Value" : "Switch to Variable"}
+                                onClick={() => {
+                                    if (isVariable) {
+                                        handleChange(key, 0); // Reset to number
+                                    } else {
+                                        handleChange(key, '{{}}'); // Switch to variable format
+                                    }
+                                }}
+                            >
+                                {isVariable ? <span className="font-mono text-xs">123</span> : <span className="font-mono text-xs">Var</span>}
+                            </Button>
+                        </div>
+                        {
+                            varValidationError && (
+                                <div className="p-1.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-400 flex items-start gap-1">
+                                    <span>⚠️ {varValidationError}</span>
+                                </div>
+                            )
+                        }
+                    </div >
                 );
             case 'select':
                 return (
