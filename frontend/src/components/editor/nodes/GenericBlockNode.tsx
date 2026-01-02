@@ -105,6 +105,30 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps<any>) => {
         return foundDirect ? foundDirect.name : s;
     };
 
+    // Helper to resolve Variable Name with Unit (for display: "Поливане (1 min)")
+    const resolveVarWithUnit = (val: any): { display: string; isVariable: boolean } => {
+        const s = String(val || '');
+        if (s.startsWith('{{') && s.endsWith('}}')) {
+            const varId = s.slice(2, -2);
+            const found = variables?.find((v: any) => v.id === varId || v.name === varId);
+            if (found) {
+                const name = found.name || varId;
+                const unit = found.unit || '';
+                const value = found.default !== undefined ? found.default : '';
+                // Format: "Поливане (1 min)" or just "Поливане" if no default
+                if (value !== '' && unit) {
+                    return { display: `${name} (${value} ${unit})`, isVariable: true };
+                } else if (unit) {
+                    return { display: `${name} [${unit}]`, isVariable: true };
+                }
+                return { display: name, isVariable: true };
+            }
+            return { display: varId, isVariable: true };
+        }
+        // Static value - show with expected unit
+        return { display: `${s}s`, isVariable: false };
+    };
+
     // Render Logic
     if (displayData.type === 'ACTUATOR_SET') {
         const action = String(displayData.action || '');
@@ -147,7 +171,9 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps<any>) => {
                         {/* Footer (Optional Params) */}
                         {((action.includes('PULSE') && displayData.duration) || (action === 'DOSE' && displayData.amount)) && (
                             <div className="px-3 py-1.5 bg-muted/30 border-t text-[10px] font-mono text-muted-foreground flex justify-between">
-                                {action.includes('PULSE') && <span>Time: {String(displayData.duration)}ms</span>}
+                                {action.includes('PULSE') && (
+                                    <span>Time: {resolveVarWithUnit(displayData.duration).display}</span>
+                                )}
                                 {action === 'DOSE' && <span>Vol: {resolveVarName(displayData.amount)}{String(displayData.amountUnit || 'ml')}</span>}
                             </div>
                         )}

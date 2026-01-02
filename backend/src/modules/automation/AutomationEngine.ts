@@ -357,9 +357,19 @@ export class AutomationEngine {
 
     /**
      * Helper to resolve variable references in params (e.g. "{{duration}}")
+     * Also injects source unit metadata (_fieldNameSourceUnit) for unit conversion.
      */
-    private resolveParams(params: Record<string, any>, variables: Record<string, any>, blockType?: string): Record<string, any> {
+    private resolveParams(
+        params: Record<string, any>,
+        variables: Record<string, any>,
+        blockType?: string,
+        variableDefinitions?: Record<string, any>
+    ): Record<string, any> {
         const resolved: Record<string, any> = {};
+
+        // Fields that may need unit conversion (time-based fields for actuators/wait/loop)
+        const timeFields = ['duration', 'timeout', 'interval', 'retryDelay'];
+
         for (const [key, value] of Object.entries(params)) {
             // SPECIAL CASE: Don't resolve 'value' parameter for IF/LOOP blocks
             // This is critical effectively to preserve the variable reference (e.g. "{{Global var}}")
@@ -372,6 +382,14 @@ export class AutomationEngine {
             if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
                 const varName = value.slice(2, -2).trim();
                 resolved[key] = variables[varName] !== undefined ? variables[varName] : value;
+
+                // Inject source unit metadata for time-related fields
+                if (timeFields.includes(key) && variableDefinitions && variableDefinitions[varName]) {
+                    const varDef = variableDefinitions[varName];
+                    if (varDef.unit) {
+                        resolved[`_${key}SourceUnit`] = varDef.unit;
+                    }
+                }
             } else {
                 resolved[key] = value;
             }
@@ -428,7 +446,7 @@ export class AutomationEngine {
 
             try {
                 if (attempts === 0) {
-                    const resolvedParamsForUI = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type);
+                    const resolvedParamsForUI = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type, context.execContext.variableDefinitions);
 
                     // Determine meaningful label
                     let label = resolvedParamsForUI.label || block.type;
@@ -453,7 +471,7 @@ export class AutomationEngine {
                     });
                 }
 
-                const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type);
+                const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type, context.execContext.variableDefinitions);
                 const result = await executor.execute(context.execContext, resolvedParams, signal);
 
                 if (!result.success) throw new Error(result.error || 'Block execution returned failure');

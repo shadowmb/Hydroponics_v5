@@ -7,6 +7,7 @@ export interface FieldDefinition {
     options?: { label: string; value: string | number | boolean }[];
     defaultValue?: any;
     description?: string;
+    expectedUnit?: string; // Unit expected by backend (e.g., 's' for seconds). Enables auto-conversion.
 }
 
 export interface BlockDefinition {
@@ -73,10 +74,11 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 ],
             },
             duration: {
-                label: 'Duration (ms)',
+                label: 'Duration (s)',
                 type: 'number', // Can be toggled to variable in UI
-                placeholder: 'e.g. 5000',
-                description: 'Time to keep the state'
+                placeholder: 'e.g. 5',
+                description: 'Time to keep the state (seconds)',
+                expectedUnit: 's' // Controller expects ms, conversion happens in executor
             },
             amount: {
                 label: 'Amount',
