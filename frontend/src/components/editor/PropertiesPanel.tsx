@@ -25,6 +25,7 @@ import { Button } from '../ui/button';
 import { DeviceSelector } from './DeviceSelector';
 import { useStore } from '../../core/useStore';
 import { VariableSelector } from './VariableSelector';
+import { DoseVolumeInput } from './DoseVolumeInput';
 import type { IVariable } from '../../../../shared/types';
 
 interface PropertiesPanelProps {
@@ -76,6 +77,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
     useEffect(() => {
         if (selectedNode) {
             // Merge default values with existing data
+            // Only run when node ID changes, not when node.data changes
             const definition = BLOCK_DEFINITIONS[selectedNode.data.type as string];
             const defaults = definition ? Object.entries(definition.fields).reduce((acc, [key, field]) => {
                 if (field.defaultValue !== undefined) acc[key] = field.defaultValue;
@@ -86,7 +88,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         } else {
             setFormData({});
         }
-    }, [selectedNode]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedNode?.id]); // Only re-run when node ID changes, not on every data change
 
     const handleChange = (key: string, value: any) => {
         const newData = { ...formData, [key]: value };
@@ -656,7 +659,19 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 {definition ? (
                     (() => {
                         const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel', 'revertOnStop', 'notificationChannelId', 'notificationMode'];
-                        const mainFields = Object.entries(definition.fields).filter(([key]) => !errorKeys.includes(key));
+
+                        // Conditional filtering for volumetric_flow strategy
+                        const isDosingStrategy = nodeType === 'ACTUATOR_SET' &&
+                            formData.strategy === 'volumetric_flow' &&
+                            formData.action === 'DOSE';
+                        const doseFieldKeys = ['amount', 'amountMode', 'amountUnit'];
+
+                        const mainFields = Object.entries(definition.fields).filter(([key]) => {
+                            if (errorKeys.includes(key)) return false;
+                            // Skip dose fields if using volumetric_flow - we render custom component
+                            if (isDosingStrategy && doseFieldKeys.includes(key)) return false;
+                            return true;
+                        });
                         const errorFields = Object.entries(definition.fields).filter(([key]) => errorKeys.includes(key));
 
                         return (
@@ -737,6 +752,28 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                 )}
                                             </div>
                                         ))}
+
+                                        {/* CUSTOM DOSE/VOLUME INPUT FOR VOLUMETRIC FLOW */}
+                                        {isDosingStrategy && (
+                                            <div className="space-y-2 pt-2 border-t">
+                                                <Label className="text-muted-foreground text-xs">Dose Configuration</Label>
+                                                <DoseVolumeInput
+                                                    amountMode={
+                                                        formData.amountMode ||
+                                                        (formData.amountUnit === 'doses' ? 'DOSES' : 'VOLUME')
+                                                    }
+                                                    amount={formData.amount}
+                                                    amountUnit={formData.amountUnit || 'ml'}
+                                                    onChange={handleChange}
+                                                    variables={variables}
+                                                    device={device}
+                                                    isVariable={typeof formData.amount === 'string' && formData.amount.startsWith('{{')}
+                                                    selectedVariable={typeof formData.amount === 'string' && formData.amount.startsWith('{{')
+                                                        ? formData.amount.slice(2, -2)
+                                                        : undefined}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </CollapsibleSection>
 

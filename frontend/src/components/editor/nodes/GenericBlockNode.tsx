@@ -174,7 +174,13 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps<any>) => {
                                 {action.includes('PULSE') && (
                                     <span>Time: {resolveVarWithUnit(displayData.duration).display}</span>
                                 )}
-                                {action === 'DOSE' && <span>Vol: {resolveVarName(displayData.amount)}{String(displayData.amountUnit || 'ml')}</span>}
+                                {action === 'DOSE' && (
+                                    <span>
+                                        {displayData.amountMode === 'DOSES' ? 'Doses: ' : 'Vol: '}
+                                        {resolveVarName(displayData.amount)}
+                                        {displayData.amountMode === 'DOSES' ? ' doses' : String(displayData.amountUnit || 'ml')}
+                                    </span>
+                                )}
                             </div>
                         )}
 
