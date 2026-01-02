@@ -234,16 +234,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 if (key === 'count') return null;   // Hide Iterations
             }
 
-            // 2. Hide unit fields conditional on variable usage
-            // Logic: If the base field (e.g. 'interval') is a variable, hide the 'intervalUnit' field.
-            // Otherwise, let it render normally (on a new line).
-            if (['intervalUnit', 'timeoutUnit'].includes(key)) {
-                // Determine base key (remove 'Unit')
-                const baseKey = key.replace('Unit', '');
-                const baseVal = formData[baseKey];
-                // If base value is a variable (string starting with {{), HIDE this unit field
-                if (typeof baseVal === 'string' && baseVal.startsWith('{{')) return null;
-            }
+            // 2. Hide unit fields (rendered inline by number field)
+            if (['intervalUnit', 'timeoutUnit'].includes(key)) return null;
 
             // 3. SAFETY/LEGACY FIELDS
             if (['maxIterations', 'onMaxIterations'].includes(key)) return null;
@@ -503,13 +495,30 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                     variables={variables}
                                 />
                             ) : (
-                                <Input
-                                    type="number"
-                                    value={value || 0}
-                                    onChange={(e) => handleChange(key, parseFloat(e.target.value))}
-                                    placeholder={field.placeholder}
-                                    className="flex-1"
-                                />
+                                <>
+                                    <Input
+                                        type="number"
+                                        value={value || 0}
+                                        onChange={(e) => handleChange(key, parseFloat(e.target.value))}
+                                        placeholder={field.placeholder}
+                                        className="flex-1"
+                                    />
+                                    {expectedUnit === 'sec' && (
+                                        <Select
+                                            value={formData[key + 'Unit'] || 'sec'}
+                                            onValueChange={(val) => handleChange(key + 'Unit', val)}
+                                        >
+                                            <SelectTrigger className="w-[100px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="sec">Seconds</SelectItem>
+                                                <SelectItem value="min">Minutes</SelectItem>
+                                                <SelectItem value="hours">Hours</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </>
                             )}
                             <Button
                                 variant="outline"
