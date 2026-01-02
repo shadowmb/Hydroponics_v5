@@ -872,7 +872,10 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
                                                                 <Zap className="h-3.5 w-3.5 text-yellow-500" />
                                                                 <span className="text-sm text-primary font-medium">
-                                                                    {getFlowName(trigger.flowId)}
+                                                                    {trigger.flowIds && trigger.flowIds.length > 0
+                                                                        ? trigger.flowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                        : getFlowName(trigger.flowId)
+                                                                    }
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
@@ -908,7 +911,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                             )}
 
                                             {/* Fallback Info */}
-                                            {window.fallbackFlowId && (
+                                            {(window.fallbackFlowIds?.length || window.fallbackFlowId) && (
                                                 <div className={cn(
                                                     "mt-3 p-3 border rounded-md",
                                                     state?.status === 'completed' && !triggers.some((t: any) =>
@@ -918,7 +921,11 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                         : "bg-amber-500/10 border-amber-500/20"
                                                 )}>
                                                     <span className="text-amber-600 font-medium">
-                                                        ⚡ Fallback: {getFlowName(window.fallbackFlowId)}
+                                                        ⚡ Fallback: {
+                                                            window.fallbackFlowIds && window.fallbackFlowIds.length > 0
+                                                                ? window.fallbackFlowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                : getFlowName(window.fallbackFlowId)
+                                                        }
                                                     </span>
                                                 </div>
                                             )}

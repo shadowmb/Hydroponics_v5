@@ -13,7 +13,8 @@ export interface ITrigger {
     operator: TriggerOperator;
     value: number;
     valueMax?: number;
-    flowId: string;
+    flowId?: string;    // Deprecated
+    flowIds?: string[]; // New
     behavior: TriggerBehavior;
 }
 
@@ -25,7 +26,8 @@ export interface ITimeWindow {
     checkInterval: number;
     dataSource: DataSource;
     triggers: ITrigger[];
-    fallbackFlowId?: string;
+    fallbackFlowId?: string;    // Deprecated
+    fallbackFlowIds?: string[]; // New
 }
 
 export interface IAdvancedProgram {

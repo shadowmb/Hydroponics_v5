@@ -13,7 +13,8 @@ export interface ITrigger {
     operator: TriggerOperator;
     value: number;
     valueMax?: number;  // For 'between' operator
-    flowId: string;
+    flowId?: string;    // Deprecated: verify migration
+    flowIds?: string[]; // New: Multiple flows support
     behavior: TriggerBehavior;
 }
 
@@ -25,7 +26,8 @@ export interface ITimeWindow {
     checkInterval: number;  // minutes
     dataSource: DataSource;
     triggers: ITrigger[];
-    fallbackFlowId?: string;
+    fallbackFlowId?: string;    // Deprecated
+    fallbackFlowIds?: string[]; // New
 }
 
 export interface IProgram extends Document, ISoftDelete {
@@ -61,7 +63,8 @@ const TriggerSchema = new Schema({
     operator: { type: String, enum: ['>', '<', '>=', '<=', '=', '!=', 'between'], required: true },
     value: { type: Number, required: true },
     valueMax: { type: Number },  // For 'between' operator
-    flowId: { type: String, required: true },
+    flowId: { type: String },    // Deprecated, optional
+    flowIds: { type: [String], default: [] }, // New
     behavior: { type: String, enum: ['continue', 'break'], default: 'break' }
 }, { _id: false });
 
@@ -74,7 +77,8 @@ const TimeWindowSchema = new Schema({
     checkInterval: { type: Number, default: 5 },  // minutes
     dataSource: { type: String, enum: ['cached', 'live'], default: 'cached' },
     triggers: [TriggerSchema],
-    fallbackFlowId: { type: String }
+    fallbackFlowId: { type: String },    // Deprecated
+    fallbackFlowIds: { type: [String], default: [] } // New
 }, { _id: false });
 
 // --- Main Program Schema ---

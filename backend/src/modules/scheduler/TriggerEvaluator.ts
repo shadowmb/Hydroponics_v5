@@ -68,26 +68,42 @@ export class TriggerEvaluator {
                 if (matches) {
                     logger.info({
                         triggerId: trigger.id,
+                        flowIds: trigger.flowIds,
                         flowId: trigger.flowId,
                         behavior: trigger.behavior
-                    }, '⚡ Trigger condition matched - executing flow');
+                    }, '⚡ Trigger condition matched - executing flow(s)');
+
+                    // Construct steps from multiple flows or legacy single flow
+                    let steps: { flowId: string, overrides: any }[] = [];
+
+                    if (trigger.flowIds && trigger.flowIds.length > 0) {
+                        steps = trigger.flowIds.map(fid => ({ flowId: fid, overrides: variableOverrides }));
+                    } else if (trigger.flowId) {
+                        steps = [{ flowId: trigger.flowId, overrides: variableOverrides }];
+                    } else {
+                        logger.warn({ triggerId: trigger.id }, '⚠️ Trigger matched but no flows defined');
+                        return 'pending';
+                    }
 
                     // Emit trigger_matched event for Live Execution Log
+                    // For multi-flow, we show "Multiple Flows" or the first one
+                    const flowDisplayName = steps.length > 1 ? `${steps.length} Flows` : steps[0]?.flowId;
+
                     events.emit('advanced:trigger_matched', {
                         windowId: window.id,
                         triggerId: trigger.id,
                         sensorName,
                         sensorValue,
                         condition: `${trigger.operator} ${trigger.value}${trigger.valueMax ? `-${trigger.valueMax}` : ''}`,
-                        flowName: trigger.flowId, // Will be resolved by frontend
+                        flowName: flowDisplayName,
                         timestamp: new Date()
                     });
 
-                    // Execute the flow with variable overrides
+                    // Execute the flow(s) with variable overrides
                     const flowSessionId = await cycleManager.startCycle(
                         trigger.id,  // cycleId
                         `Trigger: ${trigger.id}`,  // name
-                        [{ flowId: trigger.flowId, overrides: variableOverrides }],  // steps with overrides
+                        steps,  // multi-step array
                         variableOverrides  // session overrides
                     );
 
@@ -99,8 +115,9 @@ export class TriggerEvaluator {
                     logger.info({
                         windowId: window.id,
                         triggerId: trigger.id,
-                        flowSessionId
-                    }, '🚀 Trigger flow started - waiting for completion');
+                        flowSessionId,
+                        stepsCount: steps.length
+                    }, '🚀 Trigger flow(s) started - waiting for completion');
 
                     return 'executing';
                 } else {
@@ -130,22 +147,53 @@ export class TriggerEvaluator {
      * Execute the fallback flow for a window.
      */
     async executeFallback(window: ITimeWindow, variableOverrides: Record<string, any> = {}): Promise<void> {
-        if (!window.fallbackFlowId) {
-            logger.info({ windowId: window.id }, '⚠️ No fallback flow configured');
+        // Migration support: check both new plural array and old single ID
+        const useMultiFlow = window.fallbackFlowIds && window.fallbackFlowIds.length > 0;
+        const useSingleFlow = !!window.fallbackFlowId;
+
+        if (!useMultiFlow && !useSingleFlow) {
+            logger.info({ windowId: window.id }, '⚠️ No fallback flow(s) configured');
             return;
         }
 
         logger.info({
             windowId: window.id,
-            fallbackFlowId: window.fallbackFlowId
-        }, '🛡️ Executing fallback flow');
+            fallbackFlowId: window.fallbackFlowId,
+            fallbackFlowIds: window.fallbackFlowIds
+        }, '🛡️ Executing fallback flow(s)');
 
-        await cycleManager.startCycle(
-            `fallback-${window.id}`,
-            `Fallback: ${window.name}`,
-            [{ flowId: window.fallbackFlowId, overrides: variableOverrides }],
-            variableOverrides
-        );
+        try {
+            // Construct steps (Multiple flows logic)
+            let steps: { flowId: string, overrides: any }[] = [];
+
+            if (useMultiFlow) {
+                steps = window.fallbackFlowIds!.map(fid => ({
+                    flowId: fid,
+                    overrides: variableOverrides
+                }));
+            } else if (useSingleFlow) {
+                // Backward compatibility
+                steps = [{
+                    flowId: window.fallbackFlowId!,
+                    overrides: variableOverrides
+                }];
+            }
+
+            // Execute via CycleManager
+            const flowSessionId = await cycleManager.startCycle(
+                `fallback-${window.id}`,
+                `Fallback: ${window.name}`,
+                steps,
+                variableOverrides
+            );
+
+            logger.info({ flowSessionId }, '🛡️ Fallback started');
+        } catch (error: any) {
+            logger.error({
+                windowId: window.id,
+                error: error.message
+            }, '❌ Error executing fallback flow');
+        }
     }
 
     /**

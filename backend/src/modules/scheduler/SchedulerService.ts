@@ -436,11 +436,13 @@ export class SchedulerService {
                     t => t.behavior === 'break' && state.triggersExecuted.includes(t.id)
                 );
 
-                if (!hasBreakExecuted && window.fallbackFlowId) {
+                if (!hasBreakExecuted && (window.fallbackFlowId || (window.fallbackFlowIds && window.fallbackFlowIds.length > 0))) {
+                    const stepsCount = window.fallbackFlowIds?.length || (window.fallbackFlowId ? 1 : 0);
+
                     events.emit('advanced:fallback_executed', {
                         windowId: window.id,
                         windowName: window.name,
-                        flowName: window.fallbackFlowId, // Will be resolved by frontend
+                        flowName: stepsCount > 1 ? `${stepsCount} Flows` : (window.fallbackFlowId || window.fallbackFlowIds?.[0] || 'Unknown'),
                         timestamp: new Date()
                     });
                     await triggerEvaluator.executeFallback(window, variableOverrides);

@@ -45,13 +45,15 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
 }) => {
     const isEditing = !!editingTrigger;
 
-    // Form state
+    // State for multiple flows
     const [sensorId, setSensorId] = useState('');
     const [operator, setOperator] = useState<TriggerOperator>('>');
     const [value, setValue] = useState(0);
     const [valueMax, setValueMax] = useState(0);
-    const [flowId, setFlowId] = useState('');
     const [behavior, setBehavior] = useState<TriggerBehavior>('break');
+
+    // State for flows (Multi)
+    const [flowIds, setFlowIds] = useState<string[]>([]);
 
     // Reset form when modal opens
     useEffect(() => {
@@ -61,21 +63,30 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                 setOperator(editingTrigger.operator);
                 setValue(editingTrigger.value);
                 setValueMax(editingTrigger.valueMax || 0);
-                setFlowId(editingTrigger.flowId);
+
+                // Migrate legacy flowId to flowIds if needed
+                if (editingTrigger.flowIds && editingTrigger.flowIds.length > 0) {
+                    setFlowIds(editingTrigger.flowIds);
+                } else if (editingTrigger.flowId) {
+                    setFlowIds([editingTrigger.flowId]);
+                } else {
+                    setFlowIds([]);
+                }
+
                 setBehavior(editingTrigger.behavior);
             } else {
                 setSensorId(sensors[0]?.id || '');
                 setOperator('>');
                 setValue(0);
                 setValueMax(0);
-                setFlowId('');
+                setFlowIds([]);
                 setBehavior('break');
             }
         }
     }, [open, editingTrigger, sensors]);
 
     const handleSave = () => {
-        if (!sensorId || !flowId) return;
+        if (!sensorId || flowIds.length === 0) return;
 
         const triggerData: ITrigger = {
             id: editingTrigger?.id || generateId(),
@@ -83,11 +94,34 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
             operator,
             value,
             valueMax: operator === 'between' ? valueMax : undefined,
-            flowId,
+            flowId: flowIds[0], // Deprecated but kept for compatibility
+            flowIds, // New
             behavior
         };
         onSave(triggerData);
         onClose();
+    };
+
+    // Add flow to list
+    const addFlow = (id: string) => {
+        if (!flowIds.includes(id)) {
+            setFlowIds([...flowIds, id]);
+        }
+    };
+
+    // Remove flow from list
+    const removeFlow = (index: number) => {
+        const newFlows = [...flowIds];
+        newFlows.splice(index, 1);
+        setFlowIds(newFlows);
+    };
+
+    // Move flow up
+    const moveFlowUp = (index: number) => {
+        if (index === 0) return;
+        const newFlows = [...flowIds];
+        [newFlows[index - 1], newFlows[index]] = [newFlows[index], newFlows[index - 1]];
+        setFlowIds(newFlows);
     };
 
     // Group sensors by category
@@ -186,21 +220,72 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                         </div>
                     </div>
 
-                    {/* Flow Selection */}
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right">Поток</Label>
-                        <Select value={flowId} onValueChange={setFlowId}>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Избери поток за изпълнение" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {flows.map(flow => (
-                                    <SelectItem key={flow.id} value={flow.id}>
-                                        {flow.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    {/* Flows Selection (Multi) */}
+                    <div className="grid grid-cols-4 items-start gap-4">
+                        <Label className="text-right pt-2">Потоци</Label>
+                        <div className="col-span-3 space-y-3">
+                            {/* Selected Flows List */}
+                            {flowIds.length > 0 && (
+                                <div className="space-y-2 border rounded-md p-2 bg-muted/20">
+                                    {flowIds.map((id, index) => {
+                                        const flow = flows.find(f => f.id === id);
+                                        return (
+                                            <div key={`${id}-${index}`} className="flex items-center justify-between bg-background p-2 rounded border text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground font-mono text-xs">{index + 1}.</span>
+                                                    <span className="font-medium">{flow?.name || 'Unknown Flow'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    {index > 0 && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6"
+                                                            onClick={() => moveFlowUp(index)}
+                                                            title="Мести нагоре"
+                                                        >
+                                                            ↑
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-100"
+                                                        onClick={() => removeFlow(index)}
+                                                        title="Премахни"
+                                                    >
+                                                        ×
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Add Flow Dropdown */}
+                            <div className="flex gap-2">
+                                <Select onValueChange={addFlow}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="➕ Добави поток..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {flows.map(flow => (
+                                            <SelectItem
+                                                key={flow.id}
+                                                value={flow.id}
+                                                disabled={flowIds.includes(flow.id)}
+                                            >
+                                                {flow.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Потоците се изпълняват последователно в реда, в който са добавени.
+                            </p>
+                        </div>
                     </div>
 
                     {/* Behavior */}
@@ -218,7 +303,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                                         🛑 Break (Спри прозореца)
                                     </Label>
                                     <p className="text-xs text-muted-foreground">
-                                        Изпълни потока и затвори прозореца. Подходящо за основни задачи.
+                                        Изпълни потоците и затвори прозореца.
                                     </p>
                                 </div>
                             </div>
@@ -229,7 +314,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                                         ⏭️ Continue (Продължи)
                                     </Label>
                                     <p className="text-xs text-muted-foreground">
-                                        Изпълни потока и продължи да проверяваш. За допълнителни действия.
+                                        Изпълни потоците и продължи да проверяваш.
                                     </p>
                                 </div>
                             </div>
@@ -239,7 +324,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
 
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>Отказ</Button>
-                    <Button onClick={handleSave} disabled={!sensorId || !flowId}>
+                    <Button onClick={handleSave} disabled={!sensorId || flowIds.length === 0}>
                         {isEditing ? 'Запази' : 'Добави'}
                     </Button>
                 </DialogFooter>
