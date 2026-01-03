@@ -37,6 +37,7 @@ export interface SystemEvents {
         output?: any;
         summary?: string;
         sessionId?: string | null;
+        programName?: string | null;
         error?: string;
         notification?: { channelId: string; mode: string; config?: any };
     };

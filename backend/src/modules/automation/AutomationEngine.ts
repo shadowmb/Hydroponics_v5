@@ -240,6 +240,12 @@ export class AutomationEngine {
             });
         }
 
+        // CRITICAL FIX: Persist System Overrides (like _parentCycleSessionId)
+        // These are not defined in Inputs/Variables but are required for runtime logic (Scheduler)
+        if (overrides['_parentCycleSessionId']) {
+            variables['_parentCycleSessionId'] = overrides['_parentCycleSessionId'];
+        }
+
         // 3. Create Session
         const session = await sessionRepository.create({
             programId: flow.id,
@@ -498,6 +504,7 @@ export class AutomationEngine {
                     output: result.output,
                     summary: finalSummary, // Pass Summary
                     sessionId: this.currentSessionId,
+                    programName: this.currentProgramName, // Expose Flow Name for Logging
                     // Pass Notification Config
                     notification: {
                         channelId: params.notificationChannelId,

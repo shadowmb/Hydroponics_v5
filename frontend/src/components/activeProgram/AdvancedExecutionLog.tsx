@@ -79,7 +79,12 @@ const formatMessage = (entry: LogEntry): string => {
         case 'block_end':
             const blockName = entry.data.blockId?.split('_')[0] || entry.data.blockId;
             if (entry.data.success) {
-                return `✓ ${blockName}${entry.data.summary ? `: ${entry.data.summary}` : ''}`;
+                let message = `✓ ${blockName}`;
+                // Show Flow Name for Start Block
+                if (blockName === 'start' && entry.data.programName) {
+                    message += `: ${entry.data.programName}`;
+                }
+                return `${message}${entry.data.summary ? `: ${entry.data.summary}` : ''}`;
             } else {
                 return `✗ ${blockName}: ${entry.data.error || 'Failed'}`;
             }

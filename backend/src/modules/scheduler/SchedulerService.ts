@@ -27,8 +27,8 @@ export class SchedulerService {
     private _lastTick: Date | null = null;
 
     constructor() {
-        // Run every minute
-        this.job = new CronJob('* * * * *', () => this.tick());
+        // Run every 10 seconds to capture intervals accurately
+        this.job = new CronJob('*/10 * * * * *', () => this.tick());
     }
 
     public getLastTick(): Date | null {
@@ -309,15 +309,36 @@ export class SchedulerService {
                 // Check if we are waiting for a flow to complete
                 // ---------------------------------------------------------
                 if (state.triggersExecuting && state.triggersExecuting.length > 0) {
-                    const snapshot = automation.getSnapshot();
-                    const currentSessionId = state.currentFlowSessionId;
-
                     // Check if flow finished:
                     // 1. Different session active (machine moved on)
                     // 2. Or same session in final state
-                    const isFinished =
-                        snapshot.context?.sessionId !== currentSessionId ||
-                        ['completed', 'error', 'stopped', 'idle'].includes(snapshot.value as string);
+                    const snapshot = automation.getSnapshot();
+                    const currentSessionId = state.currentFlowSessionId;
+
+                    // It's a mismatch if:
+                    // A. The direct SessionID doesn't match (Running a stand-alone program?)
+                    // B. AND the parent Cycle Session ID doesn't match (Running a sub-program of our cycle?)
+                    const isDirectMatch = snapshot.context?.sessionId === currentSessionId;
+                    // FIX: Parent ID is injected into variables (inside execContext)
+                    const variables = snapshot.context?.execContext?.variables || {};
+                    const isParentMatch = variables['_parentCycleSessionId'] === currentSessionId;
+
+                    const isSessionMismatch = !isDirectMatch && !isParentMatch;
+                    const isStatusFinished = ['completed', 'error', 'stopped', 'idle'].includes(snapshot.value as string);
+
+                    const isFinished = isSessionMismatch || isStatusFinished;
+
+                    // DEBUG LOGGING for prematurely closed windows
+                    if (isFinished && currentSessionId) {
+                        logger.info({
+                            windowId: window.id,
+                            currentSessionId,
+                            snapshotSessionId: snapshot.context?.sessionId,
+                            snapshotStatus: snapshot.value,
+                            isSessionMismatch,
+                            isStatusFinished
+                        }, '🔍 Debug: Scheduler detecting flow finish');
+                    }
 
                     if (isFinished && currentSessionId) {
                         logger.info({ windowId: window.id, sessionId: currentSessionId }, '✅ Trigger flow finished');
