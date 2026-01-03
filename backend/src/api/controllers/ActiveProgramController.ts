@@ -186,4 +186,14 @@ export class ActiveProgramController {
             reply.status(500).send({ message: error.message });
         }
     }
+    static async updateTrigger(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { windowId } = req.params as any;
+            const trigger = req.body as any;
+            const active = await activeProgramService.updateTrigger(windowId, trigger);
+            reply.send(active);
+        } catch (error: any) {
+            reply.status(500).send({ message: error.message });
+        }
+    }
 }
