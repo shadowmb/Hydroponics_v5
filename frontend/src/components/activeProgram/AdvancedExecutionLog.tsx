@@ -270,18 +270,26 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
             setLogs(prev => {
                 // Smart Update: Find if there is a pending 'execution_step' for this block
                 // We search from the end to find the most recent one
-                const existingIndex = prev.findIndex(l => l.type === 'execution_step' && l.data.blockId === data.blockId);
+                // FIX: Add sessionId check to prevent cross-flow collision
+                const existingIndex = prev.findIndex(l =>
+                    l.type === 'execution_step' &&
+                    l.data.blockId === data.blockId &&
+                    // Match session matches (or ignore if execution_step didn't capture it)
+                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
+                );
 
                 if (existingIndex !== -1) {
                     // Update in place
                     const newLogs = [...prev];
                     newLogs[existingIndex] = {
-                        ...newLogs[existingIndex],
+                        ...newLogs[existingIndex], // Keep original ID/Timestamp or update?
                         type: 'block_end',
-                        timestamp: new Date(),
+                        timestamp: new Date(), // Update timestamp to finish time
                         data: { ...newLogs[existingIndex].data, ...data } // Merge data
                     };
-                    return newLogs;
+                    const sliced = newLogs.slice(-200);
+                    sessionStorage.setItem(storageKey, JSON.stringify(sliced));
+                    return sliced;
                 }
 
                 // If not found (e.g. joined late), just append
@@ -291,17 +299,49 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
                     timestamp: new Date(),
                     data
                 };
-                return [...prev.slice(-199), newEntry];
+                const newLogs = [...prev, newEntry];
+                const sliced = newLogs.slice(-200);
+                sessionStorage.setItem(storageKey, JSON.stringify(sliced));
+                return sliced;
             });
         };
 
         const handleExecutionStep = (data: any) => {
-            // Check if we already have this step (dedup generic)
-            // But usually we just add it.
-            addLog({
-                type: 'execution_step',
-                timestamp: new Date(data.timestamp || Date.now()),
-                data
+            setLogs(prev => {
+                // RACE CONDITION FIX:
+                // Check if we already have a 'block_end' for this blockId (and sessionId)
+                // This happens if block_end arrives BEFORE execution_step (network race)
+                const alreadyCompleted = prev.some(l =>
+                    l.type === 'block_end' &&
+                    l.data.blockId === data.blockId &&
+                    // Strict session matching if available
+                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
+                );
+
+                if (alreadyCompleted) {
+                    console.warn('⚠️ Log Race Condition: Ignoring execution_step because block_end already exists', data);
+                    return prev;
+                }
+
+                // Check for duplicate execution_step to avoid double spinners
+                const isDuplicate = prev.some(l =>
+                    l.type === 'execution_step' &&
+                    l.data.blockId === data.blockId &&
+                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
+                );
+
+                if (isDuplicate) return prev;
+
+                const newEntry: LogEntry = {
+                    id: generateId(),
+                    type: 'execution_step',
+                    timestamp: new Date(data.timestamp || Date.now()),
+                    data
+                };
+                const newLogs = [...prev, newEntry];
+                const sliced = newLogs.slice(-200);
+                sessionStorage.setItem(storageKey, JSON.stringify(sliced));
+                return sliced;
             });
         };
 

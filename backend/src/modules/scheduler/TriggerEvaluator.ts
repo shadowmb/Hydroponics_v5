@@ -145,15 +145,16 @@ export class TriggerEvaluator {
 
     /**
      * Execute the fallback flow for a window.
+     * Returns session ID if started.
      */
-    async executeFallback(window: ITimeWindow, variableOverrides: Record<string, any> = {}): Promise<void> {
+    async executeFallback(window: ITimeWindow, variableOverrides: Record<string, any> = {}): Promise<string | undefined> {
         // Migration support: check both new plural array and old single ID
         const useMultiFlow = window.fallbackFlowIds && window.fallbackFlowIds.length > 0;
         const useSingleFlow = !!window.fallbackFlowId;
 
         if (!useMultiFlow && !useSingleFlow) {
             logger.info({ windowId: window.id }, '⚠️ No fallback flow(s) configured');
-            return;
+            return undefined;
         }
 
         logger.info({
@@ -188,11 +189,13 @@ export class TriggerEvaluator {
             );
 
             logger.info({ flowSessionId }, '🛡️ Fallback started');
+            return flowSessionId;
         } catch (error: any) {
             logger.error({
                 windowId: window.id,
                 error: error.message
             }, '❌ Error executing fallback flow');
+            return undefined;
         }
     }
 
