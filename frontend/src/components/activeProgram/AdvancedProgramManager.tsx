@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import {
     Play, Pause, Square, Clock, Zap, CheckCircle2,
     Circle, Timer, ChevronDown, ChevronRight,
-    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity
+    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity, CalendarClock
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Progress } from '../ui/progress';
@@ -32,6 +32,7 @@ interface IWindowState {
     status: 'pending' | 'active' | 'completed' | 'skipped';
     triggersExecuted: string[];
     lastCheck?: Date;
+    skipUntil?: Date;
 }
 
 // Helper to get time-of-day icon
@@ -755,9 +756,95 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                 {getStatusIcon(state?.status || 'pending')}
                                                 {state?.status === 'active' ? 'Активен' :
                                                     state?.status === 'completed' ? 'Завършен' :
-                                                        state?.status === 'skipped' ? 'Пропуснат' :
+                                                        state?.status === 'skipped' ? (
+                                                            state?.skipUntil ?
+                                                                `Пропуснат (до ${new Date(state.skipUntil).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' })})`
+                                                                : 'Пропуснат'
+                                                        ) :
                                                             'Чакащ'}
                                             </span>
+
+                                            {/* SKIP BUTTON */}
+                                            {/* Show SKIP if Pending (and not skipped) OR Active (Force Skip) */}
+                                            {(state?.status === 'pending' || state?.status === 'active') && (
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            title="Пропусни (Skip)"
+                                                        >
+                                                            <CalendarClock className="h-4 w-4" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-60" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="space-y-3">
+                                                            <h4 className="font-medium text-sm">Пропусни прозорец</h4>
+                                                            <div className="flex items-center gap-2">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    defaultValue="1"
+                                                                    className="h-8"
+                                                                    id={`skip-input-${window.id}`}
+                                                                />
+                                                                <span className="text-sm text-muted-foreground">дни</span>
+                                                            </div>
+                                                            <Button size="sm" className="w-full" onClick={async () => {
+                                                                const input = document.getElementById(`skip-input-${window.id}`) as HTMLInputElement;
+                                                                const days = parseInt(input.value) || 1;
+
+                                                                // Calculate date: Now + Days (at 00:00 of target day?) 
+                                                                // Logic agreed: "2 days" = Skip Today + Skip Tomorrow (Expiring at 00:00 after tomorrow)
+                                                                // "1 day" = Skip Today (Expiring at 00:00 tomorrow)
+                                                                // So we add 'days' to today, and set time to 00:00:00?
+                                                                // Wait, if I add 1 day to today (3rd), result is 4th. 
+                                                                // If I set to 4th 00:00:00.
+                                                                // Any check on 3rd will be < 4th. Skipped.
+                                                                // Any check on 4th (00:01) will be > 4th. Not skipped. Correct.
+
+                                                                const targetDate = new Date();
+                                                                targetDate.setDate(targetDate.getDate() + days);
+                                                                targetDate.setHours(0, 0, 0, 0);
+
+                                                                try {
+                                                                    await activeProgramService.skipWindow(window.id, targetDate);
+                                                                    toast.success(`Прозорецът е пропуснат за ${days} дни`);
+                                                                    onUpdate();
+                                                                } catch (e) {
+                                                                    toast.error('Грешка при пропускане');
+                                                                }
+                                                            }}>
+                                                                Пропусни
+                                                            </Button>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            )}
+
+                                            {/* RESTORE BUTTON */}
+                                            {state?.status === 'skipped' && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        try {
+                                                            await activeProgramService.restoreWindow(window.id);
+                                                            toast.success('Прозорецът е възстановен');
+                                                            onUpdate();
+                                                        } catch (err) {
+                                                            toast.error('Грешка при възстановяване');
+                                                        }
+                                                    }}
+                                                    title="Възстанови (Restore)"
+                                                >
+                                                    <RefreshCw className="h-4 w-4" />
+                                                </Button>
+                                            )}
 
                                             {/* Edit button - only when window is not active */}
                                             {isWindowEditable(window) && (

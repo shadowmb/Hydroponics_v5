@@ -506,6 +506,59 @@ export class ActiveProgramService {
     }
 
     /**
+     * Skip a window (Advanced Mode).
+     */
+    async skipWindow(windowId: string, untilDate: Date): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        if (!active.windowsState) throw new Error('Not an advanced program (no windowsState)');
+
+        const windowState = active.windowsState.find(w => w.windowId === windowId);
+        if (!windowState) throw new Error('Window state not found');
+
+        // If currently active, we might want to stop running flows?
+        // For now, we update status. Scheduler should respect this next tick.
+        windowState.status = 'skipped';
+        windowState.skipUntil = untilDate;
+        windowState.triggersExecuting = []; // Clear executing flags
+        windowState.currentFlowSessionId = undefined; // Detach session
+
+        // We mark as modified because we are modifying a sub-document array element directly
+        active.markModified('windowsState');
+        await active.save();
+
+        logger.info({ windowId, untilDate }, '⏭️ Window Skipped');
+        return active;
+    }
+
+    /**
+     * Restore a skipped window (Advanced Mode).
+     */
+    async restoreWindow(windowId: string): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        if (!active.windowsState) throw new Error('Not an advanced program');
+
+        const windowState = active.windowsState.find(w => w.windowId === windowId);
+        if (!windowState) throw new Error('Window state not found');
+
+        if (windowState.status !== 'skipped') {
+            throw new Error('Cannot restore a window that is not skipped');
+        }
+
+        windowState.status = 'pending';
+        windowState.skipUntil = undefined;
+
+        active.markModified('windowsState');
+        await active.save();
+
+        logger.info({ windowId }, '⏪ Window Restored');
+        return active;
+    }
+
+    /**
      * Get the current active program.
      */
     async getActive(): Promise<IActiveProgram | null> {

@@ -165,4 +165,25 @@ export class ActiveProgramController {
             reply.status(500).send({ message: error.message });
         }
     }
+
+    static async skipWindow(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { windowId } = req.params as any;
+            const { untilDate } = req.body as any;
+            const active = await activeProgramService.skipWindow(windowId, untilDate);
+            reply.send(active);
+        } catch (error: any) {
+            reply.status(500).send({ message: error.message });
+        }
+    }
+
+    static async restoreWindow(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { windowId } = req.params as any;
+            const active = await activeProgramService.restoreWindow(windowId);
+            reply.send(active);
+        } catch (error: any) {
+            reply.status(500).send({ message: error.message });
+        }
+    }
 }

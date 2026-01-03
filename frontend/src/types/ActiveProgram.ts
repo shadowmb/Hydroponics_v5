@@ -30,4 +30,15 @@ export interface IActiveProgram {
     currentScheduleItemId?: string;
     createdAt: string;
     updatedAt: string;
+    // Advanced Mode Fields
+    windows?: any[]; // keeping as any for now to avoid circular deps with ITimeWindow if complex
+    windowsState?: IWindowState[];
+}
+
+export interface IWindowState {
+    windowId: string;
+    status: 'pending' | 'active' | 'completed' | 'skipped';
+    triggersExecuted: string[];
+    lastCheck?: Date;
+    skipUntil?: Date;
 }

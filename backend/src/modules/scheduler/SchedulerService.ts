@@ -290,6 +290,75 @@ export class SchedulerService {
                 continue;
             }
 
+            // ---------------------------------------------------------
+            // 0. SKIP & DAY RESET LOGIC
+            // ---------------------------------------------------------
+            const now = new Date();
+            let dirty = false;
+
+            // A. Check for New Day (Reset Logic)
+            // If window is done (completed/skipped) but last check was previous day
+            if (state.lastCheck && (state.status === 'completed' || state.status === 'skipped')) {
+                const lastCheckDate = new Date(state.lastCheck);
+                if (lastCheckDate.getDate() !== now.getDate() || lastCheckDate.getMonth() !== now.getMonth()) {
+                    // It's a new day!
+
+                    // Check if we should keep it skipped
+                    const isStillSkipped = state.skipUntil && new Date(state.skipUntil) > now;
+
+                    if (isStillSkipped) {
+                        // Update lastCheck to today so we don't check again this tick
+                        state.lastCheck = now;
+                        // Status remains 'skipped'
+                        dirty = true;
+                    } else {
+                        logger.info({ windowId: window.id }, '📅 New Day Detected - Resetting window status');
+                        state.status = 'pending';
+                        state.triggersExecuted = [];
+                        state.triggersExecuting = [];
+                        state.currentFlowSessionId = undefined;
+                        // Clear skip if it was expired
+                        if (state.skipUntil && new Date(state.skipUntil) <= now) {
+                            state.skipUntil = undefined;
+                        }
+
+                        // Reset day flag if needed
+                        if (activeProgram.dayCompleteEmitted) {
+                            activeProgram.dayCompleteEmitted = false;
+                        }
+                        dirty = true;
+                    }
+                }
+            }
+
+            // B. Enforce Skip Duration
+            if (state.skipUntil) {
+                const skipUntil = new Date(state.skipUntil);
+                if (now < skipUntil) {
+                    if (state.status !== 'skipped') {
+                        state.status = 'skipped';
+                        state.triggersExecuting = []; // Stop anything running? (Handled by check below)
+                        logger.info({ windowId: window.id, until: state.skipUntil }, '⏭️ Window Skipped (Enforced by skipUntil)');
+                        dirty = true;
+                    }
+                } else {
+                    // Skip Expired
+                    if (state.status === 'skipped') {
+                        // Only reset if NO skipUntil (caught above) or explicit check
+                        logger.info({ windowId: window.id }, '⏯️ Window Skip Expired - Resuming');
+                        state.status = 'pending';
+                        state.skipUntil = undefined;
+                        dirty = true;
+                    }
+                }
+            }
+
+            if (dirty) {
+                activeProgram.markModified('windowsState');
+                // We save here to ensure reset persists even if we continue/skip below
+                await activeProgram.save();
+            }
+
             // Skip completed or skipped windows
             if (state.status === 'completed' || state.status === 'skipped') continue;
 
