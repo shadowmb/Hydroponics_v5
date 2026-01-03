@@ -148,15 +148,29 @@ export class HardwareController {
             const { id } = req.params as { id: string };
             const body = req.body as any;
 
-            const controller = await Controller.findByIdAndUpdate(
-                id,
-                { $set: body },
-                { new: true }
-            );
-
+            const controller = await Controller.findById(id);
             if (!controller) {
                 return reply.status(404).send({ success: false, error: 'Controller not found' });
             }
+
+            // DEEP MERGE for nested objects to preserve existing fields
+            Object.keys(body).forEach(key => {
+                if (key === 'connection') {
+                    // Merge connection object
+                    const existingConnection = (controller.connection as any) || {};
+                    controller.set('connection', { ...existingConnection, ...body.connection });
+                    controller.markModified('connection');
+                } else if (key === 'hardwareConfig') {
+                    // Merge hardwareConfig object
+                    const existingHwConfig = (controller as any).hardwareConfig || {};
+                    controller.set('hardwareConfig', { ...existingHwConfig, ...body.hardwareConfig });
+                    controller.markModified('hardwareConfig');
+                } else {
+                    controller.set(key, body[key]);
+                }
+            });
+
+            await controller.save();
 
             // If deactivated, force disconnect
             if (body.isActive === false) {
