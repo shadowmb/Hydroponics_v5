@@ -506,6 +506,98 @@ export class ActiveProgramService {
     }
 
     /**
+     * Skip a window (Advanced Mode).
+     */
+    async skipWindow(windowId: string, untilDate: Date): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        if (!active.windowsState) throw new Error('Not an advanced program (no windowsState)');
+
+        const windowState = active.windowsState.find(w => w.windowId === windowId);
+        if (!windowState) throw new Error('Window state not found');
+
+        // If currently active, we might want to stop running flows?
+        // For now, we update status. Scheduler should respect this next tick.
+        windowState.status = 'skipped';
+        windowState.skipUntil = untilDate;
+        windowState.triggersExecuting = []; // Clear executing flags
+        windowState.currentFlowSessionId = undefined; // Detach session
+
+        // We mark as modified because we are modifying a sub-document array element directly
+        active.markModified('windowsState');
+        await active.save();
+
+        logger.info({ windowId, untilDate }, '⏭️ Window Skipped');
+        return active;
+    }
+
+    /**
+     * Restore a skipped window (Advanced Mode).
+     */
+    async restoreWindow(windowId: string): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        if (!active.windowsState) throw new Error('Not an advanced program');
+
+        const windowState = active.windowsState.find(w => w.windowId === windowId);
+        if (!windowState) throw new Error('Window state not found');
+
+        if (windowState.status !== 'skipped') {
+            throw new Error('Cannot restore a window that is not skipped');
+        }
+
+        windowState.status = 'pending';
+        windowState.skipUntil = undefined;
+
+        active.markModified('windowsState');
+        await active.save();
+
+        logger.info({ windowId }, '⏪ Window Restored');
+        return active;
+    }
+
+    /**
+     * Update a specific trigger in an active window.
+     * Allows live editing of parameters (sensor, value, flows, etc.)
+     */
+    async updateTrigger(windowId: string, trigger: any): Promise<IActiveProgram> {
+        const active = await this.getActive();
+        if (!active) throw new Error('No active program');
+
+        if (!active.windowsState) throw new Error('Not an advanced program');
+
+        // 1. Find Window Definition
+        const windowDef = (active as any).windows.find((w: any) => w.id === windowId);
+        if (!windowDef) throw new Error('Window definition not found');
+
+        // 2. Find Window State
+        const windowState = active.windowsState.find(w => w.windowId === windowId);
+        if (!windowState) throw new Error('Window state not found');
+
+        // 3. Safety Check: Cannot edit if window is ACTIVE/RUNNING
+        if (windowState.status === 'active') {
+            throw new Error('Cannot edit trigger while window is active');
+        }
+
+        // 4. Find Trigger index
+        const triggerIndex = windowDef.triggers.findIndex((t: any) => t.id === trigger.id);
+        if (triggerIndex === -1) throw new Error('Trigger not found');
+
+        // 5. Update Trigger
+        // We replace the entire text of the trigger object
+        windowDef.triggers[triggerIndex] = trigger;
+
+        // Mark as modified
+        active.markModified('windows');
+        await active.save();
+
+        logger.info({ windowId, triggerId: trigger.id }, '✏️ Active Program Trigger Updated');
+        return active;
+    }
+
+    /**
      * Get the current active program.
      */
     async getActive(): Promise<IActiveProgram | null> {

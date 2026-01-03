@@ -113,7 +113,11 @@ export class CycleManager {
             // Or Global overrides (passed at runtime) are meant to override everything?
             // Let's assume Runtime Global Overrides > Static Step Overrides.
             const sessionOverrides = this.currentSession.context || {};
-            const finalOverrides = { ...step.overrides, ...sessionOverrides };
+            const finalOverrides = {
+                ...step.overrides,
+                ...sessionOverrides,
+                _parentCycleSessionId: this.currentSession.id
+            };
 
             logger.info({ step: index, sessionOverrides, finalOverrides }, '🔧 Cycle Step Overrides Resolution');
 

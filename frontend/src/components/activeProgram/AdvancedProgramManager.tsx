@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import {
     Play, Pause, Square, Clock, Zap, CheckCircle2,
     Circle, Timer, ChevronDown, ChevronRight,
-    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity
+    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity, CalendarClock
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Progress } from '../ui/progress';
@@ -18,7 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { TimePicker24 } from '../ui/time-picker-24';
 import { TimeWindowModal } from '../programs/TimeWindowModal';
-import type { ITimeWindow } from '../programs/types';
+import { TriggerModal } from '../programs/TriggerModal';
+import type { ITimeWindow, ITrigger } from '../programs/types';
 import { AdvancedExecutionLog } from './AdvancedExecutionLog';
 
 interface AdvancedProgramManagerProps {
@@ -32,6 +33,7 @@ interface IWindowState {
     status: 'pending' | 'active' | 'completed' | 'skipped';
     triggersExecuted: string[];
     lastCheck?: Date;
+    skipUntil?: Date;
 }
 
 // Helper to get time-of-day icon
@@ -109,11 +111,11 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [localWindows, setLocalWindows] = useState<ITimeWindow[]>([]);
 
-    // Trigger quick-edit state
-    const [editingTriggerId, setEditingTriggerId] = useState<string | null>(null);
-    const [editingTriggerValue, setEditingTriggerValue] = useState<string>('');
-    const [editingTriggerValueMax, setEditingTriggerValueMax] = useState<string>('');
-    const [editingWindowId, setEditingWindowId] = useState<string | null>(null);
+    // Trigger full edit state
+    const [editingFullTrigger, setEditingFullTrigger] = useState<ITrigger | null>(null);
+    const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false);
+    const [editingTriggerWindowId, setEditingTriggerWindowId] = useState<string | null>(null);
+
 
     const windows = (program as any).windows || [];
     const windowsState: IWindowState[] = (program as any).windowsState || [];
@@ -316,19 +318,38 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     };
 
-    // Check if a window is editable (not currently active by time)
-    const isWindowEditable = (window: any): boolean => {
+    // Check if window is editable (Not Active AND Current Time NOT in window)
+    const isWindowEditable = (window: ITimeWindow) => {
         const state = getWindowState(window.id);
-        // If status is 'active', window is running - not editable
-        if (state?.status === 'active') return false;
+        if (!state) return true;
 
-        // Also check by current time (in case status hasn't updated yet)
-        const nowMins = currentTime.getHours() * 60 + currentTime.getMinutes();
-        const startMins = timeToMinutes(window.startTime);
-        const endMins = timeToMinutes(window.endTime);
+        // 1. Status Check
+        if (state.status === 'active') return false;
 
-        // If current time is within window range, not editable
-        if (nowMins >= startMins && nowMins < endMins) return false;
+        // 2. Time Check
+        // If program is scheduled/running, we must check if "Now" is potentially inside this window
+        // to prevent editing 1 second before start.
+        if (program.status === 'running' || program.status === 'scheduled') {
+            const now = new Date();
+            const [startH, startM] = window.startTime.split(':').map(Number);
+            const [endH, endM] = window.endTime.split(':').map(Number);
+
+            const start = new Date(now);
+            start.setHours(startH, startM, 0, 0);
+
+            const end = new Date(now);
+            end.setHours(endH, endM, 0, 0);
+
+            // Handle overnight windows
+            if (end < start) end.setDate(end.getDate() + 1);
+
+            // If we are IN the window (or very close, e.g. < 1 min?), disable edit
+            // Simple check: start <= now <= end
+            // Actually, if we are in the window, status *should* be active, but might be pending if
+            // scheduler hasn't ticked yet or just finished a cycle.
+            // Safer to disable if we are strictly inside the time range.
+            if (now >= start && now <= end) return false;
+        }
 
         return true;
     };
@@ -344,66 +365,31 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         setIsEditModalOpen(true);
     };
 
-    // Start editing a trigger value
-    const startTriggerEdit = (windowId: string, trigger: any, e: React.MouseEvent) => {
+    // Open Trigger Edit Modal
+    const handleEditTrigger = (windowId: string, trigger: ITrigger, e: React.MouseEvent) => {
         e.stopPropagation();
-        const window = localWindows.find(w => w.id === windowId);
-        if (!window || !isWindowEditable(window)) {
-            toast.error('Не може да редактирате тригер докато прозорецът е активен');
-            return;
-        }
-        setEditingWindowId(windowId);
-        setEditingTriggerId(trigger.id);
-        setEditingTriggerValue(String(trigger.value));
-        setEditingTriggerValueMax(trigger.valueMax ? String(trigger.valueMax) : '');
+        setEditingTriggerWindowId(windowId);
+        setEditingFullTrigger(trigger);
+        setIsTriggerModalOpen(true);
     };
 
-    // Cancel trigger editing
-    const cancelTriggerEdit = () => {
-        setEditingTriggerId(null);
-        setEditingTriggerValue('');
-        setEditingTriggerValueMax('');
-        setEditingWindowId(null);
-    };
-
-    // Save trigger value edit
-    const saveTriggerEdit = async () => {
-        if (!editingWindowId || !editingTriggerId) return;
-
-        const newValue = parseFloat(editingTriggerValue);
-        if (isNaN(newValue)) {
-            toast.error('Невалидна стойност');
-            return;
-        }
+    // Save Trigger Update
+    const handleSaveTrigger = async (updatedTrigger: ITrigger) => {
+        if (!editingTriggerWindowId) return;
 
         try {
             setProcessing(true);
-
-            const newWindows = localWindows.map(w => {
-                if (w.id !== editingWindowId) return w;
-                return {
-                    ...w,
-                    triggers: w.triggers.map(t => {
-                        if (t.id !== editingTriggerId) return t;
-                        return {
-                            ...t,
-                            value: newValue,
-                            ...(editingTriggerValueMax ? { valueMax: parseFloat(editingTriggerValueMax) } : {})
-                        };
-                    })
-                };
-            });
-
-            await activeProgramService.update({ windows: newWindows } as any);
-            setLocalWindows(newWindows);
-            toast.success('Стойността е обновена');
-            cancelTriggerEdit();
-            onUpdate();
-        } catch (error) {
+            await activeProgramService.updateTrigger(editingTriggerWindowId, updatedTrigger);
+            toast.success('Тригерът е обновен успешно');
+            onUpdate(); // Refetch
+        } catch (error: any) {
             console.error('Failed to update trigger:', error);
-            toast.error('Грешка при запазване');
+            toast.error('Грешка при обновяване на тригера');
         } finally {
             setProcessing(false);
+            setIsTriggerModalOpen(false);
+            setEditingFullTrigger(null);
+            setEditingTriggerWindowId(null);
         }
     };
 
@@ -755,9 +741,95 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                 {getStatusIcon(state?.status || 'pending')}
                                                 {state?.status === 'active' ? 'Активен' :
                                                     state?.status === 'completed' ? 'Завършен' :
-                                                        state?.status === 'skipped' ? 'Пропуснат' :
+                                                        state?.status === 'skipped' ? (
+                                                            state?.skipUntil ?
+                                                                `Пропуснат (до ${new Date(state.skipUntil).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' })})`
+                                                                : 'Пропуснат'
+                                                        ) :
                                                             'Чакащ'}
                                             </span>
+
+                                            {/* SKIP BUTTON */}
+                                            {/* Show SKIP if Pending (and not skipped) OR Active (Force Skip) */}
+                                            {(state?.status === 'pending' || state?.status === 'active') && (
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            title="Пропусни (Skip)"
+                                                        >
+                                                            <CalendarClock className="h-4 w-4" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-60" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="space-y-3">
+                                                            <h4 className="font-medium text-sm">Пропусни прозорец</h4>
+                                                            <div className="flex items-center gap-2">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    defaultValue="1"
+                                                                    className="h-8"
+                                                                    id={`skip-input-${window.id}`}
+                                                                />
+                                                                <span className="text-sm text-muted-foreground">дни</span>
+                                                            </div>
+                                                            <Button size="sm" className="w-full" onClick={async () => {
+                                                                const input = document.getElementById(`skip-input-${window.id}`) as HTMLInputElement;
+                                                                const days = parseInt(input.value) || 1;
+
+                                                                // Calculate date: Now + Days (at 00:00 of target day?) 
+                                                                // Logic agreed: "2 days" = Skip Today + Skip Tomorrow (Expiring at 00:00 after tomorrow)
+                                                                // "1 day" = Skip Today (Expiring at 00:00 tomorrow)
+                                                                // So we add 'days' to today, and set time to 00:00:00?
+                                                                // Wait, if I add 1 day to today (3rd), result is 4th. 
+                                                                // If I set to 4th 00:00:00.
+                                                                // Any check on 3rd will be < 4th. Skipped.
+                                                                // Any check on 4th (00:01) will be > 4th. Not skipped. Correct.
+
+                                                                const targetDate = new Date();
+                                                                targetDate.setDate(targetDate.getDate() + days);
+                                                                targetDate.setHours(0, 0, 0, 0);
+
+                                                                try {
+                                                                    await activeProgramService.skipWindow(window.id, targetDate);
+                                                                    toast.success(`Прозорецът е пропуснат за ${days} дни`);
+                                                                    onUpdate();
+                                                                } catch (e) {
+                                                                    toast.error('Грешка при пропускане');
+                                                                }
+                                                            }}>
+                                                                Пропусни
+                                                            </Button>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            )}
+
+                                            {/* RESTORE BUTTON */}
+                                            {state?.status === 'skipped' && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        try {
+                                                            await activeProgramService.restoreWindow(window.id);
+                                                            toast.success('Прозорецът е възстановен');
+                                                            onUpdate();
+                                                        } catch (err) {
+                                                            toast.error('Грешка при възстановяване');
+                                                        }
+                                                    }}
+                                                    title="Възстанови (Restore)"
+                                                >
+                                                    <RefreshCw className="h-4 w-4" />
+                                                </Button>
+                                            )}
 
                                             {/* Edit button - only when window is not active */}
                                             {isWindowEditable(window) && (
@@ -784,7 +856,6 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                             ) : (
                                                 triggers.map((trigger: any, triggerIndex: number) => {
                                                     const isExecuted = executedTriggers.includes(trigger.id);
-                                                    const isEditing = editingTriggerId === trigger.id && editingWindowId === window.id;
                                                     const canEdit = isWindowEditable(window) && !isExecuted;
 
                                                     return (
@@ -813,66 +884,26 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                     {getSensorName(trigger.sensorId)}
                                                                 </span>
 
-                                                                {/* Value display or edit mode */}
-                                                                {isEditing ? (
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="font-mono text-sm">
-                                                                            {formatOperator(trigger.operator)}
-                                                                        </span>
-                                                                        <Input
-                                                                            type="number"
-                                                                            value={editingTriggerValue}
-                                                                            onChange={(e) => setEditingTriggerValue(e.target.value)}
-                                                                            className="w-20 h-7 text-sm"
-                                                                            autoFocus
-                                                                        />
-                                                                        {trigger.operator === 'between' && (
-                                                                            <>
-                                                                                <span className="text-sm">-</span>
-                                                                                <Input
-                                                                                    type="number"
-                                                                                    value={editingTriggerValueMax}
-                                                                                    onChange={(e) => setEditingTriggerValueMax(e.target.value)}
-                                                                                    className="w-20 h-7 text-sm"
-                                                                                />
-                                                                            </>
-                                                                        )}
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant="ghost"
-                                                                            className="h-7 px-2"
-                                                                            onClick={saveTriggerEdit}
-                                                                            disabled={processing}
-                                                                        >
-                                                                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant="ghost"
-                                                                            className="h-7 px-2"
-                                                                            onClick={cancelTriggerEdit}
-                                                                        >
-                                                                            ✕
-                                                                        </Button>
-                                                                    </div>
-                                                                ) : (
-                                                                    <span
-                                                                        className={cn(
-                                                                            "font-mono text-sm",
-                                                                            canEdit && "cursor-pointer hover:bg-muted/50 px-1 rounded"
-                                                                        )}
-                                                                        onClick={(e) => canEdit && startTriggerEdit(window.id, trigger, e)}
-                                                                        title={canEdit ? "Кликнете за редакция" : undefined}
-                                                                    >
-                                                                        {formatOperator(trigger.operator)} {trigger.value}
-                                                                        {trigger.operator === 'between' && ` - ${trigger.valueMax}`}
-                                                                    </span>
-                                                                )}
+                                                                {/* Display Trigger Condition */}
+                                                                <span
+                                                                    className={cn(
+                                                                        "font-mono text-sm",
+                                                                        canEdit && "cursor-pointer hover:bg-muted/50 px-1 rounded"
+                                                                    )}
+                                                                    onClick={(e) => canEdit && handleEditTrigger(window.id, trigger, e)}
+                                                                    title={canEdit ? "Кликнете за пълна редакция" : undefined}
+                                                                >
+                                                                    {formatOperator(trigger.operator)} {trigger.value}
+                                                                    {trigger.operator === 'between' && ` - ${trigger.valueMax}`}
+                                                                </span>
 
                                                                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
                                                                 <Zap className="h-3.5 w-3.5 text-yellow-500" />
                                                                 <span className="text-sm text-primary font-medium">
-                                                                    {getFlowName(trigger.flowId)}
+                                                                    {trigger.flowIds && trigger.flowIds.length > 0
+                                                                        ? trigger.flowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                        : getFlowName(trigger.flowId)
+                                                                    }
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
@@ -881,14 +912,14 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                         ✓ Изпълнен
                                                                     </span>
                                                                 )}
-                                                                {/* Edit button for non-executed triggers in editable windows */}
-                                                                {canEdit && !isEditing && (
+                                                                {/* Full Edit Button */}
+                                                                {canEdit && (
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         className="h-6 w-6"
-                                                                        onClick={(e) => startTriggerEdit(window.id, trigger, e)}
-                                                                        title="Редактирай стойност"
+                                                                        onClick={(e) => handleEditTrigger(window.id, trigger, e)}
+                                                                        title="Пълна редакция"
                                                                     >
                                                                         <Pencil className="h-3 w-3" />
                                                                     </Button>
@@ -908,7 +939,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                             )}
 
                                             {/* Fallback Info */}
-                                            {window.fallbackFlowId && (
+                                            {(window.fallbackFlowIds?.length || window.fallbackFlowId) && (
                                                 <div className={cn(
                                                     "mt-3 p-3 border rounded-md",
                                                     state?.status === 'completed' && !triggers.some((t: any) =>
@@ -918,7 +949,11 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                         : "bg-amber-500/10 border-amber-500/20"
                                                 )}>
                                                     <span className="text-amber-600 font-medium">
-                                                        ⚡ Fallback: {getFlowName(window.fallbackFlowId)}
+                                                        ⚡ Fallback: {
+                                                            window.fallbackFlowIds && window.fallbackFlowIds.length > 0
+                                                                ? window.fallbackFlowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                : getFlowName(window.fallbackFlowId)
+                                                        }
                                                     </span>
                                                 </div>
                                             )}
@@ -946,6 +981,17 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                 flows={flows.map(f => ({ id: f.id || f._id, name: f.name }))}
                 existingWindows={localWindows}
             />
+
+            {/* Full Trigger Edit Modal */}
+            <TriggerModal
+                open={isTriggerModalOpen}
+                onClose={() => setIsTriggerModalOpen(false)}
+                onSave={handleSaveTrigger}
+                trigger={editingFullTrigger}
+                sensors={sensors}
+                flows={flows}
+            />
+
         </>
     );
 };

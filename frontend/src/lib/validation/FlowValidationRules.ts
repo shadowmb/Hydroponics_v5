@@ -49,7 +49,25 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
     ],
     'ACTUATOR_SET': [
         { field: 'deviceId', required: true, message: 'Device is required' },
-        { field: 'action', required: true, message: 'Action is required' }
+        { field: 'action', required: true, message: 'Action is required' },
+        {
+            field: 'duration',
+            message: 'Duration must use a time unit variable (s, ms, min, h)',
+            validate: (val, data, context) => {
+                // Only validate if it's a variable reference
+                if (typeof val !== 'string' || !val.startsWith('{{')) return true;
+                if (!context || !context.variables) return true;
+
+                const varName = val.slice(2, -2);
+                const variable = context.variables.find((v: any) => v.id === varName || v.name === varName);
+
+                if (!variable || !variable.unit) return true; // No unit defined = allow (legacy)
+
+                // Time family units (matching UnitConversionService)
+                const timeUnits = ['s', 'ms', 'min', 'h', 'sec', 'seconds', 'minutes', 'hours'];
+                return timeUnits.includes(variable.unit.toLowerCase());
+            }
+        }
     ],
     'WAIT': [
         { field: 'duration', required: true, message: 'Duration is required' },

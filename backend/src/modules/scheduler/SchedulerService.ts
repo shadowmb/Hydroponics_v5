@@ -27,8 +27,8 @@ export class SchedulerService {
     private _lastTick: Date | null = null;
 
     constructor() {
-        // Run every minute
-        this.job = new CronJob('* * * * *', () => this.tick());
+        // Run every 10 seconds to capture intervals accurately
+        this.job = new CronJob('*/10 * * * * *', () => this.tick());
     }
 
     public getLastTick(): Date | null {
@@ -290,8 +290,153 @@ export class SchedulerService {
                 continue;
             }
 
+            // ---------------------------------------------------------
+            // 0. SKIP & DAY RESET LOGIC
+            // ---------------------------------------------------------
+            const now = new Date();
+            let dirty = false;
+
+            // A. Check for New Day (Reset Logic)
+            // If window is done (completed/skipped) but last check was previous day
+            if (state.lastCheck && (state.status === 'completed' || state.status === 'skipped')) {
+                const lastCheckDate = new Date(state.lastCheck);
+                if (lastCheckDate.getDate() !== now.getDate() || lastCheckDate.getMonth() !== now.getMonth()) {
+                    // It's a new day!
+
+                    // Check if we should keep it skipped
+                    const isStillSkipped = state.skipUntil && new Date(state.skipUntil) > now;
+
+                    if (isStillSkipped) {
+                        // Update lastCheck to today so we don't check again this tick
+                        state.lastCheck = now;
+                        // Status remains 'skipped'
+                        dirty = true;
+                    } else {
+                        logger.info({ windowId: window.id }, '📅 New Day Detected - Resetting window status');
+                        state.status = 'pending';
+                        state.triggersExecuted = [];
+                        state.triggersExecuting = [];
+                        state.currentFlowSessionId = undefined;
+                        // Clear skip if it was expired
+                        if (state.skipUntil && new Date(state.skipUntil) <= now) {
+                            state.skipUntil = undefined;
+                        }
+
+                        // Reset day flag if needed
+                        if (activeProgram.dayCompleteEmitted) {
+                            activeProgram.dayCompleteEmitted = false;
+                        }
+                        dirty = true;
+                    }
+                }
+            }
+
+            // B. Enforce Skip Duration
+            if (state.skipUntil) {
+                const skipUntil = new Date(state.skipUntil);
+                if (now < skipUntil) {
+                    if (state.status !== 'skipped') {
+                        state.status = 'skipped';
+                        state.triggersExecuting = []; // Stop anything running? (Handled by check below)
+                        logger.info({ windowId: window.id, until: state.skipUntil }, '⏭️ Window Skipped (Enforced by skipUntil)');
+                        dirty = true;
+                    }
+                } else {
+                    // Skip Expired
+                    if (state.status === 'skipped') {
+                        // Only reset if NO skipUntil (caught above) or explicit check
+                        logger.info({ windowId: window.id }, '⏯️ Window Skip Expired - Resuming');
+                        state.status = 'pending';
+                        state.skipUntil = undefined;
+                        dirty = true;
+                    }
+                }
+            }
+
+            if (dirty) {
+                activeProgram.markModified('windowsState');
+                // We save here to ensure reset persists even if we continue/skip below
+                await activeProgram.save();
+            }
+
             // Skip completed or skipped windows
             if (state.status === 'completed' || state.status === 'skipped') continue;
+
+            // ---------------------------------------------------------
+            // ASYNC FLOW TRACKING (Variant C) - HOISTED
+            // Check if we are waiting for a flow to complete (Trigger or Fallback)
+            // ---------------------------------------------------------
+            if (state.triggersExecuting && state.triggersExecuting.length > 0) {
+                // Check if flow finished:
+                // 1. Different session active (machine moved on)
+                // 2. Or same session in final state
+                const snapshot = automation.getSnapshot();
+                const currentSessionId = state.currentFlowSessionId;
+
+                // It's a mismatch if:
+                // A. The direct SessionID doesn't match (Running a stand-alone program?)
+                // B. AND the parent Cycle Session ID doesn't match (Running a sub-program of our cycle?)
+                const isDirectMatch = snapshot.context?.sessionId === currentSessionId;
+                // FIX: Parent ID is injected into variables (inside execContext)
+                const variables = snapshot.context?.execContext?.variables || {};
+                const isParentMatch = variables['_parentCycleSessionId'] === currentSessionId;
+
+                const isSessionMismatch = !isDirectMatch && !isParentMatch;
+                const isStatusFinished = ['completed', 'error', 'stopped', 'idle'].includes(snapshot.value as string);
+
+                const isFinished = isSessionMismatch || isStatusFinished;
+
+                // DEBUG LOGGING for prematurely closed windows
+                if (isFinished && currentSessionId) {
+                    logger.info({
+                        windowId: window.id,
+                        currentSessionId,
+                        snapshotSessionId: snapshot.context?.sessionId,
+                        snapshotStatus: snapshot.value,
+                        isSessionMismatch,
+                        isStatusFinished
+                    }, '🔍 Debug: Scheduler detecting flow finish');
+                }
+
+                if (isFinished && currentSessionId) {
+                    logger.info({ windowId: window.id, sessionId: currentSessionId }, '✅ Trigger/Fallback flow finished');
+
+                    // Move executing triggers to executed
+                    // If it was 'fallback', we still push it to track that fallback ran
+                    state.triggersExecuted.push(...state.triggersExecuting);
+                    state.triggersExecuting = []; // Clear executing
+                    state.currentFlowSessionId = undefined;
+
+                    // Check if any executed trigger was a BREAK trigger
+                    const breakTrigger = window.triggers.find(t =>
+                        state.triggersExecuted.includes(t.id) && t.behavior === 'break'
+                    );
+
+                    // Check if fallback was executed (pseudo-ID)
+                    const fallbackExecuted = state.triggersExecuted.includes('fallback');
+
+                    // If it was a BREAK trigger OR Fallback finished, close the window NOW
+                    if (breakTrigger || fallbackExecuted) {
+                        state.status = 'completed';
+
+                        const result = breakTrigger ? 'triggered' : (fallbackExecuted ? 'fallback' : 'no_trigger');
+                        logger.info({ windowId: window.id, result }, '🛑 Flow finished (Break/Fallback) - closing window');
+
+                        events.emit('advanced:window_completed', {
+                            windowId: window.id,
+                            windowName: window.name,
+                            result: result as any,
+                            timestamp: new Date()
+                        });
+                    }
+
+                    await activeProgram.save();
+                }
+
+                // If still executing, SKIP further evaluation for this window
+                // We wait for the current flow to finish before checking other triggers
+                continue;
+            }
 
             // Check if we're in the time window
             if (this.isInTimeWindow(timeString, window.startTime, window.endTime)) {
@@ -302,55 +447,6 @@ export class SchedulerService {
                         windowName: window.name,
                         timestamp: new Date()
                     });
-                }
-
-                // ---------------------------------------------------------
-                // ASYNC FLOW TRACKING (Variant C)
-                // Check if we are waiting for a flow to complete
-                // ---------------------------------------------------------
-                if (state.triggersExecuting && state.triggersExecuting.length > 0) {
-                    const snapshot = automation.getSnapshot();
-                    const currentSessionId = state.currentFlowSessionId;
-
-                    // Check if flow finished:
-                    // 1. Different session active (machine moved on)
-                    // 2. Or same session in final state
-                    const isFinished =
-                        snapshot.context?.sessionId !== currentSessionId ||
-                        ['completed', 'error', 'stopped', 'idle'].includes(snapshot.value as string);
-
-                    if (isFinished && currentSessionId) {
-                        logger.info({ windowId: window.id, sessionId: currentSessionId }, '✅ Trigger flow finished');
-
-                        // Move executing triggers to executed
-                        state.triggersExecuted.push(...state.triggersExecuting);
-                        state.triggersExecuting = []; // Clear executing
-                        state.currentFlowSessionId = undefined;
-
-                        // Check if any executed trigger was a BREAK trigger
-                        // We need to look up the trigger definition from the window
-                        const breakTrigger = window.triggers.find(t =>
-                            state.triggersExecuted.includes(t.id) && t.behavior === 'break'
-                        );
-
-                        // If it was a BREAK trigger, close the window NOW
-                        if (breakTrigger) {
-                            state.status = 'completed';
-                            logger.info({ windowId: window.id }, '🛑 BREAK trigger finished - closing window');
-                            events.emit('advanced:window_completed', {
-                                windowId: window.id,
-                                windowName: window.name,
-                                result: 'triggered',
-                                timestamp: new Date()
-                            });
-                        }
-
-                        await activeProgram.save();
-                    }
-
-                    // If still executing, SKIP further evaluation for this window
-                    // We wait for the current flow to finish before checking other triggers
-                    continue;
                 }
 
                 state.status = 'active';
@@ -436,21 +532,46 @@ export class SchedulerService {
                     t => t.behavior === 'break' && state.triggersExecuted.includes(t.id)
                 );
 
-                if (!hasBreakExecuted && window.fallbackFlowId) {
+                if (!hasBreakExecuted && (window.fallbackFlowId || (window.fallbackFlowIds && window.fallbackFlowIds.length > 0))) {
+                    const stepsCount = window.fallbackFlowIds?.length || (window.fallbackFlowId ? 1 : 0);
+
                     events.emit('advanced:fallback_executed', {
                         windowId: window.id,
                         windowName: window.name,
-                        flowName: window.fallbackFlowId, // Will be resolved by frontend
+                        flowName: stepsCount > 1 ? `${stepsCount} Flows` : (window.fallbackFlowId || window.fallbackFlowIds?.[0] || 'Unknown'),
                         timestamp: new Date()
                     });
-                    await triggerEvaluator.executeFallback(window, variableOverrides);
+
+                    const fallbackSessionId = await triggerEvaluator.executeFallback(window, variableOverrides);
+
+                    // FIX: Track fallback execution to prevent premature window completion
+                    if (fallbackSessionId) {
+                        state.currentFlowSessionId = fallbackSessionId;
+                        state.triggersExecuting = ['fallback']; // Use pseudo-ID to track execution
+                        await activeProgram.save();
+                        continue; // Wait for next tick to track completion
+                    }
                 }
 
                 state.status = 'completed';
+                // Check if we completed due to break or fallback
+                // Note: If we just finished fallback, 'fallback' will be in triggersExecuted (logic below)
+                // But here we are setting it immediately if fallback failed to start or wasn't needed?
+                // Wait, if fallback started, we 'continue' above. So we only reach here if NO fallback ran.
+                // OR if we are handling the completion of the fallback (in the flow tracking block above).
+
+                // Oops, the flow tracking block handles completion and sets triggersExecuted = triggersExecuting.
+                // So if fallback finishes, triggersExecuted will contain 'fallback'.
+
+                // We should NOT emit 'window_completed' here if we just started fallback (handled by continue).
+                // We ARE here because either:
+                // 1. No break trigger + No fallback defined.
+                // 2. Program missed window (handled above).
+
                 events.emit('advanced:window_completed', {
                     windowId: window.id,
                     windowName: window.name,
-                    result: hasBreakExecuted ? 'triggered' : (window.fallbackFlowId ? 'fallback' : 'no_trigger'),
+                    result: hasBreakExecuted ? 'triggered' : 'no_trigger',
                     timestamp: new Date()
                 });
                 await activeProgram.save();

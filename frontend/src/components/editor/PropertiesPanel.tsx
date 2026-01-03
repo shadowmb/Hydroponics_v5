@@ -25,6 +25,7 @@ import { Button } from '../ui/button';
 import { DeviceSelector } from './DeviceSelector';
 import { useStore } from '../../core/useStore';
 import { VariableSelector } from './VariableSelector';
+import { DoseVolumeInput } from './DoseVolumeInput';
 import type { IVariable } from '../../../../shared/types';
 
 interface PropertiesPanelProps {
@@ -76,6 +77,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
     useEffect(() => {
         if (selectedNode) {
             // Merge default values with existing data
+            // Only run when node ID changes, not when node.data changes
             const definition = BLOCK_DEFINITIONS[selectedNode.data.type as string];
             const defaults = definition ? Object.entries(definition.fields).reduce((acc, [key, field]) => {
                 if (field.defaultValue !== undefined) acc[key] = field.defaultValue;
@@ -86,7 +88,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
         } else {
             setFormData({});
         }
-    }, [selectedNode]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedNode?.id]); // Only re-run when node ID changes, not on every data change
 
     const handleChange = (key: string, value: any) => {
         const newData = { ...formData, [key]: value };
@@ -210,13 +213,24 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
     const renderField = (key: string, field: FieldDefinition, readOnly: boolean = false) => {
         const value = formData[key] !== undefined ? formData[key] : field.defaultValue;
 
+        // --- Generic Unit Field Hiding ---
+        // If this is a Unit field (e.g. durationUnit) and the base field (duration) 
+        // has an expectedUnit property, it means the base field handles the Unit rendering inline.
+        if (key.endsWith('Unit')) {
+            const baseKey = key.replace('Unit', '');
+            const baseField = definition.fields[baseKey];
+            if (baseField && baseField.expectedUnit) {
+                return null;
+            }
+        }
+
         // --- Visibility Logic ---
         if (nodeType === 'ACTUATOR_SET') {
             const action = formData['action']; // No default 'ON'
             if (key === 'duration') {
                 if (action !== 'PULSE_ON' && action !== 'PULSE_OFF') return null;
             }
-            if (key === 'amount' || key === 'amountUnit') {
+            if (key === 'amount' || key === 'amountMode' || key === 'amountUnit') {
                 if (action !== 'DOSE') return null;
             }
         }
@@ -226,17 +240,17 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
 
             // 1. LIMIT FIELDS (Based on Mode)
             if (limitMode === 'COUNT') {
-                if (key === 'timeout') return null; // Hide Timeout
+                if (key === 'timeout' || key === 'timeoutUnit') return null; // Hide Timeout fields
             } else {
                 if (key === 'count') return null;   // Hide Iterations
             }
 
-            // 2. SAFETY/LEGACY FIELDS
-            // 'maxIterations', 'onMaxIterations' are legacies/redundant now that we have unified logic.
-            // If they appear in definition, hide them.
+
+
+            // 3. SAFETY/LEGACY FIELDS
             if (['maxIterations', 'onMaxIterations'].includes(key)) return null;
 
-            // 3. ALL OTHER FIELDS (Condition, Interval, etc.) -> SHOW DEFAULT
+            // 4. ALL OTHER FIELDS (Condition, Interval, etc.) -> SHOW DEFAULT
         }
 
         if (nodeType === 'FLOW_CONTROL') {
@@ -462,40 +476,104 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
             case 'number':
                 // Check if value is a variable reference (string starting with {{)
                 const isVariable = typeof value === 'string' && value.startsWith('{{');
+                const expectedUnit = (field as any).expectedUnit;
+
+                // Resolve Unit Field Definition
+                const unitKey = key + 'Unit';
+                const unitDef = definition.fields[unitKey];
+                const unitOptions = unitDef?.options || [];
+                let varValidationError: string | null = null;
+                if (isVariable && expectedUnit) {
+                    const varId = value.replace(/{{|}}/g, '');
+                    const selectedVar = variables.find(v => v.id === varId);
+                    if (selectedVar && selectedVar.unit) {
+                        // Dynamically check against valid units for this field type
+                        const validUnits = unitOptions.map(o => String(o.value).toLowerCase());
+                        // Add common aliases if needed, or rely on options
+
+                        if (unitOptions.length > 0 && !validUnits.includes(String(selectedVar.unit).toLowerCase())) {
+                            // Basic validation: if var unit isn't in options
+                            // Note: This might be too strict if var unit aliases exist (e.g. 's' vs 'sec')
+                            // For now, let's keep the specific Time/Count checks if we want robust messages,
+                            // OR generalize. Generalized is better but harder with aliases.
+                            // Let's stick to the existing logic for Time/Count for better error messages,
+                            // but use unitOptions for the Selector.
+
+                            // Keep existing specific checks for better UX messages:
+                            const timeUnits = ['sec', 'min', 'hours', 's', 'seconds', 'minutes'];
+                            const countUnits = ['count', 'iterations', 'doses', 'integer', '#'];
+
+                            if (expectedUnit === 'sec' && !timeUnits.includes(selectedVar.unit)) {
+                                varValidationError = `"${selectedVar.name}" has unit "${selectedVar.unit}". Time fields need: sec, min, hours.`;
+                            } else if (expectedUnit === 'count' && !countUnits.includes(selectedVar.unit)) {
+                                varValidationError = `"${selectedVar.name}" has unit "${selectedVar.unit}". Count fields need: count, iterations.`;
+                            }
+                        }
+                    }
+                }
 
                 return (
-                    <div className="flex gap-2">
-                        {isVariable ? (
-                            <VariableSelector
-                                value={value.replace(/{{|}}/g, '')}
-                                onChange={(val) => handleChange(key, `{{${val}}}`)}
-                                placeholder="Select variable"
-                                variables={variables}
-                            />
-                        ) : (
-                            <Input
-                                type="number"
-                                value={value || 0}
-                                onChange={(e) => handleChange(key, parseFloat(e.target.value))}
-                                placeholder={field.placeholder}
-                            />
-                        )}
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="shrink-0"
-                            title={isVariable ? "Switch to Static Value" : "Switch to Variable"}
-                            onClick={() => {
-                                if (isVariable) {
-                                    handleChange(key, 0); // Reset to number
-                                } else {
-                                    handleChange(key, '{{}}'); // Switch to variable format
-                                }
-                            }}
-                        >
-                            {isVariable ? <span className="font-mono text-xs">123</span> : <span className="font-mono text-xs">Var</span>}
-                        </Button>
-                    </div>
+                    <div className="space-y-1">
+                        <div className="flex gap-2">
+                            {isVariable ? (
+                                <VariableSelector
+                                    value={value.replace(/{{|}}/g, '')}
+                                    onChange={(val) => handleChange(key, `{{${val}}}`)}
+                                    placeholder="Select variable"
+                                    variables={variables}
+                                />
+                            ) : (
+                                <>
+                                    <Input
+                                        type="number"
+                                        value={value || 0}
+                                        onChange={(e) => handleChange(key, parseFloat(e.target.value))}
+                                        placeholder={field.placeholder}
+                                        className="flex-1"
+                                    />
+                                    {expectedUnit && unitOptions.length > 0 && (
+                                        <Select
+                                            value={formData[unitKey] || unitOptions[0].value}
+                                            onValueChange={(val) => handleChange(unitKey, val)}
+                                        >
+                                            <SelectTrigger className="w-[100px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {unitOptions.map(opt => (
+                                                    <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </>
+                            )}
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0"
+                                title={isVariable ? "Switch to Static Value" : "Switch to Variable"}
+                                onClick={() => {
+                                    if (isVariable) {
+                                        handleChange(key, 0); // Reset to number
+                                    } else {
+                                        handleChange(key, '{{}}'); // Switch to variable format
+                                    }
+                                }}
+                            >
+                                {isVariable ? <span className="font-mono text-xs">123</span> : <span className="font-mono text-xs">Var</span>}
+                            </Button>
+                        </div>
+                        {
+                            varValidationError && (
+                                <div className="p-1.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-400 flex items-start gap-1">
+                                    <span>⚠️ {varValidationError}</span>
+                                </div>
+                            )
+                        }
+                    </div >
                 );
             case 'select':
                 return (
@@ -656,7 +734,19 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                 {definition ? (
                     (() => {
                         const errorKeys = ['retryCount', 'retryDelay', 'onFailure', 'errorNotification', 'maxIterations', 'onMaxIterations', 'errorTargetLabel', 'revertOnStop', 'notificationChannelId', 'notificationMode'];
-                        const mainFields = Object.entries(definition.fields).filter(([key]) => !errorKeys.includes(key));
+
+                        // Conditional filtering for volumetric_flow strategy
+                        const isDosingStrategy = nodeType === 'ACTUATOR_SET' &&
+                            formData.strategy === 'volumetric_flow' &&
+                            formData.action === 'DOSE';
+                        const doseFieldKeys = ['amount', 'amountMode', 'amountUnit'];
+
+                        const mainFields = Object.entries(definition.fields).filter(([key]) => {
+                            if (errorKeys.includes(key)) return false;
+                            // Skip dose fields if using volumetric_flow - we render custom component
+                            if (isDosingStrategy && doseFieldKeys.includes(key)) return false;
+                            return true;
+                        });
                         const errorFields = Object.entries(definition.fields).filter(([key]) => errorKeys.includes(key));
 
                         return (
@@ -737,6 +827,28 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = (props) => {
                                                 )}
                                             </div>
                                         ))}
+
+                                        {/* CUSTOM DOSE/VOLUME INPUT FOR VOLUMETRIC FLOW */}
+                                        {isDosingStrategy && (
+                                            <div className="space-y-2 pt-2 border-t">
+                                                <Label className="text-muted-foreground text-xs">Dose Configuration</Label>
+                                                <DoseVolumeInput
+                                                    amountMode={
+                                                        formData.amountMode ||
+                                                        (formData.amountUnit === 'doses' ? 'DOSES' : 'VOLUME')
+                                                    }
+                                                    amount={formData.amount}
+                                                    amountUnit={formData.amountUnit || 'ml'}
+                                                    onChange={handleChange}
+                                                    variables={variables}
+                                                    device={device}
+                                                    isVariable={typeof formData.amount === 'string' && formData.amount.startsWith('{{')}
+                                                    selectedVariable={typeof formData.amount === 'string' && formData.amount.startsWith('{{')
+                                                        ? formData.amount.slice(2, -2)
+                                                        : undefined}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </CollapsibleSection>
 

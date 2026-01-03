@@ -29,6 +29,7 @@ export interface IWindowState {
     triggersExecuting: string[]; // IDs of currently executing triggers
     currentFlowSessionId?: string; // Track active flow session
     lastCheck?: Date;
+    skipUntil?: Date;
 }
 
 export interface IActiveProgram extends Document {
@@ -82,7 +83,8 @@ const WindowStateSchema = new Schema({
     triggersExecuted: [{ type: String }],
     triggersExecuting: [{ type: String }],
     currentFlowSessionId: { type: String },
-    lastCheck: { type: Date }
+    lastCheck: { type: Date },
+    skipUntil: { type: Date } // Date until which the window is skipped
 }, { _id: false });
 
 const ActiveProgramSchema = new Schema<IActiveProgram>({

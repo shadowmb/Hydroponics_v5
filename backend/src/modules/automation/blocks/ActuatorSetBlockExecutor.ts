@@ -60,8 +60,31 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
             // 2. Determine Action Logic
             let targetState = 0;
             let pulseDuration = 0; // Internal duration in milliseconds
-            let inputDurationSec = params.duration ? Number(params.duration) : 0;
             let logUnit = '';
+
+            // --- UNIT CONVERSION FOR DURATION ---
+            // Duration field expects seconds (s). Convert from variable unit if needed.
+            // Final output to controller is milliseconds.
+            let inputDurationSec = 0;
+            if (params.duration !== undefined && params.duration !== null) {
+                const rawDuration = Number(params.duration);
+
+                // Check if duration came from a variable with a different unit
+                if (params._durationSourceUnit && params._durationSourceUnit !== 's') {
+                    // Import conversion service dynamically
+                    const { unitConversionService } = await import('../../../services/conversion/UnitConversionService');
+                    try {
+                        inputDurationSec = unitConversionService.convert(rawDuration, params._durationSourceUnit, 's');
+                        console.log(`[ActuatorSet] ⏱️ Duration converted: ${rawDuration} ${params._durationSourceUnit} → ${inputDurationSec} s`);
+                    } catch (convErr: any) {
+                        console.warn(`[ActuatorSet] Duration conversion failed: ${convErr.message}. Using raw value as seconds.`);
+                        inputDurationSec = rawDuration;
+                    }
+                } else {
+                    // Already in seconds or no unit info
+                    inputDurationSec = rawDuration;
+                }
+            }
 
             // Handle Legacy 'value' (boolean) if 'action' is not set or default
             if (params.value !== undefined && params.action === undefined) {
@@ -85,22 +108,41 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                         if (!calibration || !calibration.flowRate) {
                             return { success: false, error: `Device ${device.name} is not calibrated for dosing` };
                         }
-                        // flowRate is usually in unit/sec (e.g., ml/sec)
+                        // flowRate is in ml/sec (base unit)
                         const flowRate = Number(calibration.flowRate);
                         if (flowRate <= 0) return { success: false, error: 'Invalid flow rate calibration' };
 
-                        let targetAmount = Number(amount);
-                        if (isNaN(targetAmount) || targetAmount <= 0) {
-                            return { success: false, error: `Invalid amount: ${amount}` };
+                        let targetAmountMl: number;
+                        const amountMode = params.amountMode || 'VOLUME';
+                        const unit = params.amountUnit || 'ml';
+
+                        if (amountMode === 'DOSES' || unit === 'doses') {
+                            // DOSES mode: amount = number of doses, convert using doseSize
+                            const doseSize = calibration.doseSize;
+                            if (!doseSize || doseSize <= 0) {
+                                return { success: false, error: `Device ${device.name} has no doseSize defined. Please recalibrate.` };
+                            }
+                            const doseCount = Number(amount);
+                            if (isNaN(doseCount) || doseCount <= 0) {
+                                return { success: false, error: `Invalid dose count: ${amount}` };
+                            }
+                            // doseSize is stored in ml (base unit)
+                            targetAmountMl = doseCount * doseSize;
+                            logUnit = 'doses';
+                            console.log(`[ActuatorSet] 💧 Dose conversion: ${doseCount} doses × ${doseSize}ml = ${targetAmountMl}ml`);
+                        } else {
+                            // VOLUME mode: amount = volume in specified unit
+                            targetAmountMl = Number(amount);
+                            if (isNaN(targetAmountMl) || targetAmountMl <= 0) {
+                                return { success: false, error: `Invalid amount: ${amount}` };
+                            }
+                            logUnit = unit;
+                            // Unit Conversion to ml (base unit)
+                            if (unit === 'l') targetAmountMl *= 1000;
+                            else if (unit === 'gal') targetAmountMl *= 3785.41;
                         }
 
-                        // Unit Conversion (Default to 'ml' if not specified)
-                        const unit = params.amountUnit || 'ml';
-                        logUnit = unit;
-                        if (unit === 'l') targetAmount *= 1000;
-                        else if (unit === 'gal') targetAmount *= 3785.41;
-
-                        pulseDuration = (targetAmount / flowRate) * 1000; // Convert to ms
+                        pulseDuration = (targetAmountMl / flowRate) * 1000; // Convert to ms
                         break;
                     default:
                         return { success: false, error: `Unknown action: ${action}` };

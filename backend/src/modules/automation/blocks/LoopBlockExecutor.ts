@@ -4,26 +4,53 @@ export class LoopBlockExecutor implements IBlockExecutor {
     type = 'LOOP';
 
     async execute(ctx: ExecutionContext, params: any): Promise<BlockResult> {
-        const { loopType = 'COUNT', count, variable, operator, value, _blockId, interval, limitMode = 'COUNT', timeout } = params;
+        const {
+            loopType = 'COUNT',
+            count,
+            variable,
+            operator,
+            value,
+            _blockId,
+            interval,
+            intervalUnit = 'sec',
+            limitMode = 'COUNT',
+            timeout,
+            timeoutUnit = 'sec'
+        } = params;
 
         // Get previous state
         const previousState = ctx.resumeState?.[_blockId] || {};
         const currentIteration = (previousState.iteration || 0) + 1;
         const loopStartTime = previousState.startTime || Date.now(); // Track when loop started
 
+        // --- UNIT CONVERSION ---
+        // Convert interval to seconds
+        let intervalSeconds = Number(interval) || 0;
+        if (intervalUnit === 'min') intervalSeconds *= 60;
+        else if (intervalUnit === 'hours') intervalSeconds *= 3600;
+
+        // Convert timeout to seconds
+        let timeoutSeconds = Number(timeout) || 60;
+        if (timeoutUnit === 'min') timeoutSeconds *= 60;
+        else if (timeoutUnit === 'hours') timeoutSeconds *= 3600;
+
+        // Resolve count (may be variable like {{var}})
+        let resolvedCount = count;
+        if (typeof count === 'string' && count.startsWith('{{') && count.endsWith('}}')) {
+            const varName = count.slice(2, -2).trim();
+            resolvedCount = this.getVariable(ctx, varName);
+            console.log(`[LoopBlock] Resolved count variable '${varName}' = ${resolvedCount}`);
+        }
+        const maxIterations = Number(resolvedCount) || 1;
+
         // --- INTERVAL LOGIC ---
         // DEBUG: Trace interval and iteration
-        console.log(`[LoopBlock Debug] Block: ${_blockId} | Interval: ${interval} (${typeof interval}) | Iteration: ${currentIteration} | Mode: ${limitMode}`);
+        console.log(`[LoopBlock Debug] Block: ${_blockId} | Interval: ${intervalSeconds}s (from ${interval} ${intervalUnit}) | Iteration: ${currentIteration} | Mode: ${limitMode}`);
 
         // If an interval is set, we wait.
-        // We wait if this is NOT the very first run (so run 1 is immediate),
-        // OR if you want to pace every run? 
-        // Standard industrial practice: delay is usually cycle time.
-        // Let's simpler: If interval > 0, we delay at start of execution.
-        // Exception: logic says if we just started, maybe run immediately?
-        // Let's stick to: Delay if iteration > 1.
-        if (interval && interval > 0 && currentIteration > 1) {
-            await new Promise(resolve => setTimeout(resolve, interval * 1000));
+        // We wait if this is NOT the very first run (so run 1 is immediate).
+        if (intervalSeconds > 0 && currentIteration > 1) {
+            await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
         }
 
         let shouldLoop = false;
@@ -33,15 +60,14 @@ export class LoopBlockExecutor implements IBlockExecutor {
         if (limitMode === 'TIME') {
             // Time-based limit
             const elapsedSeconds = (Date.now() - loopStartTime) / 1000;
-            if (timeout && elapsedSeconds > timeout) {
-                return { success: false, error: `Loop timed out after ${elapsedSeconds.toFixed(1)}s (Limit: ${timeout}s)` };
+            if (timeoutSeconds && elapsedSeconds > timeoutSeconds) {
+                return { success: false, error: `Loop timed out after ${elapsedSeconds.toFixed(1)}s (Limit: ${timeoutSeconds}s)` };
             }
             // For Time mode, we default 'shouldLoop' to TRUE (infinite until timeout),
             // unless condition fails below.
             shouldLoop = true;
         } else {
-            // Count-based limit
-            const maxIterations = Number(count) || 1;
+            // Count-based limit (maxIterations already resolved above)
             shouldLoop = currentIteration <= maxIterations;
         }
 

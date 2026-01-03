@@ -11,7 +11,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
 import {
     Activity, Zap, Play, CheckCircle2, SkipForward,
-    Clock, XCircle, ArrowRight, Sparkles
+    Clock, XCircle, ArrowRight, Sparkles, Loader2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { socketService } from '../../core/SocketService';
@@ -21,7 +21,7 @@ import { format } from 'date-fns';
 interface LogEntry {
     id: string;
     type: 'window_active' | 'window_skipped' | 'window_completed' | 'trigger_matched' |
-    'trigger_skipped' | 'fallback_executed' | 'block_end' | 'program_day_complete';
+    'trigger_skipped' | 'fallback_executed' | 'block_end' | 'program_day_complete' | 'execution_step';
     windowId?: string;
     windowName?: string;
     timestamp: Date;
@@ -54,9 +54,23 @@ const getIcon = (type: LogEntry['type'], success?: boolean) => {
                 : <XCircle className="h-3.5 w-3.5 text-red-500" />;
         case 'program_day_complete':
             return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
+        case 'execution_step':
+            return <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />;
         default:
             return <Clock className="h-3.5 w-3.5 text-gray-400" />;
     }
+};
+
+// Helper to get Block Label safely
+const getBlockLabel = (entry: LogEntry) => {
+    // 1. Try Notification Config Label (Standard for Block End)
+    if (entry.data?.notification?.config?.label) return entry.data.notification.config.label;
+
+    // 2. Try direct label (Standard for Execution Step)
+    if (entry.data?.label) return entry.data.label;
+
+    // 3. Fallback to ID
+    return entry.data.blockId?.split('_')[0] || entry.data.blockId || 'Block';
 };
 
 // Format log entry message
@@ -77,14 +91,46 @@ const formatMessage = (entry: LogEntry): string => {
         case 'fallback_executed':
             return `Изпълнен fallback поток: ${entry.data.flowName}`;
         case 'block_end':
-            const blockName = entry.data.blockId?.split('_')[0] || entry.data.blockId;
+            const blockLabel = getBlockLabel(entry);
+            const blockIdRaw = entry.data.blockId?.split('_')[0];
+
             if (entry.data.success) {
-                return `✓ ${blockName}${entry.data.summary ? `: ${entry.data.summary}` : ''}`;
+                let message = `✓ ${blockLabel}`;
+                // Show Flow Name for Start Block
+                if (blockIdRaw === 'start' && entry.data.programName) {
+                    message += `: ${entry.data.programName}`;
+                }
+                return `${message}${entry.data.summary ? `: ${entry.data.summary}` : ''}`;
             } else {
-                return `✗ ${blockName}: ${entry.data.error || 'Failed'}`;
+                return `✗ ${blockLabel}: ${entry.data.error || 'Failed'}`;
             }
         case 'program_day_complete':
             return '🏁 Програмата завърши за днес';
+        case 'execution_step':
+            const label = getBlockLabel(entry);
+            const params = entry.data.params || {};
+
+            let details = '';
+
+            // ACTUATOR_SET Specifics
+            if (entry.data.type === 'ACTUATOR_SET') {
+                if (params.amountMode === 'DOSES' && params.amount) {
+                    details = `(${params.action} ${params.amount} doses)`;
+                }
+                else if (params.amount && params.action) {
+                    details = `(${params.action} ${params.amount}${params.amountUnit || ''})`;
+                }
+            }
+            // WAIT Specifics
+            else if (entry.data.type === 'WAIT') {
+                if (params.duration) details = `(${params.duration}s)`;
+            }
+            // Fallback generic info
+            else if (params.message) {
+                details = `(${params.message})`;
+            }
+
+            return `⏳ ${label} ${details} ...`;
         default:
             return JSON.stringify(entry.data);
     }
@@ -132,11 +178,32 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
     };
 
     // Auto-scroll to bottom
-    useEffect(() => {
-        if (autoScroll && scrollRef.current) {
+    const scrollToBottom = () => {
+        if (!scrollRef.current) return;
+
+        // Radix UI ScrollArea renders a viewport div inside. We need to scroll THAT.
+        const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+        } else {
+            // Fallback if ref is direct
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
+    };
+
+    // Scroll on logs update if autoScroll is true
+    useEffect(() => {
+        if (autoScroll) {
+            // Small timeout to ensure DOM update
+            setTimeout(scrollToBottom, 50);
+        }
     }, [logs, autoScroll]);
+
+    // Scroll on initial mount (with delay for layout)
+    useEffect(() => {
+        setTimeout(scrollToBottom, 100);
+        setTimeout(scrollToBottom, 500); // Verify scroll after everything settles
+    }, []);
 
     // Subscribe to WebSocket events
     useEffect(() => {
@@ -200,10 +267,81 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
         };
 
         const handleBlockEnd = (data: any) => {
-            addLog({
-                type: 'block_end',
-                timestamp: new Date(),
-                data
+            setLogs(prev => {
+                // Smart Update: Find if there is a pending 'execution_step' for this block
+                // We search from the end to find the most recent one
+                // FIX: Add sessionId check to prevent cross-flow collision
+                const existingIndex = prev.findIndex(l =>
+                    l.type === 'execution_step' &&
+                    l.data.blockId === data.blockId &&
+                    // Match session matches (or ignore if execution_step didn't capture it)
+                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
+                );
+
+                if (existingIndex !== -1) {
+                    // Update in place
+                    const newLogs = [...prev];
+                    newLogs[existingIndex] = {
+                        ...newLogs[existingIndex], // Keep original ID/Timestamp or update?
+                        type: 'block_end',
+                        timestamp: new Date(), // Update timestamp to finish time
+                        data: { ...newLogs[existingIndex].data, ...data } // Merge data
+                    };
+                    const sliced = newLogs.slice(-200);
+                    sessionStorage.setItem(storageKey, JSON.stringify(sliced));
+                    return sliced;
+                }
+
+                // If not found (e.g. joined late), just append
+                const newEntry: LogEntry = {
+                    id: generateId(),
+                    type: 'block_end',
+                    timestamp: new Date(),
+                    data
+                };
+                const newLogs = [...prev, newEntry];
+                const sliced = newLogs.slice(-200);
+                sessionStorage.setItem(storageKey, JSON.stringify(sliced));
+                return sliced;
+            });
+        };
+
+        const handleExecutionStep = (data: any) => {
+            setLogs(prev => {
+                // RACE CONDITION FIX:
+                // Check if we already have a 'block_end' for this blockId (and sessionId)
+                // This happens if block_end arrives BEFORE execution_step (network race)
+                const alreadyCompleted = prev.some(l =>
+                    l.type === 'block_end' &&
+                    l.data.blockId === data.blockId &&
+                    // Strict session matching if available
+                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
+                );
+
+                if (alreadyCompleted) {
+                    console.warn('⚠️ Log Race Condition: Ignoring execution_step because block_end already exists', data);
+                    return prev;
+                }
+
+                // Check for duplicate execution_step to avoid double spinners
+                const isDuplicate = prev.some(l =>
+                    l.type === 'execution_step' &&
+                    l.data.blockId === data.blockId &&
+                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
+                );
+
+                if (isDuplicate) return prev;
+
+                const newEntry: LogEntry = {
+                    id: generateId(),
+                    type: 'execution_step',
+                    timestamp: new Date(data.timestamp || Date.now()),
+                    data
+                };
+                const newLogs = [...prev, newEntry];
+                const sliced = newLogs.slice(-200);
+                sessionStorage.setItem(storageKey, JSON.stringify(sliced));
+                return sliced;
             });
         };
 
@@ -223,6 +361,7 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
         socketService.on('advanced:trigger_skipped', handleTriggerSkipped);
         socketService.on('advanced:fallback_executed', handleFallbackExecuted);
         socketService.on('automation:block_end', handleBlockEnd);
+        socketService.on('automation:execution_step', handleExecutionStep);
         socketService.on('advanced:program_day_complete', handleDayComplete);
 
         // Cleanup
@@ -234,6 +373,7 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
             socketService.off('advanced:trigger_skipped', handleTriggerSkipped);
             socketService.off('advanced:fallback_executed', handleFallbackExecuted);
             socketService.off('automation:block_end', handleBlockEnd);
+            socketService.off('automation:execution_step', handleExecutionStep);
             socketService.off('advanced:program_day_complete', handleDayComplete);
         };
     }, []);

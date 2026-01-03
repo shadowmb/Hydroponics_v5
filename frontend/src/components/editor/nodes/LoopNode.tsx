@@ -22,11 +22,33 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
         return s;
     };
 
+    // Helper to get variable unit from variables array
+    const getVarUnit = (val: any): string | undefined => {
+        const s = String(val || '');
+        if (s.startsWith('{{') && s.endsWith('}}')) {
+            const varId = s.slice(2, -2);
+            const found = variables?.find((v: any) => v.id === varId);
+            return found?.unit;
+        }
+        return undefined;
+    };
+
     const isTimeMode = data.limitMode === 'TIME';
     const countVar = fmtVar(data.count);
     const isCountVar = String(data.count).startsWith('{{');
+    const countVarUnit = getVarUnit(data.count);
+
     const timeout = String(data.timeout || 0);
+    const timeoutUnit = String(data.timeoutUnit || 'sec');
+    const isTimeoutVar = String(data.timeout).startsWith('{{');
+    const timeoutVar = fmtVar(data.timeout);
+    const timeoutVarUnit = getVarUnit(data.timeout);
+
     const interval = String(data.interval || 0);
+    const intervalUnit = String(data.intervalUnit || 'sec');
+    const isIntervalVar = String(data.interval).startsWith('{{');
+    const intervalVar = fmtVar(data.interval);
+    const intervalVarUnit = getVarUnit(data.interval);
 
     // Condition Data
     const hasCondition = !!data.variable;
@@ -83,7 +105,10 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
                                             {isTimeMode ? 'Timer:' : 'Count:'}
                                         </span>
                                         {isTimeMode ? (
-                                            <span className="font-mono text-xs text-foreground">{timeout}s</span>
+                                            <span className="font-mono text-xs text-foreground">
+                                                {isTimeoutVar ? timeoutVar : timeout}
+                                                {isTimeoutVar ? (timeoutVarUnit || '') : timeoutUnit}
+                                            </span>
                                         ) : (
                                             <div className="font-mono text-xs text-foreground flex items-center gap-1">
                                                 {isCountVar ? (
@@ -93,7 +118,7 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
                                                 ) : (
                                                     <span>{data.count as string}</span>
                                                 )}
-                                                <span className="opacity-80">x</span>
+                                                <span className="opacity-80">{isCountVar && countVarUnit ? countVarUnit : 'x'}</span>
                                             </div>
                                         )}
                                     </div>
@@ -102,7 +127,10 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
                                 isTimeMode ? (
                                     <>
                                         <span className="text-[10px] uppercase font-bold text-muted-foreground opacity-70">Running For</span>
-                                        <span className="font-bold text-sm text-foreground">{timeout}s</span>
+                                        <span className="font-bold text-sm text-foreground">
+                                            {isTimeoutVar ? timeoutVar : timeout}
+                                            {isTimeoutVar ? (timeoutVarUnit || '') : timeoutUnit}
+                                        </span>
                                     </>
                                 ) : (
                                     <>
@@ -115,7 +143,7 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
                                             ) : (
                                                 <span>{data.count as string}</span>
                                             )}
-                                            <span className="font-normal opacity-80 text-xs">Times</span>
+                                            <span className="font-normal opacity-80 text-xs">{isCountVar && countVarUnit ? countVarUnit : 'Times'}</span>
                                         </div>
                                     </>
                                 )
@@ -130,7 +158,7 @@ export const LoopNode = memo(({ data, selected }: NodeProps) => {
                             <Timer className="h-3.5 w-3.5 opacity-70" />
                             <span>Every</span>
                             <span className="font-mono font-bold text-foreground bg-muted px-1.5 rounded">
-                                {interval}s
+                                {isIntervalVar ? intervalVar : interval}{isIntervalVar ? (intervalVarUnit || '') : intervalUnit}
                             </span>
                         </div>
                     </div>

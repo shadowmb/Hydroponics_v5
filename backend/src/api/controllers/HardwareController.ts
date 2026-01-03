@@ -585,7 +585,7 @@ export class HardwareController {
             const templateUnits = templates.getAllUnits();
 
             // Add specific generic units that don't come from hardware but are useful
-            const extraUnits = ['count', 'iterations', '%'];
+            const extraUnits = ['count', 'iterations', 'doses', '%'];
 
             const merged = Array.from(new Set([...templateUnits, ...extraUnits])).sort();
             return reply.send({ success: true, data: merged });

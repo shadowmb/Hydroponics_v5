@@ -115,8 +115,12 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
                                             {trigger.operator === 'between' && trigger.valueMax && ` - ${trigger.valueMax}`}
                                         </span>
                                         <span className="text-muted-foreground">→</span>
-                                        <span className="text-primary">
-                                            {flowsMap[trigger.flowId] || trigger.flowId}
+                                        <span className="text-primary font-medium">
+                                            {trigger.flowIds && trigger.flowIds.length > 0 ? (
+                                                trigger.flowIds.map(fid => flowsMap[fid] || fid).join(' + ')
+                                            ) : (
+                                                flowsMap[trigger.flowId!] || trigger.flowId
+                                            )}
                                         </span>
                                         <span className={cn(
                                             "text-xs px-2 py-0.5 rounded",
@@ -166,11 +170,15 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
                         </Button>
 
                         {/* Fallback Info */}
-                        {window.fallbackFlowId && (
+                        {(window.fallbackFlowIds?.length || window.fallbackFlowId) && (
                             <div className="mt-4 p-3 bg-muted/50 rounded-md flex items-center gap-2 text-sm">
                                 <span className="text-muted-foreground">🛡️ Fallback:</span>
                                 <span className="font-medium">
-                                    {flowsMap[window.fallbackFlowId] || window.fallbackFlowId}
+                                    {window.fallbackFlowIds && window.fallbackFlowIds.length > 0 ? (
+                                        window.fallbackFlowIds.map(fid => flowsMap[fid] || fid).join(' + ')
+                                    ) : (
+                                        flowsMap[window.fallbackFlowId!] || window.fallbackFlowId
+                                    )}
                                 </span>
                                 <span className="text-xs text-muted-foreground">
                                     (в {window.endTime} ако няма Break)

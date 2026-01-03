@@ -105,6 +105,30 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps<any>) => {
         return foundDirect ? foundDirect.name : s;
     };
 
+    // Helper to resolve Variable Name with Unit (for display: "Поливане (1 min)")
+    const resolveVarWithUnit = (val: any, localUnit?: string): { display: string; isVariable: boolean } => {
+        const s = String(val || '');
+        if (s.startsWith('{{') && s.endsWith('}}')) {
+            const varId = s.slice(2, -2);
+            const found = variables?.find((v: any) => v.id === varId || v.name === varId);
+            if (found) {
+                const name = found.name || varId;
+                const unit = found.unit || '';
+                const value = found.default !== undefined ? found.default : '';
+                // Format: "Variable Name (Value Unit)" or just "Variable Name"
+                if (value !== '' && unit) {
+                    return { display: `${name} (${value} ${unit})`, isVariable: true };
+                } else if (unit) {
+                    return { display: `${name} [${unit}]`, isVariable: true };
+                }
+                return { display: name, isVariable: true };
+            }
+            return { display: varId, isVariable: true };
+        }
+        // Static value - show with provided unit or default empty
+        return { display: `${s}${localUnit || ''}`, isVariable: false };
+    };
+
     // Render Logic
     if (displayData.type === 'ACTUATOR_SET') {
         const action = String(displayData.action || '');
@@ -147,8 +171,15 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps<any>) => {
                         {/* Footer (Optional Params) */}
                         {((action.includes('PULSE') && displayData.duration) || (action === 'DOSE' && displayData.amount)) && (
                             <div className="px-3 py-1.5 bg-muted/30 border-t text-[10px] font-mono text-muted-foreground flex justify-between">
-                                {action.includes('PULSE') && <span>Time: {String(displayData.duration)}ms</span>}
-                                {action === 'DOSE' && <span>Vol: {resolveVarName(displayData.amount)}{String(displayData.amountUnit || 'ml')}</span>}
+                                {action.includes('PULSE') && (
+                                    <span>Time: {resolveVarWithUnit(displayData.duration, displayData.durationUnit || 'sec').display}</span>
+                                )}
+                                {action === 'DOSE' && (
+                                    <span>
+                                        {displayData.amountMode === 'DOSES' ? 'Doses: ' : 'Vol: '}
+                                        {resolveVarWithUnit(displayData.amount, displayData.amountMode === 'DOSES' ? 'doses' : (displayData.amountUnit || 'ml')).display}
+                                    </span>
+                                )}
                             </div>
                         )}
 
@@ -278,7 +309,7 @@ export const GenericBlockNode = memo(({ data, selected }: NodeProps<any>) => {
                             {/* WAIT Specifics */}
                             {displayData.type === 'WAIT' && !!displayData.duration && (
                                 <span className="text-[10px] text-gray-500 font-mono mt-1">
-                                    Wait: {String(displayData.duration)} ms
+                                    Wait: {resolveVarWithUnit(displayData.duration, displayData.durationUnit || 'sec').display}
                                 </span>
                             )}
                         </div>

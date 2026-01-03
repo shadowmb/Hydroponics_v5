@@ -72,5 +72,21 @@ export const activeProgramService = {
     forceStartCycle: async (itemId: string): Promise<IActiveProgram> => {
         const response = await axios.post<IActiveProgram>(`${BASE_URL}/schedule/${itemId}/force-start`);
         return response.data;
+    },
+
+    // Advanced Window Methods
+    skipWindow: async (windowId: string, untilDate: Date): Promise<IActiveProgram> => {
+        const response = await axios.post<IActiveProgram>(`${BASE_URL}/windows/${windowId}/skip`, { untilDate });
+        return response.data;
+    },
+
+    restoreWindow: async (windowId: string): Promise<IActiveProgram> => {
+        const response = await axios.post<IActiveProgram>(`${BASE_URL}/windows/${windowId}/restore`);
+        return response.data;
+    },
+
+    updateTrigger: async (windowId: string, trigger: any): Promise<IActiveProgram> => {
+        const response = await axios.patch<IActiveProgram>(`${BASE_URL}/windows/${windowId}/triggers`, trigger);
+        return response.data;
     }
 };

@@ -7,6 +7,7 @@ export interface FieldDefinition {
     options?: { label: string; value: string | number | boolean }[];
     defaultValue?: any;
     description?: string;
+    expectedUnit?: string; // Unit expected by backend (e.g., 's' for seconds). Enables auto-conversion.
 }
 
 export interface BlockDefinition {
@@ -41,10 +42,22 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
         label: 'Wait / Delay',
         fields: {
             duration: {
-                label: 'Duration (s)',
+                label: 'Duration',
                 type: 'number',
                 defaultValue: 1,
-                description: 'Time to wait in seconds'
+                placeholder: 'e.g. 5',
+                description: 'Time to wait',
+                expectedUnit: 'sec'
+            },
+            durationUnit: {
+                label: 'Unit',
+                type: 'select',
+                options: [
+                    { label: 'Seconds', value: 'sec' },
+                    { label: 'Minutes', value: 'min' },
+                    { label: 'Hours', value: 'hours' }
+                ],
+                defaultValue: 'sec'
             }
         }
     },
@@ -73,16 +86,38 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 ],
             },
             duration: {
-                label: 'Duration (ms)',
+                label: 'Duration',
                 type: 'number', // Can be toggled to variable in UI
-                placeholder: 'e.g. 5000',
-                description: 'Time to keep the state'
+                placeholder: 'e.g. 5',
+                description: 'Time to keep the state',
+                expectedUnit: 'sec' // Controller expects ms, conversion happens in executor
+            },
+            durationUnit: {
+                label: 'Unit',
+                type: 'select',
+                options: [
+                    { label: 'Seconds', value: 'sec' },
+                    { label: 'Minutes', value: 'min' },
+                    { label: 'Hours', value: 'hours' }
+                ],
+                defaultValue: 'sec'
             },
             amount: {
                 label: 'Amount',
                 type: 'number', // Can be toggled to variable in UI
                 placeholder: 'e.g. 100',
-                description: 'Quantity to dose'
+                description: 'Quantity to dose',
+                expectedUnit: 'volume' // Triggers inline unit selector using amountUnit options
+            },
+            amountMode: {
+                label: 'Input Mode',
+                type: 'select',
+                options: [
+                    { label: 'Volume', value: 'VOLUME' },
+                    { label: 'Doses', value: 'DOSES' }
+                ],
+                defaultValue: 'VOLUME',
+                description: 'Choose between absolute volume or dose count'
             },
             amountUnit: {
                 label: 'Unit',
@@ -90,10 +125,11 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 options: [
                     { label: 'Milliliters (ml)', value: 'ml' },
                     { label: 'Liters (l)', value: 'l' },
-                    { label: 'Gallons (gal)', value: 'gal' }
+                    { label: 'Gallons (gal)', value: 'gal' },
+                    { label: 'Doses', value: 'doses' }
                 ],
                 defaultValue: 'ml',
-                description: 'Unit of measurement'
+                description: 'Unit of measurement (doses uses calibration doseSize)'
             },
             // Error Handling Policy
             retryCount: {
@@ -318,11 +354,22 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 description: 'How to limit the loop'
             },
             interval: {
-                label: 'Check Interval (s)',
+                label: 'Check Interval',
                 type: 'number',
                 placeholder: 'e.g. 1',
                 defaultValue: 1,
-                description: 'Delay between iterations'
+                description: 'Delay between iterations',
+                expectedUnit: 'sec'
+            },
+            intervalUnit: {
+                label: 'Interval Unit',
+                type: 'select',
+                options: [
+                    { label: 'Seconds', value: 'sec' },
+                    { label: 'Minutes', value: 'min' },
+                    { label: 'Hours', value: 'hours' }
+                ],
+                defaultValue: 'sec'
             },
 
             // Limit Parameters (Conditional)
@@ -331,14 +378,26 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
                 type: 'number',
                 placeholder: 'e.g. 5',
                 defaultValue: 1,
-                description: 'Stop after X iterations'
+                description: 'Stop after X iterations',
+                expectedUnit: 'count'
             },
             timeout: {
-                label: 'Timeout (Seconds)',
+                label: 'Timeout',
                 type: 'number',
                 placeholder: 'e.g. 60',
                 defaultValue: 60,
-                description: 'Stop after X seconds'
+                description: 'Stop after X time',
+                expectedUnit: 'sec'
+            },
+            timeoutUnit: {
+                label: 'Timeout Unit',
+                type: 'select',
+                options: [
+                    { label: 'Seconds', value: 'sec' },
+                    { label: 'Minutes', value: 'min' },
+                    { label: 'Hours', value: 'hours' }
+                ],
+                defaultValue: 'sec'
             },
 
             // Stop Condition (Optional)
