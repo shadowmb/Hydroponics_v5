@@ -178,11 +178,32 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
     };
 
     // Auto-scroll to bottom
-    useEffect(() => {
-        if (autoScroll && scrollRef.current) {
+    const scrollToBottom = () => {
+        if (!scrollRef.current) return;
+
+        // Radix UI ScrollArea renders a viewport div inside. We need to scroll THAT.
+        const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+        } else {
+            // Fallback if ref is direct
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
+    };
+
+    // Scroll on logs update if autoScroll is true
+    useEffect(() => {
+        if (autoScroll) {
+            // Small timeout to ensure DOM update
+            setTimeout(scrollToBottom, 50);
+        }
     }, [logs, autoScroll]);
+
+    // Scroll on initial mount (with delay for layout)
+    useEffect(() => {
+        setTimeout(scrollToBottom, 100);
+        setTimeout(scrollToBottom, 500); // Verify scroll after everything settles
+    }, []);
 
     // Subscribe to WebSocket events
     useEffect(() => {
