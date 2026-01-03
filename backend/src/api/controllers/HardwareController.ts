@@ -1106,10 +1106,21 @@ export class HardwareController {
                 }
             }
 
-            // Update device fields
-            // Use set() to handle dot notation (e.g. 'config.validation') correctly
+            // Update device fields with DEEP MERGE for config
+            // This preserves existing config fields (like calibrations) that aren't sent by frontend
             Object.keys(body).forEach(key => {
-                device.set(key, body[key]);
+                if (key === 'config') {
+                    // DEEP MERGE: Preserve existing config fields (like calibrations, activeRole)
+                    const existingConfig = (device.config as any) || {};
+                    const mergedConfig = {
+                        ...existingConfig,
+                        ...body.config
+                    };
+                    device.set('config', mergedConfig);
+                    device.markModified('config');
+                } else {
+                    device.set(key, body[key]);
+                }
             });
 
             // CRITICAL FIX: Mark hardware as modified to ensure it saves!
@@ -1142,6 +1153,9 @@ export class HardwareController {
                     req.log.warn({ deviceId: id, error: triggerError.message }, '⚠️ [UpdateDevice] Could not trigger instant restart');
                 }
             }
+
+            // Populate driverId before returning so frontend has full template info
+            await device.populate('config.driverId');
 
             return reply.send({ success: true, data: device });
         } catch (error: any) {
