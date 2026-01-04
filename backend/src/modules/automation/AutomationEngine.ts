@@ -476,7 +476,7 @@ export class AutomationEngine {
                         if (resolvedParamsForUI.action === 'DOSE') {
                             // Rough estimate: 1 dose ≈ 1.15 seconds (based on calibration)
                             duration = amount * 1150; // ms
-                        } else if (resolvedParamsForUI.action === 'PULSE') {
+                        } else if (resolvedParamsForUI.action === 'PULSE_ON' || resolvedParamsForUI.action === 'PULSE_OFF') {
                             duration = Number(resolvedParamsForUI.duration) * 1000 || 0; // Convert to ms
                         }
                     }
@@ -530,6 +530,7 @@ export class AutomationEngine {
                     success: true,
                     output: result.output,
                     summary: finalSummary, // Pass Summary
+                    logData: result.logData, // <--- Propagate Structured Data
                     sessionId: this.currentSessionId,
                     programName: this.currentProgramName, // Expose Flow Name for Logging
                     activeProgramId: this.activeProgramId, // For ProgramLogService

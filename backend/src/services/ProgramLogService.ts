@@ -121,7 +121,7 @@ export class ProgramLogService {
             const progId = data.activeProgramId;
             if (!progId) return; // Skip if no program context
 
-            const { blockId, blockType, blockLabel, success, summary, error, output } = data;
+            const { blockId, blockType, blockLabel, success, summary, error, output, logData } = data;
 
             // Determine which blocks to log
             const importantBlocks = ['SENSOR_READ', 'ACTUATOR_SET', 'IF', 'LOOP'];
@@ -159,6 +159,7 @@ export class ProgramLogService {
                 blockLabel,
                 success,
                 output: output?.displayValue || output?.result,
+                logData, // <--- Persist Structured Data
                 sessionId: data.sessionId
             }, data.sessionId);
         });

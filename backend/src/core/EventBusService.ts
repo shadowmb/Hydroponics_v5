@@ -1,6 +1,6 @@
 import { EventEmitter2 } from 'eventemitter2';
 import { logger } from './LoggerService';
-import { ExecutionContext } from '../modules/automation/interfaces';
+import { ExecutionContext, IBlockLogData } from '../modules/automation/interfaces';
 
 // 1. Define Event Map (Strict Typing)
 // Key = Event Name, Value = Payload Type
@@ -50,6 +50,7 @@ export interface SystemEvents {
         error?: string;
         notification?: { channelId: string; mode: string; config?: any };
         activeProgramId?: string | null;
+        logData?: IBlockLogData; // Structured data for analytics
     };
     'automation:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null; error?: string | null };
     'automation:execution_step': { blockId: string; type: string; sessionId?: string | null; label: string; duration?: number; timestamp: number; params?: any };

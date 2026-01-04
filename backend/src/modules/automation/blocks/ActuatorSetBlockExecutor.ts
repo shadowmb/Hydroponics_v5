@@ -61,6 +61,7 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
             let targetState = 0;
             let pulseDuration = 0; // Internal duration in milliseconds
             let logUnit = '';
+            let targetAmountMl = 0; // Lifted for Logging
 
             // --- UNIT CONVERSION FOR DURATION ---
             // Duration field expects seconds (s). Convert from variable unit if needed.
@@ -112,7 +113,6 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                         const flowRate = Number(calibration.flowRate);
                         if (flowRate <= 0) return { success: false, error: 'Invalid flow rate calibration' };
 
-                        let targetAmountMl: number;
                         const amountMode = params.amountMode || 'VOLUME';
                         const unit = params.amountUnit || 'ml';
 
@@ -199,17 +199,43 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                 console.log(`[ActuatorSet] ✔️ Set '${action}' (State: ${targetState})`);
             }
 
-            // 4. Construct Summary
+            // 4. Construct Summary & Structured Log Data
             let summary = '';
+            let logData: any = {
+                action: action,
+                strategy: 'simple'
+            };
+
             if (action === 'DOSE') {
                 summary = `Dosed ${amount}${logUnit}`;
+                logData = {
+                    action: 'DOSE',
+                    strategy: 'volumetric',
+                    primaryValue: Number(amount),
+                    primaryUnit: logUnit || 'ml',
+                    durationMs: pulseDuration,
+                    calculatedVolumeMl: (targetAmountMl !== undefined) ? targetAmountMl : 0
+                };
             } else if (action === 'PULSE_ON' || action === 'PULSE_OFF') {
                 summary = `Pulsed ${action === 'PULSE_ON' ? 'ON' : 'OFF'} for ${(pulseDuration / 1000).toFixed(1)}s`;
+                logData = {
+                    action: action,
+                    strategy: 'time_based',
+                    primaryValue: inputDurationSec,
+                    primaryUnit: 's',
+                    durationMs: pulseDuration
+                };
             } else {
                 summary = `Set ${action} (State: ${targetState})`;
+                logData = {
+                    action: action,
+                    strategy: 'simple',
+                    primaryValue: targetState,
+                    primaryUnit: 'bool'
+                };
             }
 
-            return { success: true, summary };
+            return { success: true, summary, logData };
         } catch (error: any) {
             // If aborted, error is caught here too. Ensure we distinguish logic errors from Abort.
             if (error.message === 'Aborted') throw error; // Let AutomationEngine handle abort
