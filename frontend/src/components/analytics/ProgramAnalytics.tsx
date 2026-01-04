@@ -23,8 +23,8 @@ export function ProgramAnalytics() {
     const [data, setData] = useState<AnalyticsResponse | null>(null);
 
     // Filters
-    const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-        from: subDays(new Date(), 30),
+    const [dateRange, setDateRange] = useState<{ from: Date; to: Date | undefined }>({
+        from: new Date(),
         to: new Date()
     });
     const [selectedWindow, setSelectedWindow] = useState<string>('all');
@@ -65,6 +65,7 @@ export function ProgramAnalytics() {
 
     const loadData = async () => {
         if (!selectedProgram) return;
+        if (!dateRange.from || !dateRange.to) return; // Wait for full range
 
         setLoading(true);
         try {
@@ -155,6 +156,8 @@ export function ProgramAnalytics() {
                             </Select>
                         </div>
 
+
+
                         {/* Date Range */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Период</label>
@@ -162,15 +165,29 @@ export function ProgramAnalytics() {
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {format(dateRange.from, 'dd.MM.yyyy')} - {format(dateRange.to, 'dd.MM.yyyy')}
+                                        {format(dateRange.from, 'dd.MM.yyyy')} - {dateRange.to ? format(dateRange.to, 'dd.MM.yyyy') : '...'}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
+                                    <div className="p-2 border-b grid grid-cols-2 gap-2">
+                                        <Button variant="ghost" size="sm" onClick={() => setDateRange({ from: new Date(), to: new Date() })}>
+                                            Днес
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 1), to: subDays(new Date(), 1) })}>
+                                            Вчера
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 6), to: new Date() })}>
+                                            7 Дни
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 30), to: new Date() })}>
+                                            30 Дни
+                                        </Button>
+                                    </div>
                                     <Calendar
                                         mode="range"
-                                        selected={{ from: dateRange.from, to: dateRange.to }}
+                                        selected={dateRange}
                                         onSelect={(range) => {
-                                            if (range?.from && range?.to) {
+                                            if (range?.from) {
                                                 setDateRange({ from: range.from, to: range.to });
                                             }
                                         }}

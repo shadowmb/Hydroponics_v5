@@ -105,48 +105,96 @@ export class AnalyticsService {
      */
     async getFilterOptions(filters: AnalyticsFilters): Promise<FilterOptions> {
         // Base match for Program and Date
-        const match: any = {
+        const baseMatch: any = {
             programId: filters.programId,
             date: { $gte: filters.from, $lte: filters.to }
         };
 
         const pipeline = [
-            { $match: match },
+            { $match: baseMatch },
             { $unwind: '$events' },
-            // Filter events based on selections to narrow down options
             {
-                $match: {
-                    ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
-                    ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {}),
-                    // We don't filter by device/action here because we want to show what's available
-                    // within the selected Window/Flow context.
-                    // If we filtered by device, the device dropdown would only show the selected device.
-                }
-            },
-            {
-                $group: {
-                    _id: null,
-                    windows: {
-                        $addToSet: {
-                            id: '$events.metadata.windowId',
-                            name: { $ifNull: ['$events.metadata.windowName', '$events.metadata.windowId'] }
+                $facet: {
+                    // Windows: Depend only on Program + Date
+                    windows: [
+                        {
+                            $group: {
+                                _id: null,
+                                items: {
+                                    $addToSet: {
+                                        id: '$events.metadata.windowId',
+                                        name: { $ifNull: ['$events.metadata.windowName', '$events.metadata.windowId'] }
+                                    }
+                                }
+                            }
                         }
-                    },
-                    flows: {
-                        $addToSet: {
-                            id: '$events.executionSessionId',
-                            name: { $ifNull: ['$events.metadata.flowName', '$events.executionSessionId'] } // Use flowName if available
+                    ],
+                    // Flows: Depend on Program + Date + Window
+                    flows: [
+                        {
+                            $match: {
+                                ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {})
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                items: {
+                                    $addToSet: {
+                                        id: '$events.executionSessionId',
+                                        name: { $ifNull: ['$events.metadata.flowName', '$events.executionSessionId'] }
+                                    }
+                                }
+                            }
                         }
-                    },
-                    devices: {
-                        $addToSet: '$events.metadata.blockLabel'
-                    },
-                    actions: {
-                        $addToSet: '$events.metadata.logData.action'
-                    },
-                    blockTypes: {
-                        $addToSet: '$events.metadata.blockType'
-                    }
+                    ],
+                    // Devices: Depend on Program + Date + Window + Flow
+                    devices: [
+                        {
+                            $match: {
+                                ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
+                                ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {})
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                items: { $addToSet: '$events.metadata.blockLabel' }
+                            }
+                        }
+                    ],
+                    // Actions: Depend on Program + Date + Window + Flow + Device
+                    actions: [
+                        {
+                            $match: {
+                                ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
+                                ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {}),
+                                ...(filters.device ? { 'events.metadata.blockLabel': filters.device } : {})
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                items: { $addToSet: '$events.metadata.logData.action' }
+                            }
+                        }
+                    ],
+                    // Block Types: Broadest filter (usually not cascaded strictly, or depends on Flow)
+                    // Let's make it depend on Window + Flow to be relevant
+                    blockTypes: [
+                        {
+                            $match: {
+                                ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
+                                ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {})
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                items: { $addToSet: '$events.metadata.blockType' }
+                            }
+                        }
+                    ]
                 }
             }
         ];
@@ -154,8 +202,6 @@ export class AnalyticsService {
         const result = await ProgramDailyLogModel.aggregate(pipeline);
 
         if (result.length === 0) {
-            // Fallback: If no data matches filters, maybe return all options for the date range?
-            // For now return empty, user might need to clear filters.
             return {
                 windows: [],
                 flows: [],
@@ -165,7 +211,7 @@ export class AnalyticsService {
             };
         }
 
-        const data = result[0];
+        const facets = result[0];
 
         // Helper to deduplicate items by ID, preferring human-readable names
         const deduplicate = (items: { id: string; name: string }[]) => {
@@ -173,8 +219,6 @@ export class AnalyticsService {
             items.forEach(item => {
                 if (!item.id) return;
                 const currentName = map.get(item.id);
-                // If new name is better (exists and is not just the ID), update map
-                // Or if current name is missing/is the ID, takes the new one
                 if (!currentName || (currentName === item.id && item.name !== item.id)) {
                     map.set(item.id, item.name);
                 }
@@ -182,15 +226,18 @@ export class AnalyticsService {
             return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
         };
 
-        const uniqueWindows = deduplicate(data.windows || []);
-        const uniqueFlows = deduplicate(data.flows || []);
+        const windows = facets.windows[0]?.items || [];
+        const flows = facets.flows[0]?.items || [];
+        const devices = facets.devices[0]?.items || [];
+        const actions = facets.actions[0]?.items || [];
+        const blockTypes = facets.blockTypes[0]?.items || [];
 
         return {
-            windows: uniqueWindows.sort((a, b) => a.name.localeCompare(b.name)),
-            flows: uniqueFlows.sort((a, b) => a.name.localeCompare(b.name)),
-            devices: (data.devices || []).filter((d: any) => d).sort(),
-            actions: (data.actions || []).filter((a: any) => a).sort(),
-            blockTypes: (data.blockTypes || []).filter((b: any) => b).sort()
+            windows: deduplicate(windows).sort((a, b) => a.name.localeCompare(b.name)),
+            flows: deduplicate(flows).sort((a, b) => a.name.localeCompare(b.name)),
+            devices: devices.filter((d: any) => d).sort(),
+            actions: actions.filter((a: any) => a).sort(),
+            blockTypes: blockTypes.filter((b: any) => b).sort()
         };
     }
 
