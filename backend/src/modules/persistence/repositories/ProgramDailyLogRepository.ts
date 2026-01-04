@@ -1,6 +1,17 @@
 import { BaseRepository } from './BaseRepository';
 import { IProgramDailyLog, ProgramDailyLogModel, ILogEvent } from '../schemas/ProgramDailyLog.schema';
 
+/**
+ * Get local date string in YYYY-MM-DD format (using system timezone, not UTC)
+ */
+function getLocalDateString(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 export class ProgramDailyLogRepository extends BaseRepository<IProgramDailyLog> {
     constructor() {
         super(ProgramDailyLogModel);
@@ -10,7 +21,7 @@ export class ProgramDailyLogRepository extends BaseRepository<IProgramDailyLog> 
      * Find or create the log document for a specific program and date.
      */
     async getOrCreateTodayLog(programId: string): Promise<IProgramDailyLog> {
-        const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const date = getLocalDateString(); // Uses local timezone!
 
         let doc = await this.model.findOne({ programId, date });
 
@@ -30,7 +41,7 @@ export class ProgramDailyLogRepository extends BaseRepository<IProgramDailyLog> 
      * Add an event to the daily log
      */
     async addEvent(programId: string, event: ILogEvent): Promise<void> {
-        const date = new Date().toISOString().split('T')[0];
+        const date = getLocalDateString(); // Uses local timezone!
 
         // Upsert logic: Update if exists, Insert if not
         await this.model.updateOne(
@@ -53,7 +64,7 @@ export class ProgramDailyLogRepository extends BaseRepository<IProgramDailyLog> 
         event: ILogEvent,
         matchCriteria: { type: string; triggerId?: string; windowId?: string }
     ): Promise<void> {
-        const date = new Date().toISOString().split('T')[0];
+        const date = getLocalDateString(); // Uses local timezone!
 
         // First, try to find existing document
         const doc = await this.model.findOne({ programId, date });

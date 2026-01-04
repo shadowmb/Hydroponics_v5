@@ -118,8 +118,13 @@ export class ProgramLogService {
 
         // Block Execution (only important blocks to avoid spam)
         events.on('automation:block_end', async (data: any) => {
+            logger.info({ activeProgramId: data.activeProgramId, blockType: data.blockType, blockId: data.blockId }, '📋 [ProgramLogService] Received block_end event');
+
             const progId = data.activeProgramId;
-            if (!progId) return; // Skip if no program context
+            if (!progId) {
+                logger.warn({ blockId: data.blockId }, '⚠️ [ProgramLogService] Skipping - no activeProgramId');
+                return; // Skip if no program context
+            }
 
             const { blockId, blockType, blockLabel, success, summary, error, output, logData } = data;
 
@@ -170,7 +175,7 @@ export class ProgramLogService {
      * Helper to log safely
      */
     private async logEvent(programId: string | undefined, type: any, message: string, metadata: any = {}, executionSessionId?: string) {
-        logger.debug({ programId, type, message }, '📝 [ProgramLogService] logEvent called');
+        logger.info({ programId, type, message }, '📝 [ProgramLogService] logEvent called');
 
         if (!programId) {
             logger.warn({ type, message }, '⚠️ [ProgramLogService] Skipping log - no programId');
@@ -185,7 +190,7 @@ export class ProgramLogService {
                 metadata,
                 executionSessionId
             });
-            logger.debug({ programId, type }, '✅ [ProgramLogService] Event saved to DB');
+            logger.info({ programId, type }, '✅ [ProgramLogService] Event saved to DB');
         } catch (err) {
             logger.error({ err, programId, type }, '❌ [ProgramLogService] Failed to write to DailyLog');
         }

@@ -6,8 +6,14 @@ import { FlowController } from './controllers/FlowController';
 import { ProgramController } from './controllers/ProgramController';
 import { NotificationController } from './controllers/NotificationController';
 import { NotificationRuleController } from './controllers/NotificationRuleController';
+import { AnalyticsController } from './controllers/AnalyticsController';
 
 export async function apiRoutes(app: FastifyInstance) {
+
+    // Analytics Routes
+    app.get('/api/analytics/programs', AnalyticsController.getExecutedPrograms);
+    app.get('/api/analytics/program/:programId', AnalyticsController.getAnalytics);
+    app.get('/api/analytics/program/:programId/filters', AnalyticsController.getFilterOptions);
 
     // Notification Routes
     app.get('/api/notifications/channels', NotificationController.getChannels);
