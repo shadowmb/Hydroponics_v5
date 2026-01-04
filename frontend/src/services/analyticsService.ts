@@ -58,6 +58,7 @@ export interface AnalyticsDataRow {
     window: string;
     flow: string;
     blockType: string;
+    message?: string;
     metadata?: any;
 }
 

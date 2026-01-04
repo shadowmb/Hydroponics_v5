@@ -409,9 +409,13 @@ export function ProgramAnalytics() {
                                                             className={row.value === 1 ? 'bg-green-600 hover:bg-green-700' : ''}>
                                                             {row.value === 1 ? 'TRUE' : 'FALSE'}
                                                         </Badge>
-                                                        {row.metadata?.logData?.leftValue !== undefined && (
+                                                        {row.metadata?.logData?.leftValue !== undefined ? (
                                                             <span className="text-xs text-muted-foreground whitespace-nowrap">
                                                                 {row.metadata.logData.leftValue} {row.metadata.logData.operator} {row.metadata.logData.rightValue}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                {row.message?.split('=>')[0] || row.message}
                                                             </span>
                                                         )}
                                                     </div>

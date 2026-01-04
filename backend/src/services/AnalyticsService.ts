@@ -246,8 +246,12 @@ export class AnalyticsService {
      */
     async getAnalytics(filters: AnalyticsFilters, page: number = 1, limit: number = 100): Promise<AnalyticsResponse> {
         // Build match conditions
+        // Build match conditions
         const eventMatch: any = {
-            'events.metadata.logData': { $exists: true }
+            $or: [
+                { 'events.metadata.logData': { $exists: true } },
+                { 'events.metadata.blockType': 'LOOP' }
+            ]
         };
 
         if (filters.windowId) {
@@ -282,7 +286,8 @@ export class AnalyticsService {
                     type: '$events.type',
                     device: '$events.metadata.blockLabel',
                     blockType: '$events.metadata.blockType',
-                    action: '$events.metadata.logData.action',
+                    action: { $ifNull: ['$events.metadata.logData.action', '$events.metadata.blockType'] }, // Fallback to blockType (e.g. LOOP)
+                    message: '$events.message',
                     value: '$events.metadata.logData.primaryValue',
                     unit: '$events.metadata.logData.primaryUnit',
                     duration: '$events.metadata.logData.durationMs',
