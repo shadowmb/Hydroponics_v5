@@ -288,7 +288,8 @@ export class AnalyticsService {
                     duration: '$events.metadata.logData.durationMs',
                     volume: '$events.metadata.logData.calculatedVolumeMl',
                     window: { $ifNull: ['$events.metadata.windowName', '$events.metadata.windowId'] },
-                    flow: { $ifNull: ['$events.metadata.flowName', '$events.executionSessionId'] } // Use flowName
+                    flow: { $ifNull: ['$events.metadata.flowName', '$events.executionSessionId'] }, // Use flowName
+                    metadata: '$events.metadata'
                 }
             },
             { $sort: { timestamp: -1 } }

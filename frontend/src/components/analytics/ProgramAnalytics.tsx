@@ -403,10 +403,23 @@ export function ProgramAnalytics() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right font-mono">
-                                                {row.volume
-                                                    ? `${row.volume.toFixed(1)} ml`
-                                                    : formatValue(row.value, row.unit)
-                                                }
+                                                {['IF', 'LOOP'].includes(row.blockType) ? (
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <Badge variant={row.value === 1 ? 'default' : 'destructive'}
+                                                            className={row.value === 1 ? 'bg-green-600 hover:bg-green-700' : ''}>
+                                                            {row.value === 1 ? 'TRUE' : 'FALSE'}
+                                                        </Badge>
+                                                        {row.metadata?.logData?.leftValue !== undefined && (
+                                                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                {row.metadata.logData.leftValue} {row.metadata.logData.operator} {row.metadata.logData.rightValue}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    row.volume
+                                                        ? `${row.volume.toFixed(1)} ml`
+                                                        : formatValue(row.value, row.unit)
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-right font-mono">
                                                 {formatDuration(row.duration)}

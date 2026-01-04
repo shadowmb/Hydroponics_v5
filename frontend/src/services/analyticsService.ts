@@ -57,6 +57,8 @@ export interface AnalyticsDataRow {
     volume: number | null;
     window: string;
     flow: string;
+    blockType: string;
+    metadata?: any;
 }
 
 export interface AnalyticsResponse {
