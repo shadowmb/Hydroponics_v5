@@ -21,7 +21,10 @@ interface LogEntry {
     _id?: string;
     type: 'window_active' | 'window_skipped' | 'window_completed' | 'trigger_matched' |
     'trigger_skipped' | 'fallback_executed' | 'block_end' | 'program_day_complete' | 'execution_step' |
-    'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING'; // Backend types
+    'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING' |
+    'active:program_started' | 'automation:program_start' | 'advanced:program_day_complete' |
+    'advanced:window_active' | 'advanced:window_completed' | 'advanced:window_skipped' |
+    'advanced:trigger_matched' | 'SENSOR_READ' | 'advanced:fallback_executed' | string; // Allow string fallback
     windowId?: string;
     windowName?: string;
     timestamp: Date | string;
@@ -38,19 +41,54 @@ interface AdvancedExecutionLogProps {
 // Icon mapping for log entry types
 const getIcon = (type: LogEntry['type']) => {
     switch (type) {
-        // ... (Legacy Types)
-        case 'window_active': return <Play className="h-3.5 w-3.5 text-green-500" />;
-        case 'window_skipped': return <SkipForward className="h-3.5 w-3.5 text-purple-500" />;
-        case 'window_completed': return <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />;
-        case 'trigger_matched': return <Zap className="h-3.5 w-3.5 text-yellow-500" />;
+        // High Level Lifecycle
+        case 'active:program_started':
+        case 'automation:program_start':
+            return <Play className="h-4 w-4 text-green-600 dark:text-green-500" />;
 
-        // ... (Backend Types)
-        case 'WINDOW_EVENT': return <Activity className="h-3.5 w-3.5 text-blue-500" />;
-        case 'TRIGGER_MATCH': return <Zap className="h-3.5 w-3.5 text-yellow-500" />;
-        case 'FLOW_EXECUTED': return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />;
-        case 'ERROR': return <XCircle className="h-3.5 w-3.5 text-red-500" />;
+        case 'program_day_complete':
+        case 'advanced:program_day_complete':
+            return <CheckCircle2 className="h-4 w-4 text-purple-600 dark:text-purple-500" />;
 
-        default: return <Clock className="h-3.5 w-3.5 text-gray-400" />;
+        // Window Lifecycle
+        case 'window_active':
+        case 'advanced:window_active':
+        case 'WINDOW_EVENT': // Fallback if sometimes used for start
+            return <Activity className="h-4 w-4 text-blue-600 dark:text-blue-500" />;
+
+        case 'window_completed':
+        case 'advanced:window_completed':
+            return <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-500" />;
+
+        case 'window_skipped':
+        case 'advanced:window_skipped':
+            return <SkipForward className="h-4 w-4 text-gray-400" />;
+
+        // Flow / Triggers
+        case 'trigger_matched':
+        case 'advanced:trigger_matched':
+        case 'TRIGGER_MATCH':
+            return <Zap className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500" />;
+
+        case 'FLOW_EXECUTED':
+            return <Play className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-500" />;
+
+        // Details / Blocks
+        case 'block_end':
+        case 'SENSOR_READ':
+            // Try to infer icon from message content if possible, mainly generic here
+            return <Activity className="h-3 w-3 text-gray-400" />;
+
+        // Errors/Warnings
+        case 'ERROR':
+        case 'fallback_executed':
+        case 'advanced:fallback_executed':
+            return <XCircle className="h-4 w-4 text-red-600 dark:text-red-500" />;
+
+        case 'WARNING':
+            return <Activity className="h-4 w-4 text-orange-500" />;
+
+        default: return <Clock className="h-3 w-3 text-gray-300" />;
     }
 };
 
@@ -61,6 +99,44 @@ const formatMessage = (entry: LogEntry): string => {
     // Legacy Frontend Format (fallback)
     return JSON.stringify(entry.data || {});
 };
+
+// Style mapping for row container
+const getEntryStyle = (entry: LogEntry): string => {
+    const type = entry.type;
+
+    // 1. Program/Window Start/End (Top Level)
+    if ([
+        'active:program_started', 'automation:program_start',
+        'window_active', 'advanced:window_active', 'WINDOW_EVENT',
+        'program_day_complete', 'advanced:program_day_complete'
+    ].includes(type)) {
+        return "bg-blue-500/5 border-l-2 border-blue-500 pl-3 font-medium text-foreground";
+    }
+
+    if (['window_completed', 'advanced:window_completed'].includes(type)) {
+        return "bg-blue-500/5 border-l-2 border-blue-500/50 pl-3 text-muted-foreground";
+    }
+
+    // 2. Flow / Trigger (Mid Level)
+    if (['trigger_matched', 'advanced:trigger_matched', 'TRIGGER_MATCH', 'FLOW_EXECUTED'].includes(type)) {
+        return "ml-4 border-l-2 border-transparent pl-2 text-foreground/90";
+    }
+
+    // 3. Errors (Highlight)
+    if (['ERROR', 'fallback_executed', 'advanced:fallback_executed'].includes(type)) {
+        return "bg-red-500/5 border-l-2 border-red-500 pl-3 text-red-600 dark:text-red-400 font-medium";
+    }
+
+    // 4. Low Level Details (Default - Indented)
+    return "ml-8 border-l border-border/50 pl-2 text-sm text-muted-foreground";
+};
+
+// Helper to check if entry is "significant" enough to show time clearly
+// or if it should fade the time out to reduce noise
+const shouldDimTimestamp = (type: LogEntry['type']) => {
+    return !['active:program_started', 'window_active', 'advanced:window_active', 'ERROR'].includes(type);
+};
+
 
 export function AdvancedExecutionLog({ className, programId }: AdvancedExecutionLogProps) {
     const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -321,39 +397,45 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
                             {logs.map((entry, idx) => (
                                 <div
                                     key={entry.id || entry._id || idx}
-                                    className="flex items-start gap-3 py-2 px-2 rounded-md hover:bg-muted/50 transition-colors text-sm group"
+                                    className={cn(
+                                        "flex items-start gap-3 py-1.5 pr-2 rounded-r-md transition-colors text-sm group select-text",
+                                        getEntryStyle(entry)
+                                    )}
                                 >
-                                    <span className="text-xs text-muted-foreground font-mono shrink-0 pt-0.5">
+                                    <span className={cn(
+                                        "text-xs font-mono shrink-0 pt-0.5 w-[50px]",
+                                        shouldDimTimestamp(entry.type) ? "text-muted-foreground/40" : "text-muted-foreground"
+                                    )}>
                                         {format(new Date(entry.timestamp), 'HH:mm:ss')}
                                     </span>
                                     <span className="shrink-0 mt-0.5">
                                         {getIcon(entry.type)}
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                        <p className="leading-snug">
+                                        <p className="leading-snug break-words">
                                             {formatMessage(entry)}
                                         </p>
                                     </div>
                                 </div>
                             ))}
 
-                            {/* Pending Actuators - temporary UI state with spinner */}
+                            {/* Pending Actuators - Indented like Flow Events */}
                             {Array.from(pendingActuators.values()).map((pending) => (
                                 <div
                                     key={`pending-${pending.blockId}`}
-                                    className="flex items-start gap-3 py-2 px-2 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-sm animate-pulse"
+                                    className="flex items-start gap-3 py-2 pr-2 ml-8 rounded-md bg-yellow-500/5 border-l-2 border-yellow-500 pl-2 text-sm animate-pulse"
                                 >
-                                    <span className="text-xs text-muted-foreground font-mono shrink-0 pt-0.5">
+                                    <span className="text-xs text-muted-foreground/60 font-mono shrink-0 pt-0.5 w-[50px]">
                                         {format(new Date(pending.startTime), 'HH:mm:ss')}
                                     </span>
                                     <span className="shrink-0 mt-0.5">
-                                        <Loader2 className="h-3.5 w-3.5 text-yellow-500 animate-spin" />
+                                        <Loader2 className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500 animate-spin" />
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                        <p className="leading-snug text-yellow-600 dark:text-yellow-400">
+                                        <p className="leading-snug text-yellow-700 dark:text-yellow-400 font-medium">
                                             ⚡ {pending.label}: Работи...
                                             {pending.expectedDuration > 0 && (
-                                                <span className="text-muted-foreground ml-1">
+                                                <span className="text-muted-foreground ml-1 font-normal">
                                                     (~{(pending.expectedDuration / 1000).toFixed(1)}s)
                                                 </span>
                                             )}
