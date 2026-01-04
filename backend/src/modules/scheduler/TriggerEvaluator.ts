@@ -104,13 +104,18 @@ export class TriggerEvaluator {
                     });
 
                     // Execute the flow(s) with variable overrides
-                    // Add activeProgramId so ProgramLogService can track flow executions
-                    const overridesWithProgramId = { ...variableOverrides, activeProgramId: programId };
+                    // Add activeProgramId + window context so ProgramLogService can track flow executions
+                    const overridesWithContext = {
+                        ...variableOverrides,
+                        activeProgramId: programId,
+                        windowId: window.id,
+                        windowName: window.name
+                    };
                     const flowSessionId = await cycleManager.startCycle(
                         trigger.id,  // cycleId
                         `Trigger: ${trigger.id}`,  // name
-                        steps.map(s => ({ ...s, overrides: overridesWithProgramId })),  // multi-step array with programId
-                        overridesWithProgramId  // session overrides
+                        steps.map(s => ({ ...s, overrides: overridesWithContext })),  // multi-step array with context
+                        overridesWithContext  // session overrides
                     );
 
                     // Mark trigger as executing (will be moved to executed when flow completes)

@@ -28,6 +28,7 @@ export function ProgramAnalytics() {
         to: new Date()
     });
     const [selectedWindow, setSelectedWindow] = useState<string>('all');
+    const [selectedFlow, setSelectedFlow] = useState<string>('all');
     const [selectedDevice, setSelectedDevice] = useState<string>('all');
     const [selectedAction, setSelectedAction] = useState<string>('all');
 
@@ -45,7 +46,7 @@ export function ProgramAnalytics() {
         if (selectedProgram) {
             loadData();
         }
-    }, [selectedProgram, dateRange]);
+    }, [selectedProgram, dateRange, selectedWindow, selectedFlow, selectedDevice, selectedAction]);
 
     const loadPrograms = async () => {
         setLoadingPrograms(true);
@@ -74,6 +75,7 @@ export function ProgramAnalytics() {
             };
 
             if (selectedWindow !== 'all') filters.windowId = selectedWindow;
+            if (selectedFlow !== 'all') filters.flowId = selectedFlow;
             if (selectedDevice !== 'all') filters.device = selectedDevice;
             if (selectedAction !== 'all') filters.action = selectedAction;
 
@@ -181,7 +183,12 @@ export function ProgramAnalytics() {
                         {/* Window Filter */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Прозорец</label>
-                            <Select value={selectedWindow} onValueChange={setSelectedWindow}>
+                            <Select value={selectedWindow} onValueChange={(val) => {
+                                setSelectedWindow(val);
+                                setSelectedFlow('all'); // Reset child filters
+                                setSelectedDevice('all');
+                                setSelectedAction('all');
+                            }}>
                                 <SelectTrigger className="w-[160px]">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -189,6 +196,26 @@ export function ProgramAnalytics() {
                                     <SelectItem value="all">Всички</SelectItem>
                                     {data?.filters.windows.map(w => (
                                         <SelectItem key={w.id} value={w.id}>{w.name || w.id}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Flow Filter */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Flow (Сценарий)</label>
+                            <Select value={selectedFlow} onValueChange={(val) => {
+                                setSelectedFlow(val);
+                                setSelectedDevice('all'); // Reset child filters
+                                setSelectedAction('all');
+                            }}>
+                                <SelectTrigger className="w-[160px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Всички</SelectItem>
+                                    {data?.filters.flows.map(f => (
+                                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>

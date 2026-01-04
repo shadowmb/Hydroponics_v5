@@ -118,12 +118,17 @@ export const analyticsService = {
     },
 
     /**
-     * Fetch available filter options for a program
+     * Fetch available filter options for a program (Cascading)
      */
-    async getFilterOptions(programId: string, from?: string, to?: string): Promise<FilterOptions> {
+    async getFilterOptions(programId: string, filters: AnalyticsFilters): Promise<FilterOptions> {
         const params = new URLSearchParams();
-        if (from) params.append('from', from);
-        if (to) params.append('to', to);
+        if (filters.from) params.append('from', filters.from);
+        if (filters.to) params.append('to', filters.to);
+        if (filters.windowId) params.append('windowId', filters.windowId);
+        if (filters.flowId) params.append('flowId', filters.flowId);
+        if (filters.blockType) params.append('blockType', filters.blockType);
+        if (filters.device) params.append('device', filters.device);
+        if (filters.action) params.append('action', filters.action);
 
         const response = await fetch(`${API_BASE_URL}/api/analytics/program/${programId}/filters?${params.toString()}`);
         const json = await response.json();

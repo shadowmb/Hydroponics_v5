@@ -17,6 +17,7 @@ export class ProgramLogService {
         events.on('advanced:window_active', async (data: any) => {
             await this.logEvent(data.programId, 'WINDOW_EVENT', `Прозорец "${data.windowName}" стартира`, {
                 windowId: data.windowId,
+                windowName: data.windowName,
                 startTime: data.startTime,
                 endTime: data.endTime
             });
@@ -29,6 +30,7 @@ export class ProgramLogService {
 
             await this.logEvent(data.programId, 'WINDOW_EVENT', `Прозорец "${data.windowName}" завърши (${reason})`, {
                 windowId: data.windowId,
+                windowName: data.windowName,
                 result: data.data?.result
             });
         });
@@ -46,6 +48,7 @@ export class ProgramLogService {
             // data usually has { programId, windowId, sensorName, sensorValue, condition, flowId ... }
             await this.logEvent(data.programId, 'TRIGGER_MATCH', `Тригер: ${data.sensorName} (${data.sensorValue}) ${data.condition}`, {
                 windowId: data.windowId,
+                windowName: data.windowName, // Using windowId as fallback if name missing? No, TriggerEvaluator sends it.
                 sensorId: data.sensorId,
                 value: data.sensorValue,
                 flowIds: data.flowIds
@@ -64,6 +67,7 @@ export class ProgramLogService {
 
             const metadata = {
                 windowId: data.windowId,
+                windowName: data.windowName,
                 triggerId: data.triggerId,
                 sensorValue: data.sensorValue,
                 condition: data.condition
@@ -165,7 +169,10 @@ export class ProgramLogService {
                 success,
                 output: output?.displayValue || output?.result,
                 logData, // <--- Persist Structured Data
-                sessionId: data.sessionId
+                sessionId: data.sessionId,
+                windowId: data.windowId,
+                windowName: data.windowName,
+                flowName: data.programName // In automation engine 'programName' is the flow name
             }, data.sessionId);
         });
 

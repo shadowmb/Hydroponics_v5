@@ -29,6 +29,8 @@ export class AutomationEngine {
     private currentSessionId: string | null = null;
     private currentProgramName: string | null = null;
     private activeProgramId: string | null = null;
+    private currentWindowId: string | null = null;
+    private currentWindowName: string | null = null;
     private executionStartTime: number = 0;
 
     private instanceId = Math.random().toString(36).substring(7);
@@ -250,6 +252,13 @@ export class AutomationEngine {
         // Store activeProgramId for event emission
         if (overrides['activeProgramId']) {
             this.activeProgramId = overrides['activeProgramId'];
+        }
+        // Store window context for analytics
+        if (overrides['windowId']) {
+            this.currentWindowId = overrides['windowId'];
+        }
+        if (overrides['windowName']) {
+            this.currentWindowName = overrides['windowName'];
         }
 
         // 3. Create Session
@@ -534,6 +543,8 @@ export class AutomationEngine {
                     sessionId: this.currentSessionId,
                     programName: this.currentProgramName, // Expose Flow Name for Logging
                     activeProgramId: this.activeProgramId, // For ProgramLogService
+                    windowId: this.currentWindowId, // For Analytics Filtering
+                    windowName: this.currentWindowName, // For Analytics Filtering
                     // Pass Notification Config
                     notification: {
                         channelId: params.notificationChannelId,
@@ -611,6 +622,8 @@ export class AutomationEngine {
             error: lastError?.message || 'Block Failed',
             sessionId: this.currentSessionId,
             activeProgramId: this.activeProgramId,
+            windowId: this.currentWindowId, // For Analytics Filtering
+            windowName: this.currentWindowName, // For Analytics Filtering
             // Pass Notification Config
             notification: {
                 channelId: params.notificationChannelId,

@@ -103,23 +103,38 @@ export const AnalyticsController = {
      * Get available filter options for a program
      */
     async getFilterOptions(
-        request: FastifyRequest<{ Params: AnalyticsParams; Querystring: { from?: string; to?: string } }>,
+        request: FastifyRequest<{ Params: AnalyticsParams; Querystring: AnalyticsQuery }>,
         reply: FastifyReply
     ) {
         try {
             const { programId } = request.params;
-            const { from, to } = request.query;
+            const {
+                from,
+                to,
+                windowId,
+                flowId,
+                blockType,
+                device,
+                action
+            } = request.query;
 
             // Default date range: last 30 days
             const now = new Date();
             const defaultTo = now.toISOString().split('T')[0];
             const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-            const filters = await analyticsService.getFilterOptions(
+            const filters = {
                 programId,
-                from || defaultFrom,
-                to || defaultTo
-            );
+                from: from || defaultFrom,
+                to: to || defaultTo,
+                windowId,
+                flowId,
+                blockType,
+                device,
+                action
+            };
+
+            const result = await analyticsService.getFilterOptions(filters);
 
             return reply.send({
                 success: true,

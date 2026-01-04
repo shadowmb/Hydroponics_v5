@@ -100,15 +100,29 @@ export class AnalyticsService {
     /**
      * Get all available filter options for a program
      */
-    async getFilterOptions(programId: string, from: string, to: string): Promise<FilterOptions> {
+    /**
+     * Get all available filter options for a program, respecting current selections (Cascading)
+     */
+    async getFilterOptions(filters: AnalyticsFilters): Promise<FilterOptions> {
+        // Base match for Program and Date
+        const match: any = {
+            programId: filters.programId,
+            date: { $gte: filters.from, $lte: filters.to }
+        };
+
         const pipeline = [
+            { $match: match },
+            { $unwind: '$events' },
+            // Filter events based on selections to narrow down options
             {
                 $match: {
-                    programId,
-                    date: { $gte: from, $lte: to }
+                    ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
+                    ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {}),
+                    // We don't filter by device/action here because we want to show what's available
+                    // within the selected Window/Flow context.
+                    // If we filtered by device, the device dropdown would only show the selected device.
                 }
             },
-            { $unwind: '$events' },
             {
                 $group: {
                     _id: null,
@@ -119,7 +133,10 @@ export class AnalyticsService {
                         }
                     },
                     flows: {
-                        $addToSet: '$events.executionSessionId'
+                        $addToSet: {
+                            id: '$events.executionSessionId',
+                            name: { $ifNull: ['$events.metadata.flowName', '$events.executionSessionId'] } // Use flowName if available
+                        }
                     },
                     devices: {
                         $addToSet: '$events.metadata.blockLabel'
@@ -137,6 +154,8 @@ export class AnalyticsService {
         const result = await ProgramDailyLogModel.aggregate(pipeline);
 
         if (result.length === 0) {
+            // Fallback: If no data matches filters, maybe return all options for the date range?
+            // For now return empty, user might need to clear filters.
             return {
                 windows: [],
                 flows: [],
@@ -148,12 +167,30 @@ export class AnalyticsService {
 
         const data = result[0];
 
+        // Helper to deduplicate items by ID, preferring human-readable names
+        const deduplicate = (items: { id: string; name: string }[]) => {
+            const map = new Map<string, string>();
+            items.forEach(item => {
+                if (!item.id) return;
+                const currentName = map.get(item.id);
+                // If new name is better (exists and is not just the ID), update map
+                // Or if current name is missing/is the ID, takes the new one
+                if (!currentName || (currentName === item.id && item.name !== item.id)) {
+                    map.set(item.id, item.name);
+                }
+            });
+            return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+        };
+
+        const uniqueWindows = deduplicate(data.windows || []);
+        const uniqueFlows = deduplicate(data.flows || []);
+
         return {
-            windows: (data.windows || []).filter((w: any) => w.id),
-            flows: (data.flows || []).filter((f: any) => f).map((f: string) => ({ id: f, name: f })),
-            devices: (data.devices || []).filter((d: any) => d),
-            actions: (data.actions || []).filter((a: any) => a),
-            blockTypes: (data.blockTypes || []).filter((b: any) => b)
+            windows: uniqueWindows.sort((a, b) => a.name.localeCompare(b.name)),
+            flows: uniqueFlows.sort((a, b) => a.name.localeCompare(b.name)),
+            devices: (data.devices || []).filter((d: any) => d).sort(),
+            actions: (data.actions || []).filter((a: any) => a).sort(),
+            blockTypes: (data.blockTypes || []).filter((b: any) => b).sort()
         };
     }
 
@@ -204,7 +241,7 @@ export class AnalyticsService {
                     duration: '$events.metadata.logData.durationMs',
                     volume: '$events.metadata.logData.calculatedVolumeMl',
                     window: { $ifNull: ['$events.metadata.windowName', '$events.metadata.windowId'] },
-                    flow: '$events.executionSessionId'
+                    flow: { $ifNull: ['$events.metadata.flowName', '$events.executionSessionId'] } // Use flowName
                 }
             },
             { $sort: { timestamp: -1 } }
@@ -216,7 +253,7 @@ export class AnalyticsService {
         const summary = this.calculateSummary(allData);
 
         // Get filter options
-        const filterOptions = await this.getFilterOptions(filters.programId, filters.from, filters.to);
+        const filterOptions = await this.getFilterOptions(filters);
 
         // Paginate
         const total = allData.length;

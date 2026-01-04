@@ -50,6 +50,8 @@ export interface SystemEvents {
         error?: string;
         notification?: { channelId: string; mode: string; config?: any };
         activeProgramId?: string | null;
+        windowId?: string | null; // For Analytics Cascading Filters
+        windowName?: string | null; // For Analytics Cascading Filters
         logData?: IBlockLogData; // Structured data for analytics
     };
     'automation:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null; error?: string | null };
