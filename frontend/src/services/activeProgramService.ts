@@ -88,5 +88,17 @@ export const activeProgramService = {
     updateTrigger: async (windowId: string, trigger: any): Promise<IActiveProgram> => {
         const response = await axios.patch<IActiveProgram>(`${BASE_URL}/windows/${windowId}/triggers`, trigger);
         return response.data;
+    },
+
+    // --- LOGS ---
+    getLogs: async (programId: string, date?: string): Promise<any> => {
+        const query = date ? `?date=${date}` : '';
+        const response = await axios.get(`${API_URL}/programs/${programId}/logs${query}`);
+        return response.data;
+    },
+
+    clearLogs: async (programId: string, date: string, type: 'visual' | 'permanent'): Promise<any> => {
+        const response = await axios.post(`${API_URL}/programs/${programId}/logs/clear`, { date, type });
+        return response.data;
     }
 };

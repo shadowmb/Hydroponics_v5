@@ -423,6 +423,7 @@ export class SchedulerService {
                         logger.info({ windowId: window.id, result }, '🛑 Flow finished (Break/Fallback) - closing window');
 
                         events.emit('advanced:window_completed', {
+                            programId: activeProgram.sourceProgramId,
                             windowId: window.id,
                             windowName: window.name,
                             result: result as any,
@@ -443,13 +444,17 @@ export class SchedulerService {
                 // Emit window_active event only when status changes to active
                 if (state.status !== 'active') {
                     events.emit('advanced:window_active', {
+                        programId: activeProgram.sourceProgramId,
                         windowId: window.id,
                         windowName: window.name,
                         timestamp: new Date()
                     });
-                }
 
-                state.status = 'active';
+                    state.status = 'active';
+                    // Save immediately to prevent duplicate event on next tick
+                    activeProgram.markModified('windowsState');
+                    await activeProgram.save();
+                }
 
                 // Check if it's time to poll (based on checkInterval)
                 if (this.shouldCheck(state.lastCheck, window.checkInterval)) {
@@ -464,7 +469,7 @@ export class SchedulerService {
 
                     logger.info({ windowId: window.id, windowName: window.name }, '🔄 Evaluating triggers for window');
 
-                    const result = await triggerEvaluator.evaluateWindow(window, state, variableOverrides);
+                    const result = await triggerEvaluator.evaluateWindow(window, state, variableOverrides, activeProgram.sourceProgramId);
                     state.lastCheck = new Date();
 
                     if (result === 'executing') {
@@ -477,6 +482,7 @@ export class SchedulerService {
                         state.status = 'completed';
                         logger.info({ windowId: window.id, result }, '✅ Window completed');
                         events.emit('advanced:window_completed', {
+                            programId: activeProgram.sourceProgramId,
                             windowId: window.id,
                             windowName: window.name,
                             result: result === 'triggered' ? 'triggered' : 'no_trigger',
@@ -507,6 +513,7 @@ export class SchedulerService {
                     }, '⏭️ Skipping window - program started after window ended');
                     state.status = 'skipped'; // Mark as skipped (not completed)
                     events.emit('advanced:window_skipped', {
+                        programId: activeProgram.sourceProgramId,
                         windowId: window.id,
                         windowName: window.name,
                         reason: 'Program started after window ended',
@@ -536,13 +543,14 @@ export class SchedulerService {
                     const stepsCount = window.fallbackFlowIds?.length || (window.fallbackFlowId ? 1 : 0);
 
                     events.emit('advanced:fallback_executed', {
+                        programId: activeProgram.sourceProgramId,
                         windowId: window.id,
                         windowName: window.name,
                         flowName: stepsCount > 1 ? `${stepsCount} Flows` : (window.fallbackFlowId || window.fallbackFlowIds?.[0] || 'Unknown'),
                         timestamp: new Date()
                     });
 
-                    const fallbackSessionId = await triggerEvaluator.executeFallback(window, variableOverrides);
+                    const fallbackSessionId = await triggerEvaluator.executeFallback(window, variableOverrides, activeProgram.sourceProgramId);
 
                     // FIX: Track fallback execution to prevent premature window completion
                     if (fallbackSessionId) {
@@ -569,6 +577,7 @@ export class SchedulerService {
                 // 2. Program missed window (handled above).
 
                 events.emit('advanced:window_completed', {
+                    programId: activeProgram.sourceProgramId,
                     windowId: window.id,
                     windowName: window.name,
                     result: hasBreakExecuted ? 'triggered' : 'no_trigger',
@@ -584,7 +593,10 @@ export class SchedulerService {
         );
         if (allDone && !activeProgram.dayCompleteEmitted) {
             logger.info('🏁 All windows completed - Advanced Program finished for today');
-            events.emit('advanced:program_day_complete', { timestamp: new Date() });
+            events.emit('advanced:program_day_complete', {
+                programId: activeProgram.sourceProgramId,
+                timestamp: new Date()
+            });
             activeProgram.dayCompleteEmitted = true;
             await activeProgram.save();
             // Note: We don't stop the program, it will reset at midnight or on next load

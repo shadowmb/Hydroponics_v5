@@ -152,8 +152,9 @@ export class UdpTransport implements IHardwareTransport {
                 if (packet.pins && Array.isArray(packet.pins)) {
                     const rxPin = packet.pins.find((p: any) => p.role === 'RX');
                     const txPin = packet.pins.find((p: any) => p.role === 'TX');
-                    if (rxPin) rxStr = `${rxPin.portId}_${rxPin.gpio}`;
-                    if (txPin) txStr = `${txPin.portId}_${txPin.gpio}`;
+                    // Use helper to strip prefixes
+                    if (rxPin) rxStr = this.normalizePin(`${rxPin.portId}_${rxPin.gpio}`);
+                    if (txPin) txStr = this.normalizePin(`${txPin.portId}_${txPin.gpio}`);
                 }
 
                 if (!rxStr || !txStr) {
@@ -170,8 +171,9 @@ export class UdpTransport implements IHardwareTransport {
                 if (packet.pins && Array.isArray(packet.pins)) {
                     const trigPin = packet.pins.find((p: any) => p.role === 'TRIG');
                     const echoPin = packet.pins.find((p: any) => p.role === 'ECHO');
-                    if (trigPin) trigStr = `${trigPin.portId}_${trigPin.gpio}`;
-                    if (echoPin) echoStr = `${echoPin.portId}_${echoPin.gpio}`;
+                    // Use helper to strip prefixes
+                    if (trigPin) trigStr = this.normalizePin(`${trigPin.portId}_${trigPin.gpio}`);
+                    if (echoPin) echoStr = this.normalizePin(`${echoPin.portId}_${echoPin.gpio}`);
                 }
 
                 if (!trigStr || !echoStr) {
@@ -182,7 +184,7 @@ export class UdpTransport implements IHardwareTransport {
             }
         }
 
-        logger.debug({ ip: this.targetIp, port: this.targetPort, message }, '📤 [UdpTransport] Sending');
+        logger.info({ ip: this.targetIp, port: this.targetPort, message }, '📤 [UdpTransport] Sending Raw Message');
 
         return new Promise((resolve, reject) => {
             this.socket?.send(message, this.targetPort, this.targetIp, (err) => {
@@ -228,13 +230,29 @@ export class UdpTransport implements IHardwareTransport {
     }
 
     private formatPin(packet: HardwarePacket): string | undefined {
+        let pinStr: string | undefined;
+
         if (packet.pins && Array.isArray(packet.pins) && packet.pins.length > 0) {
             const p = packet.pins.find((p: any) => p.role === 'default') || packet.pins[0];
-            return `${p.portId}_${p.gpio}`;
+            pinStr = `${p.portId}_${p.gpio}`;
+        } else if (packet.pin !== undefined) {
+            pinStr = `${packet.pin}`;
         }
-        if (packet.pin !== undefined) {
-            return `${packet.pin}`;
+
+        return pinStr;
+    }
+
+    private normalizePin(pinStr: string | undefined): string | undefined {
+        if (!pinStr) return undefined;
+
+        // If pinStr contains underscore (e.g. "D11_11"), return only the GPIO part (11)
+        if (pinStr.includes('_')) {
+            const parts = pinStr.split('_');
+            const gpio = parseInt(parts[parts.length - 1]);
+            if (!isNaN(gpio)) {
+                return gpio.toString();
+            }
         }
-        return undefined;
+        return pinStr;
     }
 }

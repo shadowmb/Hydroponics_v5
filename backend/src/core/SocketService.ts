@@ -58,7 +58,9 @@ export class SocketService {
             'advanced:trigger_skipped',
             'advanced:window_completed',
             'advanced:fallback_executed',
-            'advanced:program_day_complete'
+            'advanced:program_day_complete',
+            'active:program_started',
+            'automation:program_start'
         ];
 
         eventsToForward.forEach(eventName => {

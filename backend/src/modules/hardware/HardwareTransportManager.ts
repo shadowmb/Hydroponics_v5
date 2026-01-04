@@ -92,11 +92,12 @@ export class HardwareTransportManager {
 
     private async executePacket(controllerId: string, transport: IHardwareTransport, packet: HardwarePacket): Promise<any> {
         return new Promise((resolve, reject) => {
+            const timeoutDuration = packet.timeout || 5000;
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(packet.id);
                 this.activeCommands.delete(controllerId);
-                reject(new Error(`Command ${packet.cmd} (ID:${packet.id}) timed out after 5s`));
-            }, 5000);
+                reject(new Error(`Command ${packet.cmd} (ID:${packet.id}) timed out after ${timeoutDuration}ms`));
+            }, timeoutDuration);
 
             this.pendingRequests.set(packet.id, { resolve, reject, timeout });
             this.activeCommands.set(controllerId, packet.id);

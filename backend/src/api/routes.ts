@@ -116,6 +116,11 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/scheduler/start', ProgramController.startScheduler);
     app.post('/api/scheduler/stop', ProgramController.stopScheduler);
 
+    // Program Logs
+    const { programLogController } = require('./controllers/ProgramLogController');
+    app.get('/api/programs/:programId/logs', programLogController.getLogs);
+    app.post('/api/programs/:programId/logs/clear', programLogController.clearLogs);
+
     // Active Program Routes
     const ActiveProgramController = require('./controllers/ActiveProgramController').ActiveProgramController;
     app.get('/api/active-program', ActiveProgramController.getActive);

@@ -30,9 +30,18 @@ export interface SystemEvents {
     'command:sent': { deviceId: string; controllerId: string; packet: any; raw?: string };
 
     // Automation Events
-    'automation:block_start': { blockId: string; type: string; sessionId?: string | null };
+    'automation:block_start': {
+        blockId: string;
+        type: string;
+        sessionId?: string | null;
+        blockLabel?: string;
+        expectedDuration?: number; // in milliseconds
+        activeProgramId?: string | null;
+    };
     'automation:block_end': {
         blockId: string;
+        blockType?: string;
+        blockLabel?: string;
         success: boolean;
         output?: any;
         summary?: string;
@@ -40,25 +49,27 @@ export interface SystemEvents {
         programName?: string | null;
         error?: string;
         notification?: { channelId: string; mode: string; config?: any };
+        activeProgramId?: string | null;
     };
     'automation:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null; error?: string | null };
     'automation:execution_step': { blockId: string; type: string; sessionId?: string | null; label: string; duration?: number; timestamp: number; params?: any };
     'log': { timestamp: Date | string; level: string; message: string; blockId?: string; data?: any; sessionId?: string | null };
 
     // System Lifecycle Events
-    'automation:program_start': { programId: string; sessionId: string; programName?: string };
+    'automation:program_start': { programId: string; sessionId: string; programName?: string; activeProgramId?: string | null };
     'automation:program_stop': { sessionId: string; reason?: string };
     'scheduler:cycle_start': { cycleId: string; programId?: string; timestamp: Date; cycleName?: string };
     'scheduler:cycle_complete': { cycleId: string; programId?: string; duration?: number; timestamp: Date; cycleName?: string };
 
     // Advanced Program Events (for Live Execution Log)
-    'advanced:window_skipped': { windowId: string; windowName: string; reason: string; timestamp: Date };
-    'advanced:window_active': { windowId: string; windowName: string; timestamp: Date };
-    'advanced:trigger_matched': { windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; flowName: string; timestamp: Date };
-    'advanced:trigger_skipped': { windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; timestamp: Date };
-    'advanced:window_completed': { windowId: string; windowName: string; result: 'triggered' | 'fallback' | 'no_trigger'; timestamp: Date };
-    'advanced:fallback_executed': { windowId: string; windowName: string; flowName: string; timestamp: Date };
-    'advanced:program_day_complete': { timestamp: Date };
+    'advanced:window_skipped': { programId?: string; windowId: string; windowName: string; reason: string; timestamp: Date };
+    'advanced:window_active': { programId?: string; windowId: string; windowName: string; timestamp: Date };
+    'advanced:trigger_matched': { programId?: string; windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; flowName: string; timestamp: Date };
+    'advanced:trigger_skipped': { programId?: string; windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; timestamp: Date };
+    'advanced:window_completed': { programId?: string; windowId: string; windowName: string; result: 'triggered' | 'fallback' | 'no_trigger'; timestamp: Date };
+    'advanced:fallback_executed': { programId?: string; windowId: string; windowName: string; flowName: string; timestamp: Date };
+    'advanced:program_day_complete': { programId?: string; timestamp: Date };
+    'active:program_started': { programId: string; timestamp?: Date };
 }
 
 export class EventBusService {

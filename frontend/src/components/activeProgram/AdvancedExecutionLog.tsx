@@ -1,31 +1,33 @@
-/**
- * AdvancedExecutionLog.tsx
- * 
- * Real-time execution log for Advanced Programs.
- * Listens to WebSocket events and displays them grouped by window.
- */
-
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { ScrollArea } from '../ui/scroll-area';
-import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import {
     Activity, Zap, Play, CheckCircle2, SkipForward,
-    Clock, XCircle, ArrowRight, Sparkles, Loader2
+    Clock, XCircle, Loader2,
+    Calendar, Trash2, EyeOff, RefreshCw
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { socketService } from '../../core/SocketService';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
+import { activeProgramService } from '../../services/activeProgramService';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar as CalendarComponent } from '../ui/calendar';
+import { toast } from 'sonner';
 
 // Log entry types
 interface LogEntry {
-    id: string;
+    id?: string;
+    _id?: string;
     type: 'window_active' | 'window_skipped' | 'window_completed' | 'trigger_matched' |
-    'trigger_skipped' | 'fallback_executed' | 'block_end' | 'program_day_complete' | 'execution_step';
+    'trigger_skipped' | 'fallback_executed' | 'block_end' | 'program_day_complete' | 'execution_step' |
+    'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING'; // Backend types
     windowId?: string;
     windowName?: string;
-    timestamp: Date;
-    data: any;
+    timestamp: Date | string;
+    data?: any; // Frontend format
+    message?: string; // Backend format
+    metadata?: any; // Backend format
 }
 
 interface AdvancedExecutionLogProps {
@@ -34,381 +36,272 @@ interface AdvancedExecutionLogProps {
 }
 
 // Icon mapping for log entry types
-const getIcon = (type: LogEntry['type'], success?: boolean) => {
+const getIcon = (type: LogEntry['type']) => {
     switch (type) {
-        case 'window_active':
-            return <Play className="h-3.5 w-3.5 text-green-500" />;
-        case 'window_skipped':
-            return <SkipForward className="h-3.5 w-3.5 text-purple-500" />;
-        case 'window_completed':
-            return <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />;
-        case 'trigger_matched':
-            return <Zap className="h-3.5 w-3.5 text-yellow-500" />;
-        case 'trigger_skipped':
-            return <ArrowRight className="h-3.5 w-3.5 text-gray-400" />;
-        case 'fallback_executed':
-            return <Sparkles className="h-3.5 w-3.5 text-orange-500" />;
-        case 'block_end':
-            return success
-                ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                : <XCircle className="h-3.5 w-3.5 text-red-500" />;
-        case 'program_day_complete':
-            return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
-        case 'execution_step':
-            return <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />;
-        default:
-            return <Clock className="h-3.5 w-3.5 text-gray-400" />;
+        // ... (Legacy Types)
+        case 'window_active': return <Play className="h-3.5 w-3.5 text-green-500" />;
+        case 'window_skipped': return <SkipForward className="h-3.5 w-3.5 text-purple-500" />;
+        case 'window_completed': return <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />;
+        case 'trigger_matched': return <Zap className="h-3.5 w-3.5 text-yellow-500" />;
+
+        // ... (Backend Types)
+        case 'WINDOW_EVENT': return <Activity className="h-3.5 w-3.5 text-blue-500" />;
+        case 'TRIGGER_MATCH': return <Zap className="h-3.5 w-3.5 text-yellow-500" />;
+        case 'FLOW_EXECUTED': return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />;
+        case 'ERROR': return <XCircle className="h-3.5 w-3.5 text-red-500" />;
+
+        default: return <Clock className="h-3.5 w-3.5 text-gray-400" />;
     }
 };
 
-// Helper to get Block Label safely
-const getBlockLabel = (entry: LogEntry) => {
-    // 1. Try Notification Config Label (Standard for Block End)
-    if (entry.data?.notification?.config?.label) return entry.data.notification.config.label;
-
-    // 2. Try direct label (Standard for Execution Step)
-    if (entry.data?.label) return entry.data.label;
-
-    // 3. Fallback to ID
-    return entry.data.blockId?.split('_')[0] || entry.data.blockId || 'Block';
-};
-
-// Format log entry message
 const formatMessage = (entry: LogEntry): string => {
-    switch (entry.type) {
-        case 'window_active':
-            return `Прозорец "${entry.windowName}" - Активен`;
-        case 'window_skipped':
-            return `Прозорец "${entry.windowName}" - Пропуснат (${entry.data.reason})`;
-        case 'window_completed':
-            const result = entry.data.result === 'triggered' ? 'чрез тригер'
-                : entry.data.result === 'fallback' ? 'с fallback' : 'без действие';
-            return `Прозорец "${entry.windowName}" - Завършен ${result}`;
-        case 'trigger_matched':
-            return `📊 ${entry.data.sensorName} = ${entry.data.sensorValue} → ⚡ ${entry.data.condition} ✓`;
-        case 'trigger_skipped':
-            return `📊 ${entry.data.sensorName} = ${entry.data.sensorValue} → ${entry.data.condition} ✗`;
-        case 'fallback_executed':
-            return `Изпълнен fallback поток: ${entry.data.flowName}`;
-        case 'block_end':
-            const blockLabel = getBlockLabel(entry);
-            const blockIdRaw = entry.data.blockId?.split('_')[0];
+    // Backend Format
+    if (entry.message) return entry.message;
 
-            if (entry.data.success) {
-                let message = `✓ ${blockLabel}`;
-                // Show Flow Name for Start Block
-                if (blockIdRaw === 'start' && entry.data.programName) {
-                    message += `: ${entry.data.programName}`;
-                }
-                return `${message}${entry.data.summary ? `: ${entry.data.summary}` : ''}`;
-            } else {
-                return `✗ ${blockLabel}: ${entry.data.error || 'Failed'}`;
-            }
-        case 'program_day_complete':
-            return '🏁 Програмата завърши за днес';
-        case 'execution_step':
-            const label = getBlockLabel(entry);
-            const params = entry.data.params || {};
-
-            let details = '';
-
-            // ACTUATOR_SET Specifics
-            if (entry.data.type === 'ACTUATOR_SET') {
-                if (params.amountMode === 'DOSES' && params.amount) {
-                    details = `(${params.action} ${params.amount} doses)`;
-                }
-                else if (params.amount && params.action) {
-                    details = `(${params.action} ${params.amount}${params.amountUnit || ''})`;
-                }
-            }
-            // WAIT Specifics
-            else if (entry.data.type === 'WAIT') {
-                if (params.duration) details = `(${params.duration}s)`;
-            }
-            // Fallback generic info
-            else if (params.message) {
-                details = `(${params.message})`;
-            }
-
-            return `⏳ ${label} ${details} ...`;
-        default:
-            return JSON.stringify(entry.data);
-    }
+    // Legacy Frontend Format (fallback)
+    return JSON.stringify(entry.data || {});
 };
 
 export function AdvancedExecutionLog({ className, programId }: AdvancedExecutionLogProps) {
     const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [loading, setLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const [autoScroll, setAutoScroll] = useState(true);
 
-    const storageKey = `advanced_logs_${programId || 'default'}`;
+    // Pending actuators (temporary UI state, not in DB)
+    const [pendingActuators, setPendingActuators] = useState<Map<string, {
+        blockId: string;
+        label: string;
+        expectedDuration: number;
+        startTime: number;
+    }>>(new Map());
 
-    // Load logs from storage
+    // Date Selection
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+    // Initial Load
     useEffect(() => {
+        if (programId) {
+            fetchLogs();
+        }
+    }, [programId, selectedDate]);
+
+    const fetchLogs = async () => {
+        if (!programId) return;
+        setLoading(true);
         try {
-            const saved = sessionStorage.getItem(storageKey);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // Hydrate dates
-                const hydrated = parsed.map((entry: any) => ({
-                    ...entry,
-                    timestamp: new Date(entry.timestamp)
-                }));
-                setLogs(hydrated);
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            const response = await activeProgramService.getLogs(programId, dateStr);
+
+            if (response.success && response.data && response.data.length > 0) {
+                // If backend returns Daily Log document directly
+                // It might return [ { events: [...] } ] or just the events?
+                // The repo returns array of ProgramDailyLog documents (usually 1 per day).
+                // Let's assume we get the document and take its events.
+
+                const combinedEvents = response.data.flatMap((doc: any) => doc.events || []);
+
+                // Sort by timestamp to ensure correct chronological order (async race condition fix)
+                combinedEvents.sort((a: any, b: any) =>
+                    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                );
+
+                setLogs(combinedEvents);
+            } else {
+                setLogs([]);
             }
         } catch (error) {
-            console.error('Failed to load logs from storage:', error);
+            console.error('Failed to fetch logs:', error);
+            // Fallback to empty if not found
+            setLogs([]);
+        } finally {
+            setLoading(false);
         }
-    }, [storageKey]);
-
-    // Generate unique ID
-    const generateId = () => `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    // Add log entry
-    const addLog = (entry: Omit<LogEntry, 'id'>) => {
-        setLogs(prev => {
-            const newLogs = [...prev, { ...entry, id: generateId() }];
-            const sliced = newLogs.slice(-200); // Keep last 200
-
-            // Persist to storage
-            sessionStorage.setItem(storageKey, JSON.stringify(sliced));
-
-            return sliced;
-        });
     };
 
-    // Auto-scroll to bottom
+    // Auto-scroll logic
     const scrollToBottom = () => {
         if (!scrollRef.current) return;
-
-        // Radix UI ScrollArea renders a viewport div inside. We need to scroll THAT.
         const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
         if (viewport) {
             viewport.scrollTop = viewport.scrollHeight;
-        } else {
-            // Fallback if ref is direct
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     };
 
-    // Scroll on logs update if autoScroll is true
     useEffect(() => {
         if (autoScroll) {
-            // Small timeout to ensure DOM update
             setTimeout(scrollToBottom, 50);
         }
     }, [logs, autoScroll]);
 
-    // Scroll on initial mount (with delay for layout)
+    // WebSocket Listeners (Only active for TODAY)
+    const isToday = isSameDay(selectedDate, new Date());
+
     useEffect(() => {
-        setTimeout(scrollToBottom, 100);
-        setTimeout(scrollToBottom, 500); // Verify scroll after everything settles
-    }, []);
+        if (!isToday || !programId) return;
 
-    // Subscribe to WebSocket events
-    useEffect(() => {
-        // Window events
-        const handleWindowActive = (data: any) => {
-            addLog({
-                type: 'window_active',
-                windowId: data.windowId,
-                windowName: data.windowName,
-                timestamp: new Date(data.timestamp),
-                data
-            });
+        let refetchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+        const handleRealtimeEvent = () => {
+            // Debounce refetch to allow DB write to complete and batch rapid events
+            if (refetchTimeout) clearTimeout(refetchTimeout);
+            refetchTimeout = setTimeout(() => {
+                fetchLogs();
+            }, 300); // 300ms delay to ensure DB write completes
         };
 
-        const handleWindowSkipped = (data: any) => {
-            addLog({
-                type: 'window_skipped',
-                windowId: data.windowId,
-                windowName: data.windowName,
-                timestamp: new Date(data.timestamp),
-                data
-            });
-        };
-
-        const handleWindowCompleted = (data: any) => {
-            addLog({
-                type: 'window_completed',
-                windowId: data.windowId,
-                windowName: data.windowName,
-                timestamp: new Date(data.timestamp),
-                data
-            });
-        };
-
-        const handleTriggerMatched = (data: any) => {
-            addLog({
-                type: 'trigger_matched',
-                windowId: data.windowId,
-                timestamp: new Date(data.timestamp),
-                data
-            });
-        };
-
-        const handleTriggerSkipped = (data: any) => {
-            addLog({
-                type: 'trigger_skipped',
-                windowId: data.windowId,
-                timestamp: new Date(data.timestamp),
-                data
-            });
-        };
-
-        const handleFallbackExecuted = (data: any) => {
-            addLog({
-                type: 'fallback_executed',
-                windowId: data.windowId,
-                windowName: data.windowName,
-                timestamp: new Date(data.timestamp),
-                data
-            });
-        };
-
-        const handleBlockEnd = (data: any) => {
-            setLogs(prev => {
-                // Smart Update: Find if there is a pending 'execution_step' for this block
-                // We search from the end to find the most recent one
-                // FIX: Add sessionId check to prevent cross-flow collision
-                const existingIndex = prev.findIndex(l =>
-                    l.type === 'execution_step' &&
-                    l.data.blockId === data.blockId &&
-                    // Match session matches (or ignore if execution_step didn't capture it)
-                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
-                );
-
-                if (existingIndex !== -1) {
-                    // Update in place
-                    const newLogs = [...prev];
-                    newLogs[existingIndex] = {
-                        ...newLogs[existingIndex], // Keep original ID/Timestamp or update?
-                        type: 'block_end',
-                        timestamp: new Date(), // Update timestamp to finish time
-                        data: { ...newLogs[existingIndex].data, ...data } // Merge data
-                    };
-                    const sliced = newLogs.slice(-200);
-                    sessionStorage.setItem(storageKey, JSON.stringify(sliced));
-                    return sliced;
-                }
-
-                // If not found (e.g. joined late), just append
-                const newEntry: LogEntry = {
-                    id: generateId(),
-                    type: 'block_end',
-                    timestamp: new Date(),
-                    data
-                };
-                const newLogs = [...prev, newEntry];
-                const sliced = newLogs.slice(-200);
-                sessionStorage.setItem(storageKey, JSON.stringify(sliced));
-                return sliced;
-            });
-        };
-
-        const handleExecutionStep = (data: any) => {
-            setLogs(prev => {
-                // RACE CONDITION FIX:
-                // Check if we already have a 'block_end' for this blockId (and sessionId)
-                // This happens if block_end arrives BEFORE execution_step (network race)
-                const alreadyCompleted = prev.some(l =>
-                    l.type === 'block_end' &&
-                    l.data.blockId === data.blockId &&
-                    // Strict session matching if available
-                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
-                );
-
-                if (alreadyCompleted) {
-                    console.warn('⚠️ Log Race Condition: Ignoring execution_step because block_end already exists', data);
-                    return prev;
-                }
-
-                // Check for duplicate execution_step to avoid double spinners
-                const isDuplicate = prev.some(l =>
-                    l.type === 'execution_step' &&
-                    l.data.blockId === data.blockId &&
-                    (!data.sessionId || !l.data.sessionId || l.data.sessionId === data.sessionId)
-                );
-
-                if (isDuplicate) return prev;
-
-                const newEntry: LogEntry = {
-                    id: generateId(),
-                    type: 'execution_step',
-                    timestamp: new Date(data.timestamp || Date.now()),
-                    data
-                };
-                const newLogs = [...prev, newEntry];
-                const sliced = newLogs.slice(-200);
-                sessionStorage.setItem(storageKey, JSON.stringify(sliced));
-                return sliced;
-            });
-        };
-
-        const handleDayComplete = (data: any) => {
-            addLog({
-                type: 'program_day_complete',
-                timestamp: new Date(data.timestamp),
-                data
-            });
-        };
-
-        // Register listeners
-        socketService.on('advanced:window_active', handleWindowActive);
-        socketService.on('advanced:window_skipped', handleWindowSkipped);
-        socketService.on('advanced:window_completed', handleWindowCompleted);
-        socketService.on('advanced:trigger_matched', handleTriggerMatched);
-        socketService.on('advanced:trigger_skipped', handleTriggerSkipped);
-        socketService.on('advanced:fallback_executed', handleFallbackExecuted);
-        socketService.on('automation:block_end', handleBlockEnd);
-        socketService.on('automation:execution_step', handleExecutionStep);
-        socketService.on('advanced:program_day_complete', handleDayComplete);
-
-        // Cleanup
-        return () => {
-            socketService.off('advanced:window_active', handleWindowActive);
-            socketService.off('advanced:window_skipped', handleWindowSkipped);
-            socketService.off('advanced:window_completed', handleWindowCompleted);
-            socketService.off('advanced:trigger_matched', handleTriggerMatched);
-            socketService.off('advanced:trigger_skipped', handleTriggerSkipped);
-            socketService.off('advanced:fallback_executed', handleFallbackExecuted);
-            socketService.off('automation:block_end', handleBlockEnd);
-            socketService.off('automation:execution_step', handleExecutionStep);
-            socketService.off('advanced:program_day_complete', handleDayComplete);
-        };
-    }, []);
-
-    // Clear logs at midnight
-    // Clear logs at midnight
-    useEffect(() => {
-        const checkMidnight = () => {
-            const now = new Date();
-            if (now.getHours() === 0 && now.getMinutes() === 0) {
-                setLogs([]);
-                sessionStorage.removeItem(storageKey);
+        // Handle actuator start - show pending state
+        const handleBlockStart = (data: any) => {
+            if (data.type === 'ACTUATOR_SET' && data.activeProgramId === programId) {
+                setPendingActuators(prev => {
+                    const updated = new Map(prev);
+                    updated.set(data.blockId, {
+                        blockId: data.blockId,
+                        label: data.blockLabel || 'Актуатор',
+                        expectedDuration: data.expectedDuration || 0,
+                        startTime: Date.now()
+                    });
+                    return updated;
+                });
             }
         };
 
-        const interval = setInterval(checkMidnight, 60000); // Check every minute
-        return () => clearInterval(interval);
-    }, [storageKey]);
+        // Handle actuator end - remove pending state and refetch
+        const handleBlockEnd = (data: any) => {
+            // Remove from pending if it was an actuator
+            setPendingActuators(prev => {
+                if (prev.has(data.blockId)) {
+                    const updated = new Map(prev);
+                    updated.delete(data.blockId);
+                    return updated;
+                }
+                return prev;
+            });
+            // Refetch logs to get the actual result
+            handleRealtimeEvent();
+        };
+
+        // Listen to all relevant events
+        const events = [
+            'advanced:window_active',
+            'advanced:window_completed',
+            'advanced:window_skipped',
+            'advanced:trigger_matched',
+            'advanced:trigger_skipped',
+            'advanced:fallback_executed',
+            'advanced:program_day_complete',
+            'active:program_started',
+            'automation:program_start'
+        ];
+
+        events.forEach(event => socketService.on(event, handleRealtimeEvent));
+        socketService.on('automation:block_start', handleBlockStart);
+        socketService.on('automation:block_end', handleBlockEnd);
+
+        return () => {
+            if (refetchTimeout) clearTimeout(refetchTimeout);
+            events.forEach(event => socketService.off(event, handleRealtimeEvent));
+            socketService.off('automation:block_start', handleBlockStart);
+            socketService.off('automation:block_end', handleBlockEnd);
+        };
+    }, [isToday, programId]);
+
+
+    // Actions
+    const handleClear = async (type: 'visual' | 'permanent') => {
+        if (!programId) return;
+        try {
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            await activeProgramService.clearLogs(programId, dateStr, type);
+            if (type === 'visual') {
+                // Visual clear: empty the local list
+                setLogs([]);
+                toast.success('Логът е изчистен (визуално)');
+            } else {
+                setLogs([]);
+                toast.success('Логът е изтрит перманентно');
+            }
+        } catch (error) {
+            toast.error('Грешка при изчистване');
+        }
+    };
 
     return (
         <Card className={cn("mt-6", className)}>
-            <CardHeader className="py-3 px-4">
+            <CardHeader className="py-3 px-4 border-b bg-muted/20">
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                         <Activity className="h-4 w-4" />
-                        Лог на изпълнението
+                        История на изпълнението
                     </CardTitle>
-                    <Badge variant="outline" className="text-xs">
-                        {logs.length} записа
-                    </Badge>
+
+                    <div className="flex items-center gap-2">
+                        {/* Date Picker */}
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8 gap-2">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {isToday ? 'Днес' : format(selectedDate, 'dd.MM.yyyy')}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                                <CalendarComponent
+                                    mode="single"
+                                    selected={selectedDate}
+                                    onSelect={(date: Date | undefined) => {
+                                        if (date) {
+                                            setSelectedDate(date);
+                                            setIsCalendarOpen(false);
+                                        }
+                                    }}
+                                />
+                            </PopoverContent>
+                        </Popover>
+
+                        <div className="h-4 w-px bg-border mx-1" />
+
+                        {/* Actions */}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fetchLogs} title="Refresh">
+                            <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+                        </Button>
+
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-56" align="end">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium text-xs text-muted-foreground uppercase">Изчистване на лога</h4>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full justify-start gap-2"
+                                        onClick={() => handleClear('visual')}
+                                    >
+                                        <EyeOff className="h-3.5 w-3.5" />
+                                        Визуално (Покажи нови)
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="w-full justify-start gap-2"
+                                        onClick={() => handleClear('permanent')}
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Перманентно изтриване
+                                    </Button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="p-0">
                 <ScrollArea
-                    className="h-[300px] px-4 pb-4"
+                    className="h-[300px] px-4 py-2"
                     ref={scrollRef}
                     onScroll={(e) => {
                         const target = e.target as HTMLDivElement;
@@ -417,39 +310,68 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
                     }}
                 >
                     {logs.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                            Няма записи. Стартирайте програмата за да видите лога.
+                        <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground text-sm gap-2">
+                            <div className="p-3 bg-muted rounded-full">
+                                <Activity className="h-6 w-6 opacity-50" />
+                            </div>
+                            <p>Няма записи за избраната дата.</p>
                         </div>
                     ) : (
-                        <div className="space-y-1">
-                            {logs.map((entry) => (
+                        <div className="space-y-1 py-2">
+                            {logs.map((entry, idx) => (
                                 <div
-                                    key={entry.id}
-                                    className={cn(
-                                        "flex items-start gap-2 py-1.5 px-2 rounded text-sm",
-                                        entry.type === 'block_end' && !entry.data.success && "bg-red-500/10",
-                                        entry.type === 'window_completed' && "bg-blue-500/5",
-                                        entry.type === 'trigger_matched' && "bg-yellow-500/5",
-                                        entry.type === 'program_day_complete' && "bg-emerald-500/10"
-                                    )}
+                                    key={entry.id || entry._id || idx}
+                                    className="flex items-start gap-3 py-2 px-2 rounded-md hover:bg-muted/50 transition-colors text-sm group"
                                 >
-                                    <span className="text-xs text-muted-foreground font-mono shrink-0">
+                                    <span className="text-xs text-muted-foreground font-mono shrink-0 pt-0.5">
                                         {format(new Date(entry.timestamp), 'HH:mm:ss')}
                                     </span>
-                                    <span className="shrink-0">
-                                        {getIcon(entry.type, entry.data?.success)}
+                                    <span className="shrink-0 mt-0.5">
+                                        {getIcon(entry.type)}
                                     </span>
-                                    <span className={cn(
-                                        "flex-1",
-                                        entry.type === 'block_end' && !entry.data.success && "text-red-500"
-                                    )}>
-                                        {formatMessage(entry)}
-                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="leading-snug">
+                                            {formatMessage(entry)}
+                                        </p>
+                                    </div>
                                 </div>
                             ))}
+
+                            {/* Pending Actuators - temporary UI state with spinner */}
+                            {Array.from(pendingActuators.values()).map((pending) => (
+                                <div
+                                    key={`pending-${pending.blockId}`}
+                                    className="flex items-start gap-3 py-2 px-2 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-sm animate-pulse"
+                                >
+                                    <span className="text-xs text-muted-foreground font-mono shrink-0 pt-0.5">
+                                        {format(new Date(pending.startTime), 'HH:mm:ss')}
+                                    </span>
+                                    <span className="shrink-0 mt-0.5">
+                                        <Loader2 className="h-3.5 w-3.5 text-yellow-500 animate-spin" />
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="leading-snug text-yellow-600 dark:text-yellow-400">
+                                            ⚡ {pending.label}: Работи...
+                                            {pending.expectedDuration > 0 && (
+                                                <span className="text-muted-foreground ml-1">
+                                                    (~{(pending.expectedDuration / 1000).toFixed(1)}s)
+                                                </span>
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="h-px bg-transparent" /> {/* Bottom spacer */}
                         </div>
                     )}
                 </ScrollArea>
+
+                {/* Footer / Status */}
+                <div className="border-t bg-muted/10 px-4 py-2 text-xs text-muted-foreground flex justify-between">
+                    <span>{logs.length} събития</span>
+                    {loading && <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Updating...</span>}
+                </div>
             </CardContent>
         </Card>
     );

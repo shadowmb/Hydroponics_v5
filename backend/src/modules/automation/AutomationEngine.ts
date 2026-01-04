@@ -28,6 +28,7 @@ export class AutomationEngine {
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
     private currentProgramName: string | null = null;
+    private activeProgramId: string | null = null;
     private executionStartTime: number = 0;
 
     private instanceId = Math.random().toString(36).substring(7);
@@ -246,6 +247,11 @@ export class AutomationEngine {
             variables['_parentCycleSessionId'] = overrides['_parentCycleSessionId'];
         }
 
+        // Store activeProgramId for event emission
+        if (overrides['activeProgramId']) {
+            this.activeProgramId = overrides['activeProgramId'];
+        }
+
         // 3. Create Session
         const session = await sessionRepository.create({
             programId: flow.id,
@@ -297,9 +303,10 @@ export class AutomationEngine {
         this.actor.send({ type: 'START' });
 
         events.emit('automation:program_start', {
-            programId: 'unknown', // We don't store ID in class prop, but sessionId links it.
+            programId: this.activeProgramId || 'unknown',
             sessionId: this.currentSessionId!,
-            programName: this.currentProgramName || 'Unknown Program'
+            programName: this.currentProgramName || 'Unknown Program',
+            activeProgramId: this.activeProgramId
         });
     }
 
@@ -461,9 +468,27 @@ export class AutomationEngine {
                     // Determine duration if applicable
                     let duration = 0;
                     if (block.type === 'WAIT' && resolvedParamsForUI.duration) duration = Number(resolvedParamsForUI.duration);
-                    // Add other duration blocks here if needed
+                    // Calculate expected duration for ACTUATOR_SET
+                    if (block.type === 'ACTUATOR_SET' && resolvedParamsForUI.action) {
+                        // Duration depends on action type and calibration
+                        // This is an estimate - actual duration comes from the executor
+                        const amount = Number(resolvedParamsForUI.amount) || 1;
+                        if (resolvedParamsForUI.action === 'DOSE') {
+                            // Rough estimate: 1 dose ≈ 1.15 seconds (based on calibration)
+                            duration = amount * 1150; // ms
+                        } else if (resolvedParamsForUI.action === 'PULSE') {
+                            duration = Number(resolvedParamsForUI.duration) * 1000 || 0; // Convert to ms
+                        }
+                    }
 
-                    events.emit('automation:block_start', { blockId, type: block.type, sessionId: this.currentSessionId });
+                    events.emit('automation:block_start', {
+                        blockId,
+                        type: block.type,
+                        sessionId: this.currentSessionId,
+                        blockLabel: label,
+                        expectedDuration: duration,
+                        activeProgramId: this.activeProgramId
+                    });
 
                     // New Rich Execution Event
                     events.emit('automation:execution_step', {
@@ -500,11 +525,14 @@ export class AutomationEngine {
 
                 events.emit('automation:block_end', {
                     blockId,
+                    blockType: block.type,
+                    blockLabel: params.label || block.type, // Human-readable name
                     success: true,
                     output: result.output,
                     summary: finalSummary, // Pass Summary
                     sessionId: this.currentSessionId,
                     programName: this.currentProgramName, // Expose Flow Name for Logging
+                    activeProgramId: this.activeProgramId, // For ProgramLogService
                     // Pass Notification Config
                     notification: {
                         channelId: params.notificationChannelId,
@@ -576,9 +604,12 @@ export class AutomationEngine {
         // EMIT BLOCK_END (Failed) so frontend knows to close any groups
         events.emit('automation:block_end', {
             blockId,
+            blockType: block.type,
+            blockLabel: params.label || block.type,
             success: false,
             error: lastError?.message || 'Block Failed',
             sessionId: this.currentSessionId,
+            activeProgramId: this.activeProgramId,
             // Pass Notification Config
             notification: {
                 channelId: params.notificationChannelId,

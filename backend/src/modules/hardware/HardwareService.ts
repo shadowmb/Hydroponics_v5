@@ -79,7 +79,7 @@ export class HardwareService {
         driverId: string,
         command: string,
         params: Record<string, any> = {},
-        context: { pin?: number | string; pins?: any[]; address?: string } = {}
+        context: { pin?: number | string; pins?: any[]; address?: string; timeout?: number } = {}
     ): Promise<any> {
         const { DeviceModel } = await import('../../models/Device');
         const deviceDoc = await DeviceModel.findById(deviceId);
@@ -209,6 +209,7 @@ export class HardwareService {
             id: uuidv4(),
             cmd: packetData.cmd,
             deviceId,
+            timeout: context.timeout,
             ...packetData
         };
 
@@ -232,7 +233,9 @@ export class HardwareService {
         const { contextResolver } = await import('./HardwareContextResolver');
         const context = await contextResolver.resolveContext(device, this.readSensorValue.bind(this));
 
-        const rawResponse = await this.sendCommand(deviceId, device.config.driverId, 'READ', {}, context);
+        // Use 15s timeout for sensor reads to avoid premature timeouts
+        const readContext = { ...context, timeout: 15000 };
+        const rawResponse = await this.sendCommand(deviceId, device.config.driverId, 'READ', {}, readContext);
 
         const driverDoc = templates.getDriver(device.config.driverId);
         const valuePath = driverDoc.commands?.READ?.valuePath;
