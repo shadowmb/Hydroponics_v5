@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hydroponics Simulator - Control Panel</title>
+    <title>Hydroponics Simulator v2</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #eee;
             min-height: 100vh;
@@ -22,160 +22,208 @@
 
         h1 {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             color: #00d9ff;
-            text-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+        }
+
+        h2 {
+            color: #00d9ff;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            grid-template-columns: 300px 1fr 350px;
             gap: 20px;
         }
 
         .card {
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 16px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
         }
 
-        .card h2 {
-            margin-bottom: 20px;
-            color: #00d9ff;
-            font-size: 1.2em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* Controller Selection */
+        .controller-select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            background: #2a2a4a;
+            color: #fff;
+            border: 1px solid #444;
+            margin-bottom: 15px;
         }
 
-        .sensor-row {
+        /* Pin Grid */
+        .pin-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .pin-item {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .pin-item:hover {
+            border-color: #00d9ff;
+        }
+
+        .pin-item.assigned {
+            background: rgba(74, 222, 128, 0.2);
+            border-color: #4ade80;
+        }
+
+        .pin-item.selected {
+            border-color: #f59e0b;
+        }
+
+        .pin-label {
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .pin-type {
+            font-size: 0.75em;
+            color: #888;
+        }
+
+        .pin-sensor {
+            font-size: 0.75em;
+            color: #4ade80;
+            margin-top: 4px;
+        }
+
+        /* Sensor Selection Panel */
+        .sensor-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .sensor-item {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 6px;
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .sensor-row:last-child {
-            border-bottom: none;
+        .sensor-item:hover {
+            background: rgba(102, 126, 234, 0.3);
         }
 
-        .sensor-label {
+        .sensor-name {
             font-weight: 500;
-            color: #aaa;
         }
 
-        .sensor-value {
-            font-size: 1.4em;
-            font-weight: bold;
-            color: #4ade80;
+        .sensor-pins {
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        /* Assigned Sensors Panel */
+        .assigned-sensor {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .assigned-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .assigned-name {
+            font-weight: 600;
+        }
+
+        .assigned-pins {
+            font-size: 0.8em;
+            color: #00d9ff;
+        }
+
+        .btn-remove {
+            background: #f43f5e;
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .value-control {
+            margin-top: 8px;
+        }
+
+        .value-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            color: #aaa;
+            margin-bottom: 4px;
         }
 
         input[type="range"] {
-            width: 150px;
-            height: 8px;
-            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
             appearance: none;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            outline: none;
+            border-radius: 3px;
         }
 
         input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
+            appearance: none;
+            width: 16px;
+            height: 16px;
             background: #00d9ff;
             border-radius: 50%;
             cursor: pointer;
         }
 
         input[type="number"] {
-            width: 80px;
-            padding: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
+            width: 70px;
+            padding: 6px;
+            background: #2a2a4a;
+            border: 1px solid #444;
+            border-radius: 6px;
             color: #fff;
-            font-size: 1em;
             text-align: center;
         }
 
-        .relay-row {
+        /* Status Bar */
+        .status-bar {
+            grid-column: span 3;
             display: flex;
-            justify-content: space-between;
+            gap: 20px;
             align-items: center;
-            padding: 10px 0;
+            padding: 10px 16px;
         }
 
-        .toggle {
-            position: relative;
-            width: 60px;
-            height: 30px;
-            cursor: pointer;
-        }
-
-        .toggle input {
-            display: none;
-        }
-
-        .toggle .slider {
-            position: absolute;
-            inset: 0;
-            background: #333;
-            border-radius: 30px;
-            transition: 0.3s;
-        }
-
-        .toggle .slider::before {
-            content: '';
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            left: 3px;
-            top: 3px;
-            background: #fff;
-            border-radius: 50%;
-            transition: 0.3s;
-        }
-
-        .toggle input:checked+.slider {
-            background: #4ade80;
-        }
-
-        .toggle input:checked+.slider::before {
-            transform: translateX(30px);
-        }
-
-        .scenario-btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-            font-size: 1em;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .scenario-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .scenario-btn.stop {
-            background: linear-gradient(135deg, #f43f5e 0%, #ef4444 100%);
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .status-badge {
-            display: inline-block;
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.8em;
@@ -187,251 +235,385 @@
             color: #4ade80;
         }
 
-        .status-offline {
-            background: rgba(244, 63, 94, 0.2);
-            color: #f43f5e;
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
 
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1e1e3f;
+            padding: 24px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 1.2em;
+            margin-bottom: 16px;
+            color: #00d9ff;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #444;
+            color: white;
+        }
+
+        /* Log */
         .log-container {
             background: #0d0d0d;
             border-radius: 8px;
-            padding: 15px;
-            height: 200px;
+            padding: 12px;
+            height: 150px;
             overflow-y: auto;
             font-family: monospace;
-            font-size: 0.85em;
+            font-size: 0.8em;
         }
 
         .log-entry {
-            padding: 4px 0;
+            padding: 2px 0;
             border-bottom: 1px solid #222;
-        }
-
-        .log-in {
-            color: #60a5fa;
-        }
-
-        .log-out {
-            color: #4ade80;
-        }
-
-        .log-error {
-            color: #f43f5e;
-        }
-
-        #uptime {
-            color: #888;
-            font-size: 0.9em;
         }
     </style>
 </head>
 
 <body>
-    <h1>🌱 Hydroponics Hardware Simulator</h1>
+    <h1>🌱 Hydroponics Hardware Simulator v2</h1>
 
     <div class="container">
-        <!-- Status Card -->
-        <div class="card">
-            <h2>📡 Status</h2>
-            <div class="sensor-row">
-                <span class="sensor-label">Connection</span>
+        <!-- Status Bar -->
+        <div class="card status-bar">
+            <div class="status-item">
+                <span>Status:</span>
                 <span class="status-badge status-online" id="status">Online</span>
             </div>
-            <div class="sensor-row">
-                <span class="sensor-label">Uptime</span>
+            <div class="status-item">
+                <span>Controller:</span>
+                <strong id="controller-name">Loading...</strong>
+            </div>
+            <div class="status-item">
+                <span>Uptime:</span>
                 <span id="uptime">0s</span>
             </div>
-            <div class="sensor-row">
-                <span class="sensor-label">UDP Port</span>
+            <div class="status-item">
+                <span>UDP Port:</span>
                 <span>8888</span>
             </div>
         </div>
 
-        <!-- Sensors Card -->
+        <!-- Left: Controller & Pins -->
         <div class="card">
-            <h2>🌡️ Sensors</h2>
-            <div class="sensor-row">
-                <span class="sensor-label">pH</span>
-                <input type="number" id="sensor-pH" value="6.5" step="0.1" min="0" max="14"
-                    onchange="updateSensor('pH', this.value)">
-            </div>
-            <div class="sensor-row">
-                <span class="sensor-label">EC (mS/cm)</span>
-                <input type="number" id="sensor-EC" value="1.8" step="0.1" min="0" max="10"
-                    onchange="updateSensor('EC', this.value)">
-            </div>
-            <div class="sensor-row">
-                <span class="sensor-label">Temperature (°C)</span>
-                <input type="number" id="sensor-temperature" value="24" step="0.5" min="0" max="50"
-                    onchange="updateSensor('temperature', this.value)">
-            </div>
-            <div class="sensor-row">
-                <span class="sensor-label">Humidity (%)</span>
-                <input type="number" id="sensor-humidity" value="60" step="1" min="0" max="100"
-                    onchange="updateSensor('humidity', this.value)">
-            </div>
-            <div class="sensor-row">
-                <span class="sensor-label">Water Level (%)</span>
-                <input type="number" id="sensor-waterLevel" value="75" step="1" min="0" max="100"
-                    onchange="updateSensor('waterLevel', this.value)">
-            </div>
-            <div class="sensor-row">
-                <span class="sensor-label">Light (lux)</span>
-                <input type="number" id="sensor-light" value="500" step="50" min="0" max="10000"
-                    onchange="updateSensor('light', this.value)">
+            <h2>🎛️ Controller Pins</h2>
+            <select id="controller-select" class="controller-select"></select>
+            <div id="pin-grid" class="pin-grid"></div>
+        </div>
+
+        <!-- Center: Assigned Sensors -->
+        <div class="card">
+            <h2>📊 Active Sensors</h2>
+            <div id="assigned-sensors"></div>
+
+            <h2 style="margin-top: 20px;">📜 Command Log</h2>
+            <div id="log-container" class="log-container">
+                <div class="log-entry">Simulator v2 ready...</div>
             </div>
         </div>
 
-        <!-- Relays Card -->
+        <!-- Right: Sensor Catalog -->
         <div class="card">
-            <h2>⚡ Relays</h2>
-            <div id="relays-container">
-                <!-- Relay toggles will be added dynamically -->
-            </div>
+            <h2>📦 Sensor Catalog</h2>
+            <p style="color:#888; font-size:0.85em; margin-bottom:12px;">Select a pin, then click a sensor to assign.
+            </p>
+            <div id="sensor-list" class="sensor-list"></div>
         </div>
+    </div>
 
-        <!-- Scenarios Card -->
-        <div class="card">
-            <h2>🎬 Scenarios</h2>
-            <div id="scenarios-container">
-                <button class="scenario-btn" onclick="startScenario('ph_drift')">📉 pH Drift Down</button>
-                <button class="scenario-btn" onclick="startScenario('connection_test')">🔌 Connection Dropout</button>
-                <button class="scenario-btn" onclick="startScenario('random_fluctuation')">🎲 Random
-                    Fluctuation</button>
-                <button class="scenario-btn stop" onclick="stopScenario()">⏹️ Stop Scenario</button>
-            </div>
-        </div>
-
-        <!-- Command Log Card -->
-        <div class="card" style="grid-column: span 2;">
-            <h2>📜 Command Log</h2>
-            <div class="log-container" id="log-container">
-                <div class="log-entry">Simulator started...</div>
+    <!-- Pin Selection Modal -->
+    <div id="pin-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">Select Pins for <span id="modal-sensor-name"></span></div>
+            <p id="modal-pin-count" style="color:#888; margin-bottom:16px;"></p>
+            <div id="modal-pin-selectors"></div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn btn-primary" onclick="confirmAssignment()">Assign</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Create relay toggles
-        const relayPins = ['D4_4', 'D5_5', 'D6_6', 'D7_7', 'D8_8'];
-        const relaysContainer = document.getElementById('relays-container');
+        let selectedPins = [];
+        let pendingSensor = null;
+        let controllers = [];
+        let sensors = [];
+        let pins = [];
 
-        relayPins.forEach(pin => {
-            const row = document.createElement('div');
-            row.className = 'relay-row';
-            row.innerHTML = `
-                <span class="sensor-label">Relay ${pin}</span>
-                <label class="toggle">
-                    <input type="checkbox" id="relay-${pin}" onchange="toggleRelay('${pin}', this.checked)">
-                    <span class="slider"></span>
-                </label>
-            `;
-            relaysContainer.appendChild(row);
-        });
+        // ============ Initialization ============
 
-        // API functions
-        async function updateSensor(name, value) {
+        async function init() {
+            await loadControllers();
+            await loadSensors();
+            await loadPins();
+            await loadAssignments();
+            setInterval(refreshState, 1000);
+        }
+
+        async function loadControllers() {
+            const res = await fetch('/api/controllers');
+            controllers = await res.json();
+
+            const select = document.getElementById('controller-select');
+            select.innerHTML = controllers.map(c =>
+                `<option value="${c.key}">${c.label}</option>`
+            ).join('');
+
+            select.addEventListener('change', async (e) => {
+                await fetch(`/api/controller/${e.target.value}`, { method: 'POST' });
+                await loadPins();
+                await loadAssignments();
+            });
+        }
+
+        async function loadSensors() {
+            const res = await fetch('/api/sensors');
+            sensors = await res.json();
+
+            const container = document.getElementById('sensor-list');
+            container.innerHTML = sensors.map(s => `
+                <div class="sensor-item" onclick="startAssignment('${s.id}')">
+                    <span class="sensor-name">${s.name}</span>
+                    <span class="sensor-pins">${s.pinCount} pin${s.pinCount > 1 ? 's' : ''}</span>
+                </div>
+            `).join('');
+        }
+
+        async function loadPins() {
+            const res = await fetch('/api/pins');
+            pins = await res.json();
+
+            const grid = document.getElementById('pin-grid');
+            grid.innerHTML = pins.map(p => `
+                <div class="pin-item ${p.assigned ? 'assigned' : ''}" 
+                     id="pin-${p.id}" 
+                     onclick="togglePinSelection('${p.id}_${p.pin}')">
+                    <div class="pin-label">${p.id}</div>
+                    <div class="pin-type">${p.type}${p.pwm ? ' (PWM)' : ''}</div>
+                    ${p.sensorId ? `<div class="pin-sensor">${p.sensorId}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function loadAssignments() {
+            const res = await fetch('/api/assignments');
+            const assignments = await res.json();
+
+            const container = document.getElementById('assigned-sensors');
+
+            if (assignments.length === 0) {
+                container.innerHTML = '<p style="color:#666; text-align:center; padding:20px;">No sensors assigned yet.<br>Select pins and assign sensors from the catalog.</p>';
+                return;
+            }
+
+            container.innerHTML = assignments.map(a => `
+                <div class="assigned-sensor">
+                    <div class="assigned-header">
+                        <div>
+                            <div class="assigned-name">${a.sensorName}</div>
+                            <div class="assigned-pins">Pins: ${a.pins.join(', ')}</div>
+                        </div>
+                        <button class="btn-remove" onclick="unassign('${a.pins[0]}')">✕</button>
+                    </div>
+                    ${Object.entries(a.values).map(([key, val]) => `
+                        <div class="value-control">
+                            <div class="value-label">
+                                <span>${key} ${a.rawUnit ? `(${a.rawUnit})` : ''}</span>
+                                <span id="val-${a.pins[0]}-${key}">${val}</span>
+                            </div>
+                            <input type="range" 
+                                   min="${a.limits?.min || 0}" 
+                                   max="${a.limits?.max || 1023}" 
+                                   value="${val}"
+                                   oninput="updateValue('${a.pins[0]}', '${key}', this.value)">
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        // ============ Pin Selection ============
+
+        function togglePinSelection(pinId) {
+            const idx = selectedPins.indexOf(pinId);
+            if (idx >= 0) {
+                selectedPins.splice(idx, 1);
+            } else {
+                selectedPins.push(pinId);
+            }
+            updatePinHighlights();
+        }
+
+        function updatePinHighlights() {
+            document.querySelectorAll('.pin-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            selectedPins.forEach(pinId => {
+                const id = pinId.split('_')[0];
+                const el = document.getElementById(`pin-${id}`);
+                if (el) el.classList.add('selected');
+            });
+        }
+
+        // ============ Assignment ============
+
+        function startAssignment(sensorId) {
+            const sensor = sensors.find(s => s.id === sensorId);
+            if (!sensor) return;
+
+            if (sensor.pinCount === 1 && selectedPins.length === 1) {
+                // Direct assignment for single-pin sensors
+                assignSensor(sensorId, selectedPins);
+            } else if (sensor.pinCount === selectedPins.length) {
+                // Direct assignment if correct pins selected
+                assignSensor(sensorId, selectedPins);
+            } else {
+                // Show modal for pin selection
+                pendingSensor = sensor;
+                showPinModal(sensor);
+            }
+        }
+
+        function showPinModal(sensor) {
+            document.getElementById('modal-sensor-name').textContent = sensor.name;
+            document.getElementById('modal-pin-count').textContent =
+                `This sensor requires ${sensor.pinCount} pin(s). Select from the dropdowns:`;
+
+            const selectorsDiv = document.getElementById('modal-pin-selectors');
+            selectorsDiv.innerHTML = '';
+
+            const availablePins = pins.filter(p => !p.assigned);
+
+            for (let i = 0; i < sensor.pinCount; i++) {
+                const div = document.createElement('div');
+                div.style.marginBottom = '10px';
+                div.innerHTML = `
+                    <label style="display:block; margin-bottom:5px; color:#aaa;">Pin ${i + 1}:</label>
+                    <select class="controller-select" id="modal-pin-${i}">
+                        ${availablePins.map(p =>
+                    `<option value="${p.id}_${p.pin}">${p.id} (${p.type})</option>`
+                ).join('')}
+                    </select>
+                `;
+                selectorsDiv.appendChild(div);
+            }
+
+            document.getElementById('pin-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('pin-modal').classList.remove('active');
+            pendingSensor = null;
+        }
+
+        async function confirmAssignment() {
+            if (!pendingSensor) return;
+
+            const selectedModalPins = [];
+            for (let i = 0; i < pendingSensor.pinCount; i++) {
+                const select = document.getElementById(`modal-pin-${i}`);
+                if (select) selectedModalPins.push(select.value);
+            }
+
+            await assignSensor(pendingSensor.id, selectedModalPins);
+            closeModal();
+        }
+
+        async function assignSensor(sensorId, pinList) {
             try {
-                await fetch(`/api/sensor/${name}`, {
+                const res = await fetch('/api/assign', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ value: parseFloat(value) })
+                    body: JSON.stringify({ sensorId, pins: pinList })
                 });
-                addLog(`Sensor ${name} = ${value}`, 'out');
+
+                if (res.ok) {
+                    addLog(`Assigned ${sensorId} to ${pinList.join(', ')}`);
+                    selectedPins = [];
+                    await loadPins();
+                    await loadAssignments();
+                }
             } catch (e) {
-                addLog(`Error updating ${name}`, 'error');
+                addLog('Assignment failed', 'error');
             }
         }
 
-        async function toggleRelay(pin, state) {
-            try {
-                await fetch(`/api/relay/${pin}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ state: state ? 1 : 0 })
-                });
-                addLog(`Relay ${pin} = ${state ? 'ON' : 'OFF'}`, 'out');
-            } catch (e) {
-                addLog(`Error toggling ${pin}`, 'error');
-            }
+        async function unassign(pin) {
+            await fetch(`/api/assign/${pin}`, { method: 'DELETE' });
+            await loadPins();
+            await loadAssignments();
+            addLog(`Unassigned pin ${pin}`);
         }
 
-        async function startScenario(name) {
-            try {
-                await fetch(`/api/scenario/${name}/start`, { method: 'POST' });
-                addLog(`Started scenario: ${name}`, 'in');
-            } catch (e) {
-                addLog(`Error starting scenario`, 'error');
-            }
+        // ============ Value Updates ============
+
+        async function updateValue(pin, key, value) {
+            document.getElementById(`val-${pin}-${key}`).textContent = value;
+            await fetch(`/api/value/${pin}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, value: parseFloat(value) })
+            });
         }
 
-        async function stopScenario() {
-            try {
-                await fetch('/api/scenario/stop', { method: 'POST' });
-                addLog('Stopped scenario', 'in');
-            } catch (e) {
-                addLog('Error stopping scenario', 'error');
-            }
-        }
+        // ============ State Refresh ============
 
-        function addLog(message, type = 'in') {
-            const container = document.getElementById('log-container');
-            const time = new Date().toLocaleTimeString();
-            const entry = document.createElement('div');
-            entry.className = `log-entry log-${type}`;
-            entry.textContent = `[${time}] ${message}`;
-            container.appendChild(entry);
-            container.scrollTop = container.scrollHeight;
-
-            // Keep only last 100 entries
-            while (container.children.length > 100) {
-                container.removeChild(container.firstChild);
-            }
-        }
-
-        // Polling for state updates
         async function refreshState() {
             try {
                 const res = await fetch('/api/state');
                 const state = await res.json();
 
-                // Update uptime
-                document.getElementById('uptime').textContent =
-                    Math.floor(state.uptime / 1000) + 's';
-
-                // Update sensors
-                for (const [name, sensor] of Object.entries(state.sensors)) {
-                    const input = document.getElementById(`sensor-${name}`);
-                    if (input) {
-                        input.value = sensor.value.toFixed(1);
-                    }
-                }
-
-                // Update relays
-                for (const [pin, relay] of Object.entries(state.relays)) {
-                    const checkbox = document.getElementById(`relay-${pin}`);
-                    if (checkbox) {
-                        checkbox.checked = relay.state === 1;
-                    }
-                }
-
-                // Update status
-                const statusEl = document.getElementById('status');
-                if (state.isOffline) {
-                    statusEl.textContent = 'Offline';
-                    statusEl.className = 'status-badge status-offline';
-                } else {
-                    statusEl.textContent = 'Online';
-                    statusEl.className = 'status-badge status-online';
-                }
-            } catch (e) {
-                console.error('Failed to refresh state', e);
-            }
+                document.getElementById('uptime').textContent = Math.floor(state.uptime / 1000) + 's';
+                document.getElementById('controller-name').textContent = state.controller;
+            } catch (e) { }
         }
 
-        // Refresh every 500ms
-        setInterval(refreshState, 500);
-        refreshState();
+        // ============ Logging ============
+
+        function addLog(message, type = 'info') {
+            const container = document.getElementById('log-container');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.color = type === 'error' ? '#f43f5e' : '#4ade80';
+            entry.textContent = `[${time}] ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Initialize
+        init();
     </script>
 </body>
 

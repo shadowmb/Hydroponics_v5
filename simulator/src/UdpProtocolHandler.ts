@@ -1,12 +1,14 @@
 /**
- * UdpProtocolHandler - Parses UDP commands and generates responses
+ * UdpProtocolHandler v2 - Pin-based sensor resolution
  * 
- * Implements the same protocol as real firmware:
- * - Command format: CMD|PARAM1|PARAM2|...
- * - Response format: JSON { "ok": 1, "data": ... } or { "ok": 0, "error": "..." }
+ * Now uses PinAssignmentManager to determine:
+ * - What sensor is assigned to which pin
+ * - What values to return based on sensor type
  */
 
-import { DeviceState } from './DeviceState.js';
+import { DeviceState } from './DeviceState';
+import { PinAssignmentManager } from './PinAssignmentManager';
+import { SensorRegistry } from './SensorRegistry';
 
 interface ControllerInfo {
     mac: string;
@@ -16,6 +18,8 @@ interface ControllerInfo {
 
 export class UdpProtocolHandler {
     private deviceState: DeviceState;
+    private pinManager: PinAssignmentManager;
+    private sensorRegistry: SensorRegistry;
     private info: ControllerInfo;
     private capabilities: string[] = [
         'ANALOG', 'DIGITAL_READ', 'DIGITAL_WRITE', 'RELAY_SET',
@@ -23,42 +27,44 @@ export class UdpProtocolHandler {
         'ULTRASONIC_TRIG_ECHO', 'I2C_READ', 'MODBUS_RTU_READ', 'UART_READ_DISTANCE'
     ];
 
-    constructor(deviceState: DeviceState, info: ControllerInfo) {
+    constructor(
+        deviceState: DeviceState,
+        pinManager: PinAssignmentManager,
+        sensorRegistry: SensorRegistry,
+        info: ControllerInfo
+    ) {
         this.deviceState = deviceState;
+        this.pinManager = pinManager;
+        this.sensorRegistry = sensorRegistry;
         this.info = info;
     }
 
     /**
      * Main command handler
-     * Returns null if command should be ignored (timeout simulation)
      */
     handleCommand(rawCommand: string): object | string | null {
         const command = rawCommand.trim();
 
-        // Check if offline simulation is active
+        // Error injection checks
         if (this.deviceState.getIsOffline()) {
             console.log('[PROTO] Simulating offline - no response');
             return null;
         }
 
-        // Parse command and parameters
         const parts = command.split('|');
         const cmd = parts[0];
         const params = parts.slice(1);
 
-        // Check if command is blocked (timeout simulation)
         if (this.deviceState.isCommandBlocked(cmd)) {
             console.log(`[PROTO] Command ${cmd} blocked - simulating timeout`);
             return null;
         }
 
-        // Check if should return invalid response
         if (this.deviceState.shouldReturnInvalid(cmd)) {
             console.log(`[PROTO] Command ${cmd} - simulating invalid response`);
             return 'INVALID_RESPONSE{{{broken_json';
         }
 
-        // Route to handler
         try {
             return this.routeCommand(cmd, params);
         } catch (e: any) {
@@ -83,28 +89,28 @@ export class UdpProtocolHandler {
                 return {
                     ok: 1,
                     up: this.deviceState.getUptime(),
-                    mem: 32768, // Simulated free memory
+                    mem: 32768,
                     ver: this.info.firmwareVersion,
                     capabilities: this.capabilities
                 };
 
             case 'RESET':
-                console.log('[PROTO] Reset command received - simulating reset');
+                console.log('[PROTO] Reset command received');
                 return { ok: 1, msg: 'Resetting...' };
 
             case 'HYDROPONICS_DISCOVERY':
                 return {
                     type: 'ANNOUNCE',
                     mac: this.info.mac,
-                    ip: '127.0.0.1', // Local simulator
+                    ip: '127.0.0.1',
                     model: this.info.model,
                     firmware: this.info.firmwareVersion,
                     capabilities: this.capabilities
                 };
 
-            // ============ Sensor Commands ============
+            // ============ Sensor Commands (Pin-Based) ============
             case 'ANALOG':
-                return this.handleAnalog(params);
+                return this.handlePinBasedCommand(cmd, params, 'value');
 
             case 'DIGITAL_READ':
                 return this.handleDigitalRead(params);
@@ -113,13 +119,13 @@ export class UdpProtocolHandler {
                 return this.handleDhtRead(params);
 
             case 'ONEWIRE_READ_TEMP':
-                return this.handleOneWireTemp(params);
+                return this.handlePinBasedCommand(cmd, params, 'value');
 
             case 'ULTRASONIC_TRIG_ECHO':
-                return this.handleUltrasonic(params);
+                return this.handleMultiPinCommand(cmd, params);
 
             case 'UART_READ_DISTANCE':
-                return this.handleUartDistance(params);
+                return this.handleMultiPinCommand(cmd, params);
 
             case 'I2C_READ':
                 return this.handleI2cRead(params);
@@ -140,21 +146,98 @@ export class UdpProtocolHandler {
             case 'SERVO_WRITE':
                 return this.handleServoWrite(params);
 
-            // ============ Unknown Command ============
             default:
                 return { ok: 0, error: 'ERR_INVALID_COMMAND' };
         }
     }
 
-    // ============ Sensor Handlers ============
+    // ============ Pin-Based Sensor Handlers ============
 
-    private handleAnalog(params: string[]): object {
+    /**
+     * Handle single-pin commands (ANALOG, ONEWIRE_READ_TEMP)
+     * Uses pin assignment to get correct value
+     * 
+     * IMPORTANT: For ANALOG commands, backend expects raw value in 'value' key
+     * (based on template valuePath). The ConversionService handles the rest.
+     */
+    private handlePinBasedCommand(cmd: string, params: string[], defaultKey: string): object {
         if (params.length < 1) {
             return { ok: 0, error: 'ERR_MISSING_PIN' };
         }
+
         const pin = params[0];
-        const value = this.deviceState.getAnalogValue(pin);
-        return { ok: 1, value };
+        const assignment = this.pinManager.getAssignment(pin);
+
+        if (!assignment) {
+            // No sensor assigned - return default/random value
+            console.log(`[PROTO] No sensor assigned to ${pin}, returning default`);
+            return { ok: 1, [defaultKey]: Math.floor(Math.random() * 1024) };
+        }
+
+        // Get values from assignment
+        const values = assignment.values;
+        const sensor = this.sensorRegistry.getSensor(assignment.sensorId);
+
+        // Get valuePath from template - this is the key backend expects
+        const valuePath = sensor?.commands['READ']?.valuePath || defaultKey;
+
+        // For ANALOG sensors, return raw value in the expected key (usually 'value')
+        // The first value in our values map is the raw reading
+        const firstValueKey = Object.keys(values)[0];
+        const rawValue = values[firstValueKey] ?? 0;
+
+        console.log(`[PROTO] Pin ${pin} (${assignment.sensorId}) → {"ok":1,"${valuePath}":${rawValue}}`);
+        return { ok: 1, [valuePath]: rawValue };
+    }
+
+    /**
+     * Handle multi-pin commands (ULTRASONIC, UART_DISTANCE)
+     * Uses first pin for assignment lookup
+     */
+    private handleMultiPinCommand(cmd: string, params: string[]): object {
+        if (params.length < 2) {
+            return { ok: 0, error: 'ERR_MISSING_PINS' };
+        }
+
+        // Use first pin (TRIG or RX) for lookup
+        const primaryPin = params[0];
+        const assignment = this.pinManager.getAssignment(primaryPin);
+
+        if (!assignment) {
+            console.log(`[PROTO] No sensor assigned to ${primaryPin}, returning default distance`);
+            return { ok: 1, distance: Math.floor(Math.random() * 400) };
+        }
+
+        // Get distance value from assignment
+        const values = assignment.values;
+        const distance = values['distance'] ?? values['value'] ?? 100;
+
+        console.log(`[PROTO] Multi-pin ${primaryPin} (${assignment.sensorId}) → distance: ${distance}`);
+        return { ok: 1, distance };
+    }
+
+    /**
+     * Handle DHT_READ - returns both temp and humidity
+     */
+    private handleDhtRead(params: string[]): object {
+        if (params.length < 1) {
+            return { ok: 0, error: 'ERR_MISSING_PIN' };
+        }
+
+        const pin = params[0];
+        const assignment = this.pinManager.getAssignment(pin);
+
+        if (!assignment) {
+            // Default values
+            return { ok: 1, temp: 25.0, humidity: 50.0 };
+        }
+
+        const values = assignment.values;
+        return {
+            ok: 1,
+            temp: values['temp'] ?? 25.0,
+            humidity: values['humidity'] ?? 50.0
+        };
     }
 
     private handleDigitalRead(params: string[]): object {
@@ -166,36 +249,11 @@ export class UdpProtocolHandler {
         return { ok: 1, value };
     }
 
-    private handleDhtRead(params: string[]): object {
-        const temp = this.deviceState.getSensorValue('temperature');
-        const humidity = this.deviceState.getSensorValue('humidity');
-        return { ok: 1, temp, humidity };
-    }
-
-    private handleOneWireTemp(params: string[]): object {
-        const value = this.deviceState.getSensorValue('temperature');
-        return { ok: 1, value };
-    }
-
-    private handleUltrasonic(params: string[]): object {
-        // Returns distance in cm
-        const waterLevel = this.deviceState.getSensorValue('waterLevel');
-        // Simulate: 100cm tank, waterLevel is percentage
-        const distance = 100 - waterLevel; // cm from sensor to water surface
-        return { ok: 1, value: distance };
-    }
-
-    private handleUartDistance(params: string[]): object {
-        const waterLevel = this.deviceState.getSensorValue('waterLevel');
-        const distance = (100 - waterLevel) * 10; // mm
-        return { ok: 1, value: distance };
-    }
-
     private handleI2cRead(params: string[]): object {
         if (params.length < 2) {
             return { ok: 0, error: 'ERR_MISSING_PARAMS' };
         }
-        // Simulate I2C response (e.g., light sensor BH1750)
+        // Simulate I2C response
         const light = this.deviceState.getSensorValue('light');
         const highByte = Math.floor(light / 256);
         const lowByte = light % 256;
@@ -209,10 +267,12 @@ export class UdpProtocolHandler {
         try {
             const jsonParams = JSON.parse(params[0]);
             const len = jsonParams.len || 1;
-            // Return simulated register values
+
+            // Check if we have PAR sensor or similar assigned
+            // For now, return random values
             const registers: number[] = [];
             for (let i = 0; i < len; i++) {
-                registers.push(Math.floor(Math.random() * 65535));
+                registers.push(Math.floor(Math.random() * 2500)); // PAR range
             }
             return { ok: 1, registers };
         } catch (e) {
