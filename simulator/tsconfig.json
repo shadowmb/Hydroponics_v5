@@ -1,8 +1,8 @@
 {
     "compilerOptions": {
         "target": "ES2022",
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
         "esModuleInterop": true,
         "strict": true,
         "skipLibCheck": true,
@@ -11,11 +11,7 @@
         "rootDir": "./src",
         "resolveJsonModule": true,
         "declaration": true,
-        "paths": {
-            "@shared/*": [
-                "../shared/*"
-            ]
-        }
+        "noEmit": true
     },
     "include": [
         "src/**/*"

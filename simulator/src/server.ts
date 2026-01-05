@@ -9,9 +9,9 @@ import dgram from 'dgram';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { DeviceState } from './DeviceState.js';
-import { UdpProtocolHandler } from './UdpProtocolHandler.js';
-import { ScenarioEngine } from './ScenarioEngine.js';
+import { DeviceState } from './DeviceState';
+import { UdpProtocolHandler } from './UdpProtocolHandler';
+import { ScenarioEngine } from './ScenarioEngine';
 
 // ES Module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
