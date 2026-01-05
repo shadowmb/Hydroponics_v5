@@ -34,7 +34,7 @@ export interface SensorTemplate {
     name: string;
     description: string;
     category: 'SENSOR' | 'ACTUATOR';
-    measurements?: Record<string, { rawUnit: string; baseUnit: string }>;
+    measurements?: Record<string, { rawUnit: string; baseUnit: string; min?: number; max?: number }>;
     hardwareLimits?: { min: number; max: number; unit: string };
     commands: Record<string, SensorCommand>;
     pins: SensorPin[];
@@ -109,6 +109,30 @@ export class SensorRegistry {
 
         const readCmd = sensor.commands['READ'] || sensor.commands['TOGGLE'];
         return readCmd?.hardwareCmd;
+    }
+
+    getAllRawUnits(sensorId: string): Record<string, string> {
+        const sensor = this.sensors.get(sensorId);
+        if (!sensor?.measurements) return {};
+
+        const units: Record<string, string> = {};
+        for (const [key, meta] of Object.entries(sensor.measurements)) {
+            units[key] = meta.rawUnit;
+        }
+        return units;
+    }
+
+    getAllLimits(sensorId: string): Record<string, { min?: number; max?: number }> {
+        const sensor = this.sensors.get(sensorId);
+        if (!sensor?.measurements) return {};
+
+        const limits: Record<string, { min?: number; max?: number }> = {};
+        for (const [key, meta] of Object.entries(sensor.measurements)) {
+            if (meta.min !== undefined && meta.max !== undefined) {
+                limits[key] = { min: meta.min, max: meta.max };
+            }
+        }
+        return limits;
     }
 
     getRawUnit(sensorId: string): string | undefined {

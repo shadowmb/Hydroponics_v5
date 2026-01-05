@@ -6,11 +6,15 @@
     "measurements": {
         "temp": {
             "rawUnit": "C",
-            "baseUnit": "C"
+            "baseUnit": "C",
+            "min": -40,
+            "max": 80
         },
         "humidity": {
             "rawUnit": "%",
-            "baseUnit": "%"
+            "baseUnit": "%",
+            "min": 0,
+            "max": 100
         }
     },
     "roles": {

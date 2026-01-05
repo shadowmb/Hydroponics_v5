@@ -53,6 +53,9 @@ const scenarioEngine = new ScenarioEngine(deviceState);
 // Active controller selection
 let activeController = 'Arduino_Uno_R4_WiFi';
 
+// SSE clients for real-time UDP log
+const sseClients: Set<any> = new Set();
+
 // ============ UDP Server ============
 
 const udpServer = dgram.createSocket('udp4');
@@ -64,7 +67,16 @@ udpServer.on('error', (err) => {
 
 udpServer.on('message', (msg, rinfo) => {
     const command = msg.toString().trim();
+    const timestamp = new Date().toISOString();
     console.log(`[UDP] ← ${rinfo.address}:${rinfo.port} | ${command}`);
+
+    // Broadcast incoming command to SSE clients
+    broadcastToSSE({
+        type: 'incoming',
+        from: `${rinfo.address}:${rinfo.port}`,
+        command,
+        timestamp
+    });
 
     const response = protocolHandler.handleCommand(command);
 
@@ -72,11 +84,30 @@ udpServer.on('message', (msg, rinfo) => {
         const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
         console.log(`[UDP] → ${responseStr}`);
 
+        // Broadcast response to SSE clients
+        broadcastToSSE({
+            type: 'outgoing',
+            response: responseStr,
+            timestamp
+        });
+
         udpServer.send(responseStr, rinfo.port, rinfo.address, (err) => {
             if (err) console.error('[UDP] Send error:', err);
         });
     }
 });
+
+// Helper to broadcast to all SSE clients
+function broadcastToSSE(data: any) {
+    const message = `data: ${JSON.stringify(data)}\n\n`;
+    for (const client of sseClients) {
+        try {
+            client.write(message);
+        } catch (e) {
+            sseClients.delete(client);
+        }
+    }
+}
 
 udpServer.on('listening', () => {
     const address = udpServer.address();
@@ -90,6 +121,28 @@ udpServer.bind(UDP_PORT);
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
+
+// ---------- SSE Endpoint for UDP Log ----------
+
+app.get('/api/udp-log', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({ type: 'connected', message: 'UDP Log stream connected' })}\n\n`);
+
+    // Add client to SSE set
+    sseClients.add(res);
+    console.log(`[SSE] Client connected. Total: ${sseClients.size}`);
+
+    // Remove client on disconnect
+    req.on('close', () => {
+        sseClients.delete(res);
+        console.log(`[SSE] Client disconnected. Total: ${sseClients.size}`);
+    });
+});
 
 // ---------- Controller API ----------
 

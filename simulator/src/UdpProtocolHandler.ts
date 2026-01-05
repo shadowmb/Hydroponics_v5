@@ -169,9 +169,9 @@ export class UdpProtocolHandler {
         const assignment = this.pinManager.getAssignment(pin);
 
         if (!assignment) {
-            // No sensor assigned - return default/random value
-            console.log(`[PROTO] No sensor assigned to ${pin}, returning default`);
-            return { ok: 1, [defaultKey]: Math.floor(Math.random() * 1024) };
+            // No sensor assigned - return error for easier debugging
+            console.log(`[PROTO] No sensor assigned to ${pin}, returning error`);
+            return { ok: 0, error: 'ERR_NO_SENSOR_ASSIGNED' };
         }
 
         // Get values from assignment
@@ -204,8 +204,8 @@ export class UdpProtocolHandler {
         const assignment = this.pinManager.getAssignment(primaryPin);
 
         if (!assignment) {
-            console.log(`[PROTO] No sensor assigned to ${primaryPin}, returning default distance`);
-            return { ok: 1, distance: Math.floor(Math.random() * 400) };
+            console.log(`[PROTO] No sensor assigned to ${primaryPin}, returning error`);
+            return { ok: 0, error: 'ERR_NO_SENSOR_ASSIGNED' };
         }
 
         // Get distance value from assignment

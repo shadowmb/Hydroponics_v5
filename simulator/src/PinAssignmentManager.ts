@@ -21,8 +21,10 @@ export interface AssignedSensorInfo {
     pins: string[];
     hardwareCmd: string;
     values: Record<string, number>;
-    limits?: { min: number; max: number };
+    limits?: { min: number; max: number; unit: string };
+    perKeyLimits?: Record<string, { min?: number; max?: number }>;
     rawUnit?: string;
+    units?: Record<string, string>; // Per-key units (e.g. { temp: 'C', humidity: '%' })
 }
 
 export class PinAssignmentManager {
@@ -94,9 +96,22 @@ export class PinAssignmentManager {
 
     /**
      * Get assignment by any of its pins
+     * Supports lookup by full ID ("D11_11") or just GPIO number ("11")
      */
     getAssignment(pin: string): PinAssignment | undefined {
-        return this.assignments.get(pin);
+        // 1. Try exact match (e.g. "D11_11")
+        if (this.assignments.has(pin)) {
+            return this.assignments.get(pin);
+        }
+
+        // 2. Try looking up by suffix (e.g. find "D11_11" when searching for "11")
+        for (const key of this.assignments.keys()) {
+            if (key.endsWith(`_${pin}`)) {
+                return this.assignments.get(key);
+            }
+        }
+
+        return undefined;
     }
 
     /**
@@ -144,9 +159,20 @@ export class PinAssignmentManager {
             // For ANALOG sensors, use ADC limits (0-1023 for 10-bit, 0-16383 for 14-bit)
             const hwCmd = this.sensorRegistry.getHardwareCommand(assignment.sensorId) || '';
             const isAnalog = hwCmd === 'ANALOG';
-            const limits = isAnalog
-                ? { min: 0, max: 1023, unit: 'adc' }  // Standard Arduino ADC range
-                : sensor.hardwareLimits;
+
+            // Determine limits
+            let limits = sensor.hardwareLimits;
+            if (isAnalog) {
+                limits = { min: 0, max: 1023, unit: 'adc' };
+            }
+
+            // Get per-key limits
+            const perKeyLimits = this.sensorRegistry.getAllLimits(assignment.sensorId);
+
+            // Get per-key units
+            const units = isAnalog
+                ? { value: 'adc' }
+                : this.sensorRegistry.getAllRawUnits(assignment.sensorId);
 
             result.push({
                 sensorId: assignment.sensorId,
@@ -155,7 +181,9 @@ export class PinAssignmentManager {
                 hardwareCmd: hwCmd,
                 values: assignment.values,
                 limits,
-                rawUnit: isAnalog ? 'adc' : this.sensorRegistry.getRawUnit(assignment.sensorId)
+                perKeyLimits,
+                rawUnit: isAnalog ? 'adc' : this.sensorRegistry.getRawUnit(assignment.sensorId),
+                units
             });
         }
 

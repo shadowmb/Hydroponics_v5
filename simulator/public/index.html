@@ -438,29 +438,34 @@
             }
 
             container.innerHTML = assignments.map(a => `
-                <div class="assigned-sensor">
-                    <div class="assigned-header">
-                        <div>
-                            <div class="assigned-name">${a.sensorName}</div>
-                            <div class="assigned-pins">Pins: ${a.pins.join(', ')}</div>
-                        </div>
-                        <button class="btn-remove" onclick="unassign('${a.pins[0]}')">✕</button>
-                    </div>
-                    ${Object.entries(a.values).map(([key, val]) => `
-                        <div class="value-control">
-                            <div class="value-label">
-                                <span>${key} ${a.rawUnit ? `(${a.rawUnit})` : ''}</span>
-                                <span id="val-${a.pins[0]}-${key}">${val}</span>
+                    <div class="assigned-sensor">
+                        <div class="assigned-header">
+                            <div>
+                                <div class="assigned-name">${a.sensorName}</div>
+                                <div class="assigned-pins">Pins: ${a.pins.join(', ')}</div>
                             </div>
-                            <input type="range" 
-                                   min="${a.limits?.min || 0}" 
-                                   max="${a.limits?.max || 1023}" 
-                                   value="${val}"
-                                   oninput="updateValue('${a.pins[0]}', '${key}', this.value)">
+                            <button class="btn-remove" onclick="unassign('${a.pins[0]}')">✕</button>
                         </div>
-                    `).join('')}
-                </div>
-            `).join('');
+                        ${Object.entries(a.values).map(([key, val]) => {
+                const unit = a.units?.[key] || a.rawUnit || '';
+                const limits = a.perKeyLimits?.[key] || a.limits || { min: 0, max: 1023 };
+
+                return `
+                            <div class="value-control">
+                                <div class="value-label">
+                                    <span>${key} ${unit ? `(${unit})` : ''}</span>
+                                    <span id="val-${a.pins[0]}-${key}">${val}</span>
+                                </div>
+                                <input type="range" 
+                                       min="${limits.min}" 
+                                       max="${limits.max}" 
+                                       value="${val}"
+                                       oninput="updateValue('${a.pins[0]}', '${key}', this.value)">
+                            </div>
+                            `;
+            }).join('')}
+                    </div>
+                `).join('');
         }
 
         // ============ Pin Selection ============
@@ -606,14 +611,58 @@
             const time = new Date().toLocaleTimeString();
             const entry = document.createElement('div');
             entry.className = 'log-entry';
-            entry.style.color = type === 'error' ? '#f43f5e' : '#4ade80';
+            entry.style.color = type === 'error' ? '#f43f5e' :
+                type === 'incoming' ? '#ffb300' :
+                    type === 'outgoing' ? '#4ade80' : '#4ade80';
             entry.textContent = `[${time}] ${message}`;
             container.appendChild(entry);
             container.scrollTop = container.scrollHeight;
+
+            // Keep log size manageable
+            while (container.children.length > 100) {
+                container.removeChild(container.firstChild);
+            }
+        }
+
+        // ============ SSE UDP Log Connection ============
+
+        function connectToUdpLog() {
+            const eventSource = new EventSource('/api/udp-log');
+
+            eventSource.onopen = () => {
+                addLog('📡 Connected to UDP log stream', 'info');
+            };
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'connected') {
+                        // Initial connection message, already logged
+                        return;
+                    }
+
+                    if (data.type === 'incoming') {
+                        // Command from backend
+                        addLog(`← ${data.from} | ${data.command}`, 'incoming');
+                    } else if (data.type === 'outgoing') {
+                        // Response to backend
+                        addLog(`→ ${data.response}`, 'outgoing');
+                    }
+                } catch (e) {
+                    console.error('Error parsing SSE message:', e);
+                }
+            };
+
+            eventSource.onerror = () => {
+                addLog('⚠️ UDP log connection lost, reconnecting...', 'error');
+                // EventSource will auto-reconnect
+            };
         }
 
         // Initialize
         init();
+        connectToUdpLog();
     </script>
 </body>
 
