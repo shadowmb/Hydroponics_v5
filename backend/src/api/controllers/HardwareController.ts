@@ -916,6 +916,8 @@ export class HardwareController {
                 type: body.type,
                 hardware: body.hardware,
                 config: body.config,
+                metadata: body.metadata,
+                isEnabled: body.isEnabled,
                 tags: mergedTags, // Add tags support
                 group: template.uiConfig?.category || 'Other' // Auto-populate group from template
             });
