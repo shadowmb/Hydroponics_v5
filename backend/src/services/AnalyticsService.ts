@@ -106,7 +106,6 @@ export class AnalyticsService {
      * Get all available filter options for a program, respecting current selections (Cascading)
      */
     async getFilterOptions(filters: AnalyticsFilters): Promise<FilterOptions> {
-        console.log('DEBUG: getFilterOptions called with:', JSON.stringify(filters, null, 2));
 
         // Base match for Program and Date
         const baseMatch: any = {
