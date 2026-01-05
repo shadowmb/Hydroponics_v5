@@ -451,16 +451,28 @@
                 const limits = a.perKeyLimits?.[key] || a.limits || { min: 0, max: 1023 };
 
                 return `
-                            <div class="value-control">
-                                <div class="value-label">
+                            <div class="value-control mb-2">
+                                <div class="value-label text-xs mb-1 text-slate-400">
                                     <span>${key} ${unit ? `(${unit})` : ''}</span>
-                                    <span id="val-${a.pins[0]}-${key}">${val}</span>
                                 </div>
-                                <input type="range" 
-                                       min="${limits.min}" 
-                                       max="${limits.max}" 
-                                       value="${val}"
-                                       oninput="updateValue('${a.pins[0]}', '${key}', this.value)">
+                                <div class="flex gap-2 items-center">
+                                    <input type="range" 
+                                           id="range-${a.pins[0]}-${key}"
+                                           class="flex-1 accent-cyan-500"
+                                           min="${limits.min}" 
+                                           max="${limits.max}" 
+                                           value="${val}"
+                                           step="any"
+                                           oninput="updateValue('${a.pins[0]}', '${key}', this.value, 'range')">
+                                    <input type="number" 
+                                           id="num-${a.pins[0]}-${key}"
+                                           class="w-24 bg-slate-700 text-white rounded px-2 py-1 text-xs border border-slate-600 focus:border-cyan-500 outline-none text-right"
+                                           min="${limits.min}" 
+                                           max="${limits.max}" 
+                                           value="${val}"
+                                           step="any"
+                                           oninput="updateValue('${a.pins[0]}', '${key}', this.value, 'num')">
+                                </div>
                             </div>
                             `;
             }).join('')}
@@ -583,12 +595,37 @@
 
         // ============ Value Updates ============
 
-        async function updateValue(pin, key, value) {
-            document.getElementById(`val-${pin}-${key}`).textContent = value;
+        async function updateValue(pin, key, value, source) {
+            const rangeEl = document.getElementById(`range-${pin}-${key}`);
+            const numEl = document.getElementById(`num-${pin}-${key}`);
+
+            let val = parseFloat(value);
+            if (isNaN(val)) return; // Don't update if empty or invalid while typing
+
+            const min = parseFloat(rangeEl.min);
+            const max = parseFloat(rangeEl.max);
+
+            // Clamp value
+            if (val < min) val = min;
+            if (val > max) val = max;
+
+            // Update elements based on source
+            if (source === 'range') {
+                numEl.value = val;
+            } else {
+                rangeEl.value = val;
+                // If we clamped the value (e.g. user typed 5000 -> 100), update the input immediately
+                // This might be aggressive but ensures safety. 
+                // Alternatively, we could only clamp on blur, but valid live data is preferred.
+                if (parseFloat(value) !== val) {
+                    numEl.value = val;
+                }
+            }
+
             await fetch(`/api/value/${pin}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key, value: parseFloat(value) })
+                body: JSON.stringify({ key, value: val })
             });
         }
 
