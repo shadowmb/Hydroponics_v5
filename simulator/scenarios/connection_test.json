@@ -1,0 +1,19 @@
+{
+  "name": "Connection Dropout Test",
+  "duration": 60,
+  "actions": [
+    {
+      "sensor": "pH",
+      "type": "constant",
+      "value": 6.5
+    },
+    {
+      "type": "error_timeout",
+      "commands": [
+        "PING"
+      ],
+      "startAt": 20,
+      "duration": 10
+    }
+  ]
+}

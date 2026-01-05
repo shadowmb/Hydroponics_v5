@@ -1,0 +1,24 @@
+{
+  "name": "Random Fluctuation",
+  "duration": 120,
+  "actions": [
+    {
+      "sensor": "pH",
+      "type": "random",
+      "min": 6,
+      "max": 7
+    },
+    {
+      "sensor": "temperature",
+      "type": "random",
+      "min": 22,
+      "max": 26
+    },
+    {
+      "sensor": "humidity",
+      "type": "random",
+      "min": 55,
+      "max": 70
+    }
+  ]
+}
