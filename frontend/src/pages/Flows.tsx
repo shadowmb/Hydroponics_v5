@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Edit, Trash2, Plus, Loader2, AlertTriangle } from 'lucide-react';
+import { Play, Edit, Trash2, Plus, Loader2, AlertTriangle, BugPlay } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -13,6 +13,7 @@ import {
     DialogFooter,
     DialogClose,
 } from '../components/ui/dialog';
+import { FlowTestDialog } from '../components/flows/FlowTestDialog';
 
 import type { IFlow } from '../../../shared/types';
 
@@ -25,9 +26,33 @@ export const Flows: React.FC = () => {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [viewDeleted, setViewDeleted] = useState(false);
 
+    // Test Flow State
+    const [testFlowId, setTestFlowId] = useState<string | null>(null);
+    const [systemStatus, setSystemStatus] = useState<any>(null);
+
     useEffect(() => {
         fetchFlows();
+        fetchSystemStatus();
     }, [viewDeleted]);
+
+    // Periodically refresh system status to detect changes (e.g. if another flow started)
+    // In a real app we might rely on socket updates, but polling is safer for now.
+    useEffect(() => {
+        const interval = setInterval(fetchSystemStatus, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const fetchSystemStatus = async () => {
+        try {
+            const res = await fetch('/api/system/status');
+            if (res.ok) {
+                const data = await res.json();
+                setSystemStatus(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch system status', error);
+        }
+    };
 
     const fetchFlows = async () => {
         setLoading(true);
@@ -97,7 +122,20 @@ export const Flows: React.FC = () => {
         }
     };
 
+    // System is BUSY if:
+    // 1. Active Program is NOT stopped (running, paused, delayed)
+    // 2. OR There are other running sessions (runningSessionsCount > 0)
+    const isSystemBusy = systemStatus && (
+        (systemStatus.session?.status && systemStatus.session.status !== 'stopped') ||
+        (systemStatus.runningSessionsCount && systemStatus.runningSessionsCount > 0)
+    );
+
     const handleRun = async (flowId: string) => {
+        if (isSystemBusy) {
+            toast.error('Cannot start flow: System is busy (Program running or another flow active)');
+            return;
+        }
+
         setProcessingId(flowId);
         try {
             // Note: We still use automation/start but now we pass programId which refers to a Flow ID for now
@@ -138,6 +176,27 @@ export const Flows: React.FC = () => {
         }
     };
 
+    const handleTest = (flowId: string) => {
+        if (isSystemBusy) {
+            toast.error('Cannot test flow: System is busy');
+            return;
+        }
+        setTestFlowId(flowId);
+    };
+
+    const handleStopTest = async () => {
+        try {
+            await fetch('/api/automation/stop', { method: 'POST' });
+            toast.success('Test stopped');
+            // We keep the dialog open so user can inspect the log
+            // But we update system status
+            fetchSystemStatus();
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to stop test');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -161,6 +220,17 @@ export const Flows: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* System Status Alert if Busy */}
+            {isSystemBusy && !viewDeleted && (
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-md p-3 flex items-center gap-3 text-orange-500 text-sm">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>
+                        System is currently running a program or test. Flow execution is disabled until stopped.
+                        {systemStatus?.runningSessionsCount > 0 && ` (${systemStatus.runningSessionsCount} active sessions)`}
+                    </span>
+                </div>
+            )}
 
             <Card className={viewDeleted ? "border-orange-200 bg-orange-50/30" : ""}>
                 <CardHeader>
@@ -237,19 +307,33 @@ export const Flows: React.FC = () => {
                                                         </>
                                                     ) : (
                                                         <>
+                                                            {/* Test Button */}
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => handleRun(flow.id)}
-                                                                disabled={!!processingId || flow.validationStatus === 'INVALID'}
-                                                                title={flow.validationStatus === 'INVALID' ? "Cannot run invalid flow" : "Run Flow"}
+                                                                onClick={() => handleTest(flow.id)}
+                                                                disabled={!!processingId || flow.validationStatus === 'INVALID' || isSystemBusy}
+                                                                title={isSystemBusy ? "System is busy" : "Test Flow (Visual Log)"}
+                                                                className="text-cyan-500 hover:text-cyan-400 hover:bg-cyan-950/30"
                                                             >
                                                                 {processingId === flow.id ? (
                                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                                 ) : (
-                                                                    <Play className={`h-4 w-4 ${flow.validationStatus === 'INVALID' ? 'text-gray-300' : 'text-green-600'}`} />
+                                                                    <BugPlay className="h-4 w-4" />
                                                                 )}
                                                             </Button>
+
+                                                            {/* Actual Run Button (Redirects to Dashboard) */}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleRun(flow.id)}
+                                                                disabled={!!processingId || flow.validationStatus === 'INVALID' || isSystemBusy}
+                                                                title={isSystemBusy ? "System is busy" : "Run Flow (Go to Dashboard)"}
+                                                            >
+                                                                <Play className={`h-4 w-4 ${flow.validationStatus === 'INVALID' || isSystemBusy ? 'text-gray-300' : 'text-green-600'}`} />
+                                                            </Button>
+
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
@@ -278,6 +362,22 @@ export const Flows: React.FC = () => {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Test Dialog */}
+            <FlowTestDialog
+                open={!!testFlowId}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setTestFlowId(null);
+                        // Refresh status when closing to check if it really stopped
+                        fetchSystemStatus();
+                    }
+                }}
+                flowId={testFlowId}
+                flowName={flows.find(f => f.id === testFlowId)?.name || 'Flow'}
+                isActive={isSystemBusy} // Or infer from systemStatus
+                onStop={handleStopTest}
+            />
 
             {/* Soft Delete Confirmation Dialog */}
             <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

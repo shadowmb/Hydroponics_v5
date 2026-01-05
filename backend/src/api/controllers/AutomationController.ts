@@ -61,6 +61,13 @@ export class AutomationController {
         // TODO: check actual hardware connection status
         const snapshot = automation.getSnapshot();
 
+        // Check for ANY running sessions in DB (including "stuck" ones)
+        const { ExecutionSessionModel } = await import('../../modules/persistence/schemas/ExecutionSession.schema');
+        const runningSessionsCount = await ExecutionSessionModel.countDocuments({
+            status: { $in: ['running', 'paused'] },
+            deletedAt: null
+        });
+
         // Map XState to Session interface expected by frontend
         const session = {
             programId: snapshot.context.programId || '',
@@ -74,7 +81,8 @@ export class AutomationController {
             serverTime: new Date().toISOString(),
             schedulerLastTick: require('../../modules/scheduler/SchedulerService').schedulerService.getLastTick(),
             schedulerState: require('../../modules/scheduler/SchedulerService').schedulerService.getState(),
-            session: snapshot.context.programId ? session : null
+            session: snapshot.context.programId ? session : null,
+            runningSessionsCount
         });
     }
 }
