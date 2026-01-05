@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit, Trash2, Plus, Loader2, Calendar, Zap, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from "@/components/ui/badge";
+
 import {
     Tooltip,
     TooltipContent,

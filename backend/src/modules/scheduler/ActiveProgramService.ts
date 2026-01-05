@@ -369,6 +369,11 @@ export class ActiveProgramService {
 
         if (updates.time) {
             item.time = updates.time;
+            // Reset status if time is changed so it can run again
+            if (item.status === 'completed' || item.status === 'failed') {
+                item.status = 'pending';
+                logger.info({ itemId }, '🔄 Cycle Status Reset to Pending due to Time Update');
+            }
         }
 
         if (updates.overrides) {
