@@ -79,8 +79,9 @@ export const FlowTestDialog: React.FC<FlowTestDialogProps> = ({
         if (!open) return;
 
         const handleStateChange = (data: any) => {
-            // data.state is the XState value (e.g., 'idle', 'running', 'paused', 'error')
-            if (data.state === 'idle' || data.state === 'stopped') {
+            // data.state is the XState value
+            // 'idle', 'stopped', 'completed', 'failed', 'error' -> Not Running
+            if (['idle', 'stopped', 'completed', 'failed', 'error'].includes(data.state)) {
                 setIsRunning(false);
                 if (step === 'running') {
                     setTestFinished(true);
