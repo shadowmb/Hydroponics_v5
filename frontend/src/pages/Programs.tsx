@@ -2,6 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit, Trash2, Plus, Loader2, Calendar, Zap, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from "@/components/ui/badge";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import {
@@ -202,15 +209,19 @@ export const Programs: React.FC = () => {
                                                 {viewDeleted ? (
                                                     <span className="text-xs text-orange-600 font-medium">Deleted</span>
                                                 ) : (program as any).validationStatus === 'INVALID' ? (
-                                                    <div className="group relative inline-block">
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-red-500/10 text-red-600 gap-1 cursor-help">
-                                                            <AlertTriangle className="h-3 w-3" />
-                                                            Invalid
-                                                        </span>
-                                                        <div className="absolute hidden group-hover:block z-10 w-48 p-2 mt-1 text-xs text-white bg-slate-800 rounded shadow-lg -translate-x-1/2 left-1/2">
-                                                            {(program as any).validationError || 'Contains invalid flows'}
-                                                        </div>
-                                                    </div>
+                                                    <TooltipProvider>
+                                                        <Tooltip delayDuration={300}>
+                                                            <TooltipTrigger asChild>
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-red-500/10 text-red-600 gap-1 cursor-help">
+                                                                    <AlertTriangle className="h-3 w-3" />
+                                                                    Invalid
+                                                                </span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="bg-destructive text-destructive-foreground border-destructive max-w-[200px]">
+                                                                {(program as any).validationError || 'Contains invalid flows'}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
                                                 ) : (
                                                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${activeProgram?.sourceProgramId === program.id ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
                                                         }`}>

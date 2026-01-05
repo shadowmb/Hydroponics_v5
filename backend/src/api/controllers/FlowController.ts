@@ -30,6 +30,10 @@ export class FlowController {
 
             const flows = await flowRepository.findAll();
 
+            const { ActiveProgramModel } = await import('../../modules/persistence/schemas/ActiveProgram.schema');
+            const activeProgram = await ActiveProgramModel.findOne({});
+            const activeProgramId = activeProgram ? activeProgram.sourceProgramId : null;
+
             // Enrich with usage data
             const enrichedFlows = await Promise.all(flows.map(async (flow) => {
                 const programs = await programRepository.findProgramsByFlowId(flow.id);
@@ -38,7 +42,7 @@ export class FlowController {
                     usedIn: programs.map(p => ({
                         id: p.id,
                         name: p.name,
-                        isActive: p.isActive
+                        isActive: p.id === activeProgramId
                     }))
                 };
             }));

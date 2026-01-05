@@ -48,7 +48,7 @@ export class ProgramController {
 
                 // Helper to check flow validity
                 const checkFlow = (flowId: string): { valid: boolean, error?: string } => {
-                    const flow = flowMap.get(flowId);
+                    const flow = flowMap.get(flowId) as any;
                     if (!flow) return { valid: false, error: `Referenced flow not found: ${flowId}` };
                     if (flow.validationStatus === 'INVALID') return { valid: false, error: `Contains invalid flow: ${flow.name}` };
                     return { valid: true };
@@ -143,6 +143,7 @@ export class ProgramController {
         const { id } = req.params as { id: string };
         try {
             const data = req.body as any;
+            delete data.isActive; // Prevent manual activation via update
             const program = await programRepository.update(id, data);
             if (!program) return reply.status(404).send({ message: 'Program not found' });
             return reply.send(program);
