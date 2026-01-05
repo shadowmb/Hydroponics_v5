@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { flowRepository } from '../../modules/persistence/repositories/FlowRepository';
+import { programRepository } from '../../modules/persistence/repositories/ProgramRepository';
 import { logger } from '../../core/LoggerService';
 
 export class FlowController {
@@ -28,7 +29,25 @@ export class FlowController {
             }
 
             const flows = await flowRepository.findAll();
-            return reply.send(flows);
+
+            const { ActiveProgramModel } = await import('../../modules/persistence/schemas/ActiveProgram.schema');
+            const activeProgram = await ActiveProgramModel.findOne({});
+            const activeProgramId = activeProgram ? activeProgram.sourceProgramId : null;
+
+            // Enrich with usage data
+            const enrichedFlows = await Promise.all(flows.map(async (flow) => {
+                const programs = await programRepository.findProgramsByFlowId(flow.id);
+                return {
+                    ...flow.toObject(),
+                    usedIn: programs.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        isActive: p.id === activeProgramId
+                    }))
+                };
+            }));
+
+            return reply.send(enrichedFlows);
         } catch (error: any) {
             logger.error({ error }, 'Failed to list flows');
             return reply.status(500).send({ message: 'Failed to list flows' });

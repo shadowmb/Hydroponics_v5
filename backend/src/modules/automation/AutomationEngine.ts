@@ -344,6 +344,14 @@ export class AutomationEngine {
         };
     }
 
+    public getStatus() {
+        const snapshot = this.getSnapshot();
+        return {
+            status: snapshot.value as string,
+            sessionId: snapshot.sessionId
+        };
+    }
+
     /**
      * Safety Stop Mechanism
      * Reverts active resources to their initial state if they are flagged for revert.

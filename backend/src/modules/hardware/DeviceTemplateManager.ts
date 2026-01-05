@@ -205,15 +205,15 @@ export class DeviceTemplateManager {
             const template = DeviceTemplateSchema.parse(raw);
 
             // DEBUG: Log measurements loading
-            if (template.id === 'hc_sr04') {
-                logger.info({
-                    templateId: template.id,
-                    hasMeasurements: !!template.measurements,
-                    measurements: template.measurements,
-                    rawMeasurements: raw.measurements,
-                    roles: template.roles
-                }, '🔍 [DeviceTemplateManager] DEBUG: HC-SR04 Template Loaded');
-            }
+            // if (template.id === 'hc_sr04') {
+            //     logger.info({
+            //         templateId: template.id,
+            //         hasMeasurements: !!template.measurements,
+            //         measurements: template.measurements,
+            //         rawMeasurements: raw.measurements,
+            //         roles: template.roles
+            //     }, '🔍 [DeviceTemplateManager] DEBUG: HC-SR04 Template Loaded');
+            // }
 
             this.templates.set(template.id, template);
             logger.debug({ id: template.id, category: inferredCategory }, 'Loaded Template');

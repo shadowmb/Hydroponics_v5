@@ -392,17 +392,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                 let isOccupiedByOther = state.isOccupied;
 
                 if (isEditMode && initialData?.hardware?.parentId === formData.controllerId) {
-                    const isLegacyPort = initialData.hardware.port === id;
-
-                    let isMyPin = false;
-                    const pins = initialData.hardware.pins;
-                    if (Array.isArray(pins)) {
-                        isMyPin = pins.some((p: any) => p.portId === id);
-                    } else if (pins && typeof pins === 'object') {
-                        isMyPin = Object.values(pins).includes(id);
-                    }
-
-                    if (isLegacyPort || isMyPin) {
+                    // Simplified Ownership Check: Rely on Controller's OccupiedBy Record
+                    if (state.occupiedBy?.id === initialData?._id) {
                         isOccupiedByOther = false;
                     }
                 }

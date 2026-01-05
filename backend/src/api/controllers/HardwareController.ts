@@ -5,6 +5,8 @@ import { logger } from '../../core/LoggerService';
 import { Controller } from '../../models/Controller';
 import { ControllerTemplate } from '../../models/ControllerTemplate';
 import { DeviceTemplate, IDeviceTemplate } from '../../models/DeviceTemplate';
+import { flowRepository } from '../../modules/persistence/repositories/FlowRepository';
+import { programRepository } from '../../modules/persistence/repositories/ProgramRepository';
 
 export class HardwareController {
 
@@ -916,6 +918,8 @@ export class HardwareController {
                 type: body.type,
                 hardware: body.hardware,
                 config: body.config,
+                metadata: body.metadata,
+                isEnabled: body.isEnabled,
                 tags: mergedTags, // Add tags support
                 group: template.uiConfig?.category || 'Other' // Auto-populate group from template
             });
@@ -1240,7 +1244,25 @@ export class HardwareController {
                 req.log.warn({ err: resourceError, deviceId: device._id }, 'Failed to free resources during device deletion (ignoring)');
             }
 
+            // SAFETY CHECK: Prevent deletion if used in ACTIVE programs
+            const deviceFlows = await flowRepository.findFlowsByDeviceId(id);
+            for (const flow of deviceFlows) {
+                const programs = await programRepository.findProgramsByFlowId(flow.id);
+                const activeProgram = programs.find(p => p.isActive);
+
+                if (activeProgram) {
+                    return reply.status(409).send({
+                        success: false,
+                        error: `Cannot delete device. It is used in flow "${flow.name}", which is part of active program "${activeProgram.name}". Please stop the program first.`
+                    });
+                }
+            }
+
             await device.softDelete();
+
+            // Clean up flows using this device
+            await flowRepository.removeDeviceFromFlows(id);
+
             return reply.send({ success: true, message: 'Device deleted' });
         } catch (error: any) {
             req.log.error(error);

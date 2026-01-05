@@ -134,7 +134,12 @@ export class ActiveProgramController {
                 await active.save();
 
                 // Trigger execution
-                await schedulerService.handleScheduledCycle(item.cycleId, item.steps, item.overrides);
+                // Trigger execution
+                const runtimeOverrides = {
+                    ...item.overrides,
+                    activeProgramId: active.sourceProgramId
+                };
+                await schedulerService.handleScheduledCycle(item.cycleId, item.steps, runtimeOverrides);
             }
 
             reply.send(active);
@@ -157,7 +162,11 @@ export class ActiveProgramController {
                 await active.save();
 
                 // Trigger execution
-                await schedulerService.handleScheduledCycle(item.cycleId, item.steps, item.overrides);
+                const runtimeOverrides = {
+                    ...item.overrides,
+                    activeProgramId: active.sourceProgramId
+                };
+                await schedulerService.handleScheduledCycle(item.cycleId, item.steps, runtimeOverrides);
             }
 
             reply.send(active);

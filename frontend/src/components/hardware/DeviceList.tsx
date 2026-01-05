@@ -55,8 +55,10 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
             setDeleteDialogOpen(false);
             setDeviceToDelete(null);
             loadData();
-        } catch (error) {
-            toast.error('Failed to delete device');
+        } catch (error: any) {
+            // Show specific error from backend if available (e.g. "Used in active program")
+            const msg = error.response?.data?.error || error.message || 'Failed to delete device';
+            toast.error(msg, { duration: 5000 }); // Longer duration for reading long messages
         }
     };
 

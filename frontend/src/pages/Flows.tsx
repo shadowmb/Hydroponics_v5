@@ -13,21 +13,56 @@ import {
     DialogFooter,
     DialogClose,
 } from '../components/ui/dialog';
+import { FlowTestDialog } from '../components/flows/FlowTestDialog';
 
 import type { IFlow } from '../../../shared/types';
 
+interface FlowUsage {
+    id: string;
+    name: string;
+    isActive: boolean;
+}
+
+interface EnrichedFlow extends IFlow {
+    usedIn?: FlowUsage[];
+}
+
 export const Flows: React.FC = () => {
     const navigate = useNavigate();
-    const [flows, setFlows] = useState<IFlow[]>([]);
+    const [flows, setFlows] = useState<EnrichedFlow[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [hardDeleteId, setHardDeleteId] = useState<string | null>(null);
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [viewDeleted, setViewDeleted] = useState(false);
 
+    // Test Flow State
+    const [testFlowId, setTestFlowId] = useState<string | null>(null);
+    const [systemStatus, setSystemStatus] = useState<any>(null);
+
     useEffect(() => {
         fetchFlows();
+        fetchSystemStatus();
     }, [viewDeleted]);
+
+    // Periodically refresh system status to detect changes (e.g. if another flow started)
+    // In a real app we might rely on socket updates, but polling is safer for now.
+    useEffect(() => {
+        const interval = setInterval(fetchSystemStatus, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const fetchSystemStatus = async () => {
+        try {
+            const res = await fetch('/api/system/status');
+            if (res.ok) {
+                const data = await res.json();
+                setSystemStatus(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch system status', error);
+        }
+    };
 
     const fetchFlows = async () => {
         setLoading(true);
@@ -97,46 +132,28 @@ export const Flows: React.FC = () => {
         }
     };
 
-    const handleRun = async (flowId: string) => {
-        setProcessingId(flowId);
-        try {
-            // Note: We still use automation/start but now we pass programId which refers to a Flow ID for now
-            // until we fully implement the Schedule/Cycle logic.
-            // The backend loadProgram now expects a Flow ID.
+    // System is BUSY if:
+    // 1. Active Program is NOT stopped (running, paused, delayed)
+    // 2. OR There are other running sessions (runningSessionsCount > 0)
+    // System is BUSY if:
+    // 1. Scheduler Active Program is NOT stopped (running, paused)
+    // 2. OR There are other running sessions (runningSessionsCount > 0)
+    // 3. OR The immediate automation snapshot thinks it's running (session.status)
+    const isSystemBusy = systemStatus && (
+        (systemStatus.session?.status && systemStatus.session.status !== 'stopped') ||
+        (systemStatus.runningSessionsCount && systemStatus.runningSessionsCount > 0) ||
+        (systemStatus.activeProgramStatus && systemStatus.activeProgramStatus !== 'stopped')
+    );
 
-            // 1. Load
-            const loadRes = await fetch('/api/automation/load', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ programId: flowId })
-            });
-
-            if (!loadRes.ok) {
-                const err = await loadRes.json();
-                throw new Error(err.message);
-            }
-
-            // 2. Start
-            const startRes = await fetch('/api/automation/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-
-            if (!startRes.ok) {
-                const err = await startRes.json();
-                throw new Error(err.message);
-            }
-
-            toast.success('Flow started');
-            navigate('/'); // Redirect to Dashboard
-        } catch (error: any) {
-            console.error(error);
-            toast.error(`Failed to start: ${error.message}`);
-        } finally {
-            setProcessingId(null);
+    const handleTest = (flowId: string) => {
+        if (isSystemBusy) {
+            toast.error('Cannot test flow: System is busy');
+            return;
         }
+        setTestFlowId(flowId);
     };
+
+
 
     return (
         <div className="space-y-6">
@@ -162,6 +179,17 @@ export const Flows: React.FC = () => {
                 </div>
             </div>
 
+            {/* System Status Alert if Busy */}
+            {isSystemBusy && !viewDeleted && (
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-md p-3 flex items-center gap-3 text-orange-500 text-sm">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>
+                        System is currently running a program or test. Flow execution is disabled until stopped.
+                        {systemStatus?.runningSessionsCount > 0 && ` (${systemStatus.runningSessionsCount} active sessions)`}
+                    </span>
+                </div>
+            )}
+
             <Card className={viewDeleted ? "border-orange-200 bg-orange-50/30" : ""}>
                 <CardHeader>
                     <CardTitle>{viewDeleted ? 'Recycle Bin' : 'All Flows'}</CardTitle>
@@ -184,7 +212,8 @@ export const Flows: React.FC = () => {
                                         <th>Name</th>
                                         <th>ID</th>
                                         <th>Created At</th>
-                                        <th>Status</th>
+                                        <th>State</th>
+                                        <th>Programs</th>
                                         <th className="text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -201,17 +230,33 @@ export const Flows: React.FC = () => {
                                                     <span className="text-xs text-orange-600 font-medium">Deleted</span>
                                                 ) : (
                                                     <div className="flex flex-col gap-1">
-                                                        {flow.validationStatus === 'INVALID' && (
+                                                        {flow.validationStatus === 'INVALID' ? (
                                                             <div className="flex items-center text-xs text-orange-600 font-medium" title="This flow has errors and cannot be run.">
                                                                 <AlertTriangle className="h-3 w-3 mr-1" />
                                                                 Draft / Invalid
                                                             </div>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-green-500/10 text-green-600">
+                                                                Ready
+                                                            </span>
                                                         )}
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${flow.isActive ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
-                                                            }`}>
-                                                            {flow.isActive ? 'Active' : 'Inactive'}
-                                                        </span>
                                                     </div>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {!viewDeleted && flow.usedIn && flow.usedIn.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {flow.usedIn.map(p => (
+                                                            <span key={p.id} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${p.isActive
+                                                                ? 'bg-green-50 border-green-200 text-green-700'
+                                                                : 'bg-gray-50 border-gray-200 text-gray-600'
+                                                                }`} title={p.isActive ? 'Active Program' : 'Inactive Program'}>
+                                                                {p.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground italic">Unused</span>
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-right">
@@ -240,31 +285,35 @@ export const Flows: React.FC = () => {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => handleRun(flow.id)}
-                                                                disabled={!!processingId || flow.validationStatus === 'INVALID'}
-                                                                title={flow.validationStatus === 'INVALID' ? "Cannot run invalid flow" : "Run Flow"}
+                                                                onClick={() => handleTest(flow.id)}
+                                                                disabled={!!processingId || flow.validationStatus === 'INVALID' || isSystemBusy}
+                                                                title={isSystemBusy ? "System is busy" : "Run Flow (Visual Log)"}
+                                                                className="text-cyan-500 hover:text-cyan-400 hover:bg-cyan-950/30"
                                                             >
                                                                 {processingId === flow.id ? (
                                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                                 ) : (
-                                                                    <Play className={`h-4 w-4 ${flow.validationStatus === 'INVALID' ? 'text-gray-300' : 'text-green-600'}`} />
+                                                                    <Play className="h-4 w-4" />
                                                                 )}
                                                             </Button>
+
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => navigate(`/editor/${flow.id}`)}
-                                                                title="Edit Flow"
+                                                                disabled={!!(flow.usedIn && flow.usedIn.some((p: any) => p.isActive))}
+                                                                title={flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? "Cannot edit flow used in active programs" : "Edit Flow"}
                                                             >
-                                                                <Edit className="h-4 w-4 text-blue-600" />
+                                                                <Edit className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-blue-600'}`} />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => setDeleteId(flow.id)}
-                                                                title="Delete Flow"
+                                                                disabled={!!(flow.usedIn && flow.usedIn.some((p: any) => p.isActive))}
+                                                                title={flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? "Cannot delete flow used in active programs" : "Delete Flow"}
                                                             >
-                                                                <Trash2 className="h-4 w-4 text-red-600" />
+                                                                <Trash2 className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-red-600'}`} />
                                                             </Button>
                                                         </>
                                                     )}
@@ -278,6 +327,21 @@ export const Flows: React.FC = () => {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Test Dialog */}
+            <FlowTestDialog
+                open={!!testFlowId}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setTestFlowId(null);
+                        // Refresh status when closing to check if it really stopped
+                        fetchSystemStatus();
+                    }
+                }}
+                flowId={testFlowId}
+                flowName={flows.find(f => f.id === testFlowId)?.name || 'Flow'}
+                isActive={isSystemBusy}
+            />
 
             {/* Soft Delete Confirmation Dialog */}
             <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

@@ -32,7 +32,95 @@ export class ProgramController {
             }
 
             const programs = await programRepository.findAll();
-            return reply.send(programs);
+
+            // Validate programs by checking their flow status
+            // We do this dynamically to ensure it's always up to date
+            const { FlowModel } = require('../../modules/persistence/schemas/Flow.schema');
+
+            // Fetch ALL flows (minimal projection) to check for existence and validity
+            const allFlows = await FlowModel.find({}, { id: 1, name: 1, validationStatus: 1 });
+            const flowMap = new Map(allFlows.map((f: any) => [f.id, f]));
+
+            const validatedPrograms = programs.map(program => {
+                const p = program.toObject ? program.toObject() : program;
+                let isInvalid = false;
+                let validationError = '';
+
+                // Helper to check flow validity
+                const checkFlow = (flowId: string): { valid: boolean, error?: string } => {
+                    const flow = flowMap.get(flowId) as any;
+                    if (!flow) return { valid: false, error: `Referenced flow not found: ${flowId}` };
+                    if (flow.validationStatus === 'INVALID') return { valid: false, error: `Contains invalid flow: ${flow.name}` };
+                    return { valid: true };
+                };
+
+                // Check Basic Schedule
+                if (p.schedule) {
+                    for (const item of p.schedule) {
+                        if (item.steps) {
+                            for (const step of item.steps) {
+                                const result = checkFlow(step.flowId);
+                                if (!result.valid) {
+                                    isInvalid = true;
+                                    validationError = result.error || 'Invalid flow';
+                                    break;
+                                }
+                            }
+                        }
+                        if (isInvalid) break;
+                    }
+                }
+
+                // Check Advanced Windows
+                if (!isInvalid && p.windows) {
+                    for (const window of p.windows) {
+                        // Check triggers
+                        if (window.triggers) {
+                            for (const trigger of window.triggers) {
+                                if (trigger.flowId) {
+                                    const result = checkFlow(trigger.flowId);
+                                    if (!result.valid) {
+                                        isInvalid = true;
+                                        validationError = result.error || 'Invalid flow';
+                                        break;
+                                    }
+                                }
+                                if (trigger.flowIds) {
+                                    for (const flowId of trigger.flowIds) {
+                                        const result = checkFlow(flowId);
+                                        if (!result.valid) {
+                                            isInvalid = true;
+                                            validationError = result.error || 'Invalid flow';
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (isInvalid) break;
+                            }
+                        }
+                        // Check fallback
+                        if (!isInvalid && window.fallbackFlowId) {
+                            const result = checkFlow(window.fallbackFlowId);
+                            if (!result.valid) {
+                                isInvalid = true;
+                                validationError = result.error || 'Invalid flow';
+                            }
+                        }
+                        if (isInvalid) break;
+                    }
+                }
+
+                if (isInvalid) {
+                    (p as any).validationStatus = 'INVALID';
+                    (p as any).validationError = validationError;
+                } else {
+                    (p as any).validationStatus = 'VALID';
+                }
+
+                return p;
+            });
+
+            return reply.send(validatedPrograms);
         } catch (error: any) {
             logger.error({ error }, 'Failed to list programs');
             return reply.status(500).send({ message: 'Failed to list programs' });
@@ -55,6 +143,7 @@ export class ProgramController {
         const { id } = req.params as { id: string };
         try {
             const data = req.body as any;
+            delete data.isActive; // Prevent manual activation via update
             const program = await programRepository.update(id, data);
             if (!program) return reply.status(404).send({ message: 'Program not found' });
             return reply.send(program);

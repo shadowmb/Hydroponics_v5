@@ -21,7 +21,49 @@ export class ActiveProgramService {
         const template = await programRepository.findById(programId);
         if (!template) throw new Error(`Program template not found: ${programId}`);
 
-        // 3. Clear existing
+        // 3. Validation Check: Ensure no flows are invalid OR missing
+        const { FlowModel } = require('../persistence/schemas/Flow.schema');
+        const allFlows = await FlowModel.find({}, { id: 1, name: 1, validationStatus: 1 });
+        const flowMap = new Map(allFlows.map((f: any) => [f.id, f]));
+
+        const checkFlow = (flowId: string) => {
+            const flow = flowMap.get(flowId) as any;
+            if (!flow) throw new Error(`Cannot load program. Referenced flow '${flowId}' was not found (deleted?).`);
+            if (flow.validationStatus === 'INVALID') throw new Error(`Cannot load program. Flow '${flow.name}' is invalid/broken.`);
+        };
+
+        // Check Basic Schedule
+        if (template.schedule) {
+            for (const item of template.schedule) {
+                if (item.steps) {
+                    for (const step of item.steps) {
+                        checkFlow(step.flowId);
+                    }
+                }
+            }
+        }
+
+        // Check Advanced Windows
+        if (template.windows) {
+            for (const window of template.windows) {
+                if (window.triggers) {
+                    for (const trigger of window.triggers) {
+                        if (trigger.flowId) checkFlow(trigger.flowId);
+                        if (trigger.flowIds) { // Array support
+                            for (const fid of trigger.flowIds) checkFlow(fid);
+                        }
+                    }
+                }
+                if (window.fallbackFlowId) checkFlow(window.fallbackFlowId);
+                // @ts-ignore
+                if (window.fallbackFlowIds) {
+                    // @ts-ignore
+                    for (const fid of window.fallbackFlowIds) checkFlow(fid);
+                }
+            }
+        }
+
+        // 4. Clear existing
         await ActiveProgramModel.deleteMany({});
 
         // 4. Determine program type
@@ -73,6 +115,10 @@ export class ActiveProgramService {
 
         // 6. Create Active Program
         const activeProgram = await ActiveProgramModel.create(activeProgramData);
+
+        // 7. Sync persistent state
+        await programRepository.syncActiveStatus(template.id);
+
         return activeProgram;
     }
 
@@ -300,6 +346,10 @@ export class ActiveProgramService {
         await ActiveProgramModel.deleteMany({});
         // Ensure cycle is stopped
         await cycleManager.stopCycle();
+
+        // Sync persistent state (none active)
+        await programRepository.syncActiveStatus(null);
+
         logger.info('🗑️ Active Program Unloaded');
     }
 
@@ -319,6 +369,11 @@ export class ActiveProgramService {
 
         if (updates.time) {
             item.time = updates.time;
+            // Reset status if time is changed so it can run again
+            if (item.status === 'completed' || item.status === 'failed') {
+                item.status = 'pending';
+                logger.info({ itemId }, '🔄 Cycle Status Reset to Pending due to Time Update');
+            }
         }
 
         if (updates.overrides) {

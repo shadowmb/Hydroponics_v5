@@ -25,6 +25,7 @@ export class SchedulerService {
     private _state: 'STOPPED' | 'RUNNING' | 'WAITING_START' = 'STOPPED';
     private _startTime: number | null = null;
     private _lastTick: Date | null = null;
+    private _lastCheckedDay: number = new Date().getDate();
 
     constructor() {
         // Run every 10 seconds to capture intervals accurately
@@ -125,6 +126,27 @@ export class SchedulerService {
             // 1. Check Active Program & Schedule
             const activeProgram = await activeProgramService.getActive();
 
+            // BASIC MODE: Daily Reset Logic
+            // Check if day has changed since last tick/check
+            if (activeProgram && (activeProgram.type === 'BASIC' || !activeProgram.type)) {
+                const currentDay = now.getDate();
+                if (this._lastCheckedDay !== currentDay) {
+                    logger.info({ prev: this._lastCheckedDay, curr: currentDay }, '📅 New Day Detected (Basic Mode) - Resetting Completed Cycles');
+                    let dirty = false;
+                    for (const s of activeProgram.schedule) {
+                        if (s.status === 'completed' || s.status === 'skipped') {
+                            s.status = 'pending';
+                            dirty = true;
+                        }
+                    }
+                    if (dirty) {
+                        await activeProgram.save();
+                        logger.info('✅ Basic Program Schedule Reset for New Day');
+                    }
+                    this._lastCheckedDay = currentDay;
+                }
+            }
+
             // Check for scheduled start
             if (activeProgram && activeProgram.status === 'scheduled') {
                 if (activeProgram.startTime && now >= new Date(activeProgram.startTime)) {
@@ -149,7 +171,14 @@ export class SchedulerService {
 
                     if (scheduledItem) {
                         logger.info({ cycleId: scheduledItem.cycleId, time: timeString }, '⏰ Scheduled Cycle Triggered');
-                        await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.steps, scheduledItem.overrides, scheduledItem.cycleId);
+
+                        // FIX: Inject activeProgramId so ProgramLogService can record analytics
+                        const runtimeOverrides = {
+                            ...scheduledItem.overrides,
+                            activeProgramId: activeProgram.sourceProgramId
+                        };
+
+                        await this.handleScheduledCycle(scheduledItem.cycleId, scheduledItem.steps, runtimeOverrides, scheduledItem.cycleId);
                         scheduledItem.status = 'running';
                         await activeProgram.save();
                     }
