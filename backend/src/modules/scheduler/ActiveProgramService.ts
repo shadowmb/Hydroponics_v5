@@ -21,7 +21,55 @@ export class ActiveProgramService {
         const template = await programRepository.findById(programId);
         if (!template) throw new Error(`Program template not found: ${programId}`);
 
-        // 3. Clear existing
+        // 3. Validation Check: Ensure no flows are invalid
+        const { FlowModel } = require('../persistence/schemas/Flow.schema');
+        const invalidFlows = await FlowModel.find({ validationStatus: 'INVALID' }, { id: 1, name: 1 });
+        const invalidFlowMap = new Map(invalidFlows.map((f: any) => [f.id, f.name]));
+
+        // Check Basic Schedule
+        if (template.schedule) {
+            for (const item of template.schedule) {
+                if (item.steps) {
+                    for (const step of item.steps) {
+                        if (invalidFlowMap.has(step.flowId)) {
+                            throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(step.flowId)}' is invalid/broken.`);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check Advanced Windows
+        if (template.windows) {
+            for (const window of template.windows) {
+                if (window.triggers) {
+                    for (const trigger of window.triggers) {
+                        if (trigger.flowId && invalidFlowMap.has(trigger.flowId)) {
+                            throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(trigger.flowId)}' is invalid/broken.`);
+                        }
+                        if (trigger.flowIds) { // Array support
+                            for (const fid of trigger.flowIds) {
+                                if (invalidFlowMap.has(fid)) {
+                                    throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(fid)}' is invalid/broken.`);
+                                }
+                            }
+                        }
+                    }
+                }
+                if (window.fallbackFlowId && invalidFlowMap.has(window.fallbackFlowId)) {
+                    throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(window.fallbackFlowId)}' is invalid/broken.`);
+                }
+                if (window.fallbackFlowIds) {
+                    for (const fid of window.fallbackFlowIds) {
+                        if (invalidFlowMap.has(fid)) {
+                            throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(fid)}' is invalid/broken.`);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Clear existing
         await ActiveProgramModel.deleteMany({});
 
         // 4. Determine program type

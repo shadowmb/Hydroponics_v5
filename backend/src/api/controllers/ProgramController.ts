@@ -32,7 +32,76 @@ export class ProgramController {
             }
 
             const programs = await programRepository.findAll();
-            return reply.send(programs);
+
+            // Validate programs by checking their flow status
+            // We do this dynamically to ensure it's always up to date
+            const { FlowModel } = require('../../modules/persistence/schemas/Flow.schema');
+            const invalidFlows = await FlowModel.find({ validationStatus: 'INVALID' }, { id: 1, name: 1 });
+            const invalidFlowMap = new Map(invalidFlows.map((f: any) => [f.id, f.name]));
+
+            const validatedPrograms = programs.map(program => {
+                const p = program.toObject ? program.toObject() : program;
+                let isInvalid = false;
+                let invalidFlowName = '';
+
+                // Check Basic Schedule
+                if (p.schedule) {
+                    for (const item of p.schedule) {
+                        if (item.steps) {
+                            for (const step of item.steps) {
+                                if (invalidFlowMap.has(step.flowId)) {
+                                    isInvalid = true;
+                                    invalidFlowName = invalidFlowMap.get(step.flowId);
+                                    break;
+                                }
+                            }
+                        }
+                        if (isInvalid) break;
+                    }
+                }
+
+                // Check Advanced Windows
+                if (!isInvalid && p.windows) {
+                    for (const window of p.windows) {
+                        // Check triggers
+                        if (window.triggers) {
+                            for (const trigger of window.triggers) {
+                                if (trigger.flowId && invalidFlowMap.has(trigger.flowId)) {
+                                    isInvalid = true;
+                                    invalidFlowName = invalidFlowMap.get(trigger.flowId);
+                                    break;
+                                }
+                                if (trigger.flowIds) {
+                                    for (const flowId of trigger.flowIds) {
+                                        if (invalidFlowMap.has(flowId)) {
+                                            isInvalid = true;
+                                            invalidFlowName = invalidFlowMap.get(flowId);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Check fallback
+                        if (!isInvalid && window.fallbackFlowId && invalidFlowMap.has(window.fallbackFlowId)) {
+                            isInvalid = true;
+                            invalidFlowName = invalidFlowMap.get(window.fallbackFlowId);
+                        }
+                        if (isInvalid) break;
+                    }
+                }
+
+                if (isInvalid) {
+                    (p as any).validationStatus = 'INVALID';
+                    (p as any).validationError = `Contains invalid flow: ${invalidFlowName}`;
+                } else {
+                    (p as any).validationStatus = 'VALID';
+                }
+
+                return p;
+            });
+
+            return reply.send(validatedPrograms);
         } catch (error: any) {
             logger.error({ error }, 'Failed to list programs');
             return reply.status(500).send({ message: 'Failed to list programs' });

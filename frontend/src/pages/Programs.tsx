@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit, Trash2, Plus, Loader2, Calendar, Zap } from 'lucide-react';
+import { Edit, Trash2, Plus, Loader2, Calendar, Zap, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -201,6 +201,16 @@ export const Programs: React.FC = () => {
                                             <td className="px-4 py-3">
                                                 {viewDeleted ? (
                                                     <span className="text-xs text-orange-600 font-medium">Deleted</span>
+                                                ) : (program as any).validationStatus === 'INVALID' ? (
+                                                    <div className="group relative inline-block">
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-red-500/10 text-red-600 gap-1 cursor-help">
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            Invalid
+                                                        </span>
+                                                        <div className="absolute hidden group-hover:block z-10 w-48 p-2 mt-1 text-xs text-white bg-slate-800 rounded shadow-lg -translate-x-1/2 left-1/2">
+                                                            {(program as any).validationError || 'Contains invalid flows'}
+                                                        </div>
+                                                    </div>
                                                 ) : (
                                                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${activeProgram?.sourceProgramId === program.id ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
                                                         }`}>
@@ -235,10 +245,10 @@ export const Programs: React.FC = () => {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => handleLoad(program)}
-                                                                title={activeProgram ? "Unload active program first" : "Set as Active Program"}
-                                                                disabled={!!activeProgram}
+                                                                title={!!activeProgram ? "Unload active program first" : (program as any).validationStatus === 'INVALID' ? "Cannot load invalid program" : "Set as Active Program"}
+                                                                disabled={!!activeProgram || (program as any).validationStatus === 'INVALID'}
                                                             >
-                                                                <Zap className={`h-4 w-4 ${!!activeProgram ? 'text-gray-400' : 'text-orange-500'}`} />
+                                                                <Zap className={`h-4 w-4 ${!!activeProgram || (program as any).validationStatus === 'INVALID' ? 'text-gray-400' : 'text-orange-500'}`} />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
