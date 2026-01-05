@@ -17,9 +17,19 @@ import { FlowTestDialog } from '../components/flows/FlowTestDialog';
 
 import type { IFlow } from '../../../shared/types';
 
+interface FlowUsage {
+    id: string;
+    name: string;
+    isActive: boolean;
+}
+
+interface EnrichedFlow extends IFlow {
+    usedIn?: FlowUsage[];
+}
+
 export const Flows: React.FC = () => {
     const navigate = useNavigate();
-    const [flows, setFlows] = useState<IFlow[]>([]);
+    const [flows, setFlows] = useState<EnrichedFlow[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [hardDeleteId, setHardDeleteId] = useState<string | null>(null);
@@ -202,7 +212,8 @@ export const Flows: React.FC = () => {
                                         <th>Name</th>
                                         <th>ID</th>
                                         <th>Created At</th>
-                                        <th>Status</th>
+                                        <th>State</th>
+                                        <th>Programs</th>
                                         <th className="text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -219,17 +230,33 @@ export const Flows: React.FC = () => {
                                                     <span className="text-xs text-orange-600 font-medium">Deleted</span>
                                                 ) : (
                                                     <div className="flex flex-col gap-1">
-                                                        {flow.validationStatus === 'INVALID' && (
+                                                        {flow.validationStatus === 'INVALID' ? (
                                                             <div className="flex items-center text-xs text-orange-600 font-medium" title="This flow has errors and cannot be run.">
                                                                 <AlertTriangle className="h-3 w-3 mr-1" />
                                                                 Draft / Invalid
                                                             </div>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-green-500/10 text-green-600">
+                                                                Ready
+                                                            </span>
                                                         )}
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${flow.isActive ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
-                                                            }`}>
-                                                            {flow.isActive ? 'Active' : 'Inactive'}
-                                                        </span>
                                                     </div>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {!viewDeleted && flow.usedIn && flow.usedIn.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {flow.usedIn.map(p => (
+                                                            <span key={p.id} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${p.isActive
+                                                                    ? 'bg-green-50 border-green-200 text-green-700'
+                                                                    : 'bg-gray-50 border-gray-200 text-gray-600'
+                                                                }`} title={p.isActive ? 'Active Program' : 'Inactive Program'}>
+                                                                {p.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground italic">Unused</span>
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-right">
@@ -274,17 +301,19 @@ export const Flows: React.FC = () => {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => navigate(`/editor/${flow.id}`)}
-                                                                title="Edit Flow"
+                                                                disabled={!!(flow.usedIn && flow.usedIn.length > 0)}
+                                                                title={flow.usedIn && flow.usedIn.length > 0 ? "Cannot edit flow used in programs" : "Edit Flow"}
                                                             >
-                                                                <Edit className="h-4 w-4 text-blue-600" />
+                                                                <Edit className={`h-4 w-4 ${flow.usedIn && flow.usedIn.length > 0 ? 'text-gray-300' : 'text-blue-600'}`} />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => setDeleteId(flow.id)}
-                                                                title="Delete Flow"
+                                                                disabled={!!(flow.usedIn && flow.usedIn.length > 0)}
+                                                                title={flow.usedIn && flow.usedIn.length > 0 ? "Cannot delete flow used in programs" : "Delete Flow"}
                                                             >
-                                                                <Trash2 className="h-4 w-4 text-red-600" />
+                                                                <Trash2 className={`h-4 w-4 ${flow.usedIn && flow.usedIn.length > 0 ? 'text-gray-300' : 'text-red-600'}`} />
                                                             </Button>
                                                         </>
                                                     )}

@@ -73,6 +73,10 @@ export class ActiveProgramService {
 
         // 6. Create Active Program
         const activeProgram = await ActiveProgramModel.create(activeProgramData);
+
+        // 7. Sync persistent state
+        await programRepository.syncActiveStatus(template.id);
+
         return activeProgram;
     }
 
@@ -300,6 +304,10 @@ export class ActiveProgramService {
         await ActiveProgramModel.deleteMany({});
         // Ensure cycle is stopped
         await cycleManager.stopCycle();
+
+        // Sync persistent state (none active)
+        await programRepository.syncActiveStatus(null);
+
         logger.info('🗑️ Active Program Unloaded');
     }
 

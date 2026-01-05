@@ -41,6 +41,10 @@ export class FlowRepository {
             }
         );
     }
+
+    async findFlowsByDeviceId(deviceId: string): Promise<IFlow[]> {
+        return FlowModel.find({ "nodes.params.deviceId": deviceId }).exec();
+    }
 }
 
 export const flowRepository = new FlowRepository();
