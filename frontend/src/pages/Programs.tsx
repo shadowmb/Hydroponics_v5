@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit, Trash2, Plus, Loader2, Calendar, Play } from 'lucide-react';
+import { Edit, Trash2, Plus, Loader2, Calendar, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -26,6 +26,8 @@ export const Programs: React.FC = () => {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [viewDeleted, setViewDeleted] = useState(false);
 
+    const [activeProgram, setActiveProgram] = useState<any>(null);
+
     useEffect(() => {
         fetchPrograms();
     }, [viewDeleted]);
@@ -34,10 +36,15 @@ export const Programs: React.FC = () => {
         setLoading(true);
         try {
             const endpoint = viewDeleted ? '/api/programs?deleted=true' : '/api/programs';
-            const res = await fetch(endpoint);
-            if (!res.ok) throw new Error('Failed to fetch programs');
-            const data = await res.json();
+            const [programsRes, activeRes] = await Promise.all([
+                fetch(endpoint),
+                activeProgramService.getActive()
+            ]);
+
+            if (!programsRes.ok) throw new Error('Failed to fetch programs');
+            const data = await programsRes.json();
             setPrograms(data);
+            setActiveProgram(activeRes || null);
         } catch (error) {
             console.error(error);
             toast.error('Failed to load programs');
@@ -98,26 +105,11 @@ export const Programs: React.FC = () => {
         }
     };
 
-    const handleToggleActive = async (program: IProgram) => {
-        // TODO: Implement activation logic (ensure only one program is active?)
-        // For now just toggle the flag
-        try {
-            const res = await fetch(`/api/programs/${program.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...program, isActive: !program.isActive })
-            });
-            if (!res.ok) throw new Error('Failed to update program');
-
-            // Refresh list to reflect backend side-effects (deactivating others)
-            fetchPrograms();
-            toast.success(`Program ${!program.isActive ? 'activated' : 'deactivated'}`);
-        } catch (error) {
-            toast.error('Failed to update program status');
-        }
-    };
-
     const handleLoad = async (program: IProgram) => {
+        if (activeProgram) {
+            toast.error('A program is already active. Please stop/unload it first.');
+            return;
+        }
         try {
             await activeProgramService.load(program.id);
             toast.success('Program loaded');
@@ -210,14 +202,10 @@ export const Programs: React.FC = () => {
                                                 {viewDeleted ? (
                                                     <span className="text-xs text-orange-600 font-medium">Deleted</span>
                                                 ) : (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className={`h-6 px-2 text-xs font-medium rounded-full ${program.isActive ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20' : 'bg-gray-500/10 text-gray-600 hover:bg-gray-500/20'}`}
-                                                        onClick={() => handleToggleActive(program)}
-                                                    >
-                                                        {program.isActive ? 'Active' : 'Inactive'}
-                                                    </Button>
+                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${activeProgram?.sourceProgramId === program.id ? 'bg-green-500/10 text-green-600' : 'bg-gray-500/10 text-gray-600'
+                                                        }`}>
+                                                        {activeProgram?.sourceProgramId === program.id ? 'Active' : 'Inactive'}
+                                                    </span>
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-right">
@@ -247,25 +235,28 @@ export const Programs: React.FC = () => {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => handleLoad(program)}
-                                                                title="Load Program"
+                                                                title={activeProgram ? "Unload active program first" : "Set as Active Program"}
+                                                                disabled={!!activeProgram}
                                                             >
-                                                                <Play className="h-4 w-4 text-green-600" />
+                                                                <Zap className={`h-4 w-4 ${!!activeProgram ? 'text-gray-400' : 'text-orange-500'}`} />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => navigate(`/programs/${program.id}`)}
-                                                                title="Edit Program"
+                                                                title={activeProgram?.sourceProgramId === program.id ? "Cannot edit currently active program" : "Edit Program"}
+                                                                disabled={activeProgram?.sourceProgramId === program.id}
                                                             >
-                                                                <Edit className="h-4 w-4 text-blue-600" />
+                                                                <Edit className={`h-4 w-4 ${activeProgram?.sourceProgramId === program.id ? 'text-gray-400' : 'text-blue-600'}`} />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => setDeleteId(program.id)}
-                                                                title="Delete Program"
+                                                                title={activeProgram?.sourceProgramId === program.id ? "Cannot delete currently active program" : "Delete Program"}
+                                                                disabled={activeProgram?.sourceProgramId === program.id}
                                                             >
-                                                                <Trash2 className="h-4 w-4 text-red-600" />
+                                                                <Trash2 className={`h-4 w-4 ${activeProgram?.sourceProgramId === program.id ? 'text-gray-400' : 'text-red-600'}`} />
                                                             </Button>
                                                         </>
                                                     )}
