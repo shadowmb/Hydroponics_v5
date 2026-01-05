@@ -10,6 +10,7 @@ import { Devices } from './pages/Devices';
 import { FlowEditor } from './pages/FlowEditor';
 import Hardware from './pages/Hardware';
 import { History } from './pages/History';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 // import { Cycles } from './pages/Cycles';
 // import { CycleEditor } from './pages/CycleEditor';
 import { Programs } from './pages/Programs';
@@ -54,6 +55,7 @@ function App() {
             <Route path="/programs/:id" element={<ProgramEditor />} />
             <Route path="/active-program" element={<ActiveProgramPage />} />
             <Route path="/hardware" element={<Hardware />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/history" element={<History />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />

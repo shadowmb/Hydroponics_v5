@@ -8,6 +8,7 @@ export interface HardwarePacket {
     id: string;
     cmd: string;
     pins?: Record<string, string> | Map<string, string> | any[];
+    timeout?: number;
     [key: string]: any;
 }
 

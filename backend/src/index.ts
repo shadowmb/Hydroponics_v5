@@ -13,6 +13,7 @@ import { seedControllerTemplates } from './utils/seedTemplates';
 import { hardware } from './modules/hardware/HardwareService';
 import { historyService } from './services/HistoryService';
 import { notifications } from './services/NotificationService';
+import { programLogService } from './services/ProgramLogService'; // Ensure listeners are registered
 
 const app = Fastify({
     logger: false // We use our own Pino instance
@@ -74,6 +75,12 @@ async function bootstrap() {
         console.log('Initializing Notification Service...');
         notifications.initialize();
         logger.info('🔔 Notification Service Active');
+
+        // 5.3 Initialize Program Log Service (Event Listeners for execution history)
+        console.log('Initializing Program Log Service...');
+        // Force the service to be instantiated (import alone may be tree-shaken)
+        const logService = programLogService;
+        logger.info('📋 Program Log Service Active', { active: !!logService });
 
         // DEBUG: Verify Event Bus Connection
         const { events } = require('./core/EventBusService');

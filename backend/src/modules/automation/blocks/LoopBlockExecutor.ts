@@ -268,11 +268,23 @@ export class LoopBlockExecutor implements IBlockExecutor {
             ? `: ${Number(left).toFixed(2)} ${operator} ${rightDisplay} => ${shouldLoop ? 'TRUE' : 'FALSE'}`
             : '';
 
+        const logData = variable ? {
+            action: 'CHECK', // Using CHECK to match IF blocks
+            primaryValue: shouldLoop ? 1 : 0,
+            primaryUnit: 'bool',
+            leftValue: Number(left),
+            rightValue: Number(right),
+            operator: operator,
+            tolerance: tolerance,
+            strategy: 'loop_check'
+        } : undefined;
+
         return {
             success: true,
             output: shouldLoop,
             state: nextState,
-            summary: `Iteration ${currentIteration}${summaryDetails}` + (shouldLoop ? ' (Continuing)' : ' (Done)')
+            summary: `Iteration ${currentIteration}${summaryDetails}` + (shouldLoop ? ' (Continuing)' : ' (Done)'),
+            logData // Pass this to the engine to be saved in metadata
         };
     }
 

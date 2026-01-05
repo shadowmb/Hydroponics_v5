@@ -148,15 +148,29 @@ export class HardwareController {
             const { id } = req.params as { id: string };
             const body = req.body as any;
 
-            const controller = await Controller.findByIdAndUpdate(
-                id,
-                { $set: body },
-                { new: true }
-            );
-
+            const controller = await Controller.findById(id);
             if (!controller) {
                 return reply.status(404).send({ success: false, error: 'Controller not found' });
             }
+
+            // DEEP MERGE for nested objects to preserve existing fields
+            Object.keys(body).forEach(key => {
+                if (key === 'connection') {
+                    // Merge connection object
+                    const existingConnection = (controller.connection as any) || {};
+                    controller.set('connection', { ...existingConnection, ...body.connection });
+                    controller.markModified('connection');
+                } else if (key === 'hardwareConfig') {
+                    // Merge hardwareConfig object
+                    const existingHwConfig = (controller as any).hardwareConfig || {};
+                    controller.set('hardwareConfig', { ...existingHwConfig, ...body.hardwareConfig });
+                    controller.markModified('hardwareConfig');
+                } else {
+                    controller.set(key, body[key]);
+                }
+            });
+
+            await controller.save();
 
             // If deactivated, force disconnect
             if (body.isActive === false) {
@@ -1106,10 +1120,21 @@ export class HardwareController {
                 }
             }
 
-            // Update device fields
-            // Use set() to handle dot notation (e.g. 'config.validation') correctly
+            // Update device fields with DEEP MERGE for config
+            // This preserves existing config fields (like calibrations) that aren't sent by frontend
             Object.keys(body).forEach(key => {
-                device.set(key, body[key]);
+                if (key === 'config') {
+                    // DEEP MERGE: Preserve existing config fields (like calibrations, activeRole)
+                    const existingConfig = (device.config as any) || {};
+                    const mergedConfig = {
+                        ...existingConfig,
+                        ...body.config
+                    };
+                    device.set('config', mergedConfig);
+                    device.markModified('config');
+                } else {
+                    device.set(key, body[key]);
+                }
             });
 
             // CRITICAL FIX: Mark hardware as modified to ensure it saves!
@@ -1142,6 +1167,9 @@ export class HardwareController {
                     req.log.warn({ deviceId: id, error: triggerError.message }, '⚠️ [UpdateDevice] Could not trigger instant restart');
                 }
             }
+
+            // Populate driverId before returning so frontend has full template info
+            await device.populate('config.driverId');
 
             return reply.send({ success: true, data: device });
         } catch (error: any) {

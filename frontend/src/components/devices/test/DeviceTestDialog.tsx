@@ -39,6 +39,9 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
     const [samplingDefaults, setSamplingDefaults] = useState<{ count: number, delayMs: number } | undefined>(undefined);
 
     useEffect(() => {
+        // Skip if dialog is not open or device is not loaded
+        if (!open || !device) return;
+
         // Get Hardware Limits & Base Unit from populated driverId (or fallback to fetching templates)
         const extractTemplateInfo = () => {
             // driverId might be populated as an object with all template data
@@ -93,7 +96,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
         };
 
         extractTemplateInfo();
-    }, [device?.config?.driverId]);
+    }, [open, device?.config?.driverId]);
 
     const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
         const time = new Date().toLocaleTimeString();

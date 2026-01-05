@@ -231,7 +231,17 @@ export class IfBlockExecutor implements IBlockExecutor {
         return {
             success: true,
             output: result,
-            summary
+            summary,
+            logData: {
+                action: 'CHECK',
+                primaryValue: result ? 1 : 0,
+                primaryUnit: 'bool',
+                leftValue: Number(left),
+                rightValue: Number(right),
+                operator: operator,
+                tolerance: tolerance,
+                strategy: 'comparison'
+            }
         };
     }
 

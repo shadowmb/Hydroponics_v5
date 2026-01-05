@@ -105,7 +105,7 @@ function Sidebar({ className }: SidebarProps) {
                             Hardware
                         </NavLink>
                         <NavLink
-                            to="/history"
+                            to="/analytics"
                             className={({ isActive }) =>
                                 cn(
                                     "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
@@ -114,7 +114,7 @@ function Sidebar({ className }: SidebarProps) {
                             }
                         >
                             <LineChart className="mr-2 h-4 w-4" />
-                            History
+                            Data & Analytics
                         </NavLink>
                         <NavLink
                             to="/settings"

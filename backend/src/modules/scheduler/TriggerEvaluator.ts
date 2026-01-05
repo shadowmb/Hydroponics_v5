@@ -26,7 +26,8 @@ export class TriggerEvaluator {
     async evaluateWindow(
         window: ITimeWindow,
         windowState: IWindowState,
-        variableOverrides: Record<string, any> = {}
+        variableOverrides: Record<string, any> = {},
+        programId?: string // Added for logging context
     ): Promise<EvaluationResult> {
 
         const pendingTriggers = window.triggers.filter(
@@ -53,6 +54,7 @@ export class TriggerEvaluator {
 
                     // Emit skipped event for visibility
                     events.emit('advanced:trigger_skipped', {
+                        programId,
                         windowId: window.id,
                         triggerId: trigger.id,
                         sensorName,
@@ -64,6 +66,7 @@ export class TriggerEvaluator {
                 }
 
                 const matches = this.matchesCondition(sensorValue, trigger);
+                logger.info({ sensorValue, condition: `${trigger.operator} ${trigger.value}`, matches }, '🎯 [TriggerEvaluator] Condition check result');
 
                 if (matches) {
                     logger.info({
@@ -90,6 +93,7 @@ export class TriggerEvaluator {
                     const flowDisplayName = steps.length > 1 ? `${steps.length} Flows` : steps[0]?.flowId;
 
                     events.emit('advanced:trigger_matched', {
+                        programId,
                         windowId: window.id,
                         triggerId: trigger.id,
                         sensorName,
@@ -100,11 +104,18 @@ export class TriggerEvaluator {
                     });
 
                     // Execute the flow(s) with variable overrides
+                    // Add activeProgramId + window context so ProgramLogService can track flow executions
+                    const overridesWithContext = {
+                        ...variableOverrides,
+                        activeProgramId: programId,
+                        windowId: window.id,
+                        windowName: window.name
+                    };
                     const flowSessionId = await cycleManager.startCycle(
                         trigger.id,  // cycleId
                         `Trigger: ${trigger.id}`,  // name
-                        steps,  // multi-step array
-                        variableOverrides  // session overrides
+                        steps.map(s => ({ ...s, overrides: overridesWithContext })),  // multi-step array with context
+                        overridesWithContext  // session overrides
                     );
 
                     // Mark trigger as executing (will be moved to executed when flow completes)
@@ -123,6 +134,7 @@ export class TriggerEvaluator {
                 } else {
                     // Trigger condition NOT met
                     events.emit('advanced:trigger_skipped', {
+                        programId,
                         windowId: window.id,
                         triggerId: trigger.id,
                         sensorName,
@@ -147,7 +159,7 @@ export class TriggerEvaluator {
      * Execute the fallback flow for a window.
      * Returns session ID if started.
      */
-    async executeFallback(window: ITimeWindow, variableOverrides: Record<string, any> = {}): Promise<string | undefined> {
+    async executeFallback(window: ITimeWindow, variableOverrides: Record<string, any> = {}, activeProgramId?: string): Promise<string | undefined> {
         // Migration support: check both new plural array and old single ID
         const useMultiFlow = window.fallbackFlowIds && window.fallbackFlowIds.length > 0;
         const useSingleFlow = !!window.fallbackFlowId;
@@ -164,19 +176,22 @@ export class TriggerEvaluator {
         }, '🛡️ Executing fallback flow(s)');
 
         try {
+            // Include activeProgramId in overrides for logging
+            const overridesWithProgramId = { ...variableOverrides, activeProgramId };
+
             // Construct steps (Multiple flows logic)
             let steps: { flowId: string, overrides: any }[] = [];
 
             if (useMultiFlow) {
                 steps = window.fallbackFlowIds!.map(fid => ({
                     flowId: fid,
-                    overrides: variableOverrides
+                    overrides: overridesWithProgramId
                 }));
             } else if (useSingleFlow) {
                 // Backward compatibility
                 steps = [{
                     flowId: window.fallbackFlowId!,
-                    overrides: variableOverrides
+                    overrides: overridesWithProgramId
                 }];
             }
 
@@ -185,7 +200,7 @@ export class TriggerEvaluator {
                 `fallback-${window.id}`,
                 `Fallback: ${window.name}`,
                 steps,
-                variableOverrides
+                overridesWithProgramId
             );
 
             logger.info({ flowSessionId }, '🛡️ Fallback started');
@@ -206,6 +221,8 @@ export class TriggerEvaluator {
         sensorId: string,
         source: 'cached' | 'live'
     ): Promise<number | null> {
+        logger.info({ sensorId, source }, '🔍 [TriggerEvaluator] Reading sensor...');
+
         try {
             if (source === 'cached') {
                 const device = await DeviceModel.findById(sensorId);
@@ -213,14 +230,18 @@ export class TriggerEvaluator {
                     logger.warn({ sensorId }, '⚠️ Sensor not found');
                     return null;
                 }
-                return device.lastReading?.value ?? null;
+                const value = device.lastReading?.value ?? null;
+                logger.info({ sensorId, value }, '📊 [TriggerEvaluator] Cached value');
+                return value;
             } else {
                 // Live read
+                logger.info({ sensorId }, '📡 [TriggerEvaluator] Starting LIVE read...');
                 const result = await hardware.readSensorValue(sensorId);
+                logger.info({ sensorId, value: result.value }, '📊 [TriggerEvaluator] Live value received');
                 return result.value;
             }
         } catch (error: any) {
-            logger.error({ sensorId, error: error.message }, '❌ Failed to read sensor');
+            logger.error({ sensorId, error: error.message }, '❌ [TriggerEvaluator] Failed to read sensor');
             return null;
         }
     }

@@ -216,6 +216,13 @@ export class ActiveProgramService {
             active.status = 'running';
             if (!active.startTime) active.startTime = new Date();
             logger.info('▶️ Active Program Started');
+
+            // Emit start event for Logging Service
+            const { events } = await import('../../core/EventBusService');
+            events.emit('active:program_started', {
+                programId: active.sourceProgramId,
+                timestamp: active.startTime
+            });
         }
 
         // Reset FAILED and RUNNING items to PENDING on Start as well

@@ -47,6 +47,16 @@ export interface ActiveResource {
     revertOnStop: boolean; // Policy
 }
 
+// Universal Log Data Interface for Analytics
+export interface IBlockLogData {
+    action: string;        // e.g. "DOSE", "READ", "SET", "PULSE"
+    primaryValue?: number; // e.g. 15 (ml), 1.11 (pH), 1 (ON)
+    primaryUnit?: string;  // e.g. "ml", "pH", "bool", "doses"
+    durationMs?: number;   // Execution duration in ms
+    strategy?: string;     // e.g. "volumetric", "time_based", "simple"
+    [key: string]: any;    // Allow extensibility
+}
+
 export interface Edge {
     id: string;
     source: string;
@@ -82,6 +92,8 @@ export interface BlockResult {
     error?: string;
     summary?: string; // Human-readable summary of the result (e.g. "Read 24.5 °C")
     state?: any; // State to persist for this block (e.g. loop iteration)
+    logData?: IBlockLogData; // Structured data for analytics
+    data?: any; // Legacy generic data support
 }
 
 /**

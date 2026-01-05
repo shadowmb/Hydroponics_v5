@@ -23,7 +23,10 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
             // If user selects 'tank_volume', we pass it.
             // If user selects 'distance', we might just want default behavior OR specific 'linear' strategy.
 
+            const startTime = Date.now();
             const result = await hardware.readSensorValue(deviceId, strategyOverride);
+            const duration = Date.now() - startTime;
+
             let valueToSave = result.value;
 
             // 2. Save to Variable (if configured)
@@ -72,7 +75,14 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
             return {
                 success: true,
                 output: valueToSave, // Return the FINAL (possibly converted) value as output
-                summary: `Read ${formattedValue} ${finalUnit || ''}`.trim()
+                summary: `Read ${formattedValue} ${finalUnit || ''}`.trim(),
+                logData: {
+                    action: 'READ',
+                    primaryValue: typeof valueToSave === 'number' ? valueToSave : undefined,
+                    primaryUnit: finalUnit,
+                    strategy: strategyOverride || 'default',
+                    durationMs: duration
+                }
             };
         } catch (error: any) {
             return { success: false, error: error.message };
