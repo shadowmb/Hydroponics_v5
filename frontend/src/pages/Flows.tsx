@@ -248,8 +248,8 @@ export const Flows: React.FC = () => {
                                                     <div className="flex flex-wrap gap-1">
                                                         {flow.usedIn.map(p => (
                                                             <span key={p.id} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${p.isActive
-                                                                    ? 'bg-green-50 border-green-200 text-green-700'
-                                                                    : 'bg-gray-50 border-gray-200 text-gray-600'
+                                                                ? 'bg-green-50 border-green-200 text-green-700'
+                                                                : 'bg-gray-50 border-gray-200 text-gray-600'
                                                                 }`} title={p.isActive ? 'Active Program' : 'Inactive Program'}>
                                                                 {p.name}
                                                             </span>
@@ -301,19 +301,19 @@ export const Flows: React.FC = () => {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => navigate(`/editor/${flow.id}`)}
-                                                                disabled={!!(flow.usedIn && flow.usedIn.length > 0)}
-                                                                title={flow.usedIn && flow.usedIn.length > 0 ? "Cannot edit flow used in programs" : "Edit Flow"}
+                                                                disabled={!!(flow.usedIn && flow.usedIn.some((p: any) => p.isActive))}
+                                                                title={flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? "Cannot edit flow used in active programs" : "Edit Flow"}
                                                             >
-                                                                <Edit className={`h-4 w-4 ${flow.usedIn && flow.usedIn.length > 0 ? 'text-gray-300' : 'text-blue-600'}`} />
+                                                                <Edit className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-blue-600'}`} />
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => setDeleteId(flow.id)}
-                                                                disabled={!!(flow.usedIn && flow.usedIn.length > 0)}
-                                                                title={flow.usedIn && flow.usedIn.length > 0 ? "Cannot delete flow used in programs" : "Delete Flow"}
+                                                                disabled={!!(flow.usedIn && flow.usedIn.some((p: any) => p.isActive))}
+                                                                title={flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? "Cannot delete flow used in active programs" : "Delete Flow"}
                                                             >
-                                                                <Trash2 className={`h-4 w-4 ${flow.usedIn && flow.usedIn.length > 0 ? 'text-gray-300' : 'text-red-600'}`} />
+                                                                <Trash2 className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-red-600'}`} />
                                                             </Button>
                                                         </>
                                                     )}

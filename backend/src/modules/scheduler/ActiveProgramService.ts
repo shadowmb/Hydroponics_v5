@@ -21,19 +21,23 @@ export class ActiveProgramService {
         const template = await programRepository.findById(programId);
         if (!template) throw new Error(`Program template not found: ${programId}`);
 
-        // 3. Validation Check: Ensure no flows are invalid
+        // 3. Validation Check: Ensure no flows are invalid OR missing
         const { FlowModel } = require('../persistence/schemas/Flow.schema');
-        const invalidFlows = await FlowModel.find({ validationStatus: 'INVALID' }, { id: 1, name: 1 });
-        const invalidFlowMap = new Map(invalidFlows.map((f: any) => [f.id, f.name]));
+        const allFlows = await FlowModel.find({}, { id: 1, name: 1, validationStatus: 1 });
+        const flowMap = new Map(allFlows.map((f: any) => [f.id, f]));
+
+        const checkFlow = (flowId: string) => {
+            const flow = flowMap.get(flowId) as any;
+            if (!flow) throw new Error(`Cannot load program. Referenced flow '${flowId}' was not found (deleted?).`);
+            if (flow.validationStatus === 'INVALID') throw new Error(`Cannot load program. Flow '${flow.name}' is invalid/broken.`);
+        };
 
         // Check Basic Schedule
         if (template.schedule) {
             for (const item of template.schedule) {
                 if (item.steps) {
                     for (const step of item.steps) {
-                        if (invalidFlowMap.has(step.flowId)) {
-                            throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(step.flowId)}' is invalid/broken.`);
-                        }
+                        checkFlow(step.flowId);
                     }
                 }
             }
@@ -44,27 +48,17 @@ export class ActiveProgramService {
             for (const window of template.windows) {
                 if (window.triggers) {
                     for (const trigger of window.triggers) {
-                        if (trigger.flowId && invalidFlowMap.has(trigger.flowId)) {
-                            throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(trigger.flowId)}' is invalid/broken.`);
-                        }
+                        if (trigger.flowId) checkFlow(trigger.flowId);
                         if (trigger.flowIds) { // Array support
-                            for (const fid of trigger.flowIds) {
-                                if (invalidFlowMap.has(fid)) {
-                                    throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(fid)}' is invalid/broken.`);
-                                }
-                            }
+                            for (const fid of trigger.flowIds) checkFlow(fid);
                         }
                     }
                 }
-                if (window.fallbackFlowId && invalidFlowMap.has(window.fallbackFlowId)) {
-                    throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(window.fallbackFlowId)}' is invalid/broken.`);
-                }
+                if (window.fallbackFlowId) checkFlow(window.fallbackFlowId);
+                // @ts-ignore
                 if (window.fallbackFlowIds) {
-                    for (const fid of window.fallbackFlowIds) {
-                        if (invalidFlowMap.has(fid)) {
-                            throw new Error(`Cannot load program. Flow '${invalidFlowMap.get(fid)}' is invalid/broken.`);
-                        }
-                    }
+                    // @ts-ignore
+                    for (const fid of window.fallbackFlowIds) checkFlow(fid);
                 }
             }
         }

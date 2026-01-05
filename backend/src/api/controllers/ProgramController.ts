@@ -36,22 +36,33 @@ export class ProgramController {
             // Validate programs by checking their flow status
             // We do this dynamically to ensure it's always up to date
             const { FlowModel } = require('../../modules/persistence/schemas/Flow.schema');
-            const invalidFlows = await FlowModel.find({ validationStatus: 'INVALID' }, { id: 1, name: 1 });
-            const invalidFlowMap = new Map(invalidFlows.map((f: any) => [f.id, f.name]));
+
+            // Fetch ALL flows (minimal projection) to check for existence and validity
+            const allFlows = await FlowModel.find({}, { id: 1, name: 1, validationStatus: 1 });
+            const flowMap = new Map(allFlows.map((f: any) => [f.id, f]));
 
             const validatedPrograms = programs.map(program => {
                 const p = program.toObject ? program.toObject() : program;
                 let isInvalid = false;
-                let invalidFlowName = '';
+                let validationError = '';
+
+                // Helper to check flow validity
+                const checkFlow = (flowId: string): { valid: boolean, error?: string } => {
+                    const flow = flowMap.get(flowId);
+                    if (!flow) return { valid: false, error: `Referenced flow not found: ${flowId}` };
+                    if (flow.validationStatus === 'INVALID') return { valid: false, error: `Contains invalid flow: ${flow.name}` };
+                    return { valid: true };
+                };
 
                 // Check Basic Schedule
                 if (p.schedule) {
                     for (const item of p.schedule) {
                         if (item.steps) {
                             for (const step of item.steps) {
-                                if (invalidFlowMap.has(step.flowId)) {
+                                const result = checkFlow(step.flowId);
+                                if (!result.valid) {
                                     isInvalid = true;
-                                    invalidFlowName = invalidFlowMap.get(step.flowId);
+                                    validationError = result.error || 'Invalid flow';
                                     break;
                                 }
                             }
@@ -66,26 +77,34 @@ export class ProgramController {
                         // Check triggers
                         if (window.triggers) {
                             for (const trigger of window.triggers) {
-                                if (trigger.flowId && invalidFlowMap.has(trigger.flowId)) {
-                                    isInvalid = true;
-                                    invalidFlowName = invalidFlowMap.get(trigger.flowId);
-                                    break;
+                                if (trigger.flowId) {
+                                    const result = checkFlow(trigger.flowId);
+                                    if (!result.valid) {
+                                        isInvalid = true;
+                                        validationError = result.error || 'Invalid flow';
+                                        break;
+                                    }
                                 }
                                 if (trigger.flowIds) {
                                     for (const flowId of trigger.flowIds) {
-                                        if (invalidFlowMap.has(flowId)) {
+                                        const result = checkFlow(flowId);
+                                        if (!result.valid) {
                                             isInvalid = true;
-                                            invalidFlowName = invalidFlowMap.get(flowId);
+                                            validationError = result.error || 'Invalid flow';
                                             break;
                                         }
                                     }
                                 }
+                                if (isInvalid) break;
                             }
                         }
                         // Check fallback
-                        if (!isInvalid && window.fallbackFlowId && invalidFlowMap.has(window.fallbackFlowId)) {
-                            isInvalid = true;
-                            invalidFlowName = invalidFlowMap.get(window.fallbackFlowId);
+                        if (!isInvalid && window.fallbackFlowId) {
+                            const result = checkFlow(window.fallbackFlowId);
+                            if (!result.valid) {
+                                isInvalid = true;
+                                validationError = result.error || 'Invalid flow';
+                            }
                         }
                         if (isInvalid) break;
                     }
@@ -93,7 +112,7 @@ export class ProgramController {
 
                 if (isInvalid) {
                     (p as any).validationStatus = 'INVALID';
-                    (p as any).validationError = `Contains invalid flow: ${invalidFlowName}`;
+                    (p as any).validationError = validationError;
                 } else {
                     (p as any).validationStatus = 'VALID';
                 }
