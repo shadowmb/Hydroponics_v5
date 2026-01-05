@@ -11,6 +11,7 @@ interface AnalyticsQuery {
     action?: string;
     page?: string;
     limit?: string;
+    unit?: string;
 }
 
 interface AnalyticsParams {
@@ -60,7 +61,8 @@ export const AnalyticsController = {
                 device,
                 action,
                 page = '1',
-                limit = '100'
+                limit = '100',
+                unit
             } = request.query;
 
             // Default date range: last 7 days
@@ -76,7 +78,8 @@ export const AnalyticsController = {
                 flowId,
                 blockType,
                 device,
-                action
+                action,
+                unit
             };
 
             const result = await analyticsService.getAnalytics(
@@ -115,7 +118,8 @@ export const AnalyticsController = {
                 flowId,
                 blockType,
                 device,
-                action
+                action,
+                unit
             } = request.query;
 
             // Default date range: last 30 days
@@ -131,7 +135,8 @@ export const AnalyticsController = {
                 flowId,
                 blockType,
                 device,
-                action
+                action,
+                unit
             };
 
             const result = await analyticsService.getFilterOptions(filters);

@@ -8,6 +8,7 @@ export interface AnalyticsFilters {
     blockType?: string;
     device?: string;
     action?: string;
+    unit?: string;
     page?: number;
     limit?: number;
 }
@@ -18,6 +19,7 @@ export interface FilterOptions {
     devices: string[];
     actions: string[];
     blockTypes: string[];
+    units: string[];
 }
 
 export interface SensorStat {
@@ -107,6 +109,7 @@ export const analyticsService = {
         if (filters.blockType) params.append('blockType', filters.blockType);
         if (filters.device) params.append('device', filters.device);
         if (filters.action) params.append('action', filters.action);
+        if (filters.unit) params.append('unit', filters.unit);
         if (filters.page) params.append('page', filters.page.toString());
         if (filters.limit) params.append('limit', filters.limit.toString());
 
@@ -132,6 +135,7 @@ export const analyticsService = {
         if (filters.blockType) params.append('blockType', filters.blockType);
         if (filters.device) params.append('device', filters.device);
         if (filters.action) params.append('action', filters.action);
+        if (filters.unit) params.append('unit', filters.unit);
 
         const response = await fetch(`${API_BASE_URL}/api/analytics/program/${programId}/filters?${params.toString()}`);
         const json = await response.json();

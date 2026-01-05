@@ -29,6 +29,7 @@ export function ProgramAnalytics() {
     });
     const [selectedWindow, setSelectedWindow] = useState<string>('all');
     const [selectedFlow, setSelectedFlow] = useState<string>('all');
+    const [selectedUnit, setSelectedUnit] = useState<string>('all');
     const [selectedDevice, setSelectedDevice] = useState<string>('all');
     const [selectedAction, setSelectedAction] = useState<string>('all');
 
@@ -46,7 +47,7 @@ export function ProgramAnalytics() {
         if (selectedProgram) {
             loadData();
         }
-    }, [selectedProgram, dateRange, selectedWindow, selectedFlow, selectedDevice, selectedAction]);
+    }, [selectedProgram, dateRange, selectedWindow, selectedFlow, selectedUnit, selectedDevice, selectedAction]);
 
     const loadPrograms = async () => {
         setLoadingPrograms(true);
@@ -77,8 +78,11 @@ export function ProgramAnalytics() {
 
             if (selectedWindow !== 'all') filters.windowId = selectedWindow;
             if (selectedFlow !== 'all') filters.flowId = selectedFlow;
+            if (selectedUnit !== 'all') filters.unit = selectedUnit;
             if (selectedDevice !== 'all') filters.device = selectedDevice;
             if (selectedAction !== 'all') filters.action = selectedAction;
+
+
 
             const result = await analyticsService.getAnalytics(selectedProgram, filters);
             setData(result);
@@ -203,6 +207,7 @@ export function ProgramAnalytics() {
                             <Select value={selectedWindow} onValueChange={(val) => {
                                 setSelectedWindow(val);
                                 setSelectedFlow('all'); // Reset child filters
+                                setSelectedUnit('all');
                                 setSelectedDevice('all');
                                 setSelectedAction('all');
                             }}>
@@ -223,6 +228,7 @@ export function ProgramAnalytics() {
                             <label className="text-sm font-medium">Flow (Сценарий)</label>
                             <Select value={selectedFlow} onValueChange={(val) => {
                                 setSelectedFlow(val);
+                                setSelectedUnit('all');
                                 setSelectedDevice('all'); // Reset child filters
                                 setSelectedAction('all');
                             }}>
@@ -233,6 +239,26 @@ export function ProgramAnalytics() {
                                     <SelectItem value="all">Всички</SelectItem>
                                     {data?.filters.flows.map(f => (
                                         <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Unit Filter */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Тип Данни</label>
+                            <Select value={selectedUnit} onValueChange={(val) => {
+                                setSelectedUnit(val);
+                                setSelectedDevice('all'); // Reset child filters
+                                setSelectedAction('all');
+                            }}>
+                                <SelectTrigger className="w-[120px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Всички</SelectItem>
+                                    {data?.filters.units.map(u => (
+                                        <SelectItem key={u} value={u}>{u || 'N/A'}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>

@@ -11,6 +11,7 @@ interface AnalyticsFilters {
     blockType?: string;
     device?: string;  // blockLabel
     action?: string;
+    unit?: string;
 }
 
 interface FilterOptions {
@@ -19,6 +20,7 @@ interface FilterOptions {
     devices: string[];
     actions: string[];
     blockTypes: string[];
+    units: string[];
 }
 
 interface SensorStat {
@@ -104,6 +106,8 @@ export class AnalyticsService {
      * Get all available filter options for a program, respecting current selections (Cascading)
      */
     async getFilterOptions(filters: AnalyticsFilters): Promise<FilterOptions> {
+        console.log('DEBUG: getFilterOptions called with:', JSON.stringify(filters, null, 2));
+
         // Base match for Program and Date
         const baseMatch: any = {
             programId: filters.programId,
@@ -153,7 +157,8 @@ export class AnalyticsService {
                         {
                             $match: {
                                 ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
-                                ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {})
+                                ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {}),
+                                ...(filters.unit ? { 'events.metadata.logData.primaryUnit': filters.unit } : {})
                             }
                         },
                         {
@@ -169,7 +174,8 @@ export class AnalyticsService {
                             $match: {
                                 ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
                                 ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {}),
-                                ...(filters.device ? { 'events.metadata.blockLabel': filters.device } : {})
+                                ...(filters.device ? { 'events.metadata.blockLabel': filters.device } : {}),
+                                ...(filters.unit ? { 'events.metadata.logData.primaryUnit': filters.unit } : {})
                             }
                         },
                         {
@@ -185,7 +191,8 @@ export class AnalyticsService {
                         {
                             $match: {
                                 ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
-                                ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {})
+                                ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {}),
+                                ...(filters.unit ? { 'events.metadata.logData.primaryUnit': filters.unit } : {})
                             }
                         },
                         {
@@ -194,10 +201,25 @@ export class AnalyticsService {
                                 items: { $addToSet: '$events.metadata.blockType' }
                             }
                         }
+                    ],
+                    units: [
+                        {
+                            $match: {
+                                ...(filters.windowId ? { 'events.metadata.windowId': filters.windowId } : {}),
+                                ...(filters.flowId ? { 'events.executionSessionId': filters.flowId } : {})
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                items: { $addToSet: '$events.metadata.logData.primaryUnit' }
+                            }
+                        }
                     ]
                 }
             }
         ];
+
 
         const result = await ProgramDailyLogModel.aggregate(pipeline);
 
@@ -207,7 +229,8 @@ export class AnalyticsService {
                 flows: [],
                 devices: [],
                 actions: [],
-                blockTypes: []
+                blockTypes: [],
+                units: []
             };
         }
 
@@ -231,13 +254,15 @@ export class AnalyticsService {
         const devices = facets.devices[0]?.items || [];
         const actions = facets.actions[0]?.items || [];
         const blockTypes = facets.blockTypes[0]?.items || [];
+        const units = facets.units[0]?.items || [];
 
         return {
             windows: deduplicate(windows).sort((a, b) => a.name.localeCompare(b.name)),
             flows: deduplicate(flows).sort((a, b) => a.name.localeCompare(b.name)),
             devices: devices.filter((d: any) => d).sort(),
             actions: actions.filter((a: any) => a).sort(),
-            blockTypes: blockTypes.filter((b: any) => b).sort()
+            blockTypes: blockTypes.filter((b: any) => b).sort(),
+            units: units.filter((u: any) => u).sort()
         };
     }
 
@@ -268,6 +293,9 @@ export class AnalyticsService {
         }
         if (filters.action) {
             eventMatch['events.metadata.logData.action'] = filters.action;
+        }
+        if (filters.unit) {
+            eventMatch['events.metadata.logData.primaryUnit'] = filters.unit;
         }
 
         // Main aggregation pipeline
