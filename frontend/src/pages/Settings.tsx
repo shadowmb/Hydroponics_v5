@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NotificationCenter } from "../components/notifications/NotificationCenter";
+import { SystemRecoveryPanel } from "../components/settings/SystemRecoveryPanel";
 
 export function Settings() {
     return (
@@ -22,15 +23,7 @@ export function Settings() {
                 </TabsContent>
 
                 <TabsContent value="general">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>General Settings</CardTitle>
-                            <CardDescription>System-wide defaults.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-sm text-muted-foreground">Coming in v5.1</div>
-                        </CardContent>
-                    </Card>
+                    <SystemRecoveryPanel />
                 </TabsContent>
 
                 <TabsContent value="backup">

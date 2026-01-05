@@ -150,4 +150,8 @@ export async function apiRoutes(app: FastifyInstance) {
     // Notification Rules (System)
     app.get('/api/notifications/rules', NotificationRuleController.list);
     app.put('/api/notifications/rules/:event', NotificationRuleController.update);
+    // System Recovery Routes
+    const { SystemController } = require('./controllers/SystemController');
+    app.post('/api/system/state/check', SystemController.checkState);
+    app.post('/api/system/state/fix', SystemController.fixState);
 }
