@@ -24,7 +24,8 @@ export class UdpProtocolHandler {
     private capabilities: string[] = [
         'ANALOG', 'DIGITAL_READ', 'DIGITAL_WRITE', 'RELAY_SET',
         'PWM_WRITE', 'SERVO_WRITE', 'DHT_READ', 'ONEWIRE_READ_TEMP',
-        'ULTRASONIC_TRIG_ECHO', 'I2C_READ', 'MODBUS_RTU_READ', 'UART_READ_DISTANCE'
+        'ULTRASONIC_TRIG_ECHO', 'I2C_READ', 'MODBUS_RTU_READ', 'UART_READ_DISTANCE',
+        'PULSE_RATE'
     ];
 
     constructor(
@@ -132,6 +133,9 @@ export class UdpProtocolHandler {
 
             case 'MODBUS_RTU_READ':
                 return this.handleModbusRead(params);
+
+            case 'PULSE_RATE':
+                return this.handlePinBasedCommand(cmd, params, 'hz');
 
             // ============ Actuator Commands ============
             case 'DIGITAL_WRITE':
@@ -267,15 +271,37 @@ export class UdpProtocolHandler {
         try {
             const jsonParams = JSON.parse(params[0]);
             const len = jsonParams.len || 1;
+            const txPin = jsonParams.txPin;
+            const rxPin = jsonParams.rxPin;
 
-            // Check if we have PAR sensor or similar assigned
-            // For now, return random values
-            const registers: number[] = [];
-            for (let i = 0; i < len; i++) {
-                registers.push(Math.floor(Math.random() * 2500)); // PAR range
+            // Try to find assignment on TX or RX pin
+            let assignment = this.pinManager.getAssignment(String(txPin));
+            if (!assignment && rxPin !== undefined) {
+                assignment = this.pinManager.getAssignment(String(rxPin));
             }
+
+            const registers: number[] = [];
+
+            if (assignment) {
+                // Return the actual simulated value
+                // We take the first value from the map (e.g. 'par': 123)
+                const val = Object.values(assignment.values)[0] ?? 0;
+
+                // Fill registers with this value (simplification for single-value sensors)
+                for (let i = 0; i < len; i++) {
+                    registers.push(Math.round(val));
+                }
+                console.log(`[PROTO] Modbus Read (Pin ${txPin}/${rxPin}) -> ${val}`);
+            } else {
+                console.warn(`[PROTO] Modbus Read: No sensor on Pin ${txPin}/${rxPin}, returning 0`);
+                for (let i = 0; i < len; i++) {
+                    registers.push(0);
+                }
+            }
+
             return { ok: 1, registers };
         } catch (e) {
+            console.error('[PROTO] Modbus Error:', e);
             return { ok: 0, error: 'ERR_INVALID_JSON' };
         }
     }
