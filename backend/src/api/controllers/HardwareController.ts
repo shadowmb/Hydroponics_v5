@@ -5,6 +5,7 @@ import { logger } from '../../core/LoggerService';
 import { Controller } from '../../models/Controller';
 import { ControllerTemplate } from '../../models/ControllerTemplate';
 import { DeviceTemplate, IDeviceTemplate } from '../../models/DeviceTemplate';
+import { flowRepository } from '../../modules/persistence/repositories/FlowRepository';
 
 export class HardwareController {
 
@@ -1243,6 +1244,10 @@ export class HardwareController {
             }
 
             await device.softDelete();
+
+            // Clean up flows using this device
+            await flowRepository.removeDeviceFromFlows(id);
+
             return reply.send({ success: true, message: 'Device deleted' });
         } catch (error: any) {
             req.log.error(error);

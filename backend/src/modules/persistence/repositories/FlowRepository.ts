@@ -24,6 +24,23 @@ export class FlowRepository {
         }
         return null;
     }
+
+    async removeDeviceFromFlows(deviceId: string): Promise<void> {
+        await FlowModel.updateMany(
+            { "nodes.params.deviceId": deviceId },
+            {
+                $set: {
+                    validationStatus: 'INVALID'
+                },
+                $unset: {
+                    "nodes.$[elem].params.deviceId": 1
+                }
+            },
+            {
+                arrayFilters: [{ "elem.params.deviceId": deviceId }]
+            }
+        );
+    }
 }
 
 export const flowRepository = new FlowRepository();
