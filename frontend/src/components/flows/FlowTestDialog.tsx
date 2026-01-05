@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -27,7 +27,6 @@ interface FlowTestDialogProps {
     flowId: string | null;
     flowName: string;
     isActive: boolean; // System busy status passed from parent
-    onStop: () => void; // Used to Force Stop from parent if needed
 }
 
 interface IVariable {
@@ -46,8 +45,7 @@ export const FlowTestDialog: React.FC<FlowTestDialogProps> = ({
     onOpenChange,
     flowId,
     flowName,
-    isActive,
-    onStop
+    isActive
 }) => {
     // Internal state for the test lifecycle
     const [step, setStep] = useState<'setup' | 'running'>('setup');

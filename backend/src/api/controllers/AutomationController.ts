@@ -9,11 +9,29 @@ export class AutomationController {
         const body = AutomationStartSchema.parse(req.body);
 
         try {
+            // 1. STRICT STOP CHECK: Database Sessions
+            const { ExecutionSessionModel } = await import('../../modules/persistence/schemas/ExecutionSession.schema');
+            const runningSessionsCount = await ExecutionSessionModel.countDocuments({
+                status: { $in: ['running', 'paused'] },
+                deletedAt: null
+            });
+
+            if (runningSessionsCount > 0) {
+                throw { statusCode: 409, message: 'Cannot load flow: Another execution session is currently running or paused.' };
+            }
+
+            // 2. STRICT STOP CHECK: Active Program Schedule
+            const { activeProgramService } = await import('../../modules/scheduler/ActiveProgramService');
+            const activeProgram = await activeProgramService.getActive();
+            if (activeProgram && (activeProgram.status === 'running' || activeProgram.status === 'paused')) {
+                throw { statusCode: 409, message: 'Cannot load flow: The main Active Program is currently running.' };
+            }
+
             const sessionId = await automation.loadProgram(body.programId, body.overrides);
             return reply.send({ success: true, message: 'Program loaded', sessionId });
         } catch (error: any) {
             logger.error({ error }, 'Failed to load program');
-            throw { statusCode: 400, message: error.message || 'Failed to load program' };
+            throw { statusCode: error.statusCode || 400, message: error.message || 'Failed to load program' };
         }
     }
 
@@ -68,6 +86,10 @@ export class AutomationController {
             deletedAt: null
         });
 
+        // Check Active Program Status
+        const { activeProgramService } = await import('../../modules/scheduler/ActiveProgramService');
+        const activeProgram = await activeProgramService.getActive();
+
         // Map XState to Session interface expected by frontend
         const session = {
             programId: snapshot.context.programId || '',
@@ -82,7 +104,8 @@ export class AutomationController {
             schedulerLastTick: require('../../modules/scheduler/SchedulerService').schedulerService.getLastTick(),
             schedulerState: require('../../modules/scheduler/SchedulerService').schedulerService.getState(),
             session: snapshot.context.programId ? session : null,
-            runningSessionsCount
+            runningSessionsCount,
+            activeProgramStatus: activeProgram ? activeProgram.status : 'stopped'
         });
     }
 }
