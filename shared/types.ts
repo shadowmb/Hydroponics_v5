@@ -5,6 +5,31 @@
 
 // --- Hardware Types ---
 
+/**
+ * Represents a low-level command packet sent to the hardware.
+ * Used by: Backend (sender), Simulator (receiver)
+ * Example: { "id": "req_1", "cmd": "DIGITAL_WRITE", "pin": 13, "state": 1 }
+ */
+export interface HardwarePacket {
+    id: string;
+    cmd: string;
+    pins?: Record<string, string> | Map<string, string> | any[];
+    timeout?: number;
+    [key: string]: any;
+}
+
+/**
+ * Represents a response from the hardware.
+ * Used by: Backend (receiver), Simulator (sender)
+ * Example: { "id": "req_1", "status": "ok", "data": { ... } }
+ */
+export interface HardwareResponse {
+    id: string;
+    status: 'ok' | 'error';
+    data?: any;
+    error?: string;
+}
+
 export interface IDevice {
     id: string; // Custom String ID (e.g. 'dev_1')
     name: string;

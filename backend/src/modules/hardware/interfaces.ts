@@ -2,6 +2,7 @@ import { SystemEvents } from '../../core/EventBusService';
 
 /**
  * Represents a low-level command packet sent to the hardware.
+ * NOTE: Duplicated in shared/types.ts for Simulator compatibility
  * Example: { "id": "req_1", "cmd": "DIGITAL_WRITE", "pin": 13, "state": 1 }
  */
 export interface HardwarePacket {
@@ -14,6 +15,7 @@ export interface HardwarePacket {
 
 /**
  * Represents a response from the hardware.
+ * NOTE: Duplicated in shared/types.ts for Simulator compatibility
  * Example: { "id": "req_1", "status": "ok", "data": { ... } }
  */
 export interface HardwareResponse {
