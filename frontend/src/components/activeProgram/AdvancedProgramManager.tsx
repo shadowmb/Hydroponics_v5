@@ -393,6 +393,36 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     const handleSaveTrigger = async (updatedTrigger: ITrigger) => {
         if (!editingTriggerWindowId) return;
 
+        // 1. Get current window
+        const currentWindow = localWindows.find(w => w.id === editingTriggerWindowId);
+        if (!currentWindow) return;
+
+        // 2. Project the window state with the updated trigger
+        // Clone window and triggers array
+        const tempWindow = { ...currentWindow };
+        const tempTriggers = [...(tempWindow.triggers || [])];
+
+        // Find and replace the trigger
+        const idx = tempTriggers.findIndex(t => t.id === updatedTrigger.id);
+        if (idx >= 0) {
+            tempTriggers[idx] = updatedTrigger;
+        } else {
+            // Should typically not happen here as we are editing an existing trigger
+            // But if it were a new trigger being added via this flow:
+            tempTriggers.push(updatedTrigger);
+        }
+        tempWindow.triggers = tempTriggers;
+
+        // 3. VALIDATION: Check for missing variables
+        const projectedContexts = getRequiredContexts(tempWindow);
+        if (hasMissingVariables(projectedContexts, tempWindow.id)) {
+            // Open Configuration Modal
+            setDraftContexts(projectedContexts);
+            setConfigWindowId(tempWindow.id);
+            toast.warning('Configure variables for new flows before saving.');
+            return false; // STOP SAVE (Signal to TriggerModal to keep open)
+        }
+
         try {
             setProcessing(true);
             await activeProgramService.updateTrigger(editingTriggerWindowId, updatedTrigger);

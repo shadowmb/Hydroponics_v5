@@ -17,7 +17,7 @@ import type { ITrigger, TriggerOperator, TriggerBehavior, ISensorOption } from '
 interface TriggerModalProps {
     open: boolean;
     onClose: () => void;
-    onSave: (trigger: ITrigger) => void;
+    onSave: (trigger: ITrigger) => Promise<boolean | void> | boolean | void;
     trigger?: ITrigger | null;
     sensors: ISensorOption[];
     flows: { id: string; name: string }[];
@@ -54,6 +54,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
 
     // State for flows (Multi)
     const [flowIds, setFlowIds] = useState<string[]>([]);
+    const [saving, setSaving] = useState(false);
 
     // Reset form when modal opens
     useEffect(() => {
@@ -85,21 +86,28 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
         }
     }, [open, editingTrigger, sensors]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!sensorId || flowIds.length === 0) return;
 
-        const triggerData: ITrigger = {
-            id: editingTrigger?.id || generateId(),
-            sensorId,
-            operator,
-            value,
-            valueMax: operator === 'between' ? valueMax : undefined,
-            flowId: flowIds[0], // Deprecated but kept for compatibility
-            flowIds, // New
-            behavior
-        };
-        onSave(triggerData);
-        onClose();
+        setSaving(true);
+        try {
+            const triggerData: ITrigger = {
+                id: editingTrigger?.id || generateId(),
+                sensorId,
+                operator,
+                value,
+                valueMax: operator === 'between' ? valueMax : undefined,
+                flowId: flowIds[0], // Deprecated but kept for compatibility
+                flowIds, // New
+                behavior
+            };
+            const result = await onSave(triggerData);
+            if (result !== false) {
+                onClose();
+            }
+        } finally {
+            setSaving(false);
+        }
     };
 
     // Add flow to list
@@ -135,8 +143,13 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
     const selectedSensor = sensors.find(s => s.id === sensorId);
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[550px]">
+        <Dialog open={open} onOpenChange={(val) => {
+            if (!val && !saving) onClose();
+        }}>
+            <DialogContent
+                className="sm:max-w-[550px]"
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>
                         {isEditing ? '✏️ Редакция на тригер' : '⚡ Нов тригер'}
