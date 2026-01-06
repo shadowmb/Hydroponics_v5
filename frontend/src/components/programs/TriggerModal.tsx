@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import type { ITrigger, TriggerOperator, TriggerBehavior, ISensorOption } from './types';
 
+import { Textarea } from '../ui/textarea';
+
 interface TriggerModalProps {
     open: boolean;
     onClose: () => void;
@@ -51,6 +53,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
     const [value, setValue] = useState(0);
     const [valueMax, setValueMax] = useState(0);
     const [behavior, setBehavior] = useState<TriggerBehavior>('break');
+    const [description, setDescription] = useState('');
 
     // State for flows (Multi)
     const [flowIds, setFlowIds] = useState<string[]>([]);
@@ -64,6 +67,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                 setOperator(editingTrigger.operator);
                 setValue(editingTrigger.value);
                 setValueMax(editingTrigger.valueMax || 0);
+                setDescription(editingTrigger.description || '');
 
                 // Migrate legacy flowId to flowIds if needed
                 if (editingTrigger.flowIds && editingTrigger.flowIds.length > 0) {
@@ -82,6 +86,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                 setValueMax(0);
                 setFlowIds([]);
                 setBehavior('break');
+                setDescription('');
             }
         }
     }, [open, editingTrigger, sensors]);
@@ -99,7 +104,8 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                 valueMax: operator === 'between' ? valueMax : undefined,
                 flowId: flowIds[0], // Deprecated but kept for compatibility
                 flowIds, // New
-                behavior
+                behavior,
+                description
             };
             const result = await onSave(triggerData);
             if (result !== false) {
@@ -324,20 +330,31 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                                 </div>
                             </div>
                             <div className="flex items-start space-x-2">
-                                <RadioGroupItem value="continue" id="continue" className="mt-1" />
-                                <div>
-                                    <Label htmlFor="continue" className="font-medium text-green-600">
-                                        ⏭️ Continue (Продължи)
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
+                                <RadioGroupItem value="continue" id="continue" />
+                                <Label htmlFor="continue" className="flex flex-col cursor-pointer">
+                                    <span className="font-semibold text-green-500 flex items-center gap-1">
+                                        ⏭ Continue (Продължи)
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">
                                         Изпълни потоците и продължи да проверяваш.
-                                    </p>
-                                </div>
+                                    </span>
+                                </Label>
                             </div>
                         </RadioGroup>
                     </div>
-                </div>
 
+                    {/* Description */}
+                    <div className="grid grid-cols-4 items-start gap-4">
+                        <Label htmlFor="desc" className="text-right pt-2">Бележка</Label>
+                        <Textarea
+                            id="desc"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="col-span-3"
+                            placeholder="Опиши защо е нужен този тригер..."
+                        />
+                    </div>
+                </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>Отказ</Button>
                     <Button onClick={handleSave} disabled={!sensorId || flowIds.length === 0}>
@@ -345,6 +362,6 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                     </Button>
                 </DialogFooter>
             </DialogContent>
-        </Dialog >
+        </Dialog>
     );
 };

@@ -16,11 +16,13 @@ export interface ITrigger {
     flowId?: string;    // Deprecated
     flowIds?: string[]; // New
     behavior: TriggerBehavior;
+    description?: string;
 }
 
 export interface ITimeWindow {
     id: string;
     name: string;
+    description?: string;
     startTime: string;
     endTime: string;
     checkInterval: number;

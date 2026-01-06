@@ -14,6 +14,7 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Checkbox } from '../ui/checkbox';
+import { Textarea } from '../ui/textarea';
 import { TimePicker24 } from '../ui/time-picker-24';
 import type { ITimeWindow, DataSource } from './types';
 
@@ -46,6 +47,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
     const [dataSource, setDataSource] = useState<DataSource>('cached');
     const [autoAdjust, setAutoAdjust] = useState(false);
     const [fallbackFlowIds, setFallbackFlowIds] = useState<string[]>([]);
+    const [description, setDescription] = useState('');
 
     // Reset state when opening/editing
     useEffect(() => {
@@ -56,6 +58,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                 setEndTime(editingWindow.endTime);
                 setCheckInterval(editingWindow.checkInterval);
                 setDataSource(editingWindow.dataSource);
+                setDescription(editingWindow.description || '');
 
                 // Migrate legacy fallbackFlowId
                 if (editingWindow.fallbackFlowIds && editingWindow.fallbackFlowIds.length > 0) {
@@ -83,6 +86,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                 setCheckInterval(5);
                 setDataSource('cached');
                 setFallbackFlowIds([]);
+                setDescription('');
             }
             setAutoAdjust(false); // Reset checkbox
         }
@@ -126,7 +130,8 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
             dataSource,
             triggers: editingWindow?.triggers || [],
             fallbackFlowId: fallbackFlowIds[0], // Deprecated
-            fallbackFlowIds // New
+            fallbackFlowIds, // New
+            description
         };
         const result = await onSave(windowData, autoAdjust);
         // Only close if onSave returns true (success) or undefined (assumed success for void)
@@ -329,6 +334,18 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                                 </Select>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Description (Note) */}
+                    <div className="grid grid-cols-4 items-start gap-4">
+                        <Label htmlFor="desc" className="text-right pt-2">Бележка</Label>
+                        <Textarea
+                            id="desc"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="col-span-3"
+                            placeholder="Добави бележка или описание..."
+                        />
                     </div>
                 </div>
 
