@@ -45,6 +45,9 @@ export class UdpProtocolHandler {
      */
     handleCommand(rawCommand: string): object | string | null {
         const command = rawCommand.trim();
+        if (command !== 'PING' && command !== 'STATUS') {
+            console.log(`[PROTO] RX: ${command}`);
+        }
 
         // Error injection checks
         if (this.deviceState.getIsOffline()) {

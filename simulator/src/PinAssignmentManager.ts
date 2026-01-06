@@ -120,6 +120,13 @@ export class PinAssignmentManager {
             }
         }
 
+        // 3. Try looking up by prefix (e.g. find "D0_0" when searching for "D0")
+        for (const key of this.assignments.keys()) {
+            if (key.startsWith(`${pin}_`)) {
+                return this.assignments.get(key);
+            }
+        }
+
         return undefined;
     }
 

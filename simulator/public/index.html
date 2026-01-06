@@ -303,7 +303,8 @@
 <body>
     <h1>🌱 Hydroponics Hardware Simulator v2</h1>
 
-    <div class="container">
+    <!-- Simulator View (Hidden until configured) -->
+    <div id="simulator-panel" class="container" style="display:none;">
         <!-- Status Bar -->
         <div class="card status-bar">
             <div class="status-item">
@@ -320,9 +321,15 @@
             </div>
             <div class="status-item">
                 <span>UDP Port:</span>
-                <span>8888</span>
+                <span id="display-udp-port">...</span>
             </div>
             <div class="status-item">
+                <span>MAC:</span>
+                <span id="display-mac" style="font-family:monospace; font-size:0.9em; color:#aaa;">...</span>
+            </div>
+            <div class="status-item">
+                <button class="btn btn-secondary" onclick="reconfigureSimulator()"
+                    style="padding: 4px 12px; font-size: 0.8em; margin-right: 8px;">Reconfigure</button>
                 <button class="btn btn-secondary" onclick="resetSimulator()"
                     style="padding: 4px 12px; font-size: 0.8em; background: #ef4444; border-color: #ef4444; color: white;">Reset</button>
             </div>
@@ -331,7 +338,11 @@
         <!-- Left: Controller & Pins -->
         <div class="card">
             <h2>🎛️ Controller Pins</h2>
-            <select id="controller-select" class="controller-select"></select>
+            <div id="controller-display" class="controller-select"
+                style="text-align: center; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <span id="controller-label">Loading...</span>
+                <span class="status-badge status-online" style="font-size: 0.7em;">LOCKED</span>
+            </div>
             <div id="pin-grid" class="pin-grid"></div>
         </div>
 
@@ -352,6 +363,42 @@
             <p style="color:#888; font-size:0.85em; margin-bottom:12px;">Select a pin, then click a sensor to assign.
             </p>
             <div id="sensor-list" class="sensor-list"></div>
+        </div>
+    </div>
+
+    <!-- Configuration Wizard (Shown if not configured) -->
+    <div id="setup-panel" class="container"
+        style="display:none; height: 60vh; align-items: center; justify-content: center; display:flex;">
+        <div class="card" style="width: 100%; max-width: 500px; text-align: center;">
+            <h1 style="color: #00d9ff; margin-bottom: 30px;">Configuration Wizard</h1>
+
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label style="display:block; margin-bottom:8px; color:#aaa;">Controller Model:</label>
+                <select id="setup-controller" class="controller-select"
+                    style="font-size: 1.1em; padding: 12px;"></select>
+            </div>
+
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label style="display:block; margin-bottom:8px; color:#aaa;">UDP Port:</label>
+                <input type="number" id="setup-port" value="8888" class="controller-select"
+                    style="font-size: 1.1em; padding: 12px; width: 100%;">
+            </div>
+
+            <div style="margin-bottom: 30px; text-align: left;">
+                <label style="display:block; margin-bottom:8px; color:#aaa;">MAC Address:</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="setup-mac" value="SIM:00:00:00:00:01" class="controller-select"
+                        style="font-size: 1.1em; padding: 12px; width: 100%; flex:1; font-family:monospace;">
+                    <button class="btn btn-secondary" onclick="generateMac()" style="width: auto; font-size:1.2em;"
+                        title="Generate Random MAC">🎲</button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="submitSetup()"
+                style="width: 100%; padding: 15px; font-size: 1.1em;">
+                Start Simulator 🚀
+            </button>
+            <p id="setup-error" style="color: #f43f5e; margin-top: 15px; display: none;"></p>
         </div>
     </div>
 
@@ -378,27 +425,97 @@
         // ============ Initialization ============
 
         async function init() {
-            await loadControllers();
-            await loadSensors();
-            await loadPins();
-            await loadAssignments();
-            setInterval(refreshState, 1000);
+            try {
+                // Check if already configured
+                const res = await fetch('/api/status');
+                const status = await res.json();
+
+                if (status.configured) {
+                    // Show Simulator
+                    document.getElementById('setup-panel').style.display = 'none';
+                    document.getElementById('simulator-panel').style.display = 'grid';
+
+                    document.getElementById('display-udp-port').textContent = status.udpPort;
+                    document.getElementById('display-mac').textContent = status.mac;
+
+                    await loadControllers();
+                    await loadSensors();
+                    await loadPins();
+                    await loadAssignments();
+                    setInterval(refreshState, 1000);
+                    connectToUdpLog();
+                } else {
+                    // Show Setup Wizard
+                    document.getElementById('simulator-panel').style.display = 'none';
+                    document.getElementById('setup-panel').style.display = 'flex';
+                    // Pre-fill MAC if available
+                    if (status.mac) document.getElementById('setup-mac').value = status.mac;
+                    await loadSetupOptions();
+                }
+            } catch (e) {
+                console.error("Init failed", e);
+            }
+        }
+
+        async function loadSetupOptions() {
+            const res = await fetch('/api/controllers');
+            const controllers = await res.json();
+            const select = document.getElementById('setup-controller');
+            select.innerHTML = controllers.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+        }
+
+        async function submitSetup() {
+            const controller = document.getElementById('setup-controller').value;
+            const udpPort = document.getElementById('setup-port').value;
+            const mac = document.getElementById('setup-mac').value;
+            const btn = document.querySelector('#setup-panel button');
+            const err = document.getElementById('setup-error');
+
+            btn.disabled = true;
+            btn.textContent = 'Starting...';
+            err.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ controller, udpPort, mac })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (e) {
+                err.textContent = e.message;
+                err.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Start Simulator 🚀';
+            }
         }
 
         async function loadControllers() {
-            const res = await fetch('/api/controllers');
-            controllers = await res.json();
+            // Fetch current active controller info
+            const res = await fetch('/api/controller');
+            const data = await res.json();
 
-            const select = document.getElementById('controller-select');
-            select.innerHTML = controllers.map(c =>
-                `<option value="${c.key}">${c.label}</option>`
-            ).join('');
+            document.getElementById('controller-label').textContent = data.label || data.key;
+            document.getElementById('controller-name').textContent = data.label || data.key; // Update header too
 
-            select.addEventListener('change', async (e) => {
-                await fetch(`/api/controller/${e.target.value}`, { method: 'POST' });
-                await loadPins();
-                await loadAssignments();
-            });
+            // Selection is now disabled in UI
+        }
+
+        function generateMac() {
+            const hex = '0123456789ABCDEF';
+            let mac = 'SIM:';
+            for (let i = 0; i < 5; i++) {
+                mac += hex[Math.floor(Math.random() * 16)];
+                mac += hex[Math.floor(Math.random() * 16)];
+                if (i < 4) mac += ':';
+            }
+            document.getElementById('setup-mac').value = mac;
         }
 
         async function loadSensors() {
@@ -696,9 +813,15 @@
             };
 
             eventSource.onerror = () => {
-                addLog('⚠️ UDP log connection lost, reconnecting...', 'error');
+                // addLog('⚠️ UDP log connection lost, reconnecting...', 'error');
                 // EventSource will auto-reconnect
             };
+        }
+
+        async function reconfigureSimulator() {
+            if (!confirm('Stop current UDP server and return to setup?')) return;
+            await fetch('/api/reconfigure', { method: 'POST' });
+            window.location.reload();
         }
 
         async function resetSimulator() {
@@ -709,7 +832,6 @@
 
         // Initialize
         init();
-        connectToUdpLog();
     </script>
 </body>
 

@@ -1,12 +1,12 @@
 [
   {
-    "sensorId": "dht22",
+    "sensorId": "dfrobot_a02yyuw",
     "pins": [
-      "D0_0"
+      "D10_10",
+      "D11_11"
     ],
     "values": {
-      "temp": 0,
-      "humidity": 0
+      "distance": 298.095740545343
     }
   }
 ]

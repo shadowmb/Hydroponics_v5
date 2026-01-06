@@ -11,6 +11,7 @@ import dgram from 'dgram';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { DeviceState } from './DeviceState';
 import { UdpProtocolHandler } from './UdpProtocolHandler';
 import { ScenarioEngine } from './ScenarioEngine';
@@ -24,7 +25,7 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const UDP_PORT = parseInt(process.env.UDP_PORT || '8888');
-const HTTP_PORT = parseInt(process.env.HTTP_PORT || '3001');
+let httpPort = parseInt(process.env.HTTP_PORT || '3001');
 const CONTROLLER_MAC = process.env.MAC || 'SIM:00:00:00:00:01';
 const CONTROLLER_MODEL = process.env.MODEL || 'Simulator-ESP32';
 
@@ -37,67 +38,31 @@ const deviceState = new DeviceState();
 const pinManager = new PinAssignmentManager(sensorRegistry);
 
 // Protocol handler with pin awareness
+// Mutable configuration for dynamic updates
+const controllerConfig = {
+    mac: process.env.MAC || 'SIM:00:00:00:00:01',
+    model: process.env.MODEL || 'Simulator-ESP32',
+    firmwareVersion: '1.0-v5-sim'
+};
+
 const protocolHandler = new UdpProtocolHandler(
     deviceState,
     pinManager,
     sensorRegistry,
-    {
-        mac: CONTROLLER_MAC,
-        model: CONTROLLER_MODEL,
-        firmwareVersion: '1.0-v5-sim'
-    }
+    controllerConfig
 );
 
 const scenarioEngine = new ScenarioEngine(deviceState);
 
 // Active controller selection
-// Active controller selection
-let activeController = 'Arduino_Uno_R4_WiFi';
-pinManager.setConfigId(activeController);
+let activeController = 'Arduino_Uno_R4_WiFi'; // Will be set in setup
 
 // SSE clients for real-time UDP log
 const sseClients: Set<any> = new Set();
 
 // ============ UDP Server ============
 
-const udpServer = dgram.createSocket('udp4');
-
-udpServer.on('error', (err) => {
-    console.error(`[UDP] Server error:\n${err.stack}`);
-    udpServer.close();
-});
-
-udpServer.on('message', (msg, rinfo) => {
-    const command = msg.toString().trim();
-    const timestamp = new Date().toISOString();
-    console.log(`[UDP] ← ${rinfo.address}:${rinfo.port} | ${command}`);
-
-    // Broadcast incoming command to SSE clients
-    broadcastToSSE({
-        type: 'incoming',
-        from: `${rinfo.address}:${rinfo.port}`,
-        command,
-        timestamp
-    });
-
-    const response = protocolHandler.handleCommand(command);
-
-    if (response !== null) {
-        const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
-        console.log(`[UDP] → ${responseStr}`);
-
-        // Broadcast response to SSE clients
-        broadcastToSSE({
-            type: 'outgoing',
-            response: responseStr,
-            timestamp
-        });
-
-        udpServer.send(responseStr, rinfo.port, rinfo.address, (err) => {
-            if (err) console.error('[UDP] Send error:', err);
-        });
-    }
-});
+let udpServer: dgram.Socket | null = null;
 
 // Helper to broadcast to all SSE clients
 function broadcastToSSE(data: any) {
@@ -111,12 +76,64 @@ function broadcastToSSE(data: any) {
     }
 }
 
-udpServer.on('listening', () => {
-    const address = udpServer.address();
-    console.log(`[UDP] Simulator listening on ${address.address}:${address.port}`);
-});
+function startUdpServer(port: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const socket = dgram.createSocket('udp4');
+        let bound = false;
 
-udpServer.bind(UDP_PORT);
+        const errorHandler = (err: any) => {
+            if (!bound) {
+                socket.close();
+                reject(err);
+            } else {
+                console.error(`[UDP] Server error:\n${err.stack}`);
+                socket.close();
+            }
+        };
+
+        socket.on('error', errorHandler);
+
+        socket.on('message', (msg, rinfo) => {
+            const command = msg.toString().trim();
+            const timestamp = new Date().toISOString();
+            console.log(`[UDP] ← ${rinfo.address}:${rinfo.port} | ${command}`);
+
+            broadcastToSSE({
+                type: 'incoming',
+                from: `${rinfo.address}:${rinfo.port}`,
+                command,
+                timestamp
+            });
+
+            const response = protocolHandler.handleCommand(command);
+
+            if (response !== null) {
+                const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
+                console.log(`[UDP] → ${responseStr}`);
+
+                broadcastToSSE({
+                    type: 'outgoing',
+                    response: responseStr,
+                    timestamp
+                });
+
+                socket.send(responseStr, rinfo.port, rinfo.address, (err) => {
+                    if (err) console.error('[UDP] Send error:', err);
+                });
+            }
+        });
+
+        socket.bind(port, () => {
+            bound = true;
+            const address = socket.address();
+            console.log(`[UDP] Simulator listening on ${address.address}:${address.port}`);
+            udpServer = socket;
+            resolve();
+        });
+    });
+}
+
+// udpServer.bind() moved to setup
 
 // ============ HTTP Server (UI + API) ============
 
@@ -163,18 +180,6 @@ app.get('/api/controller', (req, res) => {
         pins: controllerRegistry.getAllPins(activeController),
         adcMax
     });
-});
-
-// Set active controller
-app.post('/api/controller/:key', (req, res) => {
-    const { key } = req.params;
-    const controller = controllerRegistry.getController(key);
-    if (!controller) {
-        return res.status(404).json({ success: false, error: 'Controller not found' });
-    }
-    activeController = key;
-    pinManager.setConfigId(key); // Load config for new controller (clears old state internally)
-    res.json({ success: true, controller: key });
 });
 
 // Get controller pins
@@ -314,26 +319,105 @@ app.post('/api/reset', (req, res) => {
 });
 
 
-app.listen(HTTP_PORT, () => {
-    console.log(`[HTTP] Control UI at http://localhost:${HTTP_PORT}`);
+// ============ Setup & Main ============
+
+let isConfigured = false;
+let configuredUdpPort: number | null = null;
+
+// Status Endpoint
+app.get('/api/status', (req, res) => {
+    res.json({
+        configured: isConfigured,
+        activeController,
+        udpPort: configuredUdpPort,
+        httpPort: httpPort,
+        mac: controllerConfig.mac
+    });
 });
 
-// ============ Graceful Shutdown ============
+// Setup Endpoint
+app.post('/api/setup', async (req, res) => {
+    if (isConfigured) {
+        return res.status(400).json({ success: false, error: 'Already configured' });
+    }
 
-process.on('SIGINT', () => {
-    console.log('\n[SIM] Shutting down...');
-    scenarioEngine.stopScenario();
-    udpServer.close();
-    process.exit(0);
+    const { controller, udpPort, mac } = req.body;
+
+    // Validate Controller
+    const ctrl = controllerRegistry.getController(controller);
+    if (!ctrl) {
+        return res.status(400).json({ success: false, error: 'Invalid controller' });
+    }
+
+    // Validate Port
+    const port = parseInt(udpPort);
+    if (isNaN(port) || port < 1024 || port > 65535) {
+        return res.status(400).json({ success: false, error: 'Invalid UDP port' });
+    }
+
+    try {
+        // Apply Config
+        activeController = controller;
+        if (mac) {
+            controllerConfig.mac = mac;
+        }
+        pinManager.setConfigId(activeController);
+
+        // Start UDP
+        await startUdpServer(port);
+        configuredUdpPort = port;
+
+        isConfigured = true;
+
+        console.log(`[Setup] Configured: ${activeController} on UDP ${configuredUdpPort}`);
+        res.json({ success: true });
+
+    } catch (e: any) {
+        console.error('[Setup] Error:', e);
+        if (e.code === 'EADDRINUSE') {
+            return res.status(400).json({ success: false, error: `Port ${port} is busy. Please try another.` });
+        }
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
-console.log(`
-╔═══════════════════════════════════════════════════════╗
-║       HYDROPONICS HARDWARE SIMULATOR v2.0             ║
-╠═══════════════════════════════════════════════════════╣
-║  UDP Port:  ${UDP_PORT.toString().padEnd(42)}║
-║  HTTP Port: ${HTTP_PORT.toString().padEnd(42)}║
-║  Controller: ${activeController.padEnd(41)}║
-║  MAC:       ${CONTROLLER_MAC.padEnd(42)}║
-╚═══════════════════════════════════════════════════════╝
-`);
+app.post('/api/reconfigure', (req, res) => {
+    console.log('[Setup] Reconfigure requested.');
+
+    if (udpServer) {
+        try {
+            udpServer.close();
+        } catch (e) { console.error('Error closing UDP:', e); }
+        udpServer = null;
+    }
+
+    isConfigured = false;
+    configuredUdpPort = null;
+
+    res.json({ success: true });
+});
+
+function startHttpServer(port: number) {
+    const server = app.listen(port, () => {
+        httpPort = port;
+        console.log('[Startup] Web-based Setup Mode');
+        console.log(`[HTTP] Server listening on port ${port}`);
+        console.log(`[Info] Open http://localhost:${port} to configure and start the simulator.`);
+    });
+
+    server.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`[Startup] Port ${port} is busy, trying ${port + 1}...`);
+            startHttpServer(port + 1);
+        } else {
+            console.error('[Startup] Failed to start HTTP server:', err);
+            process.exit(1);
+        }
+    });
+}
+
+function main() {
+    startHttpServer(httpPort);
+}
+
+main();
