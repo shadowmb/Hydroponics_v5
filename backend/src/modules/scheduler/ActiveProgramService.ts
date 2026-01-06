@@ -614,7 +614,7 @@ export class ActiveProgramService {
         };
 
         try {
-            await cycleManager.startCycle(item.cycleId, item.cycleName, stepOverrides, runtimeOverrides);
+            await cycleManager.startCycle(item.cycleId, item.cycleName || item.name || 'Unknown Cycle', stepOverrides, runtimeOverrides);
             logger.info({ itemId }, '⚡ Cycle Force Started (Direct Invocation)');
         } catch (error: any) {
             item.status = 'failed';
