@@ -592,23 +592,36 @@ export class ActiveProgramService {
         }
 
         // Stop any currently running cycle first?
-        // For now, let's assume the user knows what they are doing.
-        // But the SchedulerService might be running something else.
         // Ideally, we should tell the SchedulerService to run this NOW.
 
-        // Implementation:
-        // 1. Update time to NOW (so scheduler picks it up)
-        // 2. Or call cycleManager directly?
-        // Better to update time to NOW so the standard loop handles it.
+        // Implementation Update:
+        // Do NOT update time to NOW, as that alters the persistent schedule.
+        // Instead, mark as running and Invoke CycleManager directly.
 
-        const now = new Date();
-        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        item.time = timeString;
-        item.status = 'pending'; // Reset status so it gets picked up
+        item.status = 'running';
         await active.save();
 
-        logger.info({ itemId, newTime: timeString }, '⚡ Cycle Force Started (Time updated to Now)');
+        const stepOverrides = item.steps?.map(s => ({
+            flowId: s.flowId,
+            overrides: s.overrides
+        })) || [];
+
+        // Determine overrides (Program Level + Item Level)
+        const runtimeOverrides = {
+            ...active.variableOverrides, // Global
+            ...item.overrides,            // Item Specific
+            activeProgramId: active.sourceProgramId
+        };
+
+        try {
+            await cycleManager.startCycle(item.cycleId, item.cycleName, stepOverrides, runtimeOverrides);
+            logger.info({ itemId }, '⚡ Cycle Force Started (Direct Invocation)');
+        } catch (error: any) {
+            item.status = 'failed';
+            await active.save();
+            throw error; // Re-throw to notify caller
+        }
+
         return active;
     }
 

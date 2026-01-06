@@ -72,6 +72,7 @@ class SocketService {
     }
 
     private async fetchSession(sessionId: string) {
+        if (!sessionId || sessionId === 'null') return;
         try {
             const res = await fetch(`/api/sessions/${sessionId}`);
             if (!res.ok) return;
