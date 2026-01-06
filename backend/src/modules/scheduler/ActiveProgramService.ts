@@ -183,74 +183,91 @@ export class ActiveProgramService {
         const FlowModel = require('../persistence/schemas/Flow.schema').FlowModel;
         const variablesMap: Record<string, any[]> = {};
 
+        // Helper to get flow name
+        const getFlowName = async (id: string) => {
+            const f = await FlowModel.findOne({ id });
+            return f ? f.name : id;
+        };
+
         // Helper to extract variables from a flow, using a scoped seenVars set
-        const extractFlowVariables = async (flowId: string, keyId: string, scopedSeenVars: Set<string>) => {
+        const extractFlowVariables = async (flowId: string, scopedSeenVars: Set<string>, outputArray: any[]) => {
             const flow = await FlowModel.findOne({ id: flowId });
             if (flow && flow.variables) {
-                const flowVars: any[] = [];
-                flow.variables.forEach((v: any) => {
+                for (const v of flow.variables) {
+                    // Only global variables are exposed to the program
                     if (v.scope === 'global' && !scopedSeenVars.has(v.name)) {
-                        flowVars.push({
+                        outputArray.push({
                             name: v.name,
                             type: v.type,
                             default: v.value,
                             unit: v.unit,
                             hasTolerance: v.hasTolerance,
                             description: v.description,
-                            flowId: flow.id,
-                            flowName: flow.name || 'Unknown Flow',
+                            flowId: flowId,
+                            flowName: flow.name,
                             flowDescription: flow.description
                         });
                         scopedSeenVars.add(v.name);
                     }
-                });
-                if (flowVars.length > 0) {
-                    if (!variablesMap[keyId]) {
-                        variablesMap[keyId] = [];
-                    }
-                    variablesMap[keyId].push(...flowVars);
                 }
             }
         };
-
         // ADVANCED MODE: Extract from windows/triggers
         if (active.type === 'ADVANCED' && (active as any).windows) {
-            for (const window of (active as any).windows) {
-                const windowId = window.id; // Use window ID as the key
-                const processedFlowsInWindow = new Set<string>(); // prevent processing same flow twice in a window
+            // We need to return a structure that preserves the context of each flow
+            // Return type: Record<WindowId, { contextId: string, label: string, variables: IVariable[] }[]>
+            const windowContexts: Record<string, any[]> = {};
 
-                const processFlow = async (fid: string) => {
-                    if (!processedFlowsInWindow.has(fid)) {
-                        processedFlowsInWindow.add(fid);
-                        // Use a fresh set for seenVars to allow duplicate variable names across DIFFERENT flows
-                        await extractFlowVariables(fid, windowId, new Set<string>());
+            for (const window of (active as any).windows) {
+                const windowId = window.id;
+                windowContexts[windowId] = [];
+
+                // Helper to extract vars for a specific flow and add to context list
+                const addContext = async (fid: string, contextId: string, label: string) => {
+                    const vars: any[] = [];
+                    // We use a temporary set just for this extraction to avoid duplicates WITHIN the flow definition itself
+                    // but we allow duplicates across different contexts
+                    await extractFlowVariables(fid, new Set<string>(), vars);
+
+                    if (vars.length > 0) {
+                        windowContexts[windowId].push({
+                            contextId,
+                            label,
+                            variables: vars
+                        });
                     }
                 };
 
                 if (window.triggers) {
-                    for (const trigger of window.triggers) {
-                        // Handle single flow (legacy)
-                        if (trigger.flowId) {
-                            await processFlow(trigger.flowId);
-                        }
-                        // Handle multiple flows (new)
-                        if (trigger.flowIds && Array.isArray(trigger.flowIds)) {
-                            for (const fid of trigger.flowIds) {
-                                await processFlow(fid);
+                    for (let tIdx = 0; tIdx < window.triggers.length; tIdx++) {
+                        const trigger = window.triggers[tIdx];
+                        const triggerName = `Trigger ${tIdx + 1}`;
+
+                        // Handle flowIds (New Format) OR flowId (Legacy) - BUT NOT BOTH
+                        if (trigger.flowIds && Array.isArray(trigger.flowIds) && trigger.flowIds.length > 0) {
+                            for (let fIdx = 0; fIdx < trigger.flowIds.length; fIdx++) {
+                                const fid = trigger.flowIds[fIdx];
+                                await addContext(fid, `t_${tIdx}_f_${fIdx}`, `${triggerName}: ${await getFlowName(fid)}`);
                             }
+                        } else if (trigger.flowId) {
+                            // Fallback to legacy single flow only if flowIds is empty/missing
+                            await addContext(trigger.flowId, `t_${tIdx}_f_0`, `${triggerName}: ${await getFlowName(trigger.flowId)}`);
                         }
                     }
                 }
-                if (window.fallbackFlowId) {
-                    await processFlow(window.fallbackFlowId);
-                }
-                if ((window as any).fallbackFlowIds) {
-                    for (const fid of (window as any).fallbackFlowIds) {
-                        await processFlow(fid);
+
+                if ((window as any).fallbackFlowIds && (window as any).fallbackFlowIds.length > 0) {
+                    for (let fIdx = 0; fIdx < (window as any).fallbackFlowIds.length; fIdx++) {
+                        const fid = (window as any).fallbackFlowIds[fIdx];
+                        await addContext(fid, `fb_${fIdx}`, `Fallback: ${await getFlowName(fid)}`);
                     }
+                } else if (window.fallbackFlowId) {
+                    await addContext(window.fallbackFlowId, `fb_0`, `Fallback: ${await getFlowName(window.fallbackFlowId)}`);
                 }
             }
+            return windowContexts;
         }
+
         // BASIC MODE: Extract from schedule/cycles
         else {
             for (const item of active.schedule) {
@@ -259,8 +276,10 @@ export class ActiveProgramService {
 
                 if (!item.steps || item.steps.length === 0) continue;
 
+                if (!variablesMap[cycleId]) variablesMap[cycleId] = [];
+
                 for (const step of item.steps) {
-                    await extractFlowVariables(step.flowId, cycleId, cycleSeenVars);
+                    await extractFlowVariables(step.flowId, cycleSeenVars, variablesMap[cycleId]);
                 }
             }
         }

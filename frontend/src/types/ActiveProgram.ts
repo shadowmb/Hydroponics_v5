@@ -33,6 +33,8 @@ export interface IActiveProgram {
     // Advanced Mode Fields
     windows?: any[]; // keeping as any for now to avoid circular deps with ITimeWindow if complex
     windowsState?: IWindowState[];
+    variableOverrides?: Record<string, any>;
+    windowOverrides?: Record<string, Record<string, any>>;
 }
 
 export interface IWindowState {
@@ -41,4 +43,23 @@ export interface IWindowState {
     triggersExecuted: string[];
     lastCheck?: Date;
     skipUntil?: Date;
+}
+
+// Variable definition from backend
+export interface IVariable {
+    name: string;
+    type: 'string' | 'number' | 'boolean';
+    default?: any;
+    description?: string;
+    unit?: string;
+    hasTolerance?: boolean;
+    flowId?: string;
+    flowName?: string;
+    flowDescription?: string;
+}
+
+export interface IContext {
+    contextId: string;
+    label: string;
+    variables: IVariable[];
 }

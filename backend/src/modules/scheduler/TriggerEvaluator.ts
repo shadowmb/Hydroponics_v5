@@ -26,7 +26,8 @@ export class TriggerEvaluator {
     async evaluateWindow(
         window: ITimeWindow,
         windowState: IWindowState,
-        variableOverrides: Record<string, any> = {},
+        globalOverrides: Record<string, any> = {},
+        contextOverrides: Record<string, any> = {}, // Nest: { contextId: { var: val } }
         programId?: string // Added for logging context
     ): Promise<EvaluationResult> {
 
@@ -42,6 +43,9 @@ export class TriggerEvaluator {
         // Evaluate triggers in order (priority is implicit by array order)
         for (const trigger of pendingTriggers) {
             try {
+                // Determine original index for context generation
+                const originalTIdx = window.triggers.findIndex(t => t.id === trigger.id);
+
                 // Get sensor name first (needed for logging/events)
                 const sensorDevice = await DeviceModel.findById(trigger.sensorId);
                 const sensorName = sensorDevice?.name || trigger.sensorId;
@@ -80,9 +84,21 @@ export class TriggerEvaluator {
                     let steps: { flowId: string, overrides: any }[] = [];
 
                     if (trigger.flowIds && trigger.flowIds.length > 0) {
-                        steps = trigger.flowIds.map(fid => ({ flowId: fid, overrides: variableOverrides }));
+                        steps = trigger.flowIds.map((fid, fIdx) => {
+                            const contextId = `t_${originalTIdx}_f_${fIdx}`;
+                            const specificOverrides = contextOverrides[contextId] || {};
+                            return {
+                                flowId: fid,
+                                overrides: { ...globalOverrides, ...specificOverrides }
+                            };
+                        });
                     } else if (trigger.flowId) {
-                        steps = [{ flowId: trigger.flowId, overrides: variableOverrides }];
+                        const contextId = `t_${originalTIdx}_f_0`;
+                        const specificOverrides = contextOverrides[contextId] || {};
+                        steps = [{
+                            flowId: trigger.flowId,
+                            overrides: { ...globalOverrides, ...specificOverrides }
+                        }];
                     } else {
                         logger.warn({ triggerId: trigger.id }, '⚠️ Trigger matched but no flows defined');
                         return 'pending';
@@ -105,17 +121,26 @@ export class TriggerEvaluator {
 
                     // Execute the flow(s) with variable overrides
                     // Add activeProgramId + window context so ProgramLogService can track flow executions
-                    const overridesWithContext = {
-                        ...variableOverrides,
+                    // NOTE: The overrides are now per-step, but we pass merged session overrides for tracking
+                    // We'll use the first step's overrides as base context, or global
+                    const baseContext = {
+                        ...globalOverrides,
                         activeProgramId: programId,
                         windowId: window.id,
                         windowName: window.name
                     };
+
+                    // We need to inject the context into EACH step's overrides
+                    steps = steps.map(s => ({
+                        ...s,
+                        overrides: { ...s.overrides, ...baseContext }
+                    }));
+
                     const flowSessionId = await cycleManager.startCycle(
                         trigger.id,  // cycleId
                         `Trigger: ${trigger.id}`,  // name
-                        steps.map(s => ({ ...s, overrides: overridesWithContext })),  // multi-step array with context
-                        overridesWithContext  // session overrides
+                        steps,
+                        baseContext  // session overrides (base)
                     );
 
                     // Mark trigger as executing (will be moved to executed when flow completes)
@@ -159,7 +184,12 @@ export class TriggerEvaluator {
      * Execute the fallback flow for a window.
      * Returns session ID if started.
      */
-    async executeFallback(window: ITimeWindow, variableOverrides: Record<string, any> = {}, activeProgramId?: string): Promise<string | undefined> {
+    async executeFallback(
+        window: ITimeWindow,
+        globalOverrides: Record<string, any> = {},
+        contextOverrides: Record<string, any> = {},
+        activeProgramId?: string
+    ): Promise<string | undefined> {
         // Migration support: check both new plural array and old single ID
         const useMultiFlow = window.fallbackFlowIds && window.fallbackFlowIds.length > 0;
         const useSingleFlow = !!window.fallbackFlowId;
@@ -177,21 +207,32 @@ export class TriggerEvaluator {
 
         try {
             // Include activeProgramId in overrides for logging
-            const overridesWithProgramId = { ...variableOverrides, activeProgramId };
+            const baseContext = {
+                ...globalOverrides,
+                activeProgramId,
+                windowId: window.id,
+                windowName: window.name
+            };
 
             // Construct steps (Multiple flows logic)
             let steps: { flowId: string, overrides: any }[] = [];
 
             if (useMultiFlow) {
-                steps = window.fallbackFlowIds!.map(fid => ({
-                    flowId: fid,
-                    overrides: overridesWithProgramId
-                }));
+                steps = window.fallbackFlowIds!.map((fid, fIdx) => {
+                    const contextId = `fb_${fIdx}`;
+                    const specificOverrides = contextOverrides[contextId] || {};
+                    return {
+                        flowId: fid,
+                        overrides: { ...baseContext, ...specificOverrides }
+                    };
+                });
             } else if (useSingleFlow) {
                 // Backward compatibility
+                const contextId = `fb_0`;
+                const specificOverrides = contextOverrides[contextId] || {};
                 steps = [{
                     flowId: window.fallbackFlowId!,
-                    overrides: overridesWithProgramId
+                    overrides: { ...baseContext, ...specificOverrides }
                 }];
             }
 
@@ -200,7 +241,7 @@ export class TriggerEvaluator {
                 `fallback-${window.id}`,
                 `Fallback: ${window.name}`,
                 steps,
-                overridesWithProgramId
+                baseContext
             );
 
             logger.info({ flowSessionId }, '🛡️ Fallback started');

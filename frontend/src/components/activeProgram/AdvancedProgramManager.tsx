@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import {
     Play, Pause, Square, Clock, Zap, CheckCircle2,
     Circle, Timer, ChevronDown, ChevronRight,
-    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity, CalendarClock
+    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity, CalendarClock, Settings2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Progress } from '../ui/progress';
@@ -21,6 +21,7 @@ import { TimeWindowModal } from '../programs/TimeWindowModal';
 import { TriggerModal } from '../programs/TriggerModal';
 import type { ITimeWindow, ITrigger } from '../programs/types';
 import { AdvancedExecutionLog } from './AdvancedExecutionLog';
+import { VariableConfigModal } from './VariableConfigModal';
 
 interface AdvancedProgramManagerProps {
     program: IActiveProgram;
@@ -98,6 +99,17 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
     // Delayed Start state
     const [isDelayedStartOpen, setIsDelayedStartOpen] = useState(false);
+
+    // Variable Config State
+    const [configWindowId, setConfigWindowId] = useState<string | null>(null);
+    const [windowVariables, setWindowVariables] = useState<Record<string, any[]>>({});
+
+    // Fetch variables on mount
+    useEffect(() => {
+        activeProgramService.getVariables()
+            .then(vars => setWindowVariables(vars || {}))
+            .catch(err => console.error('Failed to load variables', err));
+    }, []);
     const [dateInput, setDateInput] = useState('');
     const [timeInput, setTimeInput] = useState('00:00');
     const [timeRemaining, setTimeRemaining] = useState<string>('');
@@ -831,6 +843,24 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                 </Button>
                                             )}
 
+
+
+                                            {/* Config Variables Button */}
+                                            {isWindowEditable(window) && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfigWindowId(window.id);
+                                                    }}
+                                                    title="Configure Variables"
+                                                >
+                                                    <Settings2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
+
                                             {/* Edit button - only when window is not active */}
                                             {isWindowEditable(window) && (
                                                 <Button
@@ -990,6 +1020,32 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                 trigger={editingFullTrigger}
                 sensors={sensors}
                 flows={flows}
+            />
+
+            {/* Variable Config Modal */}
+            <VariableConfigModal
+                isOpen={!!configWindowId}
+                onClose={() => setConfigWindowId(null)}
+                windowId={configWindowId}
+                windowName={configWindowId ? (localWindows.find((w: any) => w.id === configWindowId)?.name || '') : ''}
+                contexts={configWindowId ? windowVariables[configWindowId] || [] : []}
+                initialOverrides={configWindowId ? ((program as any).windowOverrides?.[configWindowId] || {}) : {}}
+                onSave={async (winId, newOverrides) => {
+                    const currentOverrides = (program as any).windowOverrides || {};
+                    const updatedOverrides = {
+                        ...currentOverrides,
+                        [winId]: newOverrides
+                    };
+
+                    try {
+                        await activeProgramService.update({ windowOverrides: updatedOverrides } as any);
+                        toast.success('Variables saved');
+                        onUpdate();
+                    } catch (e) {
+                        console.error(e);
+                        toast.error('Failed to save variables');
+                    }
+                }}
             />
 
         </>
