@@ -112,9 +112,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
 
     // Add flow to list
     const addFlow = (id: string) => {
-        if (!flowIds.includes(id)) {
-            setFlowIds([...flowIds, id]);
-        }
+        setFlowIds([...flowIds, id]);
     };
 
     // Remove flow from list
@@ -278,7 +276,13 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
 
                             {/* Add Flow Dropdown */}
                             <div className="flex gap-2">
-                                <Select onValueChange={addFlow}>
+                                <Select
+                                    key={flowIds.length}
+                                    onValueChange={(val) => {
+                                        addFlow(val);
+                                    }}
+                                    value=""
+                                >
                                     <SelectTrigger>
                                         <SelectValue placeholder="➕ Добави поток..." />
                                     </SelectTrigger>
@@ -287,7 +291,6 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                                             <SelectItem
                                                 key={flow.id}
                                                 value={flow.id}
-                                                disabled={flowIds.includes(flow.id)}
                                             >
                                                 {flow.name}
                                             </SelectItem>
@@ -342,6 +345,6 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                     </Button>
                 </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };

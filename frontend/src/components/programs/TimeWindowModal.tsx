@@ -137,10 +137,9 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
     };
 
     // Helper methods for fallback flows
+    // Helper methods for fallback flows
     const addFallbackFlow = (id: string) => {
-        if (!fallbackFlowIds.includes(id)) {
-            setFallbackFlowIds([...fallbackFlowIds, id]);
-        }
+        setFallbackFlowIds([...fallbackFlowIds, id]);
     };
 
     const removeFallbackFlow = (index: number) => {
@@ -307,7 +306,13 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
 
                             {/* Add Fallback Flow Dropdown */}
                             <div className="flex gap-2">
-                                <Select onValueChange={addFallbackFlow}>
+                                <Select
+                                    key={fallbackFlowIds.length}
+                                    onValueChange={(val) => {
+                                        addFallbackFlow(val);
+                                    }}
+                                    value=""
+                                >
                                     <SelectTrigger>
                                         <SelectValue placeholder="➕ Добави fallback..." />
                                     </SelectTrigger>
@@ -316,7 +321,6 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                                             <SelectItem
                                                 key={flow.id}
                                                 value={flow.id}
-                                                disabled={fallbackFlowIds.includes(flow.id)}
                                             >
                                                 {flow.name}
                                             </SelectItem>
