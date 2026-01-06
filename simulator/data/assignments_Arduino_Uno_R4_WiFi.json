@@ -1,0 +1,12 @@
+[
+  {
+    "sensorId": "dht22",
+    "pins": [
+      "D0_0"
+    ],
+    "values": {
+      "temp": 0,
+      "humidity": 0
+    }
+  }
+]

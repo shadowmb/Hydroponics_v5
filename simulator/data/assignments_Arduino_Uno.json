@@ -1,0 +1,12 @@
+[
+  {
+    "sensorId": "dfrobot_par_rs485",
+    "pins": [
+      "D0_0",
+      "D1_1"
+    ],
+    "values": {
+      "par": 0
+    }
+  }
+]

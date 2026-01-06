@@ -8,6 +8,12 @@
  */
 
 import { SensorRegistry, SensorTemplate } from './SensorRegistry';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface PinAssignment {
     sensorId: string;           // Template ID: "dfrobot_ph_pro"
@@ -30,6 +36,7 @@ export interface AssignedSensorInfo {
 export class PinAssignmentManager {
     private assignments: Map<string, PinAssignment> = new Map();  // pinKey -> assignment
     private sensorRegistry: SensorRegistry;
+    private configPath: string | null = null;
 
     constructor(sensorRegistry: SensorRegistry) {
         this.sensorRegistry = sensorRegistry;
@@ -77,6 +84,7 @@ export class PinAssignmentManager {
         }
 
         console.log(`[PinManager] Assigned ${sensorId} to pins: ${pins.join(', ')}`);
+        this.saveConfig();
         return true;
     }
 
@@ -91,6 +99,7 @@ export class PinAssignmentManager {
                 this.assignments.delete(p);
             }
             console.log(`[PinManager] Unassigned sensor from pin: ${pin}`);
+            this.saveConfig();
         }
     }
 
@@ -130,6 +139,7 @@ export class PinAssignmentManager {
         const assignment = this.assignments.get(pin);
         if (assignment) {
             assignment.values[key] = value;
+            this.saveConfig();
         }
     }
 
@@ -232,6 +242,57 @@ export class PinAssignmentManager {
                     assignment.values = { ...assignment.values, ...item.values };
                 }
             }
+        }
+    }
+
+    // ============ Persistence ============
+
+    setConfigId(controllerId: string) {
+        // Create filename based on controller ID
+        const safeId = controllerId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        this.configPath = path.join(__dirname, `../data/assignments_${safeId}.json`);
+
+        // Ensure data directory exists
+        const dataDir = path.dirname(this.configPath);
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+
+        console.log(`[PinManager] Set config path: ${this.configPath}`);
+        this.loadConfig();
+    }
+
+    reset() {
+        this.clear();
+        this.saveConfig();
+        console.log('[PinManager] Reset configuration');
+    }
+
+    private saveConfig() {
+        if (!this.configPath) return;
+        try {
+            const data = this.exportConfig();
+            fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
+        } catch (e) {
+            console.error('[PinManager] Error saving config:', e);
+        }
+    }
+
+    private loadConfig() {
+        if (!this.configPath) return;
+        if (!fs.existsSync(this.configPath)) {
+            // New config, clear current state
+            this.clear();
+            return;
+        }
+
+        try {
+            const content = fs.readFileSync(this.configPath, 'utf-8');
+            const data = JSON.parse(content);
+            this.importConfig(data);
+            console.log(`[PinManager] Loaded ${data.length} assignments from config`);
+        } catch (e) {
+            console.error('[PinManager] Error loading config:', e);
         }
     }
 }

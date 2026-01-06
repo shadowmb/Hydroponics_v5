@@ -322,6 +322,10 @@
                 <span>UDP Port:</span>
                 <span>8888</span>
             </div>
+            <div class="status-item">
+                <button class="btn btn-secondary" onclick="resetSimulator()"
+                    style="padding: 4px 12px; font-size: 0.8em; background: #ef4444; border-color: #ef4444; color: white;">Reset</button>
+            </div>
         </div>
 
         <!-- Left: Controller & Pins -->
@@ -695,6 +699,12 @@
                 addLog('⚠️ UDP log connection lost, reconnecting...', 'error');
                 // EventSource will auto-reconnect
             };
+        }
+
+        async function resetSimulator() {
+            if (!confirm('Are you sure you want to reset all assignments and configurations?')) return;
+            await fetch('/api/reset', { method: 'POST' });
+            window.location.reload();
         }
 
         // Initialize

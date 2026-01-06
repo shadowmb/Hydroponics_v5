@@ -51,7 +51,9 @@ const protocolHandler = new UdpProtocolHandler(
 const scenarioEngine = new ScenarioEngine(deviceState);
 
 // Active controller selection
+// Active controller selection
 let activeController = 'Arduino_Uno_R4_WiFi';
+pinManager.setConfigId(activeController);
 
 // SSE clients for real-time UDP log
 const sseClients: Set<any> = new Set();
@@ -171,7 +173,7 @@ app.post('/api/controller/:key', (req, res) => {
         return res.status(404).json({ success: false, error: 'Controller not found' });
     }
     activeController = key;
-    pinManager.clear(); // Clear assignments when switching controller
+    pinManager.setConfigId(key); // Load config for new controller (clears old state internally)
     res.json({ success: true, controller: key });
 });
 
@@ -298,15 +300,19 @@ app.get('/api/config/export', (req, res) => {
 });
 
 app.post('/api/config/import', (req, res) => {
-    const { controller, assignments } = req.body;
-    if (controller) {
-        activeController = controller;
+    const { config } = req.body;
+    if (!Array.isArray(config)) {
+        return res.status(400).json({ success: false, error: 'Invalid config format' });
     }
-    if (assignments) {
-        pinManager.importConfig(assignments);
-    }
+    pinManager.importConfig(config);
     res.json({ success: true });
 });
+
+app.post('/api/reset', (req, res) => {
+    pinManager.reset();
+    res.json({ success: true });
+});
+
 
 app.listen(HTTP_PORT, () => {
     console.log(`[HTTP] Control UI at http://localhost:${HTTP_PORT}`);
