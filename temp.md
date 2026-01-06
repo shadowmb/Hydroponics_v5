@@ -1,495 +1,567 @@
 {
   "_id": {
-    "$oid": "695b78d955ef70d7aa42c810"
+    "$oid": "695ceb183ca221d45d68b3da"
   },
-  "id": "rn_kontrol",
-  "name": "рН Контрол",
-  "description": "Проверка и коригиране на рН",
-  "mode": "SIMPLE",
-  "nodes": [
-    {
-      "id": "start",
-      "type": "START",
-      "params": {
-        "label": "Start",
-        "hasError": false
-      },
-      "position": {
-        "x": 116.5,
-        "y": -35
-      }
-    },
-    {
-      "id": "end",
-      "type": "END",
-      "params": {
-        "label": "End",
-        "hasError": false
-      },
-      "position": {
-        "x": -163.75226334280575,
-        "y": 882.2606545884843
-      }
-    },
-    {
-      "id": "SENSOR_READ_1767602172874",
-      "type": "SENSOR_READ",
-      "params": {
-        "label": "Сензор рН",
-        "readingType": "ph_smart",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "695b7adf55ef70d7aa42c8a7",
-        "notificationMode": "ALWAYS",
-        "hasError": false,
-        "deviceId": "695b6a468b53afd2c818732e",
-        "comment": "Сензор за измерване нивото на рН",
-        "variable": "var_1"
-      },
-      "position": {
-        "x": 92,
-        "y": 87.75
-      }
-    },
-    {
-      "id": "IF_1767603196469",
-      "type": "IF",
-      "params": {
-        "label": "Условие",
-        "operator": "==",
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "",
-        "notificationMode": "AUTO",
-        "hasError": false,
-        "variable": "var_1",
-        "value": "{{global_4}}",
-        "comment": "Проверка дали рН от сензора е равно на желаното рН"
-      },
-      "position": {
-        "x": 92.90330343502822,
-        "y": 225.3442993990624
-      }
-    },
-    {
-      "id": "IF_1767603252978",
-      "type": "IF",
-      "params": {
-        "label": "Условие",
-        "operator": "<",
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "",
-        "notificationMode": "AUTO",
-        "hasError": false,
-        "comment": "Проверява дали текущото рН е по високо или ниско от желаното рН",
-        "variable": "var_1",
-        "value": "{{global_4}}"
-      },
-      "position": {
-        "x": 316.4714969953119,
-        "y": 419.3560199123933
-      }
-    },
-    {
-      "id": "ACTUATOR_SET_1767603376554",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "strategy": "volumetric_flow",
-        "durationUnit": "sec",
-        "amountMode": "DOSES",
-        "amountUnit": "ml",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "695b7ae855ef70d7aa42c8ae",
-        "notificationMode": "ALWAYS",
-        "revertOnStop": true,
-        "label": "Помпа рН+",
-        "hasError": false,
-        "deviceId": "695b6d178b53afd2c8187813",
-        "action": "DOSE",
-        "amount": "{{global_2}}",
-        "comment": "Активра се помпата за рН+ на база дози"
-      },
-      "position": {
-        "x": 215.40088093442466,
-        "y": 829.295713256184
-      }
-    },
-    {
-      "id": "generic_1767603662823",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "strategy": "volumetric_flow",
-        "durationUnit": "sec",
-        "amountMode": "DOSES",
-        "amountUnit": "ml",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "695b7ae855ef70d7aa42c8ae",
-        "notificationMode": "ALWAYS",
-        "revertOnStop": true,
-        "label": "Помпа рН-",
-        "hasError": false,
-        "deviceId": "695b6d258b53afd2c818783f",
-        "action": "DOSE",
-        "amount": "{{global_3}}",
-        "comment": "Активра се помпата за рН- на база дози"
-      },
-      "position": {
-        "x": 482.68256682214565,
-        "y": 829.3538476471233
-      }
-    },
-    {
-      "id": "ACTUATOR_SET_1767603706936",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "strategy": "actuator_manual",
-        "durationUnit": "sec",
-        "amountMode": "VOLUME",
-        "amountUnit": "ml",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "695b7ae855ef70d7aa42c8ae",
-        "notificationMode": "ALWAYS",
-        "revertOnStop": true,
-        "label": "Set Actuator",
-        "hasError": false,
-        "deviceId": "695b6e618b53afd2c818798d",
-        "action": "PULSE_ON",
-        "duration": "{{global_5}}",
-        "comment": "Помпа за разбъркване на разтвори"
-      },
-      "position": {
-        "x": 216.89795466959998,
-        "y": 991.4321742625049
-      }
-    },
-    {
-      "id": "LOOP_1767603818056",
-      "type": "LOOP",
-      "params": {
-        "limitMode": "COUNT",
-        "interval": 1,
-        "intervalUnit": "sec",
-        "count": 2,
-        "timeout": 60,
-        "timeoutUnit": "sec",
-        "operator": "<",
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "",
-        "notificationMode": "AUTO",
-        "label": "Цикъл рН+",
-        "hasError": false,
-        "variable": "var_1",
-        "value": "{{global_4}}"
-      },
-      "position": {
-        "x": 65.67465128982317,
-        "y": 621.6132297919869
-      }
-    },
-    {
-      "id": "generic_1767603917220",
-      "type": "SENSOR_READ",
-      "params": {
-        "readingType": "ph_smart",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "695b7adf55ef70d7aa42c8a7",
-        "notificationMode": "ALWAYS",
-        "label": "Сензор рН",
-        "hasError": false,
-        "deviceId": "695b6a468b53afd2c818732e",
-        "comment": "Сензор за измерване нивото на рН",
-        "variable": "var_1",
-        "mirrorOf": "SENSOR_READ_1767602172874"
-      },
-      "position": {
-        "x": 213.54046070262635,
-        "y": 1154.2359006070235
-      }
-    },
-    {
-      "id": "FLOW_CONTROL_1767603935734",
-      "type": "FLOW_CONTROL",
-      "params": {
-        "controlType": "LOOP_BACK",
-        "label": "Flow Control (Jump/Label)",
-        "hasError": false,
-        "targetLabel": "LOOP_1767603818056"
-      },
-      "position": {
-        "x": 229.12125804937662,
-        "y": 1317.4064332453665
-      }
-    },
-    {
-      "id": "loop_1767603966706",
-      "type": "LOOP",
-      "params": {
-        "limitMode": "COUNT",
-        "interval": 1,
-        "intervalUnit": "sec",
-        "count": 2,
-        "timeout": 60,
-        "timeoutUnit": "sec",
-        "operator": ">",
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "",
-        "notificationMode": "AUTO",
-        "label": "Цикъл рН-",
-        "hasError": false,
-        "variable": "var_1",
-        "value": "{{global_4}}"
-      },
-      "position": {
-        "x": 343.322022531845,
-        "y": 601.5970951343373
-      }
-    },
-    {
-      "id": "generic_1767604016675",
-      "type": "ACTUATOR_SET",
-      "params": {
-        "strategy": "actuator_manual",
-        "durationUnit": "sec",
-        "amountMode": "VOLUME",
-        "amountUnit": "ml",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "695b7ae855ef70d7aa42c8ae",
-        "notificationMode": "ALWAYS",
-        "revertOnStop": true,
-        "label": "Set Actuator",
-        "hasError": false,
-        "deviceId": "695b6e618b53afd2c818798d",
-        "action": "PULSE_ON",
-        "duration": "{{global_5}}",
-        "comment": "Помпа за разбъркване на разтвори"
-      },
-      "position": {
-        "x": 484.89795466960004,
-        "y": 995.4321742625046
-      }
-    },
-    {
-      "id": "generic_1767604021323",
-      "type": "SENSOR_READ",
-      "params": {
-        "readingType": "ph_smart",
-        "retryCount": 3,
-        "retryDelay": 1000,
-        "onFailure": "STOP",
-        "errorNotification": false,
-        "notificationChannelId": "695b7adf55ef70d7aa42c8a7",
-        "notificationMode": "ALWAYS",
-        "label": "Сензор рН",
-        "hasError": false,
-        "deviceId": "695b6a468b53afd2c818732e",
-        "comment": "Сензор за измерване нивото на рН",
-        "variable": "var_1",
-        "mirrorOf": "SENSOR_READ_1767602172874"
-      },
-      "position": {
-        "x": 480.5404607026264,
-        "y": 1154.2359006070235
-      }
-    },
-    {
-      "id": "flowControl_1767604026589",
-      "type": "FLOW_CONTROL",
-      "params": {
-        "controlType": "LOOP_BACK",
-        "label": "Flow Control (Jump/Label)",
-        "hasError": false,
-        "targetLabel": "loop_1767603966706"
-      },
-      "position": {
-        "x": 495.12125804937665,
-        "y": 1302.4064332453665
-      }
-    }
-  ],
-  "edges": [
-    {
-      "id": "xy-edge__start-SENSOR_READ_1767602172874",
-      "source": "start",
-      "target": "SENSOR_READ_1767602172874",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__SENSOR_READ_1767602172874-IF_1767603196469",
-      "source": "SENSOR_READ_1767602172874",
-      "target": "IF_1767603196469",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__IF_1767603196469false-IF_1767603252978",
-      "source": "IF_1767603196469",
-      "target": "IF_1767603252978",
-      "sourceHandle": "false",
-      "type": "smoothstep"
-    },
-    {
-      "id": "xy-edge__ACTUATOR_SET_1767603376554-ACTUATOR_SET_1767603706936",
-      "source": "ACTUATOR_SET_1767603376554",
-      "target": "ACTUATOR_SET_1767603706936"
-    },
-    {
-      "id": "xy-edge__IF_1767603252978true-LOOP_1767603818056",
-      "source": "IF_1767603252978",
-      "target": "LOOP_1767603818056",
-      "sourceHandle": "true"
-    },
-    {
-      "id": "xy-edge__ACTUATOR_SET_1767603706936-generic_1767603917220",
-      "source": "ACTUATOR_SET_1767603706936",
-      "target": "generic_1767603917220"
-    },
-    {
-      "id": "xy-edge__generic_1767603917220-FLOW_CONTROL_1767603935734",
-      "source": "generic_1767603917220",
-      "target": "FLOW_CONTROL_1767603935734"
-    },
-    {
-      "id": "xy-edge__IF_1767603252978false-loop_1767603966706",
-      "source": "IF_1767603252978",
-      "target": "loop_1767603966706",
-      "sourceHandle": "false"
-    },
-    {
-      "id": "xy-edge__LOOP_1767603818056body-ACTUATOR_SET_1767603376554",
-      "source": "LOOP_1767603818056",
-      "target": "ACTUATOR_SET_1767603376554",
-      "sourceHandle": "body"
-    },
-    {
-      "id": "xy-edge__generic_1767603662823-generic_1767604016675",
-      "source": "generic_1767603662823",
-      "target": "generic_1767604016675"
-    },
-    {
-      "id": "xy-edge__generic_1767604016675-generic_1767604021323",
-      "source": "generic_1767604016675",
-      "target": "generic_1767604021323"
-    },
-    {
-      "id": "xy-edge__generic_1767604021323-flowControl_1767604026589",
-      "source": "generic_1767604021323",
-      "target": "flowControl_1767604026589"
-    },
-    {
-      "id": "xy-edge__loop_1767603966706body-generic_1767603662823",
-      "source": "loop_1767603966706",
-      "target": "generic_1767603662823",
-      "sourceHandle": "body"
-    },
-    {
-      "id": "xy-edge__loop_1767603966706exit-end",
-      "source": "loop_1767603966706",
-      "target": "end",
-      "sourceHandle": "exit"
-    },
-    {
-      "id": "xy-edge__LOOP_1767603818056exit-end",
-      "source": "LOOP_1767603818056",
-      "target": "end",
-      "sourceHandle": "exit"
-    },
-    {
-      "id": "xy-edge__IF_1767603196469true-end",
-      "source": "IF_1767603196469",
-      "target": "end",
-      "sourceHandle": "true"
-    }
-  ],
-  "inputs": [],
-  "variables": [
-    {
-      "id": "var_1",
-      "name": "рН Текущо",
-      "type": "number",
-      "scope": "local",
-      "unit": "pH",
-      "hasTolerance": false,
-      "description": "",
-      "_id": {
-        "$oid": "695b78d955ef70d7aa42c811"
-      }
-    },
-    {
-      "id": "global_2",
-      "name": "Дози рН+",
-      "type": "number",
-      "scope": "global",
-      "unit": "doses",
-      "hasTolerance": false,
-      "description": "Какво количество дози да се добавят",
-      "_id": {
-        "$oid": "695b78d955ef70d7aa42c812"
-      }
-    },
-    {
-      "id": "global_3",
-      "name": "Дози рН-",
-      "type": "number",
-      "scope": "global",
-      "unit": "doses",
-      "hasTolerance": false,
-      "description": "Какво количество дози да се добавят",
-      "_id": {
-        "$oid": "695b78d955ef70d7aa42c813"
-      }
-    },
-    {
-      "id": "global_4",
-      "name": "рН",
-      "type": "number",
-      "scope": "global",
-      "unit": "pH",
-      "hasTolerance": true,
-      "description": "Желано ниво на рН",
-      "_id": {
-        "$oid": "695b78d955ef70d7aa42c814"
-      }
-    },
-    {
-      "id": "global_5",
-      "name": "Разбъркване",
-      "type": "number",
-      "scope": "global",
-      "unit": "s",
-      "hasTolerance": false,
-      "description": "Помпа за разбъркване на разтвори",
-      "_id": {
-        "$oid": "695b7fad55ef70d7aa42cbc2"
-      }
-    }
-  ],
-  "isActive": true,
-  "validationStatus": "VALID",
-  "deletedAt": null,
+  "date": "2026-01-06",
+  "programId": "prog_testph_sim",
+  "__v": 0,
   "createdAt": {
-    "$date": "2026-01-05T08:39:53.140Z"
+    "$date": "2026-01-06T10:59:36.393Z"
   },
+  "deletedAt": null,
+  "events": [
+    {
+      "timestamp": {
+        "$date": "2026-01-06T10:59:36.392Z"
+      },
+      "type": "INFO",
+      "message": "Програмата стартира",
+      "metadata": {
+        "timestamp": {
+          "$date": "2026-01-06T10:59:36.392Z"
+        }
+      }
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:00.046Z"
+      },
+      "type": "FLOW_EXECUTED",
+      "message": "Стартиран поток: pH Sim",
+      "metadata": {
+        "sessionId": "695ceb3009a10176b895eff5",
+        "flowId": "prog_testph_sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:00.165Z"
+      },
+      "type": "INFO",
+      "message": "❓ Условие: 3.30 == [5.80–6.20] => FALSE",
+      "metadata": {
+        "blockId": "IF_1767603196469",
+        "blockType": "IF",
+        "blockLabel": "Условие",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 0,
+          "primaryUnit": "bool",
+          "leftValue": 3.3,
+          "rightValue": 6,
+          "operator": "==",
+          "tolerance": 0.2,
+          "strategy": "comparison"
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:00.163Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 3.30 pH",
+      "metadata": {
+        "blockId": "SENSOR_READ_1767602172874",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 3.3,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 109
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:00.170Z"
+      },
+      "type": "INFO",
+      "message": "❓ Условие: 3.30 < [5.80–6.20] => TRUE",
+      "metadata": {
+        "blockId": "IF_1767603252978",
+        "blockType": "IF",
+        "blockLabel": "Условие",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 3.3,
+          "rightValue": 6,
+          "operator": "<",
+          "tolerance": 0.2,
+          "strategy": "comparison"
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:00.174Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН+: Iteration 1: 3.30 <= [5.80–6.20] => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767603818056",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН+",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 3.3,
+          "rightValue": 6,
+          "operator": "<=",
+          "tolerance": 0.2,
+          "strategy": "loop_check"
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:01.604Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН+: Dosed 1doses",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767603376554",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН+",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1153.8461538461538,
+          "calculatedVolumeMl": 1
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:16.888Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Set Actuator: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767603706936",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Set Actuator",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:16.934Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 4 pH",
+      "metadata": {
+        "blockId": "generic_1767603917220",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 4,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 43
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:17.940Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН+: Iteration 2: 4.00 <= [5.80–6.20] => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767603818056",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН+",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 4,
+          "rightValue": 6,
+          "operator": "<=",
+          "tolerance": 0.2,
+          "strategy": "loop_check"
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:19.205Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН+: Dosed 1doses",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767603376554",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН+",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1153.8461538461538,
+          "calculatedVolumeMl": 1
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:34.520Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Set Actuator: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767603706936",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Set Actuator",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:34.547Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 4.60 pH",
+      "metadata": {
+        "blockId": "generic_1767603917220",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 4.6,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 25
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:35.554Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН+: Iteration 3: 4.60 <= [5.80–6.20] => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767603818056",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН+",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 4.6,
+          "rightValue": 6,
+          "operator": "<=",
+          "tolerance": 0.2,
+          "strategy": "loop_check"
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:36.938Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН+: Dosed 1doses",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767603376554",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН+",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1153.8461538461538,
+          "calculatedVolumeMl": 1
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:52.226Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Set Actuator: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767603706936",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Set Actuator",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:52.252Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 5.30 pH",
+      "metadata": {
+        "blockId": "generic_1767603917220",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 5.3,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 24
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:53.260Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН+: Iteration 4: 5.30 <= [5.80–6.20] => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767603818056",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН+",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 5.3,
+          "rightValue": 6,
+          "operator": "<=",
+          "tolerance": 0.2,
+          "strategy": "loop_check"
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:00:54.533Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН+: Dosed 1doses",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767603376554",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН+",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1153.8461538461538,
+          "calculatedVolumeMl": 1
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:01:09.840Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Set Actuator: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767603706936",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Set Actuator",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:01:09.893Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 5.90 pH",
+      "metadata": {
+        "blockId": "generic_1767603917220",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 5.9,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 50
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-06T11:01:10.911Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН+: Iteration 5: 5.90 <= [5.80–6.20] => FALSE (Done)",
+      "metadata": {
+        "blockId": "LOOP_1767603818056",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН+",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 0,
+          "primaryUnit": "bool",
+          "leftValue": 5.9,
+          "rightValue": 6,
+          "operator": "<=",
+          "tolerance": 0.2,
+          "strategy": "loop_check"
+        },
+        "sessionId": "695ceb3009a10176b895eff5",
+        "windowId": null,
+        "windowName": null,
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695ceb3009a10176b895eff5"
+    }
+  ],
+  "isVisible": true,
   "updatedAt": {
-    "$date": "2026-01-05T09:09:01.331Z"
-  },
-  "__v": 0
+    "$date": "2026-01-06T11:01:10.916Z"
+  }
 }

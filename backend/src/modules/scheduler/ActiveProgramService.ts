@@ -125,7 +125,7 @@ export class ActiveProgramService {
     /**
      * Update the active program settings (before starting).
      */
-    async updateProgram(updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any>, windows?: any[] }): Promise<IActiveProgram> {
+    async updateProgram(updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any>, windowOverrides?: Record<string, any>, windows?: any[] }): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
@@ -148,7 +148,7 @@ export class ActiveProgramService {
         // Apply global overrides
         if (updates.globalOverrides) {
             if (active.type === 'ADVANCED') {
-                // For ADVANCED: store in dedicated field (will be used by scheduler when executing flows)
+                // For ADVANCED: store in dedicated field
                 (active as any).variableOverrides = updates.globalOverrides;
             } else {
                 // For BASIC: apply to ALL schedule items
@@ -156,6 +156,11 @@ export class ActiveProgramService {
                     item.overrides = { ...item.overrides, ...updates.globalOverrides };
                 });
             }
+        }
+
+        // Apply window overrides (ADVANCED only)
+        if (updates.windowOverrides && active.type === 'ADVANCED') {
+            (active as any).windowOverrides = updates.windowOverrides;
         }
 
         // If we are saving changes, we can mark it as ready
@@ -177,15 +182,14 @@ export class ActiveProgramService {
 
         const FlowModel = require('../persistence/schemas/Flow.schema').FlowModel;
         const variablesMap: Record<string, any[]> = {};
-        const seenVars = new Set<string>();
 
-        // Helper to extract variables from a flow
-        const extractFlowVariables = async (flowId: string, keyId: string) => {
+        // Helper to extract variables from a flow, using a scoped seenVars set
+        const extractFlowVariables = async (flowId: string, keyId: string, scopedSeenVars: Set<string>) => {
             const flow = await FlowModel.findOne({ id: flowId });
             if (flow && flow.variables) {
                 const flowVars: any[] = [];
                 flow.variables.forEach((v: any) => {
-                    if (v.scope === 'global' && !seenVars.has(v.name)) {
+                    if (v.scope === 'global' && !scopedSeenVars.has(v.name)) {
                         flowVars.push({
                             name: v.name,
                             type: v.type,
@@ -197,7 +201,7 @@ export class ActiveProgramService {
                             flowName: flow.name || 'Unknown Flow',
                             flowDescription: flow.description
                         });
-                        seenVars.add(v.name);
+                        scopedSeenVars.add(v.name);
                     }
                 });
                 if (flowVars.length > 0) {
@@ -212,15 +216,38 @@ export class ActiveProgramService {
         // ADVANCED MODE: Extract from windows/triggers
         if (active.type === 'ADVANCED' && (active as any).windows) {
             for (const window of (active as any).windows) {
+                const windowId = window.id; // Use window ID as the key
+                const processedFlowsInWindow = new Set<string>(); // prevent processing same flow twice in a window
+
+                const processFlow = async (fid: string) => {
+                    if (!processedFlowsInWindow.has(fid)) {
+                        processedFlowsInWindow.add(fid);
+                        // Use a fresh set for seenVars to allow duplicate variable names across DIFFERENT flows
+                        await extractFlowVariables(fid, windowId, new Set<string>());
+                    }
+                };
+
                 if (window.triggers) {
                     for (const trigger of window.triggers) {
+                        // Handle single flow (legacy)
                         if (trigger.flowId) {
-                            await extractFlowVariables(trigger.flowId, trigger.flowId);
+                            await processFlow(trigger.flowId);
+                        }
+                        // Handle multiple flows (new)
+                        if (trigger.flowIds && Array.isArray(trigger.flowIds)) {
+                            for (const fid of trigger.flowIds) {
+                                await processFlow(fid);
+                            }
                         }
                     }
                 }
                 if (window.fallbackFlowId) {
-                    await extractFlowVariables(window.fallbackFlowId, window.fallbackFlowId);
+                    await processFlow(window.fallbackFlowId);
+                }
+                if ((window as any).fallbackFlowIds) {
+                    for (const fid of (window as any).fallbackFlowIds) {
+                        await processFlow(fid);
+                    }
                 }
             }
         }
@@ -228,10 +255,12 @@ export class ActiveProgramService {
         else {
             for (const item of active.schedule) {
                 const cycleId = item.cycleId;
+                const cycleSeenVars = new Set<string>(); // Scope seenVars to this cycle
+
                 if (!item.steps || item.steps.length === 0) continue;
 
                 for (const step of item.steps) {
-                    await extractFlowVariables(step.flowId, cycleId);
+                    await extractFlowVariables(step.flowId, cycleId, cycleSeenVars);
                 }
             }
         }

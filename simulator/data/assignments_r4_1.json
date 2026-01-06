@@ -5,7 +5,7 @@
       "A0_14"
     ],
     "values": {
-      "ph": 400
+      "ph": 326.6666666666667
     },
     "calibrationPoints": [
       {
@@ -17,5 +17,64 @@
         "raw": 400
       }
     ]
+  },
+  {
+    "sensorId": "dfrobot_ec_k1",
+    "pins": [
+      "A1_15"
+    ],
+    "values": {
+      "ec": 440.84494636783813
+    },
+    "calibrationPoints": [
+      {
+        "value": 1.413,
+        "raw": 290
+      },
+      {
+        "value": 12.88,
+        "raw": 2637
+      }
+    ]
+  },
+  {
+    "sensorId": "dfrobot_a02yyuw",
+    "pins": [
+      "D10_10",
+      "D11_11"
+    ],
+    "values": {
+      "distance": 300
+    },
+    "calibrationPoints": [
+      {
+        "value": 0,
+        "raw": 30
+      },
+      {
+        "value": 100,
+        "raw": 300
+      }
+    ]
+  },
+  {
+    "sensorId": "dfrobot_soil_mois",
+    "pins": [
+      "A2_16"
+    ],
+    "values": {
+      "soil_moisture": 25
+    },
+    "calibrationPoints": []
+  },
+  {
+    "sensorId": "dfrobot_par_rs485",
+    "pins": [
+      "D0_0",
+      "D1_1"
+    ],
+    "values": {
+      "par": 163.269839506858
+    }
   }
 ]

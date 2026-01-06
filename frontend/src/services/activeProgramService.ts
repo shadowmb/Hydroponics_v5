@@ -15,7 +15,7 @@ export const activeProgramService = {
         return response.data;
     },
 
-    update: async (updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any> }): Promise<IActiveProgram> => {
+    update: async (updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any>, windowOverrides?: Record<string, any> }): Promise<IActiveProgram> => {
         const response = await axios.patch<IActiveProgram>(`${BASE_URL}/update`, updates);
         return response.data;
     },
