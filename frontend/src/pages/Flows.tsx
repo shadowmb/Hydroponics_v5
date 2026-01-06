@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Edit, Trash2, Plus, Loader2, AlertTriangle } from 'lucide-react';
+import { Play, Edit, Trash2, Plus, Loader2, AlertTriangle, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -14,6 +14,7 @@ import {
     DialogClose,
 } from '../components/ui/dialog';
 import { FlowTestDialog } from '../components/flows/FlowTestDialog';
+import { DuplicateFlowDialog } from '../components/flows/DuplicateFlowDialog';
 
 import type { IFlow } from '../../../shared/types';
 
@@ -38,6 +39,7 @@ export const Flows: React.FC = () => {
 
     // Test Flow State
     const [testFlowId, setTestFlowId] = useState<string | null>(null);
+    const [duplicateFlowId, setDuplicateFlowId] = useState<string | null>(null);
     const [systemStatus, setSystemStatus] = useState<any>(null);
 
     useEffect(() => {
@@ -315,6 +317,15 @@ export const Flows: React.FC = () => {
                                                             >
                                                                 <Trash2 className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-red-600'}`} />
                                                             </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => setDuplicateFlowId(flow.id)}
+                                                                title="Duplicate Flow"
+                                                                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                                            >
+                                                                <Copy className="h-4 w-4" />
+                                                            </Button>
                                                         </>
                                                     )}
                                                 </div>
@@ -341,6 +352,15 @@ export const Flows: React.FC = () => {
                 flowId={testFlowId}
                 flowName={flows.find(f => f.id === testFlowId)?.name || 'Flow'}
                 isActive={isSystemBusy}
+            />
+
+            {/* Duplicate Dialog */}
+            <DuplicateFlowDialog
+                open={!!duplicateFlowId}
+                onOpenChange={(open) => !open && setDuplicateFlowId(null)}
+                flowId={duplicateFlowId}
+                flowName={flows.find(f => f.id === duplicateFlowId)?.name || ''}
+                onSuccess={fetchFlows}
             />
 
             {/* Soft Delete Confirmation Dialog */}
