@@ -366,11 +366,31 @@
         </div>
     </div>
 
-    <!-- Configuration Wizard (Shown if not configured) -->
+    <!-- Launcher Panel (Profile Selection) -->
+    <div id="launcher-panel" class="container"
+        style="display:none; height: 60vh; align-items: center; justify-content: center; display:flex; flex-direction: column;">
+        <h1 style="color: #00d9ff; margin-bottom: 20px;">🚀 Select Simulator Profile</h1>
+        <div id="profile-list" class="card" style="width: 100%; max-width: 600px; max-height: 400px; overflow-y: auto;">
+            <!-- Profiles injected here -->
+            <p style="text-align:center; color:#666;">Loading profiles...</p>
+        </div>
+        <button class="btn btn-primary" onclick="showSetup()"
+            style="margin-top: 20px; padding: 15px 30px; font-size: 1.2em;">
+            + New Simulator Profile
+        </button>
+    </div>
+
+    <!-- Configuration Wizard (Create Profile) -->
     <div id="setup-panel" class="container"
         style="display:none; height: 60vh; align-items: center; justify-content: center; display:flex;">
         <div class="card" style="width: 100%; max-width: 500px; text-align: center;">
-            <h1 style="color: #00d9ff; margin-bottom: 30px;">Configuration Wizard</h1>
+            <h1 style="color: #00d9ff; margin-bottom: 20px;">New Profile Setup</h1>
+
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label style="display:block; margin-bottom:8px; color:#aaa;">Profile Name:</label>
+                <input type="text" id="setup-name" placeholder="e.g. Tomatoes Tank 1" class="controller-select"
+                    style="font-size: 1.1em; padding: 12px; width: 100%;">
+            </div>
 
             <div style="margin-bottom: 20px; text-align: left;">
                 <label style="display:block; margin-bottom:8px; color:#aaa;">Controller Model:</label>
@@ -394,10 +414,11 @@
                 </div>
             </div>
 
-            <button class="btn btn-primary" onclick="submitSetup()"
-                style="width: 100%; padding: 15px; font-size: 1.1em;">
-                Start Simulator 🚀
-            </button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" onclick="showLauncher()" style="flex:1;">Cancel</button>
+                <button class="btn btn-primary" onclick="submitSetup()" style="flex:2;">Create & Start 🚀</button>
+            </div>
+
             <p id="setup-error" style="color: #f43f5e; margin-top: 15px; display: none;"></p>
         </div>
     </div>
@@ -424,6 +445,8 @@
 
         // ============ Initialization ============
 
+        // ============ Initialization ============
+
         async function init() {
             try {
                 // Check if already configured
@@ -431,29 +454,104 @@
                 const status = await res.json();
 
                 if (status.configured) {
-                    // Show Simulator
-                    document.getElementById('setup-panel').style.display = 'none';
-                    document.getElementById('simulator-panel').style.display = 'grid';
-
-                    document.getElementById('display-udp-port').textContent = status.udpPort;
-                    document.getElementById('display-mac').textContent = status.mac;
-
-                    await loadControllers();
-                    await loadSensors();
-                    await loadPins();
-                    await loadAssignments();
-                    setInterval(refreshState, 1000);
-                    connectToUdpLog();
+                    showSimulator(status);
                 } else {
-                    // Show Setup Wizard
-                    document.getElementById('simulator-panel').style.display = 'none';
-                    document.getElementById('setup-panel').style.display = 'flex';
-                    // Pre-fill MAC if available
-                    if (status.mac) document.getElementById('setup-mac').value = status.mac;
-                    await loadSetupOptions();
+                    // Show Launcher
+                    showLauncher();
+                    await loadProfiles();
                 }
             } catch (e) {
                 console.error("Init failed", e);
+            }
+        }
+
+        function showSimulator(status) {
+            document.getElementById('launcher-panel').style.display = 'none';
+            document.getElementById('setup-panel').style.display = 'none';
+            document.getElementById('simulator-panel').style.display = 'grid';
+
+            document.getElementById('display-udp-port').textContent = status.udpPort;
+            document.getElementById('display-mac').textContent = status.mac;
+
+            loadControllers();
+            loadSensors();
+            loadPins();
+            loadAssignments();
+            setInterval(refreshState, 1000);
+            connectToUdpLog();
+        }
+
+        function showLauncher() {
+            document.getElementById('simulator-panel').style.display = 'none';
+            document.getElementById('setup-panel').style.display = 'none';
+            document.getElementById('launcher-panel').style.display = 'flex';
+            loadProfiles();
+        }
+
+        function showSetup() {
+            document.getElementById('launcher-panel').style.display = 'none';
+            document.getElementById('setup-panel').style.display = 'flex';
+            loadSetupOptions();
+            generateMac(); // Pre-fill new random MAC
+            document.getElementById('setup-name').value = '';
+        }
+
+        async function loadProfiles() {
+            const res = await fetch('/api/profiles');
+            const profiles = await res.json();
+            const list = document.getElementById('profile-list');
+
+            if (profiles.length === 0) {
+                list.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">No profiles found. Create one to start.</p>';
+                return;
+            }
+
+            list.innerHTML = profiles.map(p => `
+                <div class="sensor-item" style="cursor:default; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="cursor:pointer; flex:1;" onclick="selectProfile('${p.id}')">
+                        <div class="sensor-name">${p.name}</div>
+                        <div class="sensor-pins" style="font-size:0.85em;">
+                            ID: ${p.id} | ${p.controllerType} | UDP: ${p.udpPort} | MAC: ${p.mac}
+                        </div>
+                    </div>
+                    <button class="btn-remove" onclick="deleteProfile('${p.id}', event)" title="Delete Profile">✕</button>
+                </div>
+            `).join('');
+        }
+
+        async function selectProfile(profileId) {
+            try {
+                // To launch a profile, we "setup" the server with that profile ID
+                const res = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profileId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to launch profile: ' + data.error);
+                }
+            } catch (e) {
+                alert('Error launching profile: ' + e.message);
+            }
+        }
+
+        async function deleteProfile(id, event) {
+            event.stopPropagation();
+            if (!confirm('Are you sure you want to delete this profile? Assignments will also be deleted.')) return;
+
+            try {
+                const res = await fetch('/api/profiles/' + id, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    loadProfiles();
+                } else {
+                    alert('Failed to delete: ' + data.error);
+                }
+            } catch (e) {
+                alert('Error deleting: ' + e.message);
             }
         }
 
@@ -465,10 +563,12 @@
         }
 
         async function submitSetup() {
-            const controller = document.getElementById('setup-controller').value;
+            const name = document.getElementById('setup-name').value || 'My Simulator';
+            const controllerType = document.getElementById('setup-controller').value; // Changed to controllerType in backend
             const udpPort = document.getElementById('setup-port').value;
             const mac = document.getElementById('setup-mac').value;
-            const btn = document.querySelector('#setup-panel button');
+
+            const btn = document.querySelector('#setup-panel button.btn-primary');
             const err = document.getElementById('setup-error');
 
             btn.disabled = true;
@@ -476,10 +576,16 @@
             err.style.display = 'none';
 
             try {
+                // This creates/saves profile AND starts it
                 const res = await fetch('/api/setup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ controller, udpPort, mac })
+                    body: JSON.stringify({
+                        name,
+                        controllerType,
+                        udpPort,
+                        mac
+                    })
                 });
                 const data = await res.json();
 
@@ -492,7 +598,7 @@
                 err.textContent = e.message;
                 err.style.display = 'block';
                 btn.disabled = false;
-                btn.textContent = 'Start Simulator 🚀';
+                btn.textContent = 'Create & Start 🚀';
             }
         }
 

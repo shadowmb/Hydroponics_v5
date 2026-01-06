@@ -1,0 +1,9 @@
+{
+  "id": "r3",
+  "name": "R3",
+  "controllerType": "Arduino_Uno",
+  "udpPort": 8889,
+  "mac": "SIM:C7:27:51:82:2B",
+  "created": "2026-01-06T08:37:07.409Z",
+  "lastUsed": "2026-01-06T08:37:55.449Z"
+}

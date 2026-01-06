@@ -33,23 +33,37 @@ const CONTROLLER_MODEL = process.env.MODEL || 'Simulator-ESP32';
 const controllerRegistry = new ControllerRegistry();
 const sensorRegistry = new SensorRegistry();
 
+import { ProfileManager, SimulatorProfile } from './ProfileManager';
+
+// ... (existing imports)
+
 // Initialize state management
 const deviceState = new DeviceState();
 const pinManager = new PinAssignmentManager(sensorRegistry);
+const profileManager = new ProfileManager();
 
 // Protocol handler with pin awareness
 // Mutable configuration for dynamic updates
-const controllerConfig = {
+const controllerConfig: SimulatorProfile = {
+    id: 'default',
+    name: 'Default Simulator',
     mac: process.env.MAC || 'SIM:00:00:00:00:01',
-    model: process.env.MODEL || 'Simulator-ESP32',
-    firmwareVersion: '1.0-v5-sim'
+    controllerType: process.env.MODEL || 'Arduino_Uno_R4_WiFi',
+    udpPort: parseInt(process.env.UDP_PORT || '8888'),
+    created: new Date().toISOString(),
+    lastUsed: new Date().toISOString()
 };
 
 const protocolHandler = new UdpProtocolHandler(
     deviceState,
     pinManager,
     sensorRegistry,
-    controllerConfig
+    // Proxy object to map Profile to ControllerInfo
+    {
+        get mac() { return controllerConfig.mac; },
+        get model() { return controllerConfig.controllerType; },
+        firmwareVersion: '1.0-v5-sim-profiled'
+    }
 );
 
 const scenarioEngine = new ScenarioEngine(deviceState);
@@ -336,32 +350,108 @@ app.get('/api/status', (req, res) => {
 });
 
 // Setup Endpoint
+// Profiles API
+app.get('/api/profiles', (req, res) => {
+    res.json(profileManager.listProfiles());
+});
+
+app.post('/api/profiles', (req, res) => {
+    const profile = req.body;
+    // Validate basics
+    if (!profile.name || !profile.controllerType) {
+        return res.status(400).json({ success: false, error: 'Name and Type are required' });
+    }
+
+    // Generate ID if missing
+    if (!profile.id) {
+        profile.id = profile.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    }
+
+    // Ensure data exists
+    if (!profile.created) profile.created = new Date().toISOString();
+
+    if (profileManager.saveProfile(profile)) {
+        res.json({ success: true, profile });
+    } else {
+        res.status(500).json({ success: false, error: 'Failed to save profile' });
+    }
+});
+
+app.delete('/api/profiles/:id', (req, res) => {
+    if (profileManager.deleteProfile(req.params.id)) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ success: false, error: 'Failed to delete profile' });
+    }
+});
+
+// Setup Endpoint
 app.post('/api/setup', async (req, res) => {
     if (isConfigured) {
         return res.status(400).json({ success: false, error: 'Already configured' });
     }
 
-    const { controller, udpPort, mac } = req.body;
+    // Support both manual setup and profile-based setup
+    let config: SimulatorProfile = { ...req.body };
+    const { profileId } = req.body;
+
+    if (profileId) {
+        const profile = profileManager.getProfile(profileId);
+        if (!profile) {
+            return res.status(404).json({ success: false, error: 'Profile not found' });
+        }
+        config = profile;
+        // Update last used
+        profileManager.saveProfile(profile);
+    }
+
+    const { controllerType, udpPort, mac, name } = config;
+    // Normalized check (UI might send "controller" instead of "controllerType" for manual)
+    const ctrlType = controllerType || req.body.controller;
+    const port = parseInt(udpPort as any);
 
     // Validate Controller
-    const ctrl = controllerRegistry.getController(controller);
+    const ctrl = controllerRegistry.getController(ctrlType);
     if (!ctrl) {
         return res.status(400).json({ success: false, error: 'Invalid controller' });
     }
 
     // Validate Port
-    const port = parseInt(udpPort);
     if (isNaN(port) || port < 1024 || port > 65535) {
         return res.status(400).json({ success: false, error: 'Invalid UDP port' });
     }
 
     try {
         // Apply Config
-        activeController = controller;
-        if (mac) {
-            controllerConfig.mac = mac;
+        controllerConfig.id = config.id || (name ? name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'manual');
+        controllerConfig.name = name || 'Manual Session';
+        controllerConfig.controllerType = ctrlType;
+        controllerConfig.udpPort = port;
+        controllerConfig.mac = mac || 'SIM:00:00:00:00:01';
+
+        // Update active controller for API
+        activeController = ctrlType;
+
+        // Save Profile if Name is provided and it's not a temporary manual session
+        if (name && !profileId) {
+            const newProfile: SimulatorProfile = {
+                id: controllerConfig.id,
+                name: controllerConfig.name,
+                controllerType: controllerConfig.controllerType,
+                udpPort: controllerConfig.udpPort,
+                mac: controllerConfig.mac,
+                created: new Date().toISOString(),
+                lastUsed: new Date().toISOString()
+            };
+            profileManager.saveProfile(newProfile);
+            console.log(`[Setup] Created new profile: ${newProfile.name} (${newProfile.id})`);
         }
-        pinManager.setConfigId(activeController);
+
+        // Set Pin Manager Profile
+        // If profileId exists, use it. If not, use the newly generated ID if creating one.
+        // Fallback to "manual_TYPE" only if absolutely necessary
+        const pinConfigId = profileId || controllerConfig.id;
+        pinManager.setConfigProfile(pinConfigId);
 
         // Start UDP
         await startUdpServer(port);
@@ -369,8 +459,8 @@ app.post('/api/setup', async (req, res) => {
 
         isConfigured = true;
 
-        console.log(`[Setup] Configured: ${activeController} on UDP ${configuredUdpPort}`);
-        res.json({ success: true });
+        console.log(`[Setup] Configured: ${activeController} (${controllerConfig.mac}) on UDP ${configuredUdpPort}`);
+        res.json({ success: true, profileId: controllerConfig.id });
 
     } catch (e: any) {
         console.error('[Setup] Error:', e);

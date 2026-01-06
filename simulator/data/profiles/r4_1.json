@@ -1,0 +1,9 @@
+{
+  "id": "r4_1",
+  "name": "R4 1",
+  "controllerType": "Arduino_Uno_R4_WiFi",
+  "udpPort": 8888,
+  "mac": "SIM:D4:A3:02:D0:90",
+  "created": "2026-01-06T08:36:36.361Z",
+  "lastUsed": "2026-01-06T08:38:00.960Z"
+}

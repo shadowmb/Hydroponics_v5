@@ -1,0 +1,22 @@
+[
+  {
+    "sensorId": "dfrobot_a02yyuw",
+    "pins": [
+      "D10_10",
+      "D11_11"
+    ],
+    "values": {
+      "distance": 391.957547169811
+    }
+  },
+  {
+    "sensorId": "dfrobot_par_rs485",
+    "pins": [
+      "D0_0",
+      "D1_1"
+    ],
+    "values": {
+      "par": 119
+    }
+  }
+]

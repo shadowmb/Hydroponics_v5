@@ -35,11 +35,29 @@ export interface AssignedSensorInfo {
 
 export class PinAssignmentManager {
     private assignments: Map<string, PinAssignment> = new Map();  // pinKey -> assignment
-    private sensorRegistry: SensorRegistry;
-    private configPath: string | null = null;
+    private configPath: string = '';
 
-    constructor(sensorRegistry: SensorRegistry) {
-        this.sensorRegistry = sensorRegistry;
+    constructor(private sensorRegistry: SensorRegistry) {
+        // Default init with empty path, waiting for setConfigProfile
+    }
+
+    /**
+     * Set the current profile ID for persistence
+     * This switches the loaded file provided it exists
+     */
+    setConfigProfile(profileId: string) {
+        // Sanitize ID just in case
+        const safeId = profileId.replace(/[^a-z0-9_\-]/gi, '_');
+        this.configPath = path.join(__dirname, `../data/assignments_${safeId}.json`);
+
+        // Ensure data directory exists
+        const dataDir = path.dirname(this.configPath);
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+
+        console.log(`[PinManager] Switched config to profile: ${profileId}`);
+        this.loadConfig();
     }
 
     /**
