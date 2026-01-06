@@ -16,11 +16,13 @@ export interface ITrigger {
     flowId?: string;    // Deprecated: verify migration
     flowIds?: string[]; // New: Multiple flows support
     behavior: TriggerBehavior;
+    description?: string;
 }
 
 export interface ITimeWindow {
     id: string;
     name: string;
+    description?: string;
     startTime: string;  // "HH:mm"
     endTime: string;    // "HH:mm"
     checkInterval: number;  // minutes
@@ -65,13 +67,15 @@ const TriggerSchema = new Schema({
     valueMax: { type: Number },  // For 'between' operator
     flowId: { type: String },    // Deprecated, optional
     flowIds: { type: [String], default: [] }, // New
-    behavior: { type: String, enum: ['continue', 'break'], default: 'break' }
+    behavior: { type: String, enum: ['continue', 'break'], default: 'break' },
+    description: { type: String }
 }, { _id: false });
 
 // --- Time Window Sub-Schema ---
 const TimeWindowSchema = new Schema({
     id: { type: String, required: true },
     name: { type: String, required: true },
+    description: { type: String },
     startTime: { type: String, required: true },  // "HH:mm"
     endTime: { type: String, required: true },    // "HH:mm"
     checkInterval: { type: Number, default: 5 },  // minutes

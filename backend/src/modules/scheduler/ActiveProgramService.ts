@@ -227,7 +227,7 @@ export class ActiveProgramService {
                 windowContexts[windowId] = [];
 
                 // Helper to extract vars for a specific flow and add to context list
-                const addContext = async (fid: string, contextId: string, label: string) => {
+                const addContext = async (fid: string, contextId: string, label: string, description?: string) => {
                     const vars: any[] = [];
                     // We use a temporary set just for this extraction to avoid duplicates WITHIN the flow definition itself
                     // but we allow duplicates across different contexts
@@ -237,6 +237,7 @@ export class ActiveProgramService {
                         windowContexts[windowId].push({
                             contextId,
                             label,
+                            description,
                             variables: vars
                         });
                     }
@@ -251,11 +252,11 @@ export class ActiveProgramService {
                         if (trigger.flowIds && Array.isArray(trigger.flowIds) && trigger.flowIds.length > 0) {
                             for (let fIdx = 0; fIdx < trigger.flowIds.length; fIdx++) {
                                 const fid = trigger.flowIds[fIdx];
-                                await addContext(fid, `t_${tIdx}_f_${fIdx}`, `${triggerName}: ${await getFlowName(fid)}`);
+                                await addContext(fid, `t_${tIdx}_f_${fIdx}`, `${triggerName}: ${await getFlowName(fid)}`, trigger.description);
                             }
                         } else if (trigger.flowId) {
                             // Fallback to legacy single flow only if flowIds is empty/missing
-                            await addContext(trigger.flowId, `t_${tIdx}_f_0`, `${triggerName}: ${await getFlowName(trigger.flowId)}`);
+                            await addContext(trigger.flowId, `t_${tIdx}_f_0`, `${triggerName}: ${await getFlowName(trigger.flowId)}`, trigger.description);
                         }
                     }
                 }
@@ -263,10 +264,10 @@ export class ActiveProgramService {
                 if ((window as any).fallbackFlowIds && (window as any).fallbackFlowIds.length > 0) {
                     for (let fIdx = 0; fIdx < (window as any).fallbackFlowIds.length; fIdx++) {
                         const fid = (window as any).fallbackFlowIds[fIdx];
-                        await addContext(fid, `fb_${fIdx}`, `Fallback: ${await getFlowName(fid)}`);
+                        await addContext(fid, `fb_${fIdx}`, `Fallback: ${await getFlowName(fid)}`, window.description);
                     }
                 } else if (window.fallbackFlowId) {
-                    await addContext(window.fallbackFlowId, `fb_0`, `Fallback: ${await getFlowName(window.fallbackFlowId)}`);
+                    await addContext(window.fallbackFlowId, `fb_0`, `Fallback: ${await getFlowName(window.fallbackFlowId)}`, window.description);
                 }
             }
             return windowContexts;

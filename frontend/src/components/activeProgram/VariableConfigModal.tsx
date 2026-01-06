@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import { Settings2, ArrowRight, HelpCircle, Save } from 'lucide-react';
+import { Settings2, ArrowRight, HelpCircle, Save, Zap, ShieldAlert, FileText } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 // Types (should ideally be shared, but defining here for now if not in global types)
@@ -109,7 +109,7 @@ export const VariableConfigModal = ({
                     <div>
                         <DialogTitle className="flex items-center gap-2">
                             <Settings2 className="h-5 w-5 text-primary" />
-                            Configure: {windowName}
+                            Configure (V5): {windowName}
                         </DialogTitle>
                         <DialogDescription>
                             Set variables for all execution contexts in this time window.
@@ -133,13 +133,33 @@ export const VariableConfigModal = ({
                             {Object.entries(groups).map(([groupName, groupContexts]) => {
                                 const groupMissing = groupContexts.reduce((sum, ctx) => sum + getContextMissingCount(ctx), 0);
                                 const isGroupError = groupMissing > 0;
+                                // Description comes from the first context in the group (shared per trigger/window)
+                                const groupDescription = groupContexts[0]?.description;
 
                                 return (
                                     <div key={groupName} className="space-y-1">
-                                        <div className="flex items-center justify-between px-2 py-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                            <span>{groupName}</span>
-                                            {isGroupError && (
-                                                <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                        <div className="flex flex-col px-2 py-1.5 mt-2 first:mt-0">
+                                            <div className={cn(
+                                                "flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-sm",
+                                                groupName.toLowerCase().includes('trigger')
+                                                    ? "text-orange-600 dark:text-orange-400 bg-orange-500/10"
+                                                    : groupName.toLowerCase().includes('fallback')
+                                                        ? "text-rose-600 dark:text-rose-400 bg-rose-500/10"
+                                                        : "text-muted-foreground"
+                                            )}>
+                                                {groupName.toLowerCase().includes('trigger') && <Zap className="h-3 w-3" />}
+                                                {groupName.toLowerCase().includes('fallback') && <ShieldAlert className="h-3 w-3" />}
+                                                <span>{groupName}</span>
+                                                {isGroupError && (
+                                                    <span className="ml-auto flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                                )}
+                                            </div>
+
+                                            {groupDescription && (
+                                                <div className="text-[10px] text-muted-foreground/70 mt-1 mx-2 pl-2 border-l-2 border-muted-foreground/20 italic flex items-start gap-1.5">
+                                                    <FileText className="h-3 w-3 mt-0.5 shrink-0 opacity-50" />
+                                                    <span className="line-clamp-2" title={groupDescription}>{groupDescription}</span>
+                                                </div>
                                             )}
                                         </div>
 

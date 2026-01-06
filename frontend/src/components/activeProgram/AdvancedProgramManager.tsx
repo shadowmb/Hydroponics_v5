@@ -444,7 +444,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         const contexts: IContext[] = [];
 
         // Helper to add context
-        const addCtx = (flowId: string, contextId: string, labelPrefix: string) => {
+        const addCtx = (flowId: string, contextId: string, labelPrefix: string, description?: string) => {
             // Find flow in the loaded flows list
             // Note: flows contains { id, name, ... }. We assume it also has variables from the fetch.
             // If the fetch in useEffect doesn't return variables, this will fail.
@@ -468,6 +468,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                     contexts.push({
                         contextId,
                         label: `${labelPrefix}: ${flow.name}`,
+                        description,
                         variables: vars
                     });
                 }
@@ -478,14 +479,17 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         window.triggers?.forEach((t, tIdx) => {
             const tName = `Trigger ${tIdx + 1}`;
             t.flowIds?.forEach((fid, fIdx) => {
-                addCtx(fid, `t_${tIdx}_f_${fIdx}`, tName);
+                // Pass trigger description to the first flow of the trigger context, or all? 
+                // The UI groups by "Trigger 1", so passing it to each flow context is duplicate but safe if UI handles it.
+                // Better: The UI groups by label prefix. 
+                addCtx(fid, `t_${tIdx}_f_${fIdx}`, tName, t.description);
             });
             // Legacy support if needed? No, assuming new format for edits.
         });
 
         // 2. Fallbacks
         window.fallbackFlowIds?.forEach((fid, fIdx) => {
-            addCtx(fid, `fb_${fIdx}`, `Fallback`);
+            addCtx(fid, `fb_${fIdx}`, `Fallback`, window.description);
         });
 
         return contexts;

@@ -62,5 +62,6 @@ export interface IVariable {
 export interface IContext {
     contextId: string;
     label: string;
+    description?: string;
     variables: IVariable[];
 }
