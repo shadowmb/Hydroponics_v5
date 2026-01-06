@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, differenceInMinutes, parse, isValid } from 'date-fns';
-import type { IActiveProgram } from '../../types/ActiveProgram';
+import type { IActiveProgram, IVariable, IContext } from '../../types/ActiveProgram';
 import { activeProgramService } from '../../services/activeProgramService';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -102,14 +102,18 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
     // Variable Config State
     const [configWindowId, setConfigWindowId] = useState<string | null>(null);
-    const [windowVariables, setWindowVariables] = useState<Record<string, any[]>>({});
+    const [draftContexts, setDraftContexts] = useState<IContext[] | null>(null);
+    const [windowVariables, setWindowVariables] = useState<Record<string, IContext[]>>({});
 
-    // Fetch variables on mount
+    // Fetch variables on mount and when windows structure changes
+    // Use JSON.stringify for deep comparison to avoid refetching on reference changes
+    const windowsParams = program.type === 'ADVANCED' ? JSON.stringify((program as any).windows) : null;
     useEffect(() => {
         activeProgramService.getVariables()
             .then(vars => setWindowVariables(vars || {}))
             .catch(err => console.error('Failed to load variables', err));
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [windowsParams]);
     const [dateInput, setDateInput] = useState('');
     const [timeInput, setTimeInput] = useState('00:00');
     const [timeRemaining, setTimeRemaining] = useState<string>('');
@@ -405,9 +409,89 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         }
     };
 
+    // Helper: Get required contexts from a window (projected)
+    const getRequiredContexts = (window: ITimeWindow): IContext[] => {
+        const contexts: IContext[] = [];
+
+        // Helper to add context
+        const addCtx = (flowId: string, contextId: string, labelPrefix: string) => {
+            // Find flow in the loaded flows list
+            // Note: flows contains { id, name, ... }. We assume it also has variables from the fetch.
+            // If the fetch in useEffect doesn't return variables, this will fail.
+            // We'll rely on the standard /flows endpoint returning full objects.
+            const flow = flows.find(f => f.id === flowId || f._id === flowId);
+            if (flow && flow.variables) {
+                const vars = flow.variables
+                    .filter((v: any) => v.scope === 'global')
+                    .map((v: any) => ({
+                        name: v.name,
+                        type: v.type,
+                        default: v.value,
+                        unit: v.unit,
+                        hasTolerance: v.hasTolerance, // Ensure schema has this
+                        description: v.description,
+                        flowId: flowId,
+                        flowName: flow.name
+                    })) as IVariable[];
+
+                if (vars.length > 0) {
+                    contexts.push({
+                        contextId,
+                        label: `${labelPrefix}: ${flow.name}`,
+                        variables: vars
+                    });
+                }
+            }
+        };
+
+        // 1. Triggers
+        window.triggers?.forEach((t, tIdx) => {
+            const tName = `Trigger ${tIdx + 1}`;
+            t.flowIds?.forEach((fid, fIdx) => {
+                addCtx(fid, `t_${tIdx}_f_${fIdx}`, tName);
+            });
+            // Legacy support if needed? No, assuming new format for edits.
+        });
+
+        // 2. Fallbacks
+        window.fallbackFlowIds?.forEach((fid, fIdx) => {
+            addCtx(fid, `fb_${fIdx}`, `Fallback`);
+        });
+
+        return contexts;
+    };
+
+    // Helper: Check for missing variables
+    const hasMissingVariables = (contexts: IContext[], winId: string) => {
+        const overrides = (program as any).windowOverrides?.[winId] || {};
+
+        for (const ctx of contexts) {
+            const ctxOverrides = overrides[ctx.contextId] || {};
+            for (const v of ctx.variables) {
+                const val = ctxOverrides[v.name];
+                if (val === undefined || val === '') return true;
+                if (v.hasTolerance) {
+                    const tol = ctxOverrides[v.name + '_tolerance'];
+                    if (tol === undefined || tol === '') return true;
+                }
+            }
+        }
+        return false;
+    };
+
     // Save edited window with auto-overlap adjustment
     const handleWindowSave = async (updatedWindow: ITimeWindow, autoShift: boolean = false) => {
         try {
+            // VALIDATION: Check for missing variables
+            const projectedContexts = getRequiredContexts(updatedWindow);
+            if (hasMissingVariables(projectedContexts, updatedWindow.id)) {
+                // Open Configuration Modal
+                setDraftContexts(projectedContexts);
+                setConfigWindowId(updatedWindow.id);
+                toast.warning('Configure variables for new flows before saving.');
+                return false; // STOP SAVE (Signal to TimeWindowModal to keep open)
+            }
+
             setProcessing(true);
 
             // Update the window in the list (preserving original order for logic)
@@ -1025,10 +1109,13 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             {/* Variable Config Modal */}
             <VariableConfigModal
                 isOpen={!!configWindowId}
-                onClose={() => setConfigWindowId(null)}
+                onClose={() => {
+                    setConfigWindowId(null);
+                    setDraftContexts(null);
+                }}
                 windowId={configWindowId}
                 windowName={configWindowId ? (localWindows.find((w: any) => w.id === configWindowId)?.name || '') : ''}
-                contexts={configWindowId ? windowVariables[configWindowId] || [] : []}
+                contexts={draftContexts || (configWindowId ? windowVariables[configWindowId] || [] : [])}
                 initialOverrides={configWindowId ? ((program as any).windowOverrides?.[configWindowId] || {}) : {}}
                 onSave={async (winId, newOverrides) => {
                     const currentOverrides = (program as any).windowOverrides || {};

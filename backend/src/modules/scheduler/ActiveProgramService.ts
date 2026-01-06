@@ -131,7 +131,11 @@ export class ActiveProgramService {
 
         // For ADVANCED programs, allow window updates even when running
         // (so users can edit trigger values during execution)
-        const isAdvancedWindowUpdate = active.type === 'ADVANCED' && updates.windows && Object.keys(updates).length === 1;
+        const isAdvancedWindowUpdate = active.type === 'ADVANCED' &&
+            (
+                (updates.windows && Object.keys(updates).length === 1) ||
+                (updates.windowOverrides && Object.keys(updates).length === 1)
+            );
 
         if (!isAdvancedWindowUpdate && active.status !== 'loaded' && active.status !== 'ready') {
             throw new Error('Cannot update program settings after it has started');

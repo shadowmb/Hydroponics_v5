@@ -4,7 +4,7 @@ import { activeProgramService } from '../../services/activeProgramService';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 
-import { Input } from '../ui/input';
+
 import {
     Dialog,
     DialogContent,
@@ -13,15 +13,10 @@ import {
     DialogDescription,
     DialogFooter,
 } from "../ui/dialog";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "../ui/tooltip";
+
 
 import { toast } from 'sonner';
-import { Play, Clock, Zap, ArrowRight, Sun, Sunrise, Moon, Save, HelpCircle, AlertTriangle, Settings2 } from 'lucide-react';
+import { Play, Clock, Save, AlertTriangle, Settings2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Progress } from '../ui/progress';
 import { VariableConfigModal } from './VariableConfigModal';
@@ -32,27 +27,9 @@ interface AdvancedProgramWizardProps {
     onStart: () => void;
 }
 
-// Helper to get time-of-day icon
-const getTimeIcon = (time: string) => {
-    const hour = parseInt(time.split(':')[0], 10);
-    if (hour >= 6 && hour < 12) return <Sunrise className="h-4 w-4 text-orange-500" />;
-    if (hour >= 12 && hour < 18) return <Sun className="h-4 w-4 text-yellow-500" />;
-    return <Moon className="h-4 w-4 text-blue-500" />;
-};
 
-// Format operator for display
-const formatOperator = (op: string): string => {
-    const map: Record<string, string> = {
-        '>': '>',
-        '<': '<',
-        '>=': '≥',
-        '<=': '≤',
-        '=': '=',
-        '!=': '≠',
-        'between': '↔'
-    };
-    return map[op] || op;
-};
+
+
 
 export const AdvancedProgramWizard = ({ program, onStart }: AdvancedProgramWizardProps) => {
     // Wizard step: 1 = Configure Variables, 2 = Preview
@@ -67,31 +44,29 @@ export const AdvancedProgramWizard = ({ program, onStart }: AdvancedProgramWizar
     const [windowVariables, setWindowVariables] = useState<Record<string, IContext[]>>({});
 
     // Global overrides (legacy/fallback)
-    const [globalOverrides, setGlobalOverrides] = useState<Record<string, any>>((program as any).variableOverrides || {});
+    const [globalOverrides] = useState<Record<string, any>>((program as any).variableOverrides || {});
 
     // Per-window overrides: Map<WindowId, Map<VarName, Value>>
     const [windowOverrides, setWindowOverrides] = useState<Record<string, Record<string, any>>>((program as any).windowOverrides || {});
 
-    const [flows, setFlows] = useState<any[]>([]);
+
 
     const windows = (program as any).windows || [];
 
     // API base URL
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
 
     // Load variables
     useEffect(() => {
         const loadData = async () => {
             try {
                 setDataLoading(true);
-                const [varsMap, flowsRes] = await Promise.all([
+                const [varsMap] = await Promise.all([
                     activeProgramService.getVariables(), // Now returns Record<WindowId, vars[]>
-                    fetch(`${API_URL}/flows`).then(r => r.json()).catch(() => [])
                 ]);
 
                 console.log('Variables loaded for Advanced program (by Window):', varsMap);
                 setWindowVariables(varsMap || {});
-                setFlows(Array.isArray(flowsRes) ? flowsRes : []);
 
                 // Initialize Defaults
                 const newWindowOverrides = { ...windowOverrides };

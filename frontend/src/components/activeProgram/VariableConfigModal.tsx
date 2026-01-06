@@ -16,7 +16,7 @@ interface VariableConfigModalProps {
     windowName: string;
     contexts: IContext[];
     initialOverrides: Record<string, Record<string, any>>; // ContextId -> { VarName: Value }
-    onSave: (windowId: string, overrides: Record<string, Record<string, any>>) => void;
+    onSave: (windowId: string, overrides: Record<string, Record<string, any>>) => Promise<void> | void;
 }
 
 export const VariableConfigModal = ({
@@ -30,8 +30,9 @@ export const VariableConfigModal = ({
 }: VariableConfigModalProps) => {
     const [selectedContextId, setSelectedContextId] = useState<string | null>(null);
     const [overrides, setOverrides] = useState<Record<string, Record<string, any>>>({});
+    const [saving, setSaving] = useState(false);
 
-    // Reset state when opening
+    // Reset state when opening or switching windows
     useEffect(() => {
         if (isOpen && windowId) {
             setOverrides(initialOverrides || {});
@@ -41,7 +42,8 @@ export const VariableConfigModal = ({
                 setSelectedContextId(null);
             }
         }
-    }, [isOpen, windowId, contexts, initialOverrides]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, windowId]);
 
     if (!windowId) return null;
 
@@ -76,9 +78,14 @@ export const VariableConfigModal = ({
         return missing;
     };
 
-    const handleSave = () => {
-        onSave(windowId, overrides);
-        onClose();
+    const handleSave = async () => {
+        try {
+            setSaving(true);
+            await onSave(windowId, overrides);
+            onClose();
+        } finally {
+            setSaving(false);
+        }
     };
 
     // Grouping Logic
@@ -90,9 +97,13 @@ export const VariableConfigModal = ({
         groups[groupName].push(ctx);
     });
 
+    // Validation for Save Button
+    const totalMissing = contexts.reduce((sum, ctx) => sum + getContextMissingCount(ctx), 0);
+    const saveDisabled = saving || totalMissing > 0;
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-5xl h-[80vh] flex flex-col p-0 overflow-hidden gap-0">
+            <DialogContent className="max-w-5xl h-[80vh] flex flex-col p-0 overflow-hidden gap-0" onInteractOutside={(e) => e.preventDefault()}>
                 {/* Header */}
                 <DialogHeader className="p-6 pb-2 shrink-0 border-b flex flex-row items-center justify-between">
                     <div>
@@ -106,10 +117,10 @@ export const VariableConfigModal = ({
                     </div>
                     {/* Action Buttons in Header */}
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={onClose}>Cancel</Button>
-                        <Button onClick={handleSave} className="gap-2">
-                            <Save className="h-4 w-4" />
-                            Save Configuration
+                        <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={saveDisabled} className="gap-2">
+                            {saving ? <Settings2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {saving ? 'Saving...' : 'Save Configuration'}
                         </Button>
                     </div>
                 </DialogHeader>

@@ -22,6 +22,7 @@ export interface IActiveProgram {
     _id: string;
     sourceProgramId: string;
     name: string;
+    type?: 'BASIC' | 'ADVANCED';
     status: ActiveProgramStatus;
     minCycleInterval: number;
     startTime?: string;

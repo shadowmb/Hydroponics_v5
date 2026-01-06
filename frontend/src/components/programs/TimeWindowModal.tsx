@@ -20,7 +20,7 @@ import type { ITimeWindow, DataSource } from './types';
 interface TimeWindowModalProps {
     open: boolean;
     onClose: () => void;
-    onSave: (window: ITimeWindow, autoShift?: boolean) => void;
+    onSave: (window: ITimeWindow, autoShift?: boolean) => Promise<boolean | void> | boolean | void;
     window?: ITimeWindow | null;
     flows: { id: string; name: string }[];
     existingWindows: ITimeWindow[];  // For smart defaults
@@ -93,7 +93,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
         return h * 60 + m;
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const startMins = toMinutes(startTime);
         const endMins = toMinutes(endTime);
 
@@ -128,8 +128,12 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
             fallbackFlowId: fallbackFlowIds[0], // Deprecated
             fallbackFlowIds // New
         };
-        onSave(windowData, autoAdjust);
-        onClose();
+        const result = await onSave(windowData, autoAdjust);
+        // Only close if onSave returns true (success) or undefined (assumed success for void)
+        // If it returns false (explicitly intercepted), keep open.
+        if (result !== false) {
+            onClose();
+        }
     };
 
     // Helper methods for fallback flows
@@ -154,7 +158,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>
                         {isEditing ? '✏️ Редакция на прозорец' : '📅 Нов времеви прозорец'}
