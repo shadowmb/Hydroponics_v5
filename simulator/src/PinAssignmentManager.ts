@@ -19,6 +19,7 @@ export interface PinAssignment {
     sensorId: string;           // Template ID: "dfrobot_ph_pro"
     pins: string[];             // Assigned pins: ["A0_14"] or ["D2_2", "D3_3"]
     values: Record<string, number>;  // Current values: { ph: 6.5 } or { temp: 24, humidity: 60 }
+    calibrationPoints?: { raw: number, value: number }[]; // Raw <-> Value mapping
 }
 
 export interface AssignedSensorInfo {
@@ -31,6 +32,7 @@ export interface AssignedSensorInfo {
     perKeyLimits?: Record<string, { min?: number; max?: number }>;
     rawUnit?: string;
     units?: Record<string, string>; // Per-key units (e.g. { temp: 'C', humidity: '%' })
+    calibrationPoints?: { raw: number, value: number }[];
 }
 
 export class PinAssignmentManager {
@@ -58,6 +60,18 @@ export class PinAssignmentManager {
 
         console.log(`[PinManager] Switched config to profile: ${profileId}`);
         this.loadConfig();
+    }
+
+    /**
+     * setCalibration - Store calibration points for a pin's sensor
+     */
+    setCalibration(pin: string, points: { raw: number, value: number }[]) {
+        const assignment = this.assignments.get(pin);
+        if (assignment) {
+            assignment.calibrationPoints = points;
+            console.log(`[PinManager] Set calibration for ${assignment.sensorId}:`, points);
+            this.saveConfig();
+        }
     }
 
     /**
@@ -218,7 +232,8 @@ export class PinAssignmentManager {
                 limits,
                 perKeyLimits,
                 rawUnit: isAnalog ? 'adc' : this.sensorRegistry.getRawUnit(assignment.sensorId),
-                units
+                units,
+                calibrationPoints: assignment.calibrationPoints
             });
         }
 
@@ -236,9 +251,9 @@ export class PinAssignmentManager {
     /**
      * Export assignments to JSON (for persistence)
      */
-    exportConfig(): { sensorId: string; pins: string[]; values: Record<string, number> }[] {
+    exportConfig(): { sensorId: string; pins: string[]; values: Record<string, number>; calibrationPoints?: { raw: number; value: number }[] }[] {
         const seen = new Set<string>();
-        const result: { sensorId: string; pins: string[]; values: Record<string, number> }[] = [];
+        const result: { sensorId: string; pins: string[]; values: Record<string, number>; calibrationPoints?: { raw: number; value: number }[] }[] = [];
 
         for (const [, assignment] of this.assignments) {
             const key = assignment.pins.join(',');
@@ -247,7 +262,8 @@ export class PinAssignmentManager {
             result.push({
                 sensorId: assignment.sensorId,
                 pins: assignment.pins,
-                values: assignment.values
+                values: assignment.values,
+                calibrationPoints: assignment.calibrationPoints
             });
         }
 
@@ -257,15 +273,14 @@ export class PinAssignmentManager {
     /**
      * Import assignments from JSON
      */
-    importConfig(config: { sensorId: string; pins: string[]; values?: Record<string, number> }[]): void {
+    importConfig(config: { sensorId: string; pins: string[]; values?: Record<string, number>; calibrationPoints?: { raw: number; value: number }[] }[]): void {
         this.clear();
         for (const item of config) {
             this.assignSensor(item.sensorId, item.pins);
-            if (item.values) {
-                const assignment = this.assignments.get(item.pins[0]);
-                if (assignment) {
-                    assignment.values = { ...assignment.values, ...item.values };
-                }
+            const assignment = this.assignments.get(item.pins[0]);
+            if (assignment) {
+                if (item.values) assignment.values = { ...assignment.values, ...item.values };
+                if (item.calibrationPoints) assignment.calibrationPoints = item.calibrationPoints;
             }
         }
     }

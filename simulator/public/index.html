@@ -664,24 +664,82 @@
                 return;
             }
 
-            container.innerHTML = assignments.map(a => `
+            container.innerHTML = assignments.map(a => {
+                const hasCal = a.calibrationPoints && a.calibrationPoints.length > 0;
+                const pointsJson = hasCal ? encodeURIComponent(JSON.stringify(a.calibrationPoints)) : '';
+
+                return `
                     <div class="assigned-sensor">
                         <div class="assigned-header">
-                            <div>
-                                <div class="assigned-name">${a.sensorName}</div>
+                            <div style="flex:1">
+                                <div class="assigned-name" style="display:flex; align-items:center; gap:8px;">
+                                    ${a.sensorName}
+                                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.8em;" 
+                                            onclick="openCalibration('${a.pins[0]}')" title="Calibrate">⚙️</button>
+                                </div>
                                 <div class="assigned-pins">Pins: ${a.pins.join(', ')}</div>
                             </div>
                             <button class="btn-remove" onclick="unassign('${a.pins[0]}')">✕</button>
                         </div>
                         ${Object.entries(a.values).map(([key, val]) => {
-                const unit = a.units?.[key] || a.rawUnit || '';
-                const limits = a.perKeyLimits?.[key] || a.limits || { min: 0, max: 1023 };
+                    const unit = a.units?.[key] || a.rawUnit || '';
+                    const limits = a.perKeyLimits?.[key] || a.limits || { min: 0, max: 1023 };
 
-                return `
+                    let extraControls = '';
+                    if (hasCal) {
+                        // Try to calculate current physical value from Raw
+                        let displayVal = '';
+                        const sorted = [...a.calibrationPoints].sort((x, y) => x.raw - y.raw);
+
+                        // Simple linear interpolation for display
+                        if (val <= sorted[0].raw) {
+                            // Extrapolate below
+                            if (sorted.length > 1) {
+                                const slope = (sorted[1].value - sorted[0].value) / (sorted[1].raw - sorted[0].raw);
+                                displayVal = sorted[0].value + slope * (val - sorted[0].raw);
+                            } else displayVal = sorted[0].value;
+                        } else if (val >= sorted[sorted.length - 1].raw) {
+                            // Extrapolate above
+                            if (sorted.length > 1) {
+                                const n = sorted.length;
+                                const slope = (sorted[n - 1].value - sorted[n - 2].value) / (sorted[n - 1].raw - sorted[n - 2].raw);
+                                displayVal = sorted[n - 1].value + slope * (val - sorted[n - 1].raw);
+                            } else displayVal = sorted[0].value;
+                        } else {
+                            for (let i = 0; i < sorted.length - 1; i++) {
+                                if (val >= sorted[i].raw && val <= sorted[i + 1].raw) {
+                                    const slope = (sorted[i + 1].value - sorted[i].value) / (sorted[i + 1].raw - sorted[i].raw);
+                                    displayVal = sorted[i].value + slope * (val - sorted[i].raw);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (typeof displayVal === 'number') displayVal = displayVal.toFixed(2);
+
+                        extraControls = `
+                        <div style="margin-bottom:6px; background:rgba(0,0,0,0.2); padding:6px; border-radius:4px;">
+                            <div style="font-size:0.75em; color:#00d9ff; margin-bottom:2px;">Calibrated Input:</div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="number" 
+                                       class="w-24 bg-slate-700 text-white rounded px-2 py-1 text-xs border border-slate-600 focus:border-cyan-500 outline-none"
+                                       style="width: 80px; padding:4px;"
+                                       placeholder="Target..."
+                                       value="${displayVal}"
+                                       step="any"
+                                       oninput="updateTargetValue('${a.pins[0]}', '${key}', this, '${pointsJson}')">
+                                <span style="font-size:0.8em; color:#aaa;">(Raw: ${Math.round(val)})</span>
+                            </div>
+                        </div>
+                    `;
+                    }
+
+                    return `
                             <div class="value-control mb-2">
                                 <div class="value-label text-xs mb-1 text-slate-400">
                                     <span>${key} ${unit ? `(${unit})` : ''}</span>
                                 </div>
+                                ${extraControls}
                                 <div class="flex gap-2 items-center">
                                     <input type="range" 
                                            id="range-${a.pins[0]}-${key}"
@@ -702,9 +760,10 @@
                                 </div>
                             </div>
                             `;
-            }).join('')}
+                }).join('')}
                     </div>
-                `).join('');
+                `;
+            }).join('');
         }
 
         // ============ Pin Selection ============
@@ -938,6 +997,163 @@
 
         // Initialize
         init();
+    </script>
+    <!-- Calibration Modal -->
+    <div id="calibration-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-title">Calibrate Sensor</div>
+            <p style="color:#888; margin-bottom:16px; font-size: 0.9em;">
+                Define points to map "Target Value" (e.g. pH) to "Raw Value" (ADC).
+                The simulator will interpolate between these points.
+            </p>
+
+            <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+                <table style="width: 100%; text-align: left; border-spacing: 0 8px;">
+                    <thead>
+                        <tr>
+                            <th style="color:#aaa; font-size:0.8em;">Target Value</th>
+                            <th style="color:#aaa; font-size:0.8em;">Raw (ADC)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cal-points-body">
+                        <!-- Points injected here -->
+                    </tbody>
+                </table>
+                <button class="btn btn-secondary" onclick="addCalibrationPoint()"
+                    style="width:100%; margin-top:10px; padding: 6px;">+ Add Point</button>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeCalibration()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCalibration()">Save Calibration</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCalPin = null;
+
+        async function openCalibration(pin) {
+            currentCalPin = pin;
+            const assignments = await (await fetch('/api/assignments')).json();
+            const assignment = assignments.find(a => a.pins.includes(pin));
+
+            const tbody = document.getElementById('cal-points-body');
+            tbody.innerHTML = '';
+
+            const points = assignment.calibrationPoints || [];
+            if (points.length === 0) {
+                // Default empty rows
+                addCalibrationPoint(0, 0);
+                addCalibrationPoint(10, 1023);
+            } else {
+                points.forEach(p => addCalibrationPoint(p.value, p.raw));
+            }
+
+            document.getElementById('calibration-modal').classList.add('active');
+        }
+
+        function closeCalibration() {
+            document.getElementById('calibration-modal').classList.remove('active');
+            currentCalPin = null;
+        }
+
+        function addCalibrationPoint(val = '', raw = '') {
+            const tbody = document.getElementById('cal-points-body');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="number" class="cal-val" value="${val}" style="width: 100px;"></td>
+                <td><input type="number" class="cal-raw" value="${raw}" style="width: 100px;"></td>
+                <td><button class="btn-remove" onclick="this.closest('tr').remove()" style="padding: 4px 8px;">×</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        async function saveCalibration() {
+            if (!currentCalPin) return;
+
+            const rows = document.querySelectorAll('#cal-points-body tr');
+            const points = [];
+
+            rows.forEach(tr => {
+                const val = parseFloat(tr.querySelector('.cal-val').value);
+                const raw = parseFloat(tr.querySelector('.cal-raw').value);
+                if (!isNaN(val) && !isNaN(raw)) {
+                    points.push({ value: val, raw: raw });
+                }
+            });
+
+            try {
+                const res = await fetch(`/api/assign/${currentCalPin}/calibration`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ points })
+                });
+
+                if (res.ok) {
+                    closeCalibration();
+                    loadAssignments(); // Refresh UI
+                } else {
+                    alert('Failed to save calibration');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error connecting to server');
+            }
+        }
+
+        function calculateRaw(targetVal, points) {
+            if (!points || points.length === 0) return targetVal;
+
+            // Sort by Value
+            const sorted = [...points].sort((a, b) => a.value - b.value);
+
+            // Extrapolate below first
+            if (targetVal <= sorted[0].value) {
+                if (sorted.length === 1) return sorted[0].raw;
+                return interpolate(targetVal, sorted[0], sorted[1]);
+            }
+
+            // Extrapolate above last
+            if (targetVal >= sorted[sorted.length - 1].value) {
+                if (sorted.length === 1) return sorted[0].raw;
+                return interpolate(targetVal, sorted[sorted.length - 2], sorted[sorted.length - 1]);
+            }
+
+            // Interpolate in between
+            for (let i = 0; i < sorted.length - 1; i++) {
+                if (targetVal >= sorted[i].value && targetVal <= sorted[i + 1].value) {
+                    return interpolate(targetVal, sorted[i], sorted[i + 1]);
+                }
+            }
+            return targetVal;
+        }
+
+        function interpolate(x, p1, p2) {
+            if (p2.value === p1.value) return p1.raw;
+            const slope = (p2.raw - p1.raw) / (p2.value - p1.value);
+            return p1.raw + slope * (x - p1.value);
+        }
+
+        // Wrapper to update via Target Value
+        async function updateTargetValue(pin, key, targetEl, pointsJson) {
+            const points = JSON.parse(decodeURIComponent(pointsJson));
+            const targetVal = parseFloat(targetEl.value);
+            if (isNaN(targetVal)) return;
+
+            const raw = calculateRaw(targetVal, points);
+            console.log(`[ReverseCal] Target: ${targetVal} -> Raw: ${raw}`);
+
+            // Update the Raw input and slider VISUALLY
+            const rangeEl = document.getElementById(`range-${pin}-${key}`);
+            const numEl = document.getElementById(`num-${pin}-${key}`);
+            if (rangeEl) rangeEl.value = raw;
+            if (numEl) numEl.value = raw;
+
+            // Send RAW to backend
+            await updateValue(pin, key, raw, 'calibrated');
+        }
     </script>
 </body>
 

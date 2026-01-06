@@ -1,32 +1,21 @@
 [
   {
-    "sensorId": "dfrobot_a02yyuw",
+    "sensorId": "dfrobot_ph_pro",
     "pins": [
-      "D10_10",
-      "D11_11"
+      "A0_14"
     ],
     "values": {
-      "distance": 391.957547169811
-    }
-  },
-  {
-    "sensorId": "dfrobot_par_rs485",
-    "pins": [
-      "D0_0",
-      "D1_1"
-    ],
-    "values": {
-      "par": 119
-    }
-  },
-  {
-    "sensorId": "dfrobot_a02yyuw",
-    "pins": [
-      "D12_12",
-      "D13_13"
-    ],
-    "values": {
-      "distance": 855.825471698113
-    }
+      "ph": 400
+    },
+    "calibrationPoints": [
+      {
+        "value": 4,
+        "raw": 200
+      },
+      {
+        "value": 7,
+        "raw": 400
+      }
+    ]
   }
 ]

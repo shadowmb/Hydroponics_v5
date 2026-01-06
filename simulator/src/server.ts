@@ -278,6 +278,19 @@ app.post('/api/value/:pin', (req, res) => {
     res.json({ success: true, pin, key, value });
 });
 
+// Update calibration points
+app.post('/api/assign/:pin/calibration', (req, res) => {
+    const { pin } = req.params;
+    const { points } = req.body;
+
+    if (!Array.isArray(points)) {
+        return res.status(400).json({ success: false, error: 'Points must be an array' });
+    }
+
+    pinManager.setCalibration(pin, points);
+    res.json({ success: true });
+});
+
 // ---------- State API ----------
 
 app.get('/api/state', (req, res) => {
