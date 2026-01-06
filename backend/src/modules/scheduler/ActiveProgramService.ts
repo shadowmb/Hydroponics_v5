@@ -283,8 +283,23 @@ export class ActiveProgramService {
 
                 if (!variablesMap[cycleId]) variablesMap[cycleId] = [];
 
-                for (const step of item.steps) {
-                    await extractFlowVariables(step.flowId, cycleSeenVars, variablesMap[cycleId]);
+                for (let i = 0; i < item.steps.length; i++) {
+                    const step = item.steps[i];
+                    const vars: any[] = [];
+                    // Extract to a temp array, not directly to `variablesMap`
+                    // We pass a new Set() for seenVars if we want FULL isolation scope per step (or keep cycleSeenVars to dedupe across cycle?)
+                    // For now, let's allow duplicates across steps (so distinct controls), so use separate set or empty set.
+                    // Actually, if we want separate controls for identical flows, we MUST use a fresh set per step or just not dedupe by name across steps.
+                    await extractFlowVariables(step.flowId, new Set<string>(), vars);
+
+                    if (vars.length > 0) {
+                        variablesMap[cycleId].push({
+                            stepIndex: i,
+                            flowId: step.flowId,
+                            flowName: await getFlowName(step.flowId),
+                            variables: vars
+                        });
+                    }
                 }
             }
         }
@@ -407,9 +422,9 @@ export class ActiveProgramService {
     }
 
     /**
-     * Update a specific schedule item (Time or Variables).
+     * Update a specific schedule item (Time, Variables, or Step Overrides).
      */
-    async updateScheduleItem(itemId: string, updates: { time?: string, overrides?: Record<string, any> }): Promise<IActiveProgram> {
+    async updateScheduleItem(itemId: string, updates: { time?: string, overrides?: Record<string, any>, steps?: any[] }): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
 
@@ -431,6 +446,23 @@ export class ActiveProgramService {
 
         if (updates.overrides) {
             item.overrides = { ...item.overrides, ...updates.overrides };
+        }
+
+        if (updates.steps) {
+            // Merge step overrides
+            // Assumes updates.steps is an array matching item.steps length or containing objects with index?
+            // Let's assume the frontend sends the FULL steps array or we map by index.
+            // Safer: The frontend should send the full updated steps array structure (just like Program updates).
+            // But here we are just updating overrides.
+
+            // Assume updates.steps is an array of { overrides: ... } corresponding to item.steps indices
+            if (Array.isArray(updates.steps)) {
+                updates.steps.forEach((uStep, idx) => {
+                    if (item.steps[idx] && uStep.overrides) {
+                        item.steps[idx].overrides = { ...item.steps[idx].overrides, ...uStep.overrides };
+                    }
+                });
+            }
         }
 
         await active.save();

@@ -25,6 +25,7 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
     const [editingItem, setEditingItem] = useState<IActiveScheduleItem | null>(null);
     const [editTime, setEditTime] = useState('');
     const [editOverrides, setEditOverrides] = useState<Record<string, any>>({});
+    const [editSteps, setEditSteps] = useState<{ overrides?: Record<string, any> }[]>([]);
     const [cycleVariables, setCycleVariables] = useState<Record<string, any[]>>({});
 
     useEffect(() => {
@@ -154,7 +155,8 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
         try {
             await activeProgramService.updateScheduleItem(editingItem._id, {
                 time: editTime,
-                overrides: editOverrides
+                overrides: editOverrides,
+                steps: editSteps
             });
             toast.success('Schedule updated');
             setEditingItem(null);
@@ -216,6 +218,7 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
         if (!dateInput || !timeInput) {
             setDelayedStartTime(null);
             return;
+            // ... (keep existing logic)
         }
 
         const parsedDate = parse(dateInput, 'dd.MM.yyyy', new Date());
@@ -293,88 +296,145 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
         const vars = cycleVariables[editingItem.cycleId] || [];
         if (vars.length === 0) return null;
 
-        // Group by Flow Name
-        const varsByFlow: Record<string, typeof vars> = {};
-        vars.forEach(v => {
-            const flow = v.flowName || 'Global Variables';
-            if (!varsByFlow[flow]) varsByFlow[flow] = [];
-            varsByFlow[flow].push(v);
+        // Group vars by Step Index to support duplicates
+        const stepsMap: Record<number, { flowName: string, variables: any[] }> = {};
+
+        vars.forEach((v: any) => {
+            if (v.stepIndex !== undefined && Array.isArray(v.variables)) {
+                // New backend format: v is a Step Context containing a list of variables
+                if (!stepsMap[v.stepIndex]) {
+                    stepsMap[v.stepIndex] = {
+                        flowName: v.flowName || `Flow ${v.stepIndex + 1}`,
+                        variables: []
+                    };
+                }
+                // Flatten the variables from the step container into the display list
+                stepsMap[v.stepIndex].variables.push(...v.variables);
+            } else {
+                // Legacy/Global format: v is a Variable itself
+                if (!stepsMap[-1]) stepsMap[-1] = { flowName: 'Global/Legacy', variables: [] };
+                stepsMap[-1].variables.push(v);
+            }
         });
 
         return (
             <div className="space-y-4 border-t pt-4 mt-4">
                 <h4 className="font-medium text-sm text-muted-foreground">Cycle Variables</h4>
                 <div className="grid gap-6">
-                    {Object.entries(varsByFlow).map(([flowName, flowVars]) => (
-                        <div key={flowName} className="space-y-3">
-                            <h5 className="text-xs font-semibold text-primary/80 uppercase tracking-wider border-b pb-1">
-                                {flowName}
-                            </h5>
-                            <div className="grid gap-3 pl-2">
-                                {flowVars.map(variable => (
-                                    <div key={variable.name} className="grid gap-2">
-                                        <Label htmlFor={`edit-var-${variable.name}`}>{variable.name}</Label>
-                                        {variable.type === 'boolean' ? (
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    id={`edit-var-${variable.name}`}
-                                                    checked={!!editOverrides[variable.name]}
-                                                    onChange={(e) => setEditOverrides(prev => ({ ...prev, [variable.name]: e.target.checked }))}
-                                                    className="h-4 w-4"
-                                                />
-                                                <span className="text-sm text-muted-foreground">{variable.name}</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex-1 min-w-0">
-                                                    <Input
-                                                        id={`edit-var-${variable.name}`}
-                                                        type={variable.type === 'number' ? 'number' : 'text'}
-                                                        value={editOverrides[variable.name] ?? ''}
-                                                        onChange={(e) => setEditOverrides(prev => ({
-                                                            ...prev,
-                                                            [variable.name]: variable.type === 'number' ? Number(e.target.value) : e.target.value
-                                                        }))}
-                                                        placeholder={variable.default !== undefined ? `Default: ${variable.default}` : ''}
+                    {Object.entries(stepsMap).map(([stepIdxStr, stepData]) => {
+                        const stepIdx = Number(stepIdxStr);
+                        return (
+                            <div key={stepIdx} className="space-y-3">
+                                <h5 className="text-xs font-semibold text-primary/80 uppercase tracking-wider border-b pb-1">
+                                    {stepData.flowName}
+                                </h5>
+                                <div className="grid gap-3 pl-2">
+                                    {stepData.variables.map(variable => (
+                                        <div key={variable.name} className="grid gap-2">
+                                            <Label htmlFor={`edit-var-${stepIdx}-${variable.name}`}>{variable.name}</Label>
+                                            {variable.type === 'boolean' ? (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`edit-var-${stepIdx}-${variable.name}`}
+                                                        checked={
+                                                            stepIdx >= 0
+                                                                ? !!editSteps[stepIdx]?.overrides?.[variable.name]
+                                                                : !!editOverrides[variable.name]
+                                                        }
+                                                        onChange={(e) => {
+                                                            if (stepIdx >= 0) {
+                                                                const newSteps = [...editSteps];
+                                                                if (!newSteps[stepIdx]) newSteps[stepIdx] = { overrides: {} };
+                                                                newSteps[stepIdx].overrides = {
+                                                                    ...newSteps[stepIdx].overrides,
+                                                                    [variable.name]: e.target.checked
+                                                                };
+                                                                setEditSteps(newSteps);
+                                                            } else {
+                                                                setEditOverrides(prev => ({ ...prev, [variable.name]: e.target.checked }));
+                                                            }
+                                                        }}
+                                                        className="h-4 w-4"
                                                     />
+                                                    <span className="text-sm text-muted-foreground">{variable.name}</span>
                                                 </div>
-                                                {variable.unit && (
-                                                    <span className="text-sm text-muted-foreground whitespace-nowrap min-w-[3ch]">
-                                                        {variable.unit}
-                                                    </span>
-                                                )}
-                                                {variable.hasTolerance && (
-                                                    <>
-                                                        <div className="w-[1px] h-8 bg-border mx-1" />
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-muted-foreground text-sm">±</span>
-                                                            <Input
-                                                                type="number"
-                                                                min={0}
-                                                                className="w-20"
-                                                                value={editOverrides[variable.name + '_tolerance'] ?? ''}
-                                                                onChange={(e) => {
-                                                                    const val = Number(e.target.value);
-                                                                    if (val >= 0) {
-                                                                        setEditOverrides(prev => ({
-                                                                            ...prev,
-                                                                            [variable.name + '_tolerance']: val
-                                                                        }));
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-1 min-w-0">
+                                                        <Input
+                                                            id={`edit-var-${stepIdx}-${variable.name}`}
+                                                            type={variable.type === 'number' ? 'number' : 'text'}
+                                                            value={
+                                                                stepIdx >= 0
+                                                                    ? (editSteps[stepIdx]?.overrides?.[variable.name] ?? '')
+                                                                    : (editOverrides[variable.name] ?? '')
+                                                            }
+                                                            onChange={(e) => {
+                                                                const val = variable.type === 'number' ? Number(e.target.value) : e.target.value;
+                                                                if (stepIdx >= 0) {
+                                                                    const newSteps = [...editSteps];
+                                                                    if (!newSteps[stepIdx]) newSteps[stepIdx] = { overrides: {} };
+                                                                    newSteps[stepIdx].overrides = {
+                                                                        ...newSteps[stepIdx].overrides,
+                                                                        [variable.name]: val
+                                                                    };
+                                                                    setEditSteps(newSteps);
+                                                                } else {
+                                                                    setEditOverrides(prev => ({ ...prev, [variable.name]: val }));
+                                                                }
+                                                            }}
+                                                            placeholder={variable.default !== undefined ? `Default: ${variable.default}` : ''}
+                                                        />
+                                                    </div>
+                                                    {variable.unit && (
+                                                        <span className="text-sm text-muted-foreground whitespace-nowrap min-w-[3ch]">
+                                                            {variable.unit}
+                                                        </span>
+                                                    )}
+                                                    {variable.hasTolerance && (
+                                                        <>
+                                                            <div className="w-[1px] h-8 bg-border mx-1" />
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-muted-foreground text-sm">±</span>
+                                                                <Input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    className="w-20"
+                                                                    value={
+                                                                        stepIdx >= 0
+                                                                            ? (editSteps[stepIdx]?.overrides?.[variable.name + '_tolerance'] ?? '')
+                                                                            : (editOverrides[variable.name + '_tolerance'] ?? '')
                                                                     }
-                                                                }}
-                                                                placeholder="Tol"
-                                                            />
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                                                    onChange={(e) => {
+                                                                        const val = Number(e.target.value);
+                                                                        if (val >= 0) {
+                                                                            if (stepIdx >= 0) {
+                                                                                const newSteps = [...editSteps];
+                                                                                if (!newSteps[stepIdx]) newSteps[stepIdx] = { overrides: {} };
+                                                                                newSteps[stepIdx].overrides = {
+                                                                                    ...newSteps[stepIdx].overrides,
+                                                                                    [variable.name + '_tolerance']: val
+                                                                                };
+                                                                                setEditSteps(newSteps);
+                                                                            } else {
+                                                                                setEditOverrides(prev => ({ ...prev, [variable.name + '_tolerance']: val }));
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    placeholder="Tol"
+                                                                />
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -396,20 +456,36 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
         const vars = cycleVariables[item.cycleId] || [];
         if (vars.length === 0) return <div className="p-4 text-sm text-muted-foreground">No variables defined.</div>;
 
-        // Group by Flow Name
-        const varsByFlow: Record<string, typeof vars> = {};
-        vars.forEach(v => {
-            const flow = v.flowName || 'Global Variables';
-            if (!varsByFlow[flow]) varsByFlow[flow] = [];
-            varsByFlow[flow].push(v);
+        // Group vars by Step Index to support duplicates
+        const stepsMap: Record<number, { flowName: string, flowDescription?: string, variables: any[] }> = {};
+
+        vars.forEach((v: any) => {
+            if (v.stepIndex !== undefined && Array.isArray(v.variables)) {
+                // New backend format
+                if (!stepsMap[v.stepIndex]) {
+                    stepsMap[v.stepIndex] = {
+                        flowName: v.flowName || `Flow ${v.stepIndex + 1}`,
+                        flowDescription: v.flowDescription,
+                        variables: []
+                    };
+                }
+                stepsMap[v.stepIndex].variables.push(...v.variables);
+            } else {
+                // Legacy/Global
+                if (!stepsMap[-1]) stepsMap[-1] = { flowName: 'Global/Legacy', variables: [] };
+                stepsMap[-1].variables.push(v);
+            }
         });
 
         return (
             <div className="p-4 bg-muted/30 border-t grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(varsByFlow).map(([flowName, flowVars]) => {
-                    const flowDesc = flowVars[0].flowDescription;
+                {Object.entries(stepsMap).map(([stepIdxStr, stepData]) => {
+                    const stepIdx = Number(stepIdxStr);
+                    const flowName = stepData.flowName;
+                    const flowDesc = stepData.flowDescription;
+                    const flowVars = stepData.variables;
                     return (
-                        <div key={flowName} className="space-y-2">
+                        <div key={stepIdx} className="space-y-2">
                             <div className="border-b pb-1 flex items-center gap-2">
                                 <TooltipProvider>
                                     <Tooltip>
@@ -433,19 +509,9 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                     return (
                                         <div key={variable.name} className="grid grid-cols-[1fr_5rem_3.5rem] gap-2 text-sm items-center">
                                             <div className="truncate">
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <span className="text-muted-foreground cursor-help border-b border-dotted border-muted-foreground/30 hover:border-muted-foreground">
-                                                                {variable.name}:
-                                                            </span>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p className="font-semibold mb-1">{variable.name}</p>
-                                                            {variable.description && <p className="text-xs text-muted-foreground">{variable.description}</p>}
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
+                                                <div className="truncate text-foreground font-medium" title={variable.description}>
+                                                    {variable.name || 'Unknown Var'}:
+                                                </div>
                                             </div>
 
                                             <div className="text-center font-medium truncate">
@@ -736,8 +802,10 @@ export const ActiveProgramManager = ({ program, onUpdate }: ActiveProgramManager
                                                             setEditingItem(item);
                                                             setEditTime(item.time);
                                                             setEditOverrides(item.overrides || {});
+                                                            setEditSteps(item.steps ? item.steps.map(s => ({ overrides: s.overrides || {} })) : []);
                                                         } else {
                                                             setEditingItem(null);
+                                                            setEditSteps([]);
                                                         }
                                                     }}>
                                                         <DialogTrigger asChild>
