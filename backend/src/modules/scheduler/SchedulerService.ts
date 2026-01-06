@@ -498,7 +498,15 @@ export class SchedulerService {
 
                     logger.info({ windowId: window.id, windowName: window.name }, '🔄 Evaluating triggers for window');
 
-                    const result = await triggerEvaluator.evaluateWindow(window, state, variableOverrides, activeProgram.sourceProgramId);
+                    const windowOverrides = (activeProgram as any).windowOverrides?.[window.id] || {};
+
+                    const result = await triggerEvaluator.evaluateWindow(
+                        window,
+                        state,
+                        variableOverrides, // Global defaults
+                        windowOverrides,   // Context specific
+                        activeProgram.sourceProgramId
+                    );
                     state.lastCheck = new Date();
 
                     if (result === 'executing') {
@@ -579,7 +587,16 @@ export class SchedulerService {
                         timestamp: new Date()
                     });
 
-                    const fallbackSessionId = await triggerEvaluator.executeFallback(window, variableOverrides, activeProgram.sourceProgramId);
+
+
+                    const windowOverrides = (activeProgram as any).windowOverrides?.[window.id] || {};
+                    // Pass global (variableOverrides) and window-specific (windowOverrides) separately
+                    const fallbackSessionId = await triggerEvaluator.executeFallback(
+                        window,
+                        variableOverrides,
+                        windowOverrides,
+                        activeProgram.sourceProgramId
+                    );
 
                     // FIX: Track fallback execution to prevent premature window completion
                     if (fallbackSessionId) {

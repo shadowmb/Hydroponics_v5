@@ -125,13 +125,17 @@ export class ActiveProgramService {
     /**
      * Update the active program settings (before starting).
      */
-    async updateProgram(updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any>, windows?: any[] }): Promise<IActiveProgram> {
+    async updateProgram(updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any>, windowOverrides?: Record<string, any>, windows?: any[] }): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
         // For ADVANCED programs, allow window updates even when running
         // (so users can edit trigger values during execution)
-        const isAdvancedWindowUpdate = active.type === 'ADVANCED' && updates.windows && Object.keys(updates).length === 1;
+        const isAdvancedWindowUpdate = active.type === 'ADVANCED' &&
+            (
+                (updates.windows && Object.keys(updates).length === 1) ||
+                (updates.windowOverrides && Object.keys(updates).length === 1)
+            );
 
         if (!isAdvancedWindowUpdate && active.status !== 'loaded' && active.status !== 'ready') {
             throw new Error('Cannot update program settings after it has started');
@@ -148,7 +152,7 @@ export class ActiveProgramService {
         // Apply global overrides
         if (updates.globalOverrides) {
             if (active.type === 'ADVANCED') {
-                // For ADVANCED: store in dedicated field (will be used by scheduler when executing flows)
+                // For ADVANCED: store in dedicated field
                 (active as any).variableOverrides = updates.globalOverrides;
             } else {
                 // For BASIC: apply to ALL schedule items
@@ -156,6 +160,11 @@ export class ActiveProgramService {
                     item.overrides = { ...item.overrides, ...updates.globalOverrides };
                 });
             }
+        }
+
+        // Apply window overrides (ADVANCED only)
+        if (updates.windowOverrides && active.type === 'ADVANCED') {
+            (active as any).windowOverrides = updates.windowOverrides;
         }
 
         // If we are saving changes, we can mark it as ready
@@ -177,61 +186,120 @@ export class ActiveProgramService {
 
         const FlowModel = require('../persistence/schemas/Flow.schema').FlowModel;
         const variablesMap: Record<string, any[]> = {};
-        const seenVars = new Set<string>();
 
-        // Helper to extract variables from a flow
-        const extractFlowVariables = async (flowId: string, keyId: string) => {
+        // Helper to get flow name
+        const getFlowName = async (id: string) => {
+            const f = await FlowModel.findOne({ id });
+            return f ? f.name : id;
+        };
+
+        // Helper to extract variables from a flow, using a scoped seenVars set
+        const extractFlowVariables = async (flowId: string, scopedSeenVars: Set<string>, outputArray: any[]) => {
             const flow = await FlowModel.findOne({ id: flowId });
             if (flow && flow.variables) {
-                const flowVars: any[] = [];
-                flow.variables.forEach((v: any) => {
-                    if (v.scope === 'global' && !seenVars.has(v.name)) {
-                        flowVars.push({
+                for (const v of flow.variables) {
+                    // Only global variables are exposed to the program
+                    if (v.scope === 'global' && !scopedSeenVars.has(v.name)) {
+                        outputArray.push({
                             name: v.name,
                             type: v.type,
                             default: v.value,
                             unit: v.unit,
                             hasTolerance: v.hasTolerance,
                             description: v.description,
-                            flowId: flow.id,
-                            flowName: flow.name || 'Unknown Flow',
+                            flowId: flowId,
+                            flowName: flow.name,
                             flowDescription: flow.description
                         });
-                        seenVars.add(v.name);
+                        scopedSeenVars.add(v.name);
                     }
-                });
-                if (flowVars.length > 0) {
-                    if (!variablesMap[keyId]) {
-                        variablesMap[keyId] = [];
-                    }
-                    variablesMap[keyId].push(...flowVars);
                 }
             }
         };
-
         // ADVANCED MODE: Extract from windows/triggers
         if (active.type === 'ADVANCED' && (active as any).windows) {
+            // We need to return a structure that preserves the context of each flow
+            // Return type: Record<WindowId, { contextId: string, label: string, variables: IVariable[] }[]>
+            const windowContexts: Record<string, any[]> = {};
+
             for (const window of (active as any).windows) {
+                const windowId = window.id;
+                windowContexts[windowId] = [];
+
+                // Helper to extract vars for a specific flow and add to context list
+                const addContext = async (fid: string, contextId: string, label: string, description?: string) => {
+                    const vars: any[] = [];
+                    // We use a temporary set just for this extraction to avoid duplicates WITHIN the flow definition itself
+                    // but we allow duplicates across different contexts
+                    await extractFlowVariables(fid, new Set<string>(), vars);
+
+                    if (vars.length > 0) {
+                        windowContexts[windowId].push({
+                            contextId,
+                            label,
+                            description,
+                            variables: vars
+                        });
+                    }
+                };
+
                 if (window.triggers) {
-                    for (const trigger of window.triggers) {
-                        if (trigger.flowId) {
-                            await extractFlowVariables(trigger.flowId, trigger.flowId);
+                    for (let tIdx = 0; tIdx < window.triggers.length; tIdx++) {
+                        const trigger = window.triggers[tIdx];
+                        const triggerName = `Trigger ${tIdx + 1}`;
+
+                        // Handle flowIds (New Format) OR flowId (Legacy) - BUT NOT BOTH
+                        if (trigger.flowIds && Array.isArray(trigger.flowIds) && trigger.flowIds.length > 0) {
+                            for (let fIdx = 0; fIdx < trigger.flowIds.length; fIdx++) {
+                                const fid = trigger.flowIds[fIdx];
+                                await addContext(fid, `t_${tIdx}_f_${fIdx}`, `${triggerName}: ${await getFlowName(fid)}`, trigger.description);
+                            }
+                        } else if (trigger.flowId) {
+                            // Fallback to legacy single flow only if flowIds is empty/missing
+                            await addContext(trigger.flowId, `t_${tIdx}_f_0`, `${triggerName}: ${await getFlowName(trigger.flowId)}`, trigger.description);
                         }
                     }
                 }
-                if (window.fallbackFlowId) {
-                    await extractFlowVariables(window.fallbackFlowId, window.fallbackFlowId);
+
+                if ((window as any).fallbackFlowIds && (window as any).fallbackFlowIds.length > 0) {
+                    for (let fIdx = 0; fIdx < (window as any).fallbackFlowIds.length; fIdx++) {
+                        const fid = (window as any).fallbackFlowIds[fIdx];
+                        await addContext(fid, `fb_${fIdx}`, `Fallback: ${await getFlowName(fid)}`, window.description);
+                    }
+                } else if (window.fallbackFlowId) {
+                    await addContext(window.fallbackFlowId, `fb_0`, `Fallback: ${await getFlowName(window.fallbackFlowId)}`, window.description);
                 }
             }
+            return windowContexts;
         }
+
         // BASIC MODE: Extract from schedule/cycles
         else {
             for (const item of active.schedule) {
                 const cycleId = item.cycleId;
+                const cycleSeenVars = new Set<string>(); // Scope seenVars to this cycle
+
                 if (!item.steps || item.steps.length === 0) continue;
 
-                for (const step of item.steps) {
-                    await extractFlowVariables(step.flowId, cycleId);
+                if (!variablesMap[cycleId]) variablesMap[cycleId] = [];
+
+                for (let i = 0; i < item.steps.length; i++) {
+                    const step = item.steps[i];
+                    const vars: any[] = [];
+                    // Extract to a temp array, not directly to `variablesMap`
+                    // We pass a new Set() for seenVars if we want FULL isolation scope per step (or keep cycleSeenVars to dedupe across cycle?)
+                    // For now, let's allow duplicates across steps (so distinct controls), so use separate set or empty set.
+                    // Actually, if we want separate controls for identical flows, we MUST use a fresh set per step or just not dedupe by name across steps.
+                    await extractFlowVariables(step.flowId, new Set<string>(), vars);
+
+                    if (vars.length > 0) {
+                        variablesMap[cycleId].push({
+                            stepIndex: i,
+                            flowId: step.flowId,
+                            flowName: await getFlowName(step.flowId),
+                            variables: vars
+                        });
+                    }
                 }
             }
         }
@@ -354,9 +422,9 @@ export class ActiveProgramService {
     }
 
     /**
-     * Update a specific schedule item (Time or Variables).
+     * Update a specific schedule item (Time, Variables, or Step Overrides).
      */
-    async updateScheduleItem(itemId: string, updates: { time?: string, overrides?: Record<string, any> }): Promise<IActiveProgram> {
+    async updateScheduleItem(itemId: string, updates: { time?: string, overrides?: Record<string, any>, steps?: any[] }): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
 
@@ -378,6 +446,23 @@ export class ActiveProgramService {
 
         if (updates.overrides) {
             item.overrides = { ...item.overrides, ...updates.overrides };
+        }
+
+        if (updates.steps) {
+            // Merge step overrides
+            // Assumes updates.steps is an array matching item.steps length or containing objects with index?
+            // Let's assume the frontend sends the FULL steps array or we map by index.
+            // Safer: The frontend should send the full updated steps array structure (just like Program updates).
+            // But here we are just updating overrides.
+
+            // Assume updates.steps is an array of { overrides: ... } corresponding to item.steps indices
+            if (Array.isArray(updates.steps)) {
+                updates.steps.forEach((uStep, idx) => {
+                    if (item.steps[idx] && uStep.overrides) {
+                        item.steps[idx].overrides = { ...item.steps[idx].overrides, ...uStep.overrides };
+                    }
+                });
+            }
         }
 
         await active.save();
@@ -507,23 +592,36 @@ export class ActiveProgramService {
         }
 
         // Stop any currently running cycle first?
-        // For now, let's assume the user knows what they are doing.
-        // But the SchedulerService might be running something else.
         // Ideally, we should tell the SchedulerService to run this NOW.
 
-        // Implementation:
-        // 1. Update time to NOW (so scheduler picks it up)
-        // 2. Or call cycleManager directly?
-        // Better to update time to NOW so the standard loop handles it.
+        // Implementation Update:
+        // Do NOT update time to NOW, as that alters the persistent schedule.
+        // Instead, mark as running and Invoke CycleManager directly.
 
-        const now = new Date();
-        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        item.time = timeString;
-        item.status = 'pending'; // Reset status so it gets picked up
+        item.status = 'running';
         await active.save();
 
-        logger.info({ itemId, newTime: timeString }, '⚡ Cycle Force Started (Time updated to Now)');
+        const stepOverrides = item.steps?.map(s => ({
+            flowId: s.flowId,
+            overrides: s.overrides
+        })) || [];
+
+        // Determine overrides (Program Level + Item Level)
+        const runtimeOverrides = {
+            ...active.variableOverrides, // Global
+            ...item.overrides,            // Item Specific
+            activeProgramId: active.sourceProgramId
+        };
+
+        try {
+            await cycleManager.startCycle(item.cycleId, item.cycleName || item.name || 'Unknown Cycle', stepOverrides, runtimeOverrides);
+            logger.info({ itemId }, '⚡ Cycle Force Started (Direct Invocation)');
+        } catch (error: any) {
+            item.status = 'failed';
+            await active.save();
+            throw error; // Re-throw to notify caller
+        }
+
         return active;
     }
 

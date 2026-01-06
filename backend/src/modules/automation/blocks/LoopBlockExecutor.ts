@@ -198,8 +198,12 @@ export class LoopBlockExecutor implements IBlockExecutor {
                     }
                     case '>': {
                         if (tolerance > 0) {
+                            // "Entry Stop" Logic:
+                            // We are coming from High (8.0) and want to reach Target (6.2) with tolerance (0.2).
+                            // We should stop as soon as we enter the range (i.e. <= 6.4).
+                            // Loop Condition: CONTINUE while Current > (Target + Tol).
                             const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'lower')
-                                ? Number(right) - tolerance
+                                ? Number(right) + tolerance  // Stop at Upper Edge (6.4)
                                 : Number(right);
                             conditionResult = Number(left) > effectiveRight;
                         } else {
@@ -208,13 +212,14 @@ export class LoopBlockExecutor implements IBlockExecutor {
                         break;
                     }
                     case '<': {
-                        // FIX: For `<`, tolerance should SUBTRACT to define the lower bound of truth.
-                        // "sensor < target" with tolerance means: sensor < (target - tolerance)
-                        // This stops the loop EARLY when sensor enters the truth range.
                         if (tolerance > 0) {
-                            const effectiveRight = (toleranceMode === 'upper')
-                                ? Number(right) + tolerance  // Upper: Expand upward
-                                : Number(right) - tolerance; // Lower/Symmetric: Contract downward
+                            // "Entry Stop" Logic:
+                            // We are coming from Low (1.0) and want to reach Target (2.0) with tolerance (0.2).
+                            // We should stop as soon as we enter the range (i.e. >= 1.8).
+                            // Loop Condition: CONTINUE while Current < (Target - Tol).
+                            const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
+                                ? Number(right) - tolerance  // Stop at Lower Edge (1.8)
+                                : Number(right);
                             conditionResult = Number(left) < effectiveRight;
                         } else {
                             conditionResult = Number(left) < Number(right);
@@ -223,8 +228,10 @@ export class LoopBlockExecutor implements IBlockExecutor {
                     }
                     case '>=': {
                         if (tolerance > 0) {
+                            // Entry Stop Logic equivalent for >=
+                            // Stop if Current <= (Target + Tol)
                             const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'lower')
-                                ? Number(right) - tolerance
+                                ? Number(right) + tolerance
                                 : Number(right);
                             conditionResult = Number(left) >= effectiveRight;
                         } else {
@@ -233,11 +240,12 @@ export class LoopBlockExecutor implements IBlockExecutor {
                         break;
                     }
                     case '<=': {
-                        // FIX: Same as `<`, subtract tolerance for Lower/Symmetric.
                         if (tolerance > 0) {
-                            const effectiveRight = (toleranceMode === 'upper')
-                                ? Number(right) + tolerance  // Upper: Expand upward
-                                : Number(right) - tolerance; // Lower/Symmetric: Contract downward
+                            // Entry Stop Logic equivalent for <=
+                            // Stop if Current >= (Target - Tol)
+                            const effectiveRight = (toleranceMode === undefined || toleranceMode === 'symmetric' || toleranceMode === 'upper')
+                                ? Number(right) - tolerance
+                                : Number(right);
                             conditionResult = Number(left) <= effectiveRight;
                         } else {
                             conditionResult = Number(left) <= Number(right);
@@ -261,7 +269,7 @@ export class LoopBlockExecutor implements IBlockExecutor {
         if (tolerance > 0) {
             const lower = toleranceMode === 'upper' ? Number(right) : Number(right) - tolerance;
             const upper = toleranceMode === 'lower' ? Number(right) : Number(right) + tolerance;
-            rightDisplay = `[${lower.toFixed(0)}–${upper.toFixed(0)}]`;
+            rightDisplay = `[${lower.toFixed(2)}–${upper.toFixed(2)}]`;
         }
 
         const summaryDetails = variable

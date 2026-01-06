@@ -18,7 +18,14 @@ export class UdpTransport implements IHardwareTransport {
 
         // Parse IP and Port
         let ip = path;
-        let port = 8888;
+        let port = 8888; // Default
+
+        if (options && options.port !== undefined && options.port !== null) {
+            const parsed = parseInt(options.port);
+            if (!isNaN(parsed) && parsed > 0) {
+                port = parsed;
+            }
+        }
 
         if (path.startsWith('udp://')) {
             const parts = path.replace('udp://', '').split(':');
@@ -33,7 +40,7 @@ export class UdpTransport implements IHardwareTransport {
         this.targetIp = ip;
         this.targetPort = port;
 
-        logger.info({ ip, port }, '🔌 [UdpTransport] Initializing...');
+        logger.info({ ip, port, rawPath: path, optionsPort: options?.port }, '🔌 [UdpTransport] Connecting...');
 
         return new Promise((resolve, reject) => {
             try {

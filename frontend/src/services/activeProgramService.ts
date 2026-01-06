@@ -15,7 +15,7 @@ export const activeProgramService = {
         return response.data;
     },
 
-    update: async (updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any> }): Promise<IActiveProgram> => {
+    update: async (updates: Partial<IActiveProgram> & { globalOverrides?: Record<string, any>, windowOverrides?: Record<string, any> }): Promise<IActiveProgram> => {
         const response = await axios.patch<IActiveProgram>(`${BASE_URL}/update`, updates);
         return response.data;
     },
@@ -44,7 +44,7 @@ export const activeProgramService = {
         await axios.post(`${BASE_URL}/unload`);
     },
 
-    updateScheduleItem: async (itemId: string, updates: { time?: string, overrides?: Record<string, any> }): Promise<IActiveProgram> => {
+    updateScheduleItem: async (itemId: string, updates: { time?: string, overrides?: Record<string, any>, steps?: any[] }): Promise<IActiveProgram> => {
         const response = await axios.patch<IActiveProgram>(`${BASE_URL}/schedule/${itemId}`, updates);
         return response.data;
     },

@@ -85,16 +85,45 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
         setExpandedItems(newExpanded);
     };
 
-    const updateItemOverride = (index: number, varName: string, value: any) => {
+    const handleVariableChange = (index: number, varName: string, value: any, stepIndex?: number) => {
         const newSchedule = [...schedule];
         const item = newSchedule[index];
-        newSchedule[index] = {
-            ...item,
-            overrides: {
-                ...item.overrides,
-                [varName]: value
+
+        // Handle Step-Specific Overrides (Duplicate Flows)
+        if (stepIndex !== undefined && stepIndex >= 0) {
+            const newSteps = item.steps ? [...item.steps] : [];
+            // Ensure step object exists
+            if (!newSteps[stepIndex]) {
+                // Should not happen if data is consistent, but safety check
+                // We can't easily create a step from scratch without flowId, so we assume it exists from backend
+                console.warn(`Step at index ${stepIndex} missing for item ${index}`);
+                return;
             }
-        };
+
+            const currentStep = newSteps[stepIndex];
+            newSteps[stepIndex] = {
+                ...currentStep,
+                overrides: {
+                    ...currentStep.overrides,
+                    [varName]: value
+                }
+            };
+
+            newSchedule[index] = {
+                ...item,
+                steps: newSteps
+            };
+        } else {
+            // Legacy / Global Overrides
+            newSchedule[index] = {
+                ...item,
+                overrides: {
+                    ...item.overrides,
+                    [varName]: value
+                }
+            };
+        }
+
         setSchedule(newSchedule);
     };
 
@@ -165,19 +194,37 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
             const vars = cycleVariables[item.cycleId];
             if (vars) {
                 for (const v of vars) {
-                    const val = item.overrides?.[v.name];
-                    if (val === undefined || val === '') {
-                        toast.error(`Missing value for "${v.name}" in cycle "${item.cycleName}" (Start Time: ${item.time})`);
-                        return;
-                    }
-
-                    // Validate Tolerance if enabled
-                    if (v.hasTolerance) {
-                        const tol = item.overrides?.[v.name + '_tolerance'];
-                        if (tol === undefined || tol === '') {
-                            toast.error(`Missing tolerance for "${v.name}" in cycle "${item.cycleName}"`);
-                            return;
+                    // Helper to check a specific variable map
+                    const checkVar = (variable: any, overrides: any, contextName: string) => {
+                        const val = overrides?.[variable.name];
+                        if (val === undefined || val === '') {
+                            toast.error(`Missing value for "${variable.name}" in cycle "${item.cycleName}" ${contextName} (Start Time: ${item.time})`);
+                            return true; // Error found
                         }
+
+                        // Validate Tolerance if enabled
+                        if (variable.hasTolerance) {
+                            const tol = overrides?.[variable.name + '_tolerance'];
+                            if (tol === undefined || tol === '') {
+                                toast.error(`Missing tolerance for "${variable.name}" in cycle "${item.cycleName}" ${contextName}`);
+                                return true; // Error found
+                            }
+                        }
+                        return false;
+                    };
+
+                    if (v.stepIndex !== undefined && Array.isArray(v.variables)) {
+                        // New Format: v is a Step Context
+                        const stepOverrides = item.steps?.[v.stepIndex]?.overrides;
+                        const flowName = v.flowName || `Flow ${v.stepIndex + 1}`;
+
+                        // Check all variables in this step
+                        for (const subVar of v.variables) {
+                            if (checkVar(subVar, stepOverrides, `[${flowName}]`)) return;
+                        }
+                    } else {
+                        // Legacy Format: v is a Variable
+                        if (checkVar(v, item.overrides, '')) return;
                     }
                 }
             }
@@ -294,14 +341,27 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                 const isExpanded = expandedItems.has(index);
 
                                 // Check for missing values
-                                const missingVars = vars.some(v => {
-                                    const valMissing = item.overrides?.[v.name] === undefined || item.overrides?.[v.name] === '';
-                                    if (valMissing) return true;
-                                    if (v.hasTolerance) {
-                                        const tolMissing = item.overrides?.[v.name + '_tolerance'] === undefined || item.overrides?.[v.name + '_tolerance'] === '';
-                                        return tolMissing;
+                                const missingVars = vars.some((v: any) => {
+                                    // Helper to check a specific variable map
+                                    const checkVar = (variable: any, overrides: any) => {
+                                        const valMissing = overrides?.[variable.name] === undefined || overrides?.[variable.name] === '';
+                                        if (valMissing) return true;
+                                        if (variable.hasTolerance) {
+                                            const tolMissing = overrides?.[variable.name + '_tolerance'] === undefined || overrides?.[variable.name + '_tolerance'] === '';
+                                            return tolMissing;
+                                        }
+                                        return false;
+                                    };
+
+                                    if (v.stepIndex !== undefined && Array.isArray(v.variables)) {
+                                        // New Format: v is a Step Context
+                                        const stepOverrides = item.steps?.[v.stepIndex]?.overrides;
+                                        // Check if ANY variable in this step is missing
+                                        return v.variables.some((subVar: any) => checkVar(subVar, stepOverrides));
+                                    } else {
+                                        // Legacy Format: v is a Variable
+                                        return checkVar(v, item.overrides);
                                     }
-                                    return false;
                                 });
 
                                 return (
@@ -388,15 +448,10 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                         {isExpanded && hasVars && (
                                             <div className="mt-2 space-y-4">
                                                 {(() => {
-                                                    // Group variables by flowId
-                                                    const varsByFlow: Record<string, typeof vars> = {};
-                                                    vars.forEach(v => {
-                                                        const fid = v.flowId || 'unknown';
-                                                        if (!varsByFlow[fid]) varsByFlow[fid] = [];
-                                                        varsByFlow[fid].push(v);
-                                                    });
+                                                    // Group vars by Step Index to support duplicates
+                                                    const stepsMap: Record<number, { flowId: string, flowName: string, flowDescription?: string, variables: any[] }> = {};
 
-                                                    // Assign colors to flows found in this schedule item
+                                                    // Pre-calculate flow colors for consistency
                                                     const flowColors = [
                                                         'border-blue-500/50 text-blue-600 dark:text-blue-400 bg-blue-500/10',
                                                         'border-green-500/50 text-green-600 dark:text-green-400 bg-green-500/10',
@@ -405,37 +460,51 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                                         'border-pink-500/50 text-pink-600 dark:text-pink-400 bg-pink-500/10',
                                                         'border-cyan-500/50 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10',
                                                     ];
-
-                                                    // Map flowId to Color
                                                     const flowColorMap: Record<string, string> = {};
                                                     let colorIndex = 0;
 
-                                                    // Get unique flow IDs from steps to ensure consistent ordering
-                                                    const uniqueFlowIds = Array.from(new Set(item.steps?.map(s => s.flowId) || []));
+                                                    vars.forEach((v: any) => {
+                                                        const fid = v.flowId || 'unknown';
 
-                                                    uniqueFlowIds.forEach(fid => {
-                                                        flowColorMap[fid] = flowColors[colorIndex % flowColors.length];
-                                                        colorIndex++;
-                                                    });
-
-                                                    // Handle variables that might belong to flows not in steps (edge case) or unknown
-                                                    Object.keys(varsByFlow).forEach(fid => {
+                                                        // Assign color if not assigned
                                                         if (!flowColorMap[fid] && fid !== 'unknown') {
                                                             flowColorMap[fid] = flowColors[colorIndex % flowColors.length];
                                                             colorIndex++;
                                                         }
+
+                                                        if (v.stepIndex !== undefined && Array.isArray(v.variables)) {
+                                                            // New backend format: Step Context
+                                                            const sIdx = v.stepIndex;
+                                                            if (!stepsMap[sIdx]) {
+                                                                stepsMap[sIdx] = {
+                                                                    flowId: v.flowId,
+                                                                    flowName: v.flowName || `Flow ${sIdx + 1}`,
+                                                                    flowDescription: v.flowDescription,
+                                                                    variables: []
+                                                                };
+                                                            }
+                                                            stepsMap[sIdx].variables.push(...v.variables);
+                                                        } else {
+                                                            // Legacy format (treat as global or fallback)
+                                                            if (!stepsMap[-1]) stepsMap[-1] = { flowId: 'global', flowName: 'Global/Legacy', variables: [] };
+                                                            stepsMap[-1].variables.push(v);
+                                                        }
                                                     });
 
-                                                    return Object.entries(varsByFlow).map(([flowId, flowVars]) => {
+                                                    return Object.entries(stepsMap).map(([stepIdxStr, stepData]) => {
+                                                        const stepIdx = Number(stepIdxStr);
+                                                        const flowId = stepData.flowId || 'global';
                                                         const colorClass = flowColorMap[flowId] || 'border-border text-muted-foreground bg-muted/20';
-                                                        const flowName = flowVars[0].flowName || 'Global Variables';
-                                                        const flowDescription = flowVars[0].flowDescription;
+                                                        const flowName = stepData.flowName;
+                                                        const flowDescription = stepData.flowDescription;
+                                                        const flowVars = stepData.variables;
 
                                                         return (
-                                                            <div key={flowId} className={`rounded-md border-2 p-3 ${colorClass.split(' ')[0]} ${colorClass.split(' ')[2]}`}>
+                                                            <div key={stepIdx} className={`rounded-md border-2 p-3 ${colorClass.split(' ')[0]} ${colorClass.split(' ')[2]}`}>
                                                                 <div className={`flex items-baseline gap-2 mb-2 ${colorClass.split(' ')[1]}`}>
                                                                     <div className="text-xs font-bold uppercase tracking-wider">
                                                                         {flowName}
+                                                                        {stepIdx >= 0 && stepsMap[-1] && <span className="ml-1 opacity-50 text-[10px]">(Step {stepIdx + 1})</span>}
                                                                     </div>
                                                                     {flowDescription && (
                                                                         <div className="text-xs opacity-75 font-normal italic truncate max-w-[300px]">
@@ -451,116 +520,146 @@ export const ActiveProgramWizard = ({ program, onStart }: ActiveProgramWizardPro
                                                                                     <TooltipTrigger asChild>
                                                                                         <div className="w-full text-center border-b border-border/30 flex items-center justify-center gap-2 pb-1 mb-1">
                                                                                             <Label
-                                                                                                htmlFor={`var-${index}-${variable.name}`}
+                                                                                                htmlFor={`var-${item.cycleId}-${stepIdx}-${variable.name}`}
                                                                                                 className="truncate cursor-help font-medium text-center text-xs"
                                                                                             >
-                                                                                                {variable.name}
+                                                                                                {variable.name || 'Unnamed Var'}
                                                                                             </Label>
                                                                                             {variable.hasTolerance && <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />}
                                                                                         </div>
                                                                                     </TooltipTrigger>
                                                                                     <TooltipContent>
                                                                                         <p className="font-semibold mb-1">{variable.name}</p>
-                                                                                        {variable.description && <p className="text-xs text-muted-foreground mb-2">{variable.description}</p>}
-                                                                                        <p className="text-xs text-muted-foreground">Flow: {flowName}</p>
+                                                                                        {variable.description && <p className="text-xs text-muted-foreground">{variable.description}</p>}
+                                                                                        <p className="text-xs text-muted-foreground mt-1">Flow: {flowName}</p>
                                                                                     </TooltipContent>
                                                                                 </Tooltip>
                                                                             </TooltipProvider>
 
-                                                                            {variable.type === 'boolean' ? (
-                                                                                <div className="flex items-center gap-2 h-8 justify-center">
-                                                                                    <input
-                                                                                        type="checkbox"
-                                                                                        id={`var-${index}-${variable.name}`}
-                                                                                        checked={!!item.overrides?.[variable.name]}
-                                                                                        onChange={(e) => updateItemOverride(index, variable.name, e.target.checked)}
-                                                                                        className="h-4 w-4"
-                                                                                    />
-                                                                                    <span className="text-xs text-muted-foreground">Enabled</span>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <div className="flex items-end gap-2">
-                                                                                    <div className="flex-1 flex items-center gap-2 min-w-0">
-                                                                                        <Input
-                                                                                            id={`var-${index}-${variable.name}`}
-                                                                                            type={variable.type === 'number' ? 'number' : 'text'}
-                                                                                            value={item.overrides?.[variable.name] ?? ''}
-                                                                                            onChange={(e) => updateItemOverride(index, variable.name, variable.type === 'number' ? Number(e.target.value) : e.target.value)}
-                                                                                            placeholder={variable.default !== undefined ? `${variable.default}` : 'Value'}
-                                                                                            className="w-20 h-8 text-xs placeholder:text-muted-foreground/30"
-                                                                                        />
-                                                                                        {variable.unit && (
-                                                                                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                                                                {variable.unit}
-                                                                                            </span>
-                                                                                        )}
-                                                                                    </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="flex-1">
+                                                                                    {variable.type === 'boolean' ? (
+                                                                                        <div className="flex justify-center py-1">
+                                                                                            <input
+                                                                                                type="checkbox"
+                                                                                                id={`var-${item.cycleId}-${stepIdx}-${variable.name}`}
+                                                                                                checked={
+                                                                                                    stepIdx >= 0
+                                                                                                        ? !!item.steps?.[stepIdx]?.overrides?.[variable.name]
+                                                                                                        : !!item.overrides?.[variable.name]
+                                                                                                }
+                                                                                                onChange={(e) => {
+                                                                                                    const newVal = e.target.checked;
+                                                                                                    handleVariableChange(index, variable.name, newVal, stepIdx);
+                                                                                                }}
+                                                                                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                                                            />
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="flex items-center gap-2 w-full">
+                                                                                            <Input
+                                                                                                id={`var-${item.cycleId}-${stepIdx}-${variable.name}`}
+                                                                                                type="number"
+                                                                                                placeholder={String(variable.default ?? '')}
+                                                                                                value={
+                                                                                                    stepIdx >= 0
+                                                                                                        ? (item.steps?.[stepIdx]?.overrides?.[variable.name] ?? '')
+                                                                                                        : (item.overrides?.[variable.name] ?? '')
+                                                                                                }
+                                                                                                onChange={(e) => {
+                                                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                                                    handleVariableChange(index, variable.name, val, stepIdx);
+                                                                                                }}
+                                                                                                className="h-8 text-xs font-mono text-center flex-1 min-w-[60px]"
+                                                                                            />
 
-                                                                                    {variable.hasTolerance && (
-                                                                                        <>
-                                                                                            <div className="w-[1px] h-5 bg-border/40 mx-0.5" />
-                                                                                            <div className="flex items-center gap-1">
-                                                                                                {/* Tolerance Mode Toggle */}
-                                                                                                <TooltipProvider>
-                                                                                                    <Tooltip>
-                                                                                                        <TooltipTrigger asChild>
-                                                                                                            <Button
-                                                                                                                variant="ghost"
-                                                                                                                size="icon"
-                                                                                                                className="h-6 w-6 p-0 hover:bg-transparent"
-                                                                                                                onClick={() => {
-                                                                                                                    const currentMode = item.overrides?.[variable.name + '_tolerance_mode'] || 'symmetric';
-                                                                                                                    let nextMode = 'symmetric';
-                                                                                                                    if (currentMode === 'symmetric') nextMode = 'lower';
-                                                                                                                    else if (currentMode === 'lower') nextMode = 'upper';
-                                                                                                                    else nextMode = 'symmetric';
+                                                                                            {variable.hasTolerance && (
+                                                                                                <>
+                                                                                                    <div className="w-[1px] h-5 bg-border/40 mx-0.5" />
+                                                                                                    <div className="flex items-center gap-1 shrink-0">
+                                                                                                        <TooltipProvider>
+                                                                                                            <Tooltip>
+                                                                                                                <TooltipTrigger asChild>
+                                                                                                                    <Button
+                                                                                                                        variant="ghost"
+                                                                                                                        size="icon"
+                                                                                                                        className="h-6 w-6 p-0 hover:bg-transparent"
+                                                                                                                        onClick={() => {
+                                                                                                                            const overrideKey = variable.name + '_tolerance_mode';
+                                                                                                                            const currentOverrides = stepIdx >= 0 ? item.steps?.[stepIdx]?.overrides : item.overrides;
+                                                                                                                            const currentMode = currentOverrides?.[overrideKey] || 'symmetric';
 
-                                                                                                                    updateItemOverride(index, variable.name + '_tolerance_mode', nextMode);
-                                                                                                                }}
-                                                                                                            >
-                                                                                                                {(() => {
-                                                                                                                    const mode = item.overrides?.[variable.name + '_tolerance_mode'] || 'symmetric';
-                                                                                                                    if (mode === 'lower') return <ArrowDown className="h-4 w-4 text-cyan-500" />;
-                                                                                                                    if (mode === 'upper') return <ArrowUp className="h-4 w-4 text-orange-500" />;
-                                                                                                                    return <span className="text-muted-foreground text-base select-none">±</span>;
-                                                                                                                })()}
-                                                                                                            </Button>
-                                                                                                        </TooltipTrigger>
-                                                                                                        <TooltipContent side="top">
-                                                                                                            {(() => {
-                                                                                                                const mode = item.overrides?.[variable.name + '_tolerance_mode'] || 'symmetric';
-                                                                                                                if (mode === 'lower') return <p>Tolerance: <strong>Allow Lower Only</strong><br /><span className="text-xs opacity-70">(Target - Tol) to Target</span></p>;
-                                                                                                                if (mode === 'upper') return <p>Tolerance: <strong>Allow Upper Only</strong><br /><span className="text-xs opacity-70">Target to (Target + Tol)</span></p>;
-                                                                                                                return <p>Tolerance: <strong>Symmetric</strong><br /><span className="text-xs opacity-70">(Target - Tol) to (Target + Tol)</span></p>;
+                                                                                                                            let nextMode = 'symmetric';
+                                                                                                                            if (currentMode === 'symmetric') nextMode = 'lower';
+                                                                                                                            else if (currentMode === 'lower') nextMode = 'upper';
+                                                                                                                            else nextMode = 'symmetric';
+
+                                                                                                                            handleVariableChange(index, overrideKey, nextMode, stepIdx);
+                                                                                                                        }}
+                                                                                                                    >
+                                                                                                                        {(() => {
+                                                                                                                            const overrideKey = variable.name + '_tolerance_mode';
+                                                                                                                            const currentOverrides = stepIdx >= 0 ? item.steps?.[stepIdx]?.overrides : item.overrides;
+                                                                                                                            const mode = currentOverrides?.[overrideKey] || 'symmetric';
+
+                                                                                                                            if (mode === 'lower') return <ArrowDown className="h-4 w-4 text-cyan-500" />;
+                                                                                                                            if (mode === 'upper') return <ArrowUp className="h-4 w-4 text-orange-500" />;
+                                                                                                                            return <span className="text-muted-foreground text-base select-none">±</span>;
+                                                                                                                        })()}
+                                                                                                                    </Button>
+                                                                                                                </TooltipTrigger>
+                                                                                                                <TooltipContent side="top">
+                                                                                                                    {(() => {
+                                                                                                                        const overrideKey = variable.name + '_tolerance_mode';
+                                                                                                                        const currentOverrides = stepIdx >= 0 ? item.steps?.[stepIdx]?.overrides : item.overrides;
+                                                                                                                        const mode = currentOverrides?.[overrideKey] || 'symmetric';
+
+                                                                                                                        if (mode === 'lower') return <p>Tolerance: <strong>Allow Lower Only</strong><br /><span className="text-xs opacity-70">(Target - Tol) to Target</span></p>;
+                                                                                                                        if (mode === 'upper') return <p>Tolerance: <strong>Allow Upper Only</strong><br /><span className="text-xs opacity-70">Target to (Target + Tol)</span></p>;
+                                                                                                                        return <p>Tolerance: <strong>Symmetric</strong><br /><span className="text-xs opacity-70">(Target - Tol) to (Target + Tol)</span></p>;
+                                                                                                                    })()}
+                                                                                                                </TooltipContent>
+                                                                                                            </Tooltip>
+                                                                                                        </TooltipProvider>
+
+                                                                                                        <Input
+                                                                                                            type="number"
+                                                                                                            min={0}
+                                                                                                            value={(() => {
+                                                                                                                const key = variable.name + '_tolerance';
+                                                                                                                return stepIdx >= 0
+                                                                                                                    ? (item.steps?.[stepIdx]?.overrides?.[key] ?? '')
+                                                                                                                    : (item.overrides?.[key] ?? '');
                                                                                                             })()}
-                                                                                                        </TooltipContent>
-                                                                                                    </Tooltip>
-                                                                                                </TooltipProvider>
-
-                                                                                                <Input
-                                                                                                    type="number"
-                                                                                                    min={0}
-                                                                                                    value={item.overrides?.[variable.name + '_tolerance'] ?? ''}
-                                                                                                    onChange={(e) => {
-                                                                                                        const val = Number(e.target.value);
-                                                                                                        if (val >= 0) {
-                                                                                                            updateItemOverride(index, variable.name + '_tolerance', val);
-                                                                                                        }
-                                                                                                    }}
-                                                                                                    placeholder="Tol"
-                                                                                                    className="w-20 h-8 text-xs placeholder:text-muted-foreground/30"
-                                                                                                />
-                                                                                            </div>
-                                                                                        </>
+                                                                                                            onChange={(e) => {
+                                                                                                                const val = Number(e.target.value);
+                                                                                                                if (val >= 0) {
+                                                                                                                    handleVariableChange(index, variable.name + '_tolerance', val, stepIdx);
+                                                                                                                }
+                                                                                                            }}
+                                                                                                            placeholder="Tol"
+                                                                                                            className="w-14 h-8 text-xs placeholder:text-muted-foreground/30 px-1 text-center"
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                </>
+                                                                                            )}
+                                                                                        </div>
                                                                                     )}
                                                                                 </div>
-                                                                            )}
+
+                                                                                {/* Unit */}
+                                                                                {variable.unit && (
+                                                                                    <span className="text-xs text-muted-foreground font-mono w-8 text-right shrink-0">
+                                                                                        {variable.unit}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
                                                                     ))}
                                                                 </div>
                                                             </div>
                                                         );
-                                                    });
+                                                    })
                                                 })()}
                                             </div>
                                         )}

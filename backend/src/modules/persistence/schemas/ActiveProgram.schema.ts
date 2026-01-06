@@ -45,6 +45,8 @@ export interface IActiveProgram extends Document {
 
     // Global overrides for the entire program execution
     variableOverrides?: Record<string, any>;
+    // Window-specific overrides (Advanced Mode)
+    windowOverrides?: Record<string, Record<string, any>>;
 
     // BASIC mode: schedule items
     schedule: IActiveScheduleItem[];
@@ -101,6 +103,8 @@ const ActiveProgramSchema = new Schema<IActiveProgram>({
 
     // Global overrides
     variableOverrides: { type: Schema.Types.Mixed, default: {} },
+    // Window-specific overrides (Advanced Mode) - Map<WindowId, Record<VarName, Value>>
+    windowOverrides: { type: Schema.Types.Mixed, default: {} },
 
     // Program Type
     type: { type: String, enum: ['BASIC', 'ADVANCED'], default: 'BASIC' },

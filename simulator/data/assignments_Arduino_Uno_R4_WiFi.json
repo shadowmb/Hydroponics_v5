@@ -1,0 +1,12 @@
+[
+  {
+    "sensorId": "dfrobot_a02yyuw",
+    "pins": [
+      "D10_10",
+      "D11_11"
+    ],
+    "values": {
+      "distance": 218.659965568945
+    }
+  }
+]

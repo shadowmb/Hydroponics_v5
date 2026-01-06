@@ -106,6 +106,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.delete('/api/flows/:id', FlowController.delete);
     app.post('/api/flows/:id/restore', FlowController.restore);
     app.delete('/api/flows/:id/hard', FlowController.hardDelete);
+    app.post('/api/flows/:id/duplicate', FlowController.duplicate);
 
     // Cycle Routes - Removed
     // app.register(require('./routes/cycles').cycleRoutes, { prefix: '/api/cycles' });

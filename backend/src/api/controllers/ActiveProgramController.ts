@@ -113,7 +113,7 @@ export class ActiveProgramController {
         console.log('GET /api/active-program/variables called');
         try {
             const variables = await activeProgramService.getProgramVariables();
-            console.log('Variables found:', variables);
+            console.log('Variables found (V2):', JSON.stringify(variables, null, 2));
             reply.send(variables);
         } catch (error: any) {
             console.error('Error getting variables:', error);

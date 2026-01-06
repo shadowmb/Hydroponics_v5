@@ -14,10 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import type { ITrigger, TriggerOperator, TriggerBehavior, ISensorOption } from './types';
 
+import { Textarea } from '../ui/textarea';
+
 interface TriggerModalProps {
     open: boolean;
     onClose: () => void;
-    onSave: (trigger: ITrigger) => void;
+    onSave: (trigger: ITrigger) => Promise<boolean | void> | boolean | void;
     trigger?: ITrigger | null;
     sensors: ISensorOption[];
     flows: { id: string; name: string }[];
@@ -51,9 +53,11 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
     const [value, setValue] = useState(0);
     const [valueMax, setValueMax] = useState(0);
     const [behavior, setBehavior] = useState<TriggerBehavior>('break');
+    const [description, setDescription] = useState('');
 
     // State for flows (Multi)
     const [flowIds, setFlowIds] = useState<string[]>([]);
+    const [saving, setSaving] = useState(false);
 
     // Reset form when modal opens
     useEffect(() => {
@@ -63,6 +67,7 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                 setOperator(editingTrigger.operator);
                 setValue(editingTrigger.value);
                 setValueMax(editingTrigger.valueMax || 0);
+                setDescription(editingTrigger.description || '');
 
                 // Migrate legacy flowId to flowIds if needed
                 if (editingTrigger.flowIds && editingTrigger.flowIds.length > 0) {
@@ -81,32 +86,39 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                 setValueMax(0);
                 setFlowIds([]);
                 setBehavior('break');
+                setDescription('');
             }
         }
     }, [open, editingTrigger, sensors]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!sensorId || flowIds.length === 0) return;
 
-        const triggerData: ITrigger = {
-            id: editingTrigger?.id || generateId(),
-            sensorId,
-            operator,
-            value,
-            valueMax: operator === 'between' ? valueMax : undefined,
-            flowId: flowIds[0], // Deprecated but kept for compatibility
-            flowIds, // New
-            behavior
-        };
-        onSave(triggerData);
-        onClose();
+        setSaving(true);
+        try {
+            const triggerData: ITrigger = {
+                id: editingTrigger?.id || generateId(),
+                sensorId,
+                operator,
+                value,
+                valueMax: operator === 'between' ? valueMax : undefined,
+                flowId: flowIds[0], // Deprecated but kept for compatibility
+                flowIds, // New
+                behavior,
+                description
+            };
+            const result = await onSave(triggerData);
+            if (result !== false) {
+                onClose();
+            }
+        } finally {
+            setSaving(false);
+        }
     };
 
     // Add flow to list
     const addFlow = (id: string) => {
-        if (!flowIds.includes(id)) {
-            setFlowIds([...flowIds, id]);
-        }
+        setFlowIds([...flowIds, id]);
     };
 
     // Remove flow from list
@@ -135,8 +147,13 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
     const selectedSensor = sensors.find(s => s.id === sensorId);
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[550px]">
+        <Dialog open={open} onOpenChange={(val) => {
+            if (!val && !saving) onClose();
+        }}>
+            <DialogContent
+                className="sm:max-w-[550px]"
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>
                         {isEditing ? '✏️ Редакция на тригер' : '⚡ Нов тригер'}
@@ -265,7 +282,13 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
 
                             {/* Add Flow Dropdown */}
                             <div className="flex gap-2">
-                                <Select onValueChange={addFlow}>
+                                <Select
+                                    key={flowIds.length}
+                                    onValueChange={(val) => {
+                                        addFlow(val);
+                                    }}
+                                    value=""
+                                >
                                     <SelectTrigger>
                                         <SelectValue placeholder="➕ Добави поток..." />
                                     </SelectTrigger>
@@ -274,7 +297,6 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                                             <SelectItem
                                                 key={flow.id}
                                                 value={flow.id}
-                                                disabled={flowIds.includes(flow.id)}
                                             >
                                                 {flow.name}
                                             </SelectItem>
@@ -308,20 +330,31 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
                                 </div>
                             </div>
                             <div className="flex items-start space-x-2">
-                                <RadioGroupItem value="continue" id="continue" className="mt-1" />
-                                <div>
-                                    <Label htmlFor="continue" className="font-medium text-green-600">
-                                        ⏭️ Continue (Продължи)
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
+                                <RadioGroupItem value="continue" id="continue" />
+                                <Label htmlFor="continue" className="flex flex-col cursor-pointer">
+                                    <span className="font-semibold text-green-500 flex items-center gap-1">
+                                        ⏭ Continue (Продължи)
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">
                                         Изпълни потоците и продължи да проверяваш.
-                                    </p>
-                                </div>
+                                    </span>
+                                </Label>
                             </div>
                         </RadioGroup>
                     </div>
-                </div>
 
+                    {/* Description */}
+                    <div className="grid grid-cols-4 items-start gap-4">
+                        <Label htmlFor="desc" className="text-right pt-2">Бележка</Label>
+                        <Textarea
+                            id="desc"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="col-span-3"
+                            placeholder="Опиши защо е нужен този тригер..."
+                        />
+                    </div>
+                </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>Отказ</Button>
                     <Button onClick={handleSave} disabled={!sensorId || flowIds.length === 0}>

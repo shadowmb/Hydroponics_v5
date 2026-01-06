@@ -14,13 +14,14 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Checkbox } from '../ui/checkbox';
+import { Textarea } from '../ui/textarea';
 import { TimePicker24 } from '../ui/time-picker-24';
 import type { ITimeWindow, DataSource } from './types';
 
 interface TimeWindowModalProps {
     open: boolean;
     onClose: () => void;
-    onSave: (window: ITimeWindow, autoShift?: boolean) => void;
+    onSave: (window: ITimeWindow, autoShift?: boolean) => Promise<boolean | void> | boolean | void;
     window?: ITimeWindow | null;
     flows: { id: string; name: string }[];
     existingWindows: ITimeWindow[];  // For smart defaults
@@ -46,6 +47,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
     const [dataSource, setDataSource] = useState<DataSource>('cached');
     const [autoAdjust, setAutoAdjust] = useState(false);
     const [fallbackFlowIds, setFallbackFlowIds] = useState<string[]>([]);
+    const [description, setDescription] = useState('');
 
     // Reset state when opening/editing
     useEffect(() => {
@@ -56,6 +58,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                 setEndTime(editingWindow.endTime);
                 setCheckInterval(editingWindow.checkInterval);
                 setDataSource(editingWindow.dataSource);
+                setDescription(editingWindow.description || '');
 
                 // Migrate legacy fallbackFlowId
                 if (editingWindow.fallbackFlowIds && editingWindow.fallbackFlowIds.length > 0) {
@@ -83,6 +86,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                 setCheckInterval(5);
                 setDataSource('cached');
                 setFallbackFlowIds([]);
+                setDescription('');
             }
             setAutoAdjust(false); // Reset checkbox
         }
@@ -93,7 +97,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
         return h * 60 + m;
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const startMins = toMinutes(startTime);
         const endMins = toMinutes(endTime);
 
@@ -126,17 +130,21 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
             dataSource,
             triggers: editingWindow?.triggers || [],
             fallbackFlowId: fallbackFlowIds[0], // Deprecated
-            fallbackFlowIds // New
+            fallbackFlowIds, // New
+            description
         };
-        onSave(windowData, autoAdjust);
-        onClose();
+        const result = await onSave(windowData, autoAdjust);
+        // Only close if onSave returns true (success) or undefined (assumed success for void)
+        // If it returns false (explicitly intercepted), keep open.
+        if (result !== false) {
+            onClose();
+        }
     };
 
     // Helper methods for fallback flows
+    // Helper methods for fallback flows
     const addFallbackFlow = (id: string) => {
-        if (!fallbackFlowIds.includes(id)) {
-            setFallbackFlowIds([...fallbackFlowIds, id]);
-        }
+        setFallbackFlowIds([...fallbackFlowIds, id]);
     };
 
     const removeFallbackFlow = (index: number) => {
@@ -154,7 +162,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>
                         {isEditing ? '✏️ Редакция на прозорец' : '📅 Нов времеви прозорец'}
@@ -303,7 +311,13 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
 
                             {/* Add Fallback Flow Dropdown */}
                             <div className="flex gap-2">
-                                <Select onValueChange={addFallbackFlow}>
+                                <Select
+                                    key={fallbackFlowIds.length}
+                                    onValueChange={(val) => {
+                                        addFallbackFlow(val);
+                                    }}
+                                    value=""
+                                >
                                     <SelectTrigger>
                                         <SelectValue placeholder="➕ Добави fallback..." />
                                     </SelectTrigger>
@@ -312,7 +326,6 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                                             <SelectItem
                                                 key={flow.id}
                                                 value={flow.id}
-                                                disabled={fallbackFlowIds.includes(flow.id)}
                                             >
                                                 {flow.name}
                                             </SelectItem>
@@ -321,6 +334,18 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                                 </Select>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Description (Note) */}
+                    <div className="grid grid-cols-4 items-start gap-4">
+                        <Label htmlFor="desc" className="text-right pt-2">Бележка</Label>
+                        <Textarea
+                            id="desc"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="col-span-3"
+                            placeholder="Добави бележка или описание..."
+                        />
                     </div>
                 </div>
 

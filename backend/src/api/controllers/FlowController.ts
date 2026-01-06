@@ -141,4 +141,60 @@ export class FlowController {
             return reply.status(500).send({ success: false, message: error.message || 'Failed to permanently delete flow' });
         }
     }
+    static async duplicate(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { id } = req.params as { id: string };
+            const { name } = req.body as { name: string };
+            const { FlowModel } = await import('../../modules/persistence/schemas/Flow.schema');
+
+            if (!name) {
+                return reply.status(400).send({ success: false, message: 'New flow name is required' });
+            }
+
+            // 1. Find the original flow
+            // @ts-ignore
+            const originalFlow = await FlowModel.findOne({ id }).exec();
+            if (!originalFlow) {
+                return reply.status(404).send({ success: false, message: 'Flow not found' });
+            }
+
+            // 2. Generate new ID (slug)
+            const slugify = (text: string) => text.toString().toLowerCase()
+                .replace(/\s+/g, '_')           // Replace spaces with -
+                .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+                .replace(/\-\-+/g, '_')         // Replace multiple - with single -
+                .replace(/^-+/, '')             // Trim - from start of text
+                .replace(/-+$/, '');            // Trim - from end of text
+
+            let newId = slugify(name);
+
+            // 3. Check for existing ID/Name
+            const existing = await FlowModel.findOne({
+                $or: [{ id: newId }, { name: name }]
+            });
+
+            if (existing) {
+                return reply.status(400).send({ success: false, message: 'A flow with this name or ID already exists' });
+            }
+
+            // 4. Sanitize and Create New Flow
+            const originalObj = originalFlow.toObject() as any;
+            const { _id, id: oldId, name: oldName, createdAt, updatedAt, __v, deletedAt, ...cleanFlow } = originalObj;
+
+            const newFlowData = {
+                ...cleanFlow,
+                name: name,
+                id: newId,
+                isActive: false, // Always start as stopped
+                deletedAt: null // Ensure it's not deleted even if source was
+            };
+
+            const newFlow = await FlowModel.create(newFlowData);
+            return reply.send({ success: true, FLOW: newFlow });
+
+        } catch (error: any) {
+            logger.error({ error }, 'Failed to duplicate flow');
+            return reply.status(500).send({ success: false, message: error.message || 'Failed to duplicate flow' });
+        }
+    }
 }

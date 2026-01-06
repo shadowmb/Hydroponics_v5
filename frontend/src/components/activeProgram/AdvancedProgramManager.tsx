@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, differenceInMinutes, parse, isValid } from 'date-fns';
-import type { IActiveProgram } from '../../types/ActiveProgram';
+import type { IActiveProgram, IVariable, IContext } from '../../types/ActiveProgram';
 import { activeProgramService } from '../../services/activeProgramService';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import {
     Play, Pause, Square, Clock, Zap, CheckCircle2,
     Circle, Timer, ChevronDown, ChevronRight,
-    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity, CalendarClock
+    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity, CalendarClock, Settings2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Progress } from '../ui/progress';
@@ -21,6 +21,7 @@ import { TimeWindowModal } from '../programs/TimeWindowModal';
 import { TriggerModal } from '../programs/TriggerModal';
 import type { ITimeWindow, ITrigger } from '../programs/types';
 import { AdvancedExecutionLog } from './AdvancedExecutionLog';
+import { VariableConfigModal } from './VariableConfigModal';
 
 interface AdvancedProgramManagerProps {
     program: IActiveProgram;
@@ -98,6 +99,21 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
     // Delayed Start state
     const [isDelayedStartOpen, setIsDelayedStartOpen] = useState(false);
+
+    // Variable Config State
+    const [configWindowId, setConfigWindowId] = useState<string | null>(null);
+    const [draftContexts, setDraftContexts] = useState<IContext[] | null>(null);
+    const [windowVariables, setWindowVariables] = useState<Record<string, IContext[]>>({});
+
+    // Fetch variables on mount and when windows structure changes
+    // Use JSON.stringify for deep comparison to avoid refetching on reference changes
+    const windowsParams = program.type === 'ADVANCED' ? JSON.stringify((program as any).windows) : null;
+    useEffect(() => {
+        activeProgramService.getVariables()
+            .then(vars => setWindowVariables(vars || {}))
+            .catch(err => console.error('Failed to load variables', err));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [windowsParams]);
     const [dateInput, setDateInput] = useState('');
     const [timeInput, setTimeInput] = useState('00:00');
     const [timeRemaining, setTimeRemaining] = useState<string>('');
@@ -377,6 +393,36 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     const handleSaveTrigger = async (updatedTrigger: ITrigger) => {
         if (!editingTriggerWindowId) return;
 
+        // 1. Get current window
+        const currentWindow = localWindows.find(w => w.id === editingTriggerWindowId);
+        if (!currentWindow) return;
+
+        // 2. Project the window state with the updated trigger
+        // Clone window and triggers array
+        const tempWindow = { ...currentWindow };
+        const tempTriggers = [...(tempWindow.triggers || [])];
+
+        // Find and replace the trigger
+        const idx = tempTriggers.findIndex(t => t.id === updatedTrigger.id);
+        if (idx >= 0) {
+            tempTriggers[idx] = updatedTrigger;
+        } else {
+            // Should typically not happen here as we are editing an existing trigger
+            // But if it were a new trigger being added via this flow:
+            tempTriggers.push(updatedTrigger);
+        }
+        tempWindow.triggers = tempTriggers;
+
+        // 3. VALIDATION: Check for missing variables
+        const projectedContexts = getRequiredContexts(tempWindow);
+        if (hasMissingVariables(projectedContexts, tempWindow.id)) {
+            // Open Configuration Modal
+            setDraftContexts(projectedContexts);
+            setConfigWindowId(tempWindow.id);
+            toast.warning('Configure variables for new flows before saving.');
+            return false; // STOP SAVE (Signal to TriggerModal to keep open)
+        }
+
         try {
             setProcessing(true);
             await activeProgramService.updateTrigger(editingTriggerWindowId, updatedTrigger);
@@ -393,9 +439,93 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         }
     };
 
+    // Helper: Get required contexts from a window (projected)
+    const getRequiredContexts = (window: ITimeWindow): IContext[] => {
+        const contexts: IContext[] = [];
+
+        // Helper to add context
+        const addCtx = (flowId: string, contextId: string, labelPrefix: string, description?: string) => {
+            // Find flow in the loaded flows list
+            // Note: flows contains { id, name, ... }. We assume it also has variables from the fetch.
+            // If the fetch in useEffect doesn't return variables, this will fail.
+            // We'll rely on the standard /flows endpoint returning full objects.
+            const flow = flows.find(f => f.id === flowId || f._id === flowId);
+            if (flow && flow.variables) {
+                const vars = flow.variables
+                    .filter((v: any) => v.scope === 'global')
+                    .map((v: any) => ({
+                        name: v.name,
+                        type: v.type,
+                        default: v.value,
+                        unit: v.unit,
+                        hasTolerance: v.hasTolerance, // Ensure schema has this
+                        description: v.description,
+                        flowId: flowId,
+                        flowName: flow.name
+                    })) as IVariable[];
+
+                if (vars.length > 0) {
+                    contexts.push({
+                        contextId,
+                        label: `${labelPrefix}: ${flow.name}`,
+                        description,
+                        variables: vars
+                    });
+                }
+            }
+        };
+
+        // 1. Triggers
+        window.triggers?.forEach((t, tIdx) => {
+            const tName = `Trigger ${tIdx + 1}`;
+            t.flowIds?.forEach((fid, fIdx) => {
+                // Pass trigger description to the first flow of the trigger context, or all? 
+                // The UI groups by "Trigger 1", so passing it to each flow context is duplicate but safe if UI handles it.
+                // Better: The UI groups by label prefix. 
+                addCtx(fid, `t_${tIdx}_f_${fIdx}`, tName, t.description);
+            });
+            // Legacy support if needed? No, assuming new format for edits.
+        });
+
+        // 2. Fallbacks
+        window.fallbackFlowIds?.forEach((fid, fIdx) => {
+            addCtx(fid, `fb_${fIdx}`, `Fallback`, window.description);
+        });
+
+        return contexts;
+    };
+
+    // Helper: Check for missing variables
+    const hasMissingVariables = (contexts: IContext[], winId: string) => {
+        const overrides = (program as any).windowOverrides?.[winId] || {};
+
+        for (const ctx of contexts) {
+            const ctxOverrides = overrides[ctx.contextId] || {};
+            for (const v of ctx.variables) {
+                const val = ctxOverrides[v.name];
+                if (val === undefined || val === '') return true;
+                if (v.hasTolerance) {
+                    const tol = ctxOverrides[v.name + '_tolerance'];
+                    if (tol === undefined || tol === '') return true;
+                }
+            }
+        }
+        return false;
+    };
+
     // Save edited window with auto-overlap adjustment
     const handleWindowSave = async (updatedWindow: ITimeWindow, autoShift: boolean = false) => {
         try {
+            // VALIDATION: Check for missing variables
+            const projectedContexts = getRequiredContexts(updatedWindow);
+            if (hasMissingVariables(projectedContexts, updatedWindow.id)) {
+                // Open Configuration Modal
+                setDraftContexts(projectedContexts);
+                setConfigWindowId(updatedWindow.id);
+                toast.warning('Configure variables for new flows before saving.');
+                return false; // STOP SAVE (Signal to TimeWindowModal to keep open)
+            }
+
             setProcessing(true);
 
             // Update the window in the list (preserving original order for logic)
@@ -831,6 +961,24 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                 </Button>
                                             )}
 
+
+
+                                            {/* Config Variables Button */}
+                                            {isWindowEditable(window) && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfigWindowId(window.id);
+                                                    }}
+                                                    title="Configure Variables"
+                                                >
+                                                    <Settings2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
+
                                             {/* Edit button - only when window is not active */}
                                             {isWindowEditable(window) && (
                                                 <Button
@@ -990,6 +1138,35 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                 trigger={editingFullTrigger}
                 sensors={sensors}
                 flows={flows}
+            />
+
+            {/* Variable Config Modal */}
+            <VariableConfigModal
+                isOpen={!!configWindowId}
+                onClose={() => {
+                    setConfigWindowId(null);
+                    setDraftContexts(null);
+                }}
+                windowId={configWindowId}
+                windowName={configWindowId ? (localWindows.find((w: any) => w.id === configWindowId)?.name || '') : ''}
+                contexts={draftContexts || (configWindowId ? windowVariables[configWindowId] || [] : [])}
+                initialOverrides={configWindowId ? ((program as any).windowOverrides?.[configWindowId] || {}) : {}}
+                onSave={async (winId, newOverrides) => {
+                    const currentOverrides = (program as any).windowOverrides || {};
+                    const updatedOverrides = {
+                        ...currentOverrides,
+                        [winId]: newOverrides
+                    };
+
+                    try {
+                        await activeProgramService.update({ windowOverrides: updatedOverrides } as any);
+                        toast.success('Variables saved');
+                        onUpdate();
+                    } catch (e) {
+                        console.error(e);
+                        toast.error('Failed to save variables');
+                    }
+                }}
             />
 
         </>
