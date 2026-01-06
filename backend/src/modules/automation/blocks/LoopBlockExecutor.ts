@@ -261,7 +261,7 @@ export class LoopBlockExecutor implements IBlockExecutor {
         if (tolerance > 0) {
             const lower = toleranceMode === 'upper' ? Number(right) : Number(right) - tolerance;
             const upper = toleranceMode === 'lower' ? Number(right) : Number(right) + tolerance;
-            rightDisplay = `[${lower.toFixed(0)}–${upper.toFixed(0)}]`;
+            rightDisplay = `[${lower.toFixed(2)}–${upper.toFixed(2)}]`;
         }
 
         const summaryDetails = variable
