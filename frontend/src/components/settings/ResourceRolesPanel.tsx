@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { resourceRoleService, type ResourceRole, type AnalyticsType } from "../../services/resourceRoleService";
 import { RefreshCw, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -98,6 +99,7 @@ export function ResourceRolesPanel() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[150px]">System Key</TableHead>
+                                <TableHead className="w-[80px] text-center">Show</TableHead>
                                 <TableHead>Display Name</TableHead>
                                 <TableHead className="w-[150px]">Calculation</TableHead>
                                 <TableHead className="w-[120px]">Color</TableHead>
@@ -113,6 +115,12 @@ export function ResourceRolesPanel() {
                                     <TableRow key={role.key}>
                                         <TableCell className="font-mono text-xs">
                                             <Badge variant="outline">{role.key}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <Switch
+                                                checked={current.showInSummary ?? false}
+                                                onCheckedChange={(checked) => handleEdit(role.key, 'showInSummary', checked)}
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             <Input
@@ -171,7 +179,7 @@ export function ResourceRolesPanel() {
                             })}
                             {roles.length === 0 && !loading && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                                         No roles found. Click "Sync Templates" to discover roles.
                                     </TableCell>
                                 </TableRow>

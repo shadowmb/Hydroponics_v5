@@ -11,6 +11,7 @@ export interface ResourceRole {
     unit?: string;
     color?: string;
     description?: string;
+    showInSummary?: boolean;
     createdAt?: string;
     updatedAt?: string;
 }

@@ -9,6 +9,7 @@ export interface IResourceRole extends Document {
     unit?: string;          // Default display unit (e.g., "ml", "L", "pH")
     color?: string;         // UI identifier for badge color (e.g., "red", "cyan" or hex)
     description?: string;   // Optional description
+    showInSummary?: boolean; // Show this role in window summary accordion header
 }
 
 const ResourceRoleSchema: Schema = new Schema({
@@ -29,7 +30,8 @@ const ResourceRoleSchema: Schema = new Schema({
     },
     unit: { type: String },
     color: { type: String, default: 'gray' },
-    description: { type: String }
+    description: { type: String },
+    showInSummary: { type: Boolean, default: false }
 }, {
     timestamps: true
 });

@@ -8,10 +8,11 @@ import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import {
     CalendarIcon, RefreshCw, Loader2, ChevronDown, ChevronRight,
-    Clock, Droplets
+    Clock
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { analyticsService, type ExecutionTrace as ExecutionTraceType, type ExecutedProgram } from '../../services/analyticsService';
+import { resourceRoleService } from '../../services/resourceRoleService';
 import { ExecutionTrace } from './ExecutionTrace';
 import { toast } from 'sonner';
 
@@ -23,10 +24,22 @@ export function SessionTimeline() {
     const [sessions, setSessions] = useState<ExecutionTraceType[]>([]);
     const [date, setDate] = useState<Date>(new Date());
     const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+    const [visibleRoles, setVisibleRoles] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         loadPrograms();
+        loadVisibleRoles();
     }, []);
+
+    const loadVisibleRoles = async () => {
+        try {
+            const roles = await resourceRoleService.getAll();
+            const visible = roles.filter(r => r.showInSummary).map(r => r.key);
+            setVisibleRoles(new Set(visible));
+        } catch {
+            // Fallback: show all
+        }
+    };
 
     useEffect(() => {
         if (selectedProgram) {
@@ -182,7 +195,7 @@ export function SessionTimeline() {
                                             </div>
                                             <div className="flex items-center gap-2 text-sm">
                                                 {session.totals.byRole && Object.entries(session.totals.byRole)
-                                                    .filter(([, stats]) => stats.value > 0)
+                                                    .filter(([role, stats]) => stats.value > 0 && visibleRoles.has(role))
                                                     .map(([role, stats]) => (
                                                         <Badge key={role} variant="secondary" className="text-xs font-normal">
                                                             <span className="capitalize mr-1 text-muted-foreground">{role.replace('_', ' ')}:</span>
