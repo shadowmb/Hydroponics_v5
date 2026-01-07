@@ -564,7 +564,7 @@ export class AnalyticsService {
                 const endTime = new Date(Math.max(...timestamps));
 
                 // Extract sensor readings (last known value per device)
-                const sensorMap: Map<string, { value: number; unit: string }> = new Map();
+                const sensorMap: Map<string, { value: number; unit: string; isPrimary?: boolean }> = new Map();
                 const actuatorMap: Map<string, { action: string; totalValue: number; unit: string; count: number }> = new Map();
 
                 for (const event of flowEvents) {
@@ -575,13 +575,16 @@ export class AnalyticsService {
                     const deviceName = logData?.deviceName || event.metadata?.blockLabel || 'Unknown';
 
                     if (blockType === 'SENSOR_READ' && logData) {
-                        // Support multi-value sensors via allReadings
-                        if (logData.allReadings && typeof logData.allReadings === 'object') {
-                            // Extract all numeric readings from allReadings
-                            for (const [key, val] of Object.entries(logData.allReadings)) {
-                                if (typeof val === 'number' && !isNaN(val)) {
-                                    const readingKey = `${deviceName}:${key}`;
-                                    sensorMap.set(readingKey, { value: val, unit: key });
+                        // Use structured measurements array (new format)
+                        if (logData.measurements && Array.isArray(logData.measurements)) {
+                            for (const m of logData.measurements) {
+                                if (typeof m.value === 'number' && !isNaN(m.value)) {
+                                    const readingKey = `${deviceName}:${m.key}`;
+                                    sensorMap.set(readingKey, {
+                                        value: m.value,
+                                        unit: m.unit,
+                                        isPrimary: m.isPrimary
+                                    });
                                 }
                             }
                         }

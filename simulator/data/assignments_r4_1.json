@@ -44,7 +44,7 @@
       "D11_11"
     ],
     "values": {
-      "distance": 300
+      "distance": 267.6
     },
     "calibrationPoints": [
       {
@@ -83,8 +83,8 @@
       "D6_6"
     ],
     "values": {
-      "temp": 23.3886821791526,
-      "humidity": 28.3889598489476
+      "temp": 22,
+      "humidity": 80
     }
   }
 ]
