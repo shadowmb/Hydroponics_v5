@@ -216,7 +216,7 @@ export interface ExecutionTrace {
     totals: {
         dosedMl: number;
         energyWh: number;
-        byRole: Record<string, number>;
+        byRole: Record<string, { role: string; type: 'SUM' | 'DELTA' | 'TREND' | 'NONE'; value: number; unit: string }>;
     };
 }
 

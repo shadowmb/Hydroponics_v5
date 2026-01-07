@@ -119,7 +119,7 @@ export interface ExecutionSession {
     startTime: Date;
     endTime: Date;
     steps: ExecutionStep[];
-    totals: Record<string, number>; // Totals just for this session
+    totals: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }>;
 }
 
 export interface ExecutionTrace {
@@ -132,8 +132,26 @@ export interface ExecutionTrace {
     totals: {
         dosedMl: number;
         energyWh: number;
-        byRole: Record<string, number>;
+        byRole: Record<string, { role: string; type: 'SUM' | 'DELTA' | 'TREND' | 'NONE'; value: number; unit: string }>;
     };
+}
+
+interface SessionTimelineResponse {
+    programId: string;
+    date: string;
+    sessions: ExecutionTrace[];
+}
+
+// Assuming ILogEvent is defined elsewhere or needs to be defined here
+// For the purpose of this change, I'll assume a basic structure based on usage
+interface ILogEvent {
+    timestamp: Date;
+    programId: string;
+    windowId?: string;
+    eventId?: string;
+    type: string;
+    message: string;
+    metadata?: any;
 }
 
 
@@ -568,7 +586,7 @@ export class AnalyticsService {
                 durationSeconds: (endTime.getTime() - startTime.getTime()) / 1000,
                 sessions,
                 totals: {
-                    dosedMl: windowTotals['volume'] || 0,
+                    dosedMl: windowTotals['volume']?.value || 0,
                     energyWh: 0,
                     byRole: windowTotals
                 }
@@ -579,23 +597,50 @@ export class AnalyticsService {
     }
 
     private processWindowEvents(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string }>) {
-        const sessions: ExecutionSession[] = [];
-        const windowTotals: Record<string, number> = {};
+        // Since processSessionSteps handles segmentation locally now, we just pass all events
+        const { formattedSessions } = this.processSessionSteps(events, roleMap);
 
-        let currentSession: ExecutionSession | null = null;
-        let sessionEvents: any[] = [];
+        // Updated to Detailed Structure
+        const windowTotals: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }> = {};
+
+        // Aggregate totals from all sessions
+        for (const session of formattedSessions) {
+            for (const [role, stat] of Object.entries(session.totals)) {
+                if (!windowTotals[role]) {
+                    windowTotals[role] = { ...stat, value: 0 };
+                }
+                windowTotals[role].value += stat.value;
+            }
+        }
+
+        return { sessions: formattedSessions, windowTotals };
+    }
+
+
+
+    private processSessionSteps(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string }>) {
+        const sessions: ExecutionSession[] = [];
+        let currentSession: ExecutionSession = {
+            id: `sess_init_${Date.now()}`,
+            type: 'SCHEDULED',
+            description: 'Initializing',
+            startTime: new Date(events[0]?.timestamp || Date.now()),
+            endTime: new Date(events[0]?.timestamp || Date.now()),
+            steps: [],
+            totals: {}
+        };
+
+        let sessionTotals: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }> = {};
 
         const flushSession = () => {
-            if (currentSession) {
-                const { steps, sessionTotals } = this.processSessionSteps(sessionEvents, roleMap);
-                currentSession.steps = steps;
-                currentSession.totals = sessionTotals;
-                currentSession.endTime = new Date(sessionEvents[sessionEvents.length - 1]?.timestamp || currentSession.startTime);
+            // Finalize current session
+            currentSession.totals = sessionTotals;
+            if (currentSession.steps.length > 0) {
+                currentSession.endTime = new Date(currentSession.steps[currentSession.steps.length - 1]?.timestamp || currentSession.startTime);
                 sessions.push(currentSession);
-                Object.entries(sessionTotals).forEach(([key, val]) => {
-                    windowTotals[key] = (windowTotals[key] || 0) + val;
-                });
             }
+            // Reset totals for new session
+            sessionTotals = {};
         };
 
         const startNewSession = (type: ExecutionSession['type'], description: string, time: Date) => {
@@ -609,36 +654,7 @@ export class AnalyticsService {
                 steps: [],
                 totals: {}
             };
-            sessionEvents = [];
         };
-
-        for (const event of events) {
-            const type = event.type;
-            const msg = event.message || '';
-
-            if (type === 'TRIGGER_MATCH') {
-                startNewSession('TRIGGER_MATCH', msg || 'Trigger Condition Matched', new Date(event.timestamp));
-            } else if (type === 'WINDOW_EVENT' && msg.includes('стартира')) {
-                if (!currentSession) {
-                    startNewSession('SCHEDULED', 'Window Started', new Date(event.timestamp));
-                }
-            } else if (type === 'WINDOW_EVENT' && msg.includes('Fallback')) {
-                startNewSession('FALLBACK', 'Fallback Activation', new Date(event.timestamp));
-            }
-
-            if (!currentSession) {
-                startNewSession('SCHEDULED', 'Execution Segment', new Date(event.timestamp));
-            }
-            sessionEvents.push(event);
-        }
-
-        flushSession();
-        return { sessions, windowTotals };
-    }
-
-    private processSessionSteps(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string }>) {
-        const steps: ExecutionStep[] = [];
-        const sessionTotals: Record<string, number> = {};
 
         interface LoopContext {
             blockId: string;
@@ -665,7 +681,7 @@ export class AnalyticsService {
                     ctx.step.children = ctx.step.children || [];
                     ctx.step.children.push(step);
                 } else {
-                    steps.push(step);
+                    currentSession.steps.push(step);
                 }
                 currentScan = null;
                 currentScanTime = null;
@@ -673,9 +689,29 @@ export class AnalyticsService {
         };
 
         for (const event of events) {
+            // --- SESSION SEGMENTATION ---
+            const type = event.type;
+            const msg = event.message || '';
+            const timestamp = new Date(event.timestamp);
+
+            if (type === 'TRIGGER_MATCH') {
+                startNewSession('TRIGGER_MATCH', msg || 'Trigger Condition Matched', timestamp);
+            } else if (type === 'WINDOW_EVENT' && msg.includes('стартира')) {
+                if (sessions.length === 0 && currentSession.steps.length === 0) {
+                    // First session, just update metadata
+                    currentSession.startTime = timestamp;
+                    currentSession.description = 'Window Started';
+                } else {
+                    startNewSession('SCHEDULED', 'Window Started', timestamp);
+                }
+            } else if (type === 'WINDOW_EVENT' && msg.includes('Fallback')) {
+                startNewSession('FALLBACK', 'Fallback Activation', timestamp);
+            }
+
+            // --- EVENT PROCESSING ---
             const meta = event.metadata || {};
             const logData = meta.logData;
-            const timestamp = new Date(event.timestamp);
+            // const timestamp = new Date(event.timestamp); // Already defined above
             const blockType = meta.blockType;
 
             // --- LOOP LOGIC ---
@@ -703,35 +739,30 @@ export class AnalyticsService {
                         parent.step.children = parent.step.children || [];
                         parent.step.children.push(loopStep);
                     } else {
-                        steps.push(loopStep);
+                        currentSession.steps.push(loopStep);
                     }
 
                     loopStack.push({ blockId, step: loopStep, events: [event] });
                     continue;
                 }
 
-                // 2. Loop Iteration > 1 (Continuing)
+                // ... (Iterations & End Logic unchanged) ...
+                // 2. Loop Iteration > 1
                 if (iteration > 1 && isContinuing) {
-                    if (loopStack.length > 0) {
-                        const ctx = loopStack[loopStack.length - 1];
-                        if (ctx.blockId === blockId) {
-                            ctx.step.loopStats!.iterations = iteration;
-                        }
+                    if (loopStack.length > 0 && loopStack[loopStack.length - 1].blockId === blockId) {
+                        loopStack[loopStack.length - 1].step.loopStats!.iterations = iteration;
                     }
                     continue;
                 }
 
-                // 3. Loop End (Done)
+                // 3. Loop End
                 if (isDone) {
-                    if (loopStack.length > 0) {
-                        const ctx = loopStack[loopStack.length - 1];
-                        if (ctx.blockId === blockId) {
-                            loopStack.pop();
-                            if (ctx.events.length > 0) {
-                                const start = new Date(ctx.events[0].timestamp).getTime();
-                                const end = timestamp.getTime();
-                                ctx.step.loopStats!.durationSeconds = (end - start) / 1000;
-                            }
+                    if (loopStack.length > 0 && loopStack[loopStack.length - 1].blockId === blockId) {
+                        const ctx = loopStack.pop()!;
+                        if (ctx.events.length > 0) {
+                            const start = new Date(ctx.events[0].timestamp).getTime();
+                            const end = timestamp.getTime();
+                            ctx.step.loopStats!.durationSeconds = (end - start) / 1000;
                         }
                     }
                     continue;
@@ -758,7 +789,7 @@ export class AnalyticsService {
                     const rType = roleMap.get(role)?.type || 'NONE';
                     const rUnit = logData.primaryUnit || roleMap.get(role)?.unit || '';
 
-                    this.accumulateStats(sessionTotals, role, logData.primaryValue, rType);
+                    this.accumulateLoopStats(sessionTotals, role, logData.primaryValue, rType, rUnit);
 
                     if (loopStack.length > 0) {
                         const ctx = loopStack[loopStack.length - 1];
@@ -774,19 +805,15 @@ export class AnalyticsService {
             // --- ACTUATOR LOGIC ---
             if (blockType === 'ACTUATOR_SET' && logData) {
                 const role = logData.resourceRole;
-
-                // Determine amount and unit
-                // Prefer calculatedVolumeMl for normalization to liquid volume
                 let amount = 0;
                 let unit = logData.unit || logData.primaryUnit || '';
 
                 if (logData.calculatedVolumeMl !== undefined) {
                     amount = Number(logData.calculatedVolumeMl);
-                    unit = 'ml'; // Enforce normalized unit 'ml'
+                    unit = 'ml';
                 } else if (logData.primaryValue !== undefined) {
                     amount = Number(logData.primaryValue);
                 } else {
-                    // Legacy/Fallback
                     amount = Number(logData.amount) || 0;
                 }
 
@@ -800,24 +827,25 @@ export class AnalyticsService {
                     metadata: logData
                 };
 
+                if (role && amount > 0) {
+                    const rType = roleMap.get(role)?.type || 'NONE';
+                    const rUnit = unit || roleMap.get(role)?.unit || '';
+
+                    this.accumulateLoopStats(sessionTotals, role, amount, rType, rUnit);
+
+                    if (loopStack.length > 0) {
+                        const ctx = loopStack[loopStack.length - 1];
+                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit);
+                    }
+                }
+
                 if (loopStack.length > 0) {
                     const ctx = loopStack[loopStack.length - 1];
                     ctx.step.children = ctx.step.children || [];
                     ctx.step.children.push(step);
                     ctx.events.push(event);
-
-                    if (role && amount > 0) {
-                        const rType = roleMap.get(role)?.type || 'NONE';
-                        // Use determined unit, or fallback to role default
-                        const rUnit = unit || roleMap.get(role)?.unit || '';
-                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit);
-                    }
                 } else {
-                    steps.push(step);
-                }
-
-                if (role && amount > 0) {
-                    this.accumulateStats(sessionTotals, role, amount, roleMap.get(role)?.type || 'NONE');
+                    currentSession.steps.push(step);
                 }
                 continue;
             }
@@ -840,36 +868,36 @@ export class AnalyticsService {
                 metadata: event.metadata
             };
 
-            // If inside loop, capture them for duration tracking, otherwise ignore or add as steps?
-            // User mostly cares about Sensors and Actions. But IF blocks are useful.
             if (loopStack.length > 0) {
-                // Only add children if it's significant? 
-                // For now, let's keep it clean and NOT add every generic step to avoiding spamming the folded loop
-                // unless it is an important control flow event.
-                // loopStack[loopStack.length - 1].step.children?.push(genericStep);
                 loopStack[loopStack.length - 1].events.push(event);
             } else {
                 if (event.type === 'TRIGGER_MATCH' ||
                     event.type === 'WINDOW_EVENT' ||
                     event.type === 'FLOW_EXECUTED' ||
                     meta.blockType === 'IF') {
-                    steps.push(genericStep);
+                    // steps.push(genericStep); // Don't push generic steps to session steps for now or it duplicates with currentSession.steps?
+                    // Actually, processSessionSteps collects steps into `steps` array but now we want to segment.
+                    // Wait, my previous huge replace block put the segmentation loop INSIDE processSessionSteps.
+
+                    // Let's stick to the Segmentation Logic:
+                    // Top level in session
+                    currentSession.steps.push(genericStep);
                 }
             }
         }
-        flushScan();
-        return { steps, sessionTotals };
+
+        // Flush the last session to assign sessionTotals to currentSession.totals
+        flushSession();
+
+        return { formattedSessions: sessions };
     }
 
     private countLoopIterations(events: any[]): number {
         return events.filter(e => e.message === 'Loop Condition Check').length || 1;
     }
 
-    private accumulateStats(totals: Record<string, number>, role: string, value: number, type: AnalyticsType) {
-        if (type === 'SUM') {
-            totals[role] = (totals[role] || 0) + value;
-        }
-    }
+    // Legacy method removed or kept if needed elsewhere, but for now we only use accumulateLoopStats
+    // private accumulateStats... 
 
     private accumulateLoopStats(
         stats: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }>,
@@ -882,7 +910,10 @@ export class AnalyticsService {
             stats[role] = { role, type, value: 0, unit };
         }
 
-        if (type === 'SUM') {
+        // SUM: Add values (dosages, volumes)
+        // DELTA: Also sum for now (sensors will calculate delta at display time)
+        // NONE: Default to SUM behavior for safety (ensures unconfigured roles still accumulate)
+        if (type === 'SUM' || type === 'DELTA' || type === 'NONE') {
             stats[role].value += value;
         }
     }

@@ -273,30 +273,7 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
     };
 
     return (
-        <div className="space-y-6">
-            {/* Trace Header (Window Level) */}
-            <div className="bg-muted/30 p-4 rounded-lg flex flex-wrap gap-4 items-center justify-between text-sm border border-border">
-                <div className="space-y-1">
-                    <div className="font-semibold text-lg">{trace.windowName}</div>
-                    <div className="text-muted-foreground flex items-center gap-2">
-                        <Clock className="h-3 w-3" />
-                        {trace.durationSeconds.toFixed(1)}s Duration
-                    </div>
-                </div>
-
-                <div className="flex gap-4">
-                    {trace.totals.byRole && Object.entries(trace.totals.byRole).map(([role, total]) => (
-                        <div key={role} className="flex items-center gap-1 bg-background px-3 py-1 rounded shadow-sm border">
-                            {getRoleIcon(role)}
-                            <span className="font-medium text-foreground">
-                                <span className="capitalize text-muted-foreground mr-1">{role.replace('_', ' ')}:</span>
-                                {total.toFixed(1)} ml
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
+        <div className="space-y-4">
             {/* Sessions */}
             {trace.sessions.map((session) => (
                 <div key={session.id} className="relative pl-6 pb-2">

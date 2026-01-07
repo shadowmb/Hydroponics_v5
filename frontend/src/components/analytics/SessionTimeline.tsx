@@ -180,14 +180,16 @@ export function SessionTimeline() {
                                                     {formatTime(session.startTime)} - {formatTime(session.endTime)}
                                                 </Badge>
                                             </div>
-                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                {session.totals.dosedMl > 0 && (
-                                                    <span className="flex items-center gap-1">
-                                                        <Droplets className="h-4 w-4 text-blue-500" />
-                                                        {session.totals.dosedMl.toFixed(1)} ml
-                                                    </span>
-                                                )}
-                                                <span>{session.sessions.length} sessions</span>
+                                            <div className="flex items-center gap-2 text-sm">
+                                                {session.totals.byRole && Object.entries(session.totals.byRole)
+                                                    .filter(([, stats]) => stats.value > 0)
+                                                    .map(([role, stats]) => (
+                                                        <Badge key={role} variant="secondary" className="text-xs font-normal">
+                                                            <span className="capitalize mr-1 text-muted-foreground">{role.replace('_', ' ')}:</span>
+                                                            <span className="font-mono font-medium">{stats.value.toFixed(1)} {stats.unit}</span>
+                                                        </Badge>
+                                                    ))}
+                                                <span className="text-muted-foreground ml-2">{session.sessions.length} sessions</span>
                                             </div>
                                         </div>
                                     </CardHeader>
