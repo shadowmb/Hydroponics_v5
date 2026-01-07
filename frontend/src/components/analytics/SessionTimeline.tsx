@@ -56,10 +56,17 @@ export function SessionTimeline() {
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
             const result = await analyticsService.getSessionTimeline(selectedProgram, dateStr);
-            setSessions(result.sessions);
+
+            // Sort sessions chronologically (Start -> End)
+            // Assuming backend returns them, but let's be safe and explicit
+            const sortedSessions = result.sessions.sort((a, b) =>
+                new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+            );
+
+            setSessions(sortedSessions);
 
             // Auto-expand all sessions
-            setExpandedSessions(new Set(result.sessions.map(s => s.windowId)));
+            setExpandedSessions(new Set(sortedSessions.map(s => s.windowId)));
         } catch (error: any) {
             toast.error('Грешка: ' + error.message);
         } finally {
@@ -180,7 +187,7 @@ export function SessionTimeline() {
                                                         {session.totals.dosedMl.toFixed(1)} ml
                                                     </span>
                                                 )}
-                                                <span>{session.steps.length} steps</span>
+                                                <span>{session.sessions.length} sessions</span>
                                             </div>
                                         </div>
                                     </CardHeader>

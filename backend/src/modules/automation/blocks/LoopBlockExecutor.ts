@@ -284,8 +284,11 @@ export class LoopBlockExecutor implements IBlockExecutor {
             rightValue: Number(right),
             operator: operator,
             tolerance: tolerance,
-            strategy: 'loop_check'
-        } : undefined;
+            strategy: 'loop_check',
+            iteration: currentIteration
+        } : {
+            iteration: currentIteration
+        };
 
         return {
             success: true,

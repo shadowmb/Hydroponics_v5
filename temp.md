@@ -1,30 +1,30 @@
 {
   "_id": {
-    "$oid": "695e3edd3ca221d45d69f320"
+    "$oid": "695e59063ca221d45d6a0cec"
   },
-  "programId": "prog_test_nov_ad",
   "date": "2026-01-07",
+  "programId": "prog_test_nov_ad",
   "__v": 0,
   "createdAt": {
-    "$date": "2026-01-07T11:09:17.817Z"
+    "$date": "2026-01-07T13:00:54.559Z"
   },
   "deletedAt": null,
   "events": [
     {
       "timestamp": {
-        "$date": "2026-01-07T11:09:17.815Z"
+        "$date": "2026-01-07T13:00:54.556Z"
       },
       "type": "INFO",
       "message": "Програмата стартира",
       "metadata": {
         "timestamp": {
-          "$date": "2026-01-07T11:09:17.815Z"
+          "$date": "2026-01-07T13:00:54.556Z"
         }
       }
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:09:17.827Z"
+        "$date": "2026-01-07T13:00:54.569Z"
       },
       "type": "WINDOW_EVENT",
       "message": "Прозорец \"Сутрин\" стартира",
@@ -35,33 +35,32 @@
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:11:30.038Z"
+        "$date": "2026-01-07T13:00:55.237Z"
       },
       "type": "TRIGGER_SKIP",
-      "message": "Тригер: PAR SIM (305) between 100-300 - не съвпадна",
+      "message": "Тригер: PAR SIM (60) between 100-300 - не съвпадна",
       "metadata": {
         "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": null,
         "triggerId": "tr_1767776080005_ucj6o18qp",
-        "sensorValue": 305,
+        "sensorValue": 60,
         "condition": "between 100-300"
       }
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:12:00.069Z"
+        "$date": "2026-01-07T13:01:00.127Z"
       },
       "type": "FLOW_EXECUTED",
       "message": "Стартиран поток: StartStop NEW",
       "metadata": {
-        "sessionId": "695e3f800374fb190bb7d288",
+        "sessionId": "695e590c4a073efe9b2f9f66",
         "flowId": "prog_test_nov_ad"
       },
-      "executionSessionId": "695e3f800374fb190bb7d288"
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:12:00.143Z"
+        "$date": "2026-01-07T13:01:00.309Z"
       },
       "type": "INFO",
       "message": "📊 Сензор Темп: Read 22 C",
@@ -75,7 +74,7 @@
           "primaryValue": 22,
           "primaryUnit": "C",
           "strategy": "linear",
-          "durationMs": 48,
+          "durationMs": 122,
           "deviceId": "695e20bb92c768e3f5d01e0d",
           "deviceName": "DTH22 SIM",
           "resourceRole": "temp",
@@ -104,19 +103,19 @@
             "activeStrategy": "linear"
           }
         },
-        "sessionId": "695e3f800374fb190bb7d288",
+        "sessionId": "695e590c4a073efe9b2f9f66",
         "windowId": "tw_1767776032669_zvoij2xz2",
         "windowName": "Сутрин",
         "flowName": "StartStop NEW"
       },
-      "executionSessionId": "695e3f800374fb190bb7d288"
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:12:00.220Z"
+        "$date": "2026-01-07T13:01:00.388Z"
       },
       "type": "INFO",
-      "message": "📊 Сензор: Read 3 pH",
+      "message": "📊 Сензор: Read 6.21 pH",
       "metadata": {
         "blockId": "SENSOR_READ_1767776623104",
         "blockType": "SENSOR_READ",
@@ -124,812 +123,10 @@
         "success": true,
         "logData": {
           "action": "READ",
-          "primaryValue": 3,
-          "primaryUnit": "pH",
-          "strategy": "ph_smart",
-          "durationMs": 64,
-          "deviceId": "695cd1fc4e26582a9ad753fa",
-          "deviceName": "PH SIM",
-          "resourceRole": "ph",
-          "measurements": [
-            {
-              "key": "ph",
-              "value": 3,
-              "unit": "pH",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "value": 133.33333333333331,
-            "baseHwValue": 133.33333333333331,
-            "baseHwUnit": "adc",
-            "baseLogValue": 3,
-            "baseLogUnit": "pH",
-            "activeStrategy": "ph_smart",
-            "vMeas": 651.7,
-            "vRef": 5,
-            "neutralMv": 1955,
-            "temp": 25,
-            "isPolStd": false,
-            "points": 2,
-            "slopeAcid": 325.84,
-            "slopeAlkali": 325.84,
-            "raw_pH": 3
-          }
-        },
-        "sessionId": "695e3f800374fb190bb7d288",
-        "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": "Сутрин",
-        "flowName": "StartStop NEW"
-      },
-      "executionSessionId": "695e3f800374fb190bb7d288"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:12:00.276Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сенозор ЕС: Read 1 mS/cm",
-      "metadata": {
-        "blockId": "SENSOR_READ_1767776646455",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сенозор ЕС",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 1,
-          "primaryUnit": "mS/cm",
-          "strategy": "ec_smart",
-          "durationMs": 27,
-          "deviceId": "695cf8f309a10176b895f574",
-          "deviceName": "EC SIM",
-          "resourceRole": "ec",
-          "measurements": [
-            {
-              "key": "ec",
-              "value": 1000,
-              "unit": "µS/cm",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "value": 205.46952123484783,
-            "baseHwValue": 205.46952123484783,
-            "baseHwUnit": "µS/cm",
-            "baseLogValue": 1000,
-            "baseLogUnit": "µS/cm",
-            "activeStrategy": "ec_smart",
-            "vMeas": 1004.2,
-            "temp": 25,
-            "ecRaw": 1000,
-            "points": 2,
-            "beta": 0.02
-          }
-        },
-        "sessionId": "695e3f800374fb190bb7d288",
-        "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": "Сутрин",
-        "flowName": "StartStop NEW"
-      },
-      "executionSessionId": "695e3f800374fb190bb7d288"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:12:00.320Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор ГР: Read 60 L",
-      "metadata": {
-        "blockId": "SENSOR_READ_1767776711990",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 35,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e3f800374fb190bb7d288",
-        "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": "Сутрин",
-        "flowName": "StartStop NEW"
-      },
-      "executionSessionId": "695e3f800374fb190bb7d288"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:12:02.369Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Помпа рН+: Dosed 2doses",
-      "metadata": {
-        "blockId": "ACTUATOR_SET_1767778082120",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Помпа рН+",
-        "success": true,
-        "logData": {
-          "action": "DOSE",
-          "strategy": "volumetric",
-          "primaryValue": 2,
-          "primaryUnit": "doses",
-          "durationMs": 2000,
-          "calculatedVolumeMl": 2,
-          "deviceId": "695e15240b9faf24ff1c06ff",
-          "deviceName": "Pump рН+ SIM",
-          "resourceRole": "ph_up"
-        },
-        "sessionId": "695e3f800374fb190bb7d288",
-        "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": "Сутрин",
-        "flowName": "StartStop NEW"
-      },
-      "executionSessionId": "695e3f800374fb190bb7d288"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:12:22.402Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Разтвор А Доза: Dosed 4doses",
-      "metadata": {
-        "blockId": "ACTUATOR_SET_1767780233428",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Разтвор А Доза",
-        "success": true,
-        "logData": {
-          "action": "DOSE",
-          "strategy": "volumetric",
-          "primaryValue": 4,
-          "primaryUnit": "doses",
-          "durationMs": 20000,
-          "calculatedVolumeMl": 200,
-          "deviceId": "695e2f57c434325f8fcb40d1",
-          "deviceName": "Pump A SIM",
-          "resourceRole": "nutrient_a"
-        },
-        "sessionId": "695e3f800374fb190bb7d288",
-        "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": "Сутрин",
-        "flowName": "StartStop NEW"
-      },
-      "executionSessionId": "695e3f800374fb190bb7d288"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:12:32.444Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Разтвор А мл: Dosed 100ml",
-      "metadata": {
-        "blockId": "generic_1767780255185",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Разтвор А мл",
-        "success": true,
-        "logData": {
-          "action": "DOSE",
-          "strategy": "volumetric",
-          "primaryValue": 100,
-          "primaryUnit": "ml",
-          "durationMs": 10000,
-          "calculatedVolumeMl": 100,
-          "deviceId": "695e2f57c434325f8fcb40d1",
-          "deviceName": "Pump A SIM",
-          "resourceRole": "nutrient_a"
-        },
-        "sessionId": "695e3f800374fb190bb7d288",
-        "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": "Сутрин",
-        "flowName": "StartStop NEW"
-      },
-      "executionSessionId": "695e3f800374fb190bb7d288"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:12:42.492Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Senzor: Dosed 2doses",
-      "metadata": {
-        "blockId": "generic_1767781988254",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Senzor",
-        "success": true,
-        "logData": {
-          "action": "DOSE",
-          "strategy": "volumetric",
-          "primaryValue": 2,
-          "primaryUnit": "doses",
-          "durationMs": 10000,
-          "calculatedVolumeMl": 100,
-          "deviceId": "695e3634f65986265d5506f9",
-          "deviceName": "Pump B SIM",
-          "resourceRole": "nutrient_b"
-        },
-        "sessionId": "695e3f800374fb190bb7d288",
-        "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": "Сутрин",
-        "flowName": "StartStop NEW"
-      },
-      "executionSessionId": "695e3f800374fb190bb7d288"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:12:50.012Z"
-      },
-      "type": "WINDOW_EVENT",
-      "message": "Прозорец \"Сутрин\" завърши (Изтекло време)",
-      "metadata": {
-        "windowId": "tw_1767776032669_zvoij2xz2",
-        "windowName": "Сутрин"
-      }
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:14:00.016Z"
-      },
-      "type": "WINDOW_EVENT",
-      "message": "Прозорец \"Прозорец 2\" стартира",
-      "metadata": {
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2"
-      }
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:14:00.042Z"
-      },
-      "type": "TRIGGER_SKIP",
-      "message": "Тригер: Mois SIM (25) < 20 - не съвпадна",
-      "metadata": {
-        "windowId": "tw_1767783940364_paws173s2",
-        "triggerId": "tr_1767783949188_kym599qqr",
-        "sensorValue": 25,
-        "condition": "< 20"
-      }
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:10.013Z"
-      },
-      "type": "TRIGGER_MATCH",
-      "message": "Тригер: Mois SIM (15) < 20",
-      "metadata": {
-        "windowId": "tw_1767783940364_paws173s2",
-        "value": 15
-      }
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:10.038Z"
-      },
-      "type": "FLOW_EXECUTED",
-      "message": "Стартиран поток: pH Sim",
-      "metadata": {
-        "sessionId": "695e412e0374fb190bb7d509",
-        "flowId": "prog_test_nov_ad"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:10.096Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Цикъл рН+: Iteration 1: 3.00 <= 6.20 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767603818056",
-        "blockType": "LOOP",
-        "blockLabel": "Цикъл рН+",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 3,
-          "rightValue": 6.2,
-          "operator": "<=",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:10.093Z"
-      },
-      "type": "INFO",
-      "message": "❓ Условие: 3.00 < 6.20 => TRUE",
-      "metadata": {
-        "blockId": "IF_1767603252978",
-        "blockType": "IF",
-        "blockLabel": "Условие",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 3,
-          "rightValue": 6.2,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "comparison"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:10.091Z"
-      },
-      "type": "INFO",
-      "message": "❓ Условие: 3.00 == 6.20 => FALSE",
-      "metadata": {
-        "blockId": "IF_1767603196469",
-        "blockType": "IF",
-        "blockLabel": "Условие",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 0,
-          "primaryUnit": "bool",
-          "leftValue": 3,
-          "rightValue": 6.2,
-          "operator": "==",
-          "tolerance": 0,
-          "strategy": "comparison"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:10.087Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор рН: Read 3 pH",
-      "metadata": {
-        "blockId": "SENSOR_READ_1767602172874",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор рН",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 3,
-          "primaryUnit": "pH",
-          "strategy": "ph_smart",
-          "durationMs": 28,
-          "deviceId": "695cd1fc4e26582a9ad753fa",
-          "deviceName": "PH SIM",
-          "resourceRole": "ph",
-          "measurements": [
-            {
-              "key": "ph",
-              "value": 3,
-              "unit": "pH",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "value": 133.33333333333331,
-            "baseHwValue": 133.33333333333331,
-            "baseHwUnit": "adc",
-            "baseLogValue": 3,
-            "baseLogUnit": "pH",
-            "activeStrategy": "ph_smart",
-            "vMeas": 651.7,
-            "vRef": 5,
-            "neutralMv": 1955,
-            "temp": 25,
-            "isPolStd": false,
-            "points": 2,
-            "slopeAcid": 325.84,
-            "slopeAlkali": 325.84,
-            "raw_pH": 3
-          }
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:12.148Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Помпа рН+: Dosed 2doses",
-      "metadata": {
-        "blockId": "ACTUATOR_SET_1767603376554",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Помпа рН+",
-        "success": true,
-        "logData": {
-          "action": "DOSE",
-          "strategy": "volumetric",
-          "primaryValue": 2,
-          "primaryUnit": "doses",
-          "durationMs": 2000,
-          "calculatedVolumeMl": 2,
-          "deviceId": "695e15240b9faf24ff1c06ff",
-          "deviceName": "Pump рН+ SIM",
-          "resourceRole": "ph_up"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:32.189Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Разбъркване: Pulsed ON for 20.0s",
-      "metadata": {
-        "blockId": "ACTUATOR_SET_1767603706936",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Разбъркване",
-        "success": true,
-        "logData": {
-          "action": "PULSE_ON",
-          "strategy": "time_based",
-          "primaryValue": 20,
-          "primaryUnit": "s",
-          "durationMs": 20000,
-          "deviceId": "695e1dde92c768e3f5d01336",
-          "deviceName": "Pump Mix SIM",
-          "resourceRole": "mixer"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:32.221Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор рН: Read 3 pH",
-      "metadata": {
-        "blockId": "generic_1767603917220",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор рН",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 3,
-          "primaryUnit": "pH",
-          "strategy": "ph_smart",
-          "durationMs": 23,
-          "deviceId": "695cd1fc4e26582a9ad753fa",
-          "deviceName": "PH SIM",
-          "resourceRole": "ph",
-          "measurements": [
-            {
-              "key": "ph",
-              "value": 3,
-              "unit": "pH",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "value": 133.33333333333331,
-            "baseHwValue": 133.33333333333331,
-            "baseHwUnit": "adc",
-            "baseLogValue": 3,
-            "baseLogUnit": "pH",
-            "activeStrategy": "ph_smart",
-            "vMeas": 651.7,
-            "vRef": 5,
-            "neutralMv": 1955,
-            "temp": 25,
-            "isPolStd": false,
-            "points": 2,
-            "slopeAcid": 325.84,
-            "slopeAlkali": 325.84,
-            "raw_pH": 3
-          }
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:33.225Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Цикъл рН+: Iteration 2: 3.00 <= 6.20 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767603818056",
-        "blockType": "LOOP",
-        "blockLabel": "Цикъл рН+",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 3,
-          "rightValue": 6.2,
-          "operator": "<=",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:35.263Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Помпа рН+: Dosed 2doses",
-      "metadata": {
-        "blockId": "ACTUATOR_SET_1767603376554",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Помпа рН+",
-        "success": true,
-        "logData": {
-          "action": "DOSE",
-          "strategy": "volumetric",
-          "primaryValue": 2,
-          "primaryUnit": "doses",
-          "durationMs": 2000,
-          "calculatedVolumeMl": 2,
-          "deviceId": "695e15240b9faf24ff1c06ff",
-          "deviceName": "Pump рН+ SIM",
-          "resourceRole": "ph_up"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:55.315Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Разбъркване: Pulsed ON for 20.0s",
-      "metadata": {
-        "blockId": "ACTUATOR_SET_1767603706936",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Разбъркване",
-        "success": true,
-        "logData": {
-          "action": "PULSE_ON",
-          "strategy": "time_based",
-          "primaryValue": 20,
-          "primaryUnit": "s",
-          "durationMs": 20000,
-          "deviceId": "695e1dde92c768e3f5d01336",
-          "deviceName": "Pump Mix SIM",
-          "resourceRole": "mixer"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:55.348Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор рН: Read 5 pH",
-      "metadata": {
-        "blockId": "generic_1767603917220",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор рН",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 5,
-          "primaryUnit": "pH",
-          "strategy": "ph_smart",
-          "durationMs": 21,
-          "deviceId": "695cd1fc4e26582a9ad753fa",
-          "deviceName": "PH SIM",
-          "resourceRole": "ph",
-          "measurements": [
-            {
-              "key": "ph",
-              "value": 5,
-              "unit": "pH",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "value": 266.6666666666667,
-            "baseHwValue": 266.6666666666667,
-            "baseHwUnit": "adc",
-            "baseLogValue": 5,
-            "baseLogUnit": "pH",
-            "activeStrategy": "ph_smart",
-            "vMeas": 1303.4,
-            "vRef": 5,
-            "neutralMv": 1955,
-            "temp": 25,
-            "isPolStd": false,
-            "points": 2,
-            "slopeAcid": 325.84,
-            "slopeAlkali": 325.84,
-            "raw_pH": 5
-          }
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:56.357Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Цикъл рН+: Iteration 3: 5.00 <= 6.20 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767603818056",
-        "blockType": "LOOP",
-        "blockLabel": "Цикъл рН+",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 5,
-          "rightValue": 6.2,
-          "operator": "<=",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:19:58.440Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Помпа рН+: Dosed 2doses",
-      "metadata": {
-        "blockId": "ACTUATOR_SET_1767603376554",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Помпа рН+",
-        "success": true,
-        "logData": {
-          "action": "DOSE",
-          "strategy": "volumetric",
-          "primaryValue": 2,
-          "primaryUnit": "doses",
-          "durationMs": 2000,
-          "calculatedVolumeMl": 2,
-          "deviceId": "695e15240b9faf24ff1c06ff",
-          "deviceName": "Pump рН+ SIM",
-          "resourceRole": "ph_up"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:18.480Z"
-      },
-      "type": "INFO",
-      "message": "⚡ Разбъркване: Pulsed ON for 20.0s",
-      "metadata": {
-        "blockId": "ACTUATOR_SET_1767603706936",
-        "blockType": "ACTUATOR_SET",
-        "blockLabel": "Разбъркване",
-        "success": true,
-        "logData": {
-          "action": "PULSE_ON",
-          "strategy": "time_based",
-          "primaryValue": 20,
-          "primaryUnit": "s",
-          "durationMs": 20000,
-          "deviceId": "695e1dde92c768e3f5d01336",
-          "deviceName": "Pump Mix SIM",
-          "resourceRole": "mixer"
-        },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
-      },
-      "executionSessionId": "695e412e0374fb190bb7d509"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:18.541Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор рН: Read 6.21 pH",
-      "metadata": {
-        "blockId": "generic_1767603917220",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор рН",
-        "success": true,
-        "logData": {
-          "action": "READ",
           "primaryValue": 6.21,
           "primaryUnit": "pH",
           "strategy": "ph_smart",
-          "durationMs": 41,
+          "durationMs": 35,
           "deviceId": "695cd1fc4e26582a9ad753fa",
           "deviceName": "PH SIM",
           "resourceRole": "ph",
@@ -960,59 +157,1132 @@
             "raw_pH": 6.21
           }
         },
-        "sessionId": "695e412e0374fb190bb7d509",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "pH Sim"
+        "sessionId": "695e590c4a073efe9b2f9f66",
+        "windowId": "tw_1767776032669_zvoij2xz2",
+        "windowName": "Сутрин",
+        "flowName": "StartStop NEW"
       },
-      "executionSessionId": "695e412e0374fb190bb7d509"
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:19.548Z"
+        "$date": "2026-01-07T13:01:00.478Z"
       },
       "type": "INFO",
-      "message": "🔄 Цикъл рН+: Iteration 4: 6.21 <= 6.20 => FALSE (Done)",
+      "message": "📊 Сенозор ЕС: Read 1 mS/cm",
       "metadata": {
-        "blockId": "LOOP_1767603818056",
-        "blockType": "LOOP",
-        "blockLabel": "Цикъл рН+",
+        "blockId": "SENSOR_READ_1767776646455",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сенозор ЕС",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 1,
+          "primaryUnit": "mS/cm",
+          "strategy": "ec_smart",
+          "durationMs": 53,
+          "deviceId": "695cf8f309a10176b895f574",
+          "deviceName": "EC SIM",
+          "resourceRole": "ec",
+          "measurements": [
+            {
+              "key": "ec",
+              "value": 1000,
+              "unit": "µS/cm",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "value": 205.46952123484783,
+            "baseHwValue": 205.46952123484783,
+            "baseHwUnit": "µS/cm",
+            "baseLogValue": 1000,
+            "baseLogUnit": "µS/cm",
+            "activeStrategy": "ec_smart",
+            "vMeas": 1004.2,
+            "temp": 25,
+            "ecRaw": 1000,
+            "points": 2,
+            "beta": 0.02
+          }
+        },
+        "sessionId": "695e590c4a073efe9b2f9f66",
+        "windowId": "tw_1767776032669_zvoij2xz2",
+        "windowName": "Сутрин",
+        "flowName": "StartStop NEW"
+      },
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:01:00.517Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор ГР: Read 20 L",
+      "metadata": {
+        "blockId": "SENSOR_READ_1767776711990",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 20,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 23,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 84,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 20,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 84,
+            "baseHwValue": 84,
+            "baseHwUnit": "mm",
+            "baseLogValue": 20,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e590c4a073efe9b2f9f66",
+        "windowId": "tw_1767776032669_zvoij2xz2",
+        "windowName": "Сутрин",
+        "flowName": "StartStop NEW"
+      },
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:01:02.580Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН+: Dosed 2doses",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767778082120",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН+",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 2,
+          "primaryUnit": "doses",
+          "durationMs": 2000,
+          "calculatedVolumeMl": 2,
+          "deviceId": "695e15240b9faf24ff1c06ff",
+          "deviceName": "Pump рН+ SIM",
+          "resourceRole": "ph_up"
+        },
+        "sessionId": "695e590c4a073efe9b2f9f66",
+        "windowId": "tw_1767776032669_zvoij2xz2",
+        "windowName": "Сутрин",
+        "flowName": "StartStop NEW"
+      },
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:01:22.619Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разтвор А Доза: Dosed 4doses",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767780233428",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разтвор А Доза",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 4,
+          "primaryUnit": "doses",
+          "durationMs": 20000,
+          "calculatedVolumeMl": 200,
+          "deviceId": "695e2f57c434325f8fcb40d1",
+          "deviceName": "Pump A SIM",
+          "resourceRole": "nutrient_a"
+        },
+        "sessionId": "695e590c4a073efe9b2f9f66",
+        "windowId": "tw_1767776032669_zvoij2xz2",
+        "windowName": "Сутрин",
+        "flowName": "StartStop NEW"
+      },
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:01:32.658Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разтвор А мл: Dosed 100ml",
+      "metadata": {
+        "blockId": "generic_1767780255185",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разтвор А мл",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 100,
+          "primaryUnit": "ml",
+          "durationMs": 10000,
+          "calculatedVolumeMl": 100,
+          "deviceId": "695e2f57c434325f8fcb40d1",
+          "deviceName": "Pump A SIM",
+          "resourceRole": "nutrient_a"
+        },
+        "sessionId": "695e590c4a073efe9b2f9f66",
+        "windowId": "tw_1767776032669_zvoij2xz2",
+        "windowName": "Сутрин",
+        "flowName": "StartStop NEW"
+      },
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:01:42.695Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Senzor: Dosed 2doses",
+      "metadata": {
+        "blockId": "generic_1767781988254",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Senzor",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 2,
+          "primaryUnit": "doses",
+          "durationMs": 10000,
+          "calculatedVolumeMl": 100,
+          "deviceId": "695e3634f65986265d5506f9",
+          "deviceName": "Pump B SIM",
+          "resourceRole": "nutrient_b"
+        },
+        "sessionId": "695e590c4a073efe9b2f9f66",
+        "windowId": "tw_1767776032669_zvoij2xz2",
+        "windowName": "Сутрин",
+        "flowName": "StartStop NEW"
+      },
+      "executionSessionId": "695e590c4a073efe9b2f9f66"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:01:50.019Z"
+      },
+      "type": "WINDOW_EVENT",
+      "message": "Прозорец \"Сутрин\" завърши (Изтекло време)",
+      "metadata": {
+        "windowId": "tw_1767776032669_zvoij2xz2",
+        "windowName": "Сутрин"
+      }
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:00.027Z"
+      },
+      "type": "WINDOW_EVENT",
+      "message": "Прозорец \"Прозорец 2\" стартира",
+      "metadata": {
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2"
+      }
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:00.074Z"
+      },
+      "type": "TRIGGER_MATCH",
+      "message": "Тригер: Mois SIM (15) < 20",
+      "metadata": {
+        "windowId": "tw_1767783940364_paws173s2",
+        "value": 15
+      }
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:00.105Z"
+      },
+      "type": "FLOW_EXECUTED",
+      "message": "Стартиран поток: pH Sim",
+      "metadata": {
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "flowId": "prog_test_nov_ad"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:00.293Z"
+      },
+      "type": "INFO",
+      "message": "❓ Условие: 6.21 == 6.00 => FALSE",
+      "metadata": {
+        "blockId": "IF_1767603196469",
+        "blockType": "IF",
+        "blockLabel": "Условие",
         "success": true,
         "logData": {
           "action": "CHECK",
           "primaryValue": 0,
           "primaryUnit": "bool",
           "leftValue": 6.21,
-          "rightValue": 6.2,
-          "operator": "<=",
+          "rightValue": 6,
+          "operator": "==",
           "tolerance": 0,
-          "strategy": "loop_check"
+          "strategy": "comparison"
         },
-        "sessionId": "695e412e0374fb190bb7d509",
+        "sessionId": "695e59844a073efe9b2fa1fc",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "pH Sim"
       },
-      "executionSessionId": "695e412e0374fb190bb7d509"
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:19.589Z"
+        "$date": "2026-01-07T13:03:00.295Z"
+      },
+      "type": "INFO",
+      "message": "❓ Условие: 6.21 < 6.00 => FALSE",
+      "metadata": {
+        "blockId": "IF_1767603252978",
+        "blockType": "IF",
+        "blockLabel": "Условие",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 0,
+          "primaryUnit": "bool",
+          "leftValue": 6.21,
+          "rightValue": 6,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "comparison"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:00.256Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 6.21 pH",
+      "metadata": {
+        "blockId": "SENSOR_READ_1767602172874",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 6.21,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 84,
+          "deviceId": "695cd1fc4e26582a9ad753fa",
+          "deviceName": "PH SIM",
+          "resourceRole": "ph",
+          "measurements": [
+            {
+              "key": "ph",
+              "value": 6.21,
+              "unit": "pH",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "value": 347.33333333333337,
+            "baseHwValue": 347.33333333333337,
+            "baseHwUnit": "adc",
+            "baseLogValue": 6.21,
+            "baseLogUnit": "pH",
+            "activeStrategy": "ph_smart",
+            "vMeas": 1697.6,
+            "vRef": 5,
+            "neutralMv": 1955,
+            "temp": 25,
+            "isPolStd": false,
+            "points": 2,
+            "slopeAcid": 325.84,
+            "slopeAlkali": 325.84,
+            "raw_pH": 6.21
+          }
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:00.299Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН-: Iteration 1: 6.21 >= 6.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "loop_1767603966706",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН-",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 6.21,
+          "rightValue": 6,
+          "operator": ">=",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 1
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:01.427Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН-: Dosed 1doses",
+      "metadata": {
+        "blockId": "generic_1767603662823",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН-",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1000,
+          "calculatedVolumeMl": 1,
+          "deviceId": "695e1dad92c768e3f5d01280",
+          "deviceName": "Pump pH- SIM",
+          "resourceRole": "ph_down"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:16.460Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разбъркване: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "generic_1767604016675",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разбъркване",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000,
+          "deviceId": "695e1dde92c768e3f5d01336",
+          "deviceName": "Pump Mix SIM",
+          "resourceRole": "mixer"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:16.495Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 6.21 pH",
+      "metadata": {
+        "blockId": "generic_1767604021323",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 6.21,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 26,
+          "deviceId": "695cd1fc4e26582a9ad753fa",
+          "deviceName": "PH SIM",
+          "resourceRole": "ph",
+          "measurements": [
+            {
+              "key": "ph",
+              "value": 6.21,
+              "unit": "pH",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "value": 347.33333333333337,
+            "baseHwValue": 347.33333333333337,
+            "baseHwUnit": "adc",
+            "baseLogValue": 6.21,
+            "baseLogUnit": "pH",
+            "activeStrategy": "ph_smart",
+            "vMeas": 1697.6,
+            "vRef": 5,
+            "neutralMv": 1955,
+            "temp": 25,
+            "isPolStd": false,
+            "points": 2,
+            "slopeAcid": 325.84,
+            "slopeAlkali": 325.84,
+            "raw_pH": 6.21
+          }
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:17.499Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН-: Iteration 2: 6.21 >= 6.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "loop_1767603966706",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН-",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 6.21,
+          "rightValue": 6,
+          "operator": ">=",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 2
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:18.545Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН-: Dosed 1doses",
+      "metadata": {
+        "blockId": "generic_1767603662823",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН-",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1000,
+          "calculatedVolumeMl": 1,
+          "deviceId": "695e1dad92c768e3f5d01280",
+          "deviceName": "Pump pH- SIM",
+          "resourceRole": "ph_down"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:33.587Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разбъркване: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "generic_1767604016675",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разбъркване",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000,
+          "deviceId": "695e1dde92c768e3f5d01336",
+          "deviceName": "Pump Mix SIM",
+          "resourceRole": "mixer"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:33.622Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 6.21 pH",
+      "metadata": {
+        "blockId": "generic_1767604021323",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 6.21,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 25,
+          "deviceId": "695cd1fc4e26582a9ad753fa",
+          "deviceName": "PH SIM",
+          "resourceRole": "ph",
+          "measurements": [
+            {
+              "key": "ph",
+              "value": 6.21,
+              "unit": "pH",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "value": 347.33333333333337,
+            "baseHwValue": 347.33333333333337,
+            "baseHwUnit": "adc",
+            "baseLogValue": 6.21,
+            "baseLogUnit": "pH",
+            "activeStrategy": "ph_smart",
+            "vMeas": 1697.6,
+            "vRef": 5,
+            "neutralMv": 1955,
+            "temp": 25,
+            "isPolStd": false,
+            "points": 2,
+            "slopeAcid": 325.84,
+            "slopeAlkali": 325.84,
+            "raw_pH": 6.21
+          }
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:34.641Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН-: Iteration 3: 6.21 >= 6.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "loop_1767603966706",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН-",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 6.21,
+          "rightValue": 6,
+          "operator": ">=",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 3
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:35.673Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН-: Dosed 1doses",
+      "metadata": {
+        "blockId": "generic_1767603662823",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН-",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1000,
+          "calculatedVolumeMl": 1,
+          "deviceId": "695e1dad92c768e3f5d01280",
+          "deviceName": "Pump pH- SIM",
+          "resourceRole": "ph_down"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:50.726Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разбъркване: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "generic_1767604016675",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разбъркване",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000,
+          "deviceId": "695e1dde92c768e3f5d01336",
+          "deviceName": "Pump Mix SIM",
+          "resourceRole": "mixer"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:50.782Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 6.21 pH",
+      "metadata": {
+        "blockId": "generic_1767604021323",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 6.21,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 38,
+          "deviceId": "695cd1fc4e26582a9ad753fa",
+          "deviceName": "PH SIM",
+          "resourceRole": "ph",
+          "measurements": [
+            {
+              "key": "ph",
+              "value": 6.21,
+              "unit": "pH",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "value": 347.33333333333337,
+            "baseHwValue": 347.33333333333337,
+            "baseHwUnit": "adc",
+            "baseLogValue": 6.21,
+            "baseLogUnit": "pH",
+            "activeStrategy": "ph_smart",
+            "vMeas": 1697.6,
+            "vRef": 5,
+            "neutralMv": 1955,
+            "temp": 25,
+            "isPolStd": false,
+            "points": 2,
+            "slopeAcid": 325.84,
+            "slopeAlkali": 325.84,
+            "raw_pH": 6.21
+          }
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:51.802Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН-: Iteration 4: 6.21 >= 6.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "loop_1767603966706",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН-",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 6.21,
+          "rightValue": 6,
+          "operator": ">=",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 4
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:03:52.861Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН-: Dosed 1doses",
+      "metadata": {
+        "blockId": "generic_1767603662823",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН-",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1000,
+          "calculatedVolumeMl": 1,
+          "deviceId": "695e1dad92c768e3f5d01280",
+          "deviceName": "Pump pH- SIM",
+          "resourceRole": "ph_down"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:07.918Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разбъркване: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "generic_1767604016675",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разбъркване",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000,
+          "deviceId": "695e1dde92c768e3f5d01336",
+          "deviceName": "Pump Mix SIM",
+          "resourceRole": "mixer"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:07.955Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 6.50 pH",
+      "metadata": {
+        "blockId": "generic_1767604021323",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 6.5,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 19,
+          "deviceId": "695cd1fc4e26582a9ad753fa",
+          "deviceName": "PH SIM",
+          "resourceRole": "ph",
+          "measurements": [
+            {
+              "key": "ph",
+              "value": 6.5,
+              "unit": "pH",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "value": 366.6666666666667,
+            "baseHwValue": 366.6666666666667,
+            "baseHwUnit": "adc",
+            "baseLogValue": 6.5,
+            "baseLogUnit": "pH",
+            "activeStrategy": "ph_smart",
+            "vMeas": 1792.1,
+            "vRef": 5,
+            "neutralMv": 1955,
+            "temp": 25,
+            "isPolStd": false,
+            "points": 2,
+            "slopeAcid": 325.84,
+            "slopeAlkali": 325.84,
+            "raw_pH": 6.5
+          }
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:08.971Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН-: Iteration 5: 6.50 >= 6.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "loop_1767603966706",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН-",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 6.5,
+          "rightValue": 6,
+          "operator": ">=",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 5
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:10.029Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Помпа рН-: Dosed 1doses",
+      "metadata": {
+        "blockId": "generic_1767603662823",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Помпа рН-",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 1,
+          "primaryUnit": "doses",
+          "durationMs": 1000,
+          "calculatedVolumeMl": 1,
+          "deviceId": "695e1dad92c768e3f5d01280",
+          "deviceName": "Pump pH- SIM",
+          "resourceRole": "ph_down"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:25.083Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разбъркване: Pulsed ON for 15.0s",
+      "metadata": {
+        "blockId": "generic_1767604016675",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разбъркване",
+        "success": true,
+        "logData": {
+          "action": "PULSE_ON",
+          "strategy": "time_based",
+          "primaryValue": 15,
+          "primaryUnit": "s",
+          "durationMs": 15000,
+          "deviceId": "695e1dde92c768e3f5d01336",
+          "deviceName": "Pump Mix SIM",
+          "resourceRole": "mixer"
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:25.123Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор рН: Read 5 pH",
+      "metadata": {
+        "blockId": "generic_1767604021323",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор рН",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 5,
+          "primaryUnit": "pH",
+          "strategy": "ph_smart",
+          "durationMs": 29,
+          "deviceId": "695cd1fc4e26582a9ad753fa",
+          "deviceName": "PH SIM",
+          "resourceRole": "ph",
+          "measurements": [
+            {
+              "key": "ph",
+              "value": 5,
+              "unit": "pH",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "value": 266.6666666666667,
+            "baseHwValue": 266.6666666666667,
+            "baseHwUnit": "adc",
+            "baseLogValue": 5,
+            "baseLogUnit": "pH",
+            "activeStrategy": "ph_smart",
+            "vMeas": 1303.4,
+            "vRef": 5,
+            "neutralMv": 1955,
+            "temp": 25,
+            "isPolStd": false,
+            "points": 2,
+            "slopeAcid": 325.84,
+            "slopeAlkali": 325.84,
+            "raw_pH": 5
+          }
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:26.137Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Цикъл рН-: Iteration 6: 5.00 >= 6.00 => FALSE (Done)",
+      "metadata": {
+        "blockId": "loop_1767603966706",
+        "blockType": "LOOP",
+        "blockLabel": "Цикъл рН-",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 0,
+          "primaryUnit": "bool",
+          "leftValue": 5,
+          "rightValue": 6,
+          "operator": ">=",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 6
+        },
+        "sessionId": "695e59844a073efe9b2fa1fc",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "pH Sim"
+      },
+      "executionSessionId": "695e59844a073efe9b2fa1fc"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:26.171Z"
       },
       "type": "FLOW_EXECUTED",
       "message": "Стартиран поток: Резервоар",
       "metadata": {
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "flowId": "prog_test_nov_ad"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:19.629Z"
+        "$date": "2026-01-07T13:04:26.223Z"
       },
       "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
       "metadata": {
         "blockId": "SENSOR_READ_1767702436022",
         "blockType": "SENSOR_READ",
@@ -1020,50 +1290,50 @@
         "success": true,
         "logData": {
           "action": "READ",
-          "primaryValue": 60,
+          "primaryValue": 20,
           "primaryUnit": "L",
           "strategy": "tank_volume",
-          "durationMs": 27,
+          "durationMs": 29,
           "deviceId": "695cf9d709a10176b895f66d",
           "deviceName": "Ultra SIM",
           "resourceRole": "volume",
           "measurements": [
             {
               "key": "distance",
-              "value": 192,
+              "value": 84,
               "unit": "mm",
               "isPrimary": false
             },
             {
               "key": "volume",
-              "value": 60,
+              "value": 20,
               "unit": "L",
               "isPrimary": true
             }
           ],
           "rawContext": {
             "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
+            "distance": 84,
+            "baseHwValue": 84,
             "baseHwUnit": "mm",
-            "baseLogValue": 60,
+            "baseLogValue": 20,
             "baseLogUnit": "L",
             "activeStrategy": "tank_volume"
           }
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:19.634Z"
+        "$date": "2026-01-07T13:04:26.228Z"
       },
       "type": "INFO",
-      "message": "❓ Condition (IF): 60.00 >= 100.00 => FALSE",
+      "message": "❓ Condition (IF): 20.00 >= 100.00 => FALSE",
       "metadata": {
         "blockId": "IF_1767702486445",
         "blockType": "IF",
@@ -1073,25 +1343,25 @@
           "action": "CHECK",
           "primaryValue": 0,
           "primaryUnit": "bool",
-          "leftValue": 60,
+          "leftValue": 20,
           "rightValue": 100,
           "operator": ">=",
           "tolerance": 0,
           "strategy": "comparison"
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:19.680Z"
+        "$date": "2026-01-07T13:04:26.272Z"
       },
       "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 1: 60.00 < 100.00 => TRUE (Continuing)",
+      "message": "🔄 Проверка ниво ГР: Iteration 1: 20.00 < 100.00 => TRUE (Continuing)",
       "metadata": {
         "blockId": "LOOP_1767702567019",
         "blockType": "LOOP",
@@ -1101,22 +1371,23 @@
           "action": "CHECK",
           "primaryValue": 1,
           "primaryUnit": "bool",
-          "leftValue": 60,
+          "leftValue": 20,
           "rightValue": 100,
           "operator": "<",
           "tolerance": 0,
-          "strategy": "loop_check"
+          "strategy": "loop_check",
+          "iteration": 1
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:19.678Z"
+        "$date": "2026-01-07T13:04:26.270Z"
       },
       "type": "INFO",
       "message": "⚡ Помпа Пълнене ON: Set ON (State: 1)",
@@ -1134,19 +1405,19 @@
           "deviceName": "Pump Irrigation SIM",
           "resourceRole": "none"
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:19.731Z"
+        "$date": "2026-01-07T13:04:26.303Z"
       },
       "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
       "metadata": {
         "blockId": "generic_1767702656664",
         "blockType": "SENSOR_READ",
@@ -1154,50 +1425,50 @@
         "success": true,
         "logData": {
           "action": "READ",
-          "primaryValue": 60,
+          "primaryValue": 20,
           "primaryUnit": "L",
           "strategy": "tank_volume",
-          "durationMs": 35,
+          "durationMs": 18,
           "deviceId": "695cf9d709a10176b895f66d",
           "deviceName": "Ultra SIM",
           "resourceRole": "volume",
           "measurements": [
             {
               "key": "distance",
-              "value": 192,
+              "value": 84,
               "unit": "mm",
               "isPrimary": false
             },
             {
               "key": "volume",
-              "value": 60,
+              "value": 20,
               "unit": "L",
               "isPrimary": true
             }
           ],
           "rawContext": {
             "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
+            "distance": 84,
+            "baseHwValue": 84,
             "baseHwUnit": "mm",
-            "baseLogValue": 60,
+            "baseLogValue": 20,
             "baseLogUnit": "L",
             "activeStrategy": "tank_volume"
           }
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:20.750Z"
+        "$date": "2026-01-07T13:04:27.314Z"
       },
       "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 2: 60.00 < 100.00 => TRUE (Continuing)",
+      "message": "🔄 Проверка ниво ГР: Iteration 2: 20.00 < 100.00 => TRUE (Continuing)",
       "metadata": {
         "blockId": "LOOP_1767702567019",
         "blockType": "LOOP",
@@ -1207,25 +1478,26 @@
           "action": "CHECK",
           "primaryValue": 1,
           "primaryUnit": "bool",
-          "leftValue": 60,
+          "leftValue": 20,
           "rightValue": 100,
           "operator": "<",
           "tolerance": 0,
-          "strategy": "loop_check"
+          "strategy": "loop_check",
+          "iteration": 2
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:20.784Z"
+        "$date": "2026-01-07T13:04:27.345Z"
       },
       "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
       "metadata": {
         "blockId": "generic_1767702656664",
         "blockType": "SENSOR_READ",
@@ -1233,50 +1505,50 @@
         "success": true,
         "logData": {
           "action": "READ",
-          "primaryValue": 60,
+          "primaryValue": 20,
           "primaryUnit": "L",
           "strategy": "tank_volume",
-          "durationMs": 25,
+          "durationMs": 18,
           "deviceId": "695cf9d709a10176b895f66d",
           "deviceName": "Ultra SIM",
           "resourceRole": "volume",
           "measurements": [
             {
               "key": "distance",
-              "value": 192,
+              "value": 84,
               "unit": "mm",
               "isPrimary": false
             },
             {
               "key": "volume",
-              "value": 60,
+              "value": 20,
               "unit": "L",
               "isPrimary": true
             }
           ],
           "rawContext": {
             "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
+            "distance": 84,
+            "baseHwValue": 84,
             "baseHwUnit": "mm",
-            "baseLogValue": 60,
+            "baseLogValue": 20,
             "baseLogUnit": "L",
             "activeStrategy": "tank_volume"
           }
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:21.789Z"
+        "$date": "2026-01-07T13:04:28.351Z"
       },
       "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 3: 60.00 < 100.00 => TRUE (Continuing)",
+      "message": "🔄 Проверка ниво ГР: Iteration 3: 20.00 < 100.00 => TRUE (Continuing)",
       "metadata": {
         "blockId": "LOOP_1767702567019",
         "blockType": "LOOP",
@@ -1286,25 +1558,26 @@
           "action": "CHECK",
           "primaryValue": 1,
           "primaryUnit": "bool",
-          "leftValue": 60,
+          "leftValue": 20,
           "rightValue": 100,
           "operator": "<",
           "tolerance": 0,
-          "strategy": "loop_check"
+          "strategy": "loop_check",
+          "iteration": 3
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:21.821Z"
+        "$date": "2026-01-07T13:04:28.378Z"
       },
       "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
       "metadata": {
         "blockId": "generic_1767702656664",
         "blockType": "SENSOR_READ",
@@ -1312,718 +1585,7 @@
         "success": true,
         "logData": {
           "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 22,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:22.825Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 4: 60.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 60,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:22.881Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 48,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:23.892Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 5: 60.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 60,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:23.928Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 21,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:24.931Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 6: 60.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 60,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:24.963Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 20,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:25.968Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 7: 60.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 60,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:26.041Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 19,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:27.059Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 8: 60.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 60,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:27.091Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 22,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:28.108Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 9: 60.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 60,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:28.135Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 19,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:29.143Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 10: 60.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 60,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:29.175Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 60 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 60,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 25,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 192,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 60,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 192,
-            "baseHwValue": 192,
-            "baseHwUnit": "mm",
-            "baseLogValue": 60,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:30.179Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 11: 60.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 60,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:30.212Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 8 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 8,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 21,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 51.6,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 8,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 51.6,
-            "baseHwValue": 51.6,
-            "baseHwUnit": "mm",
-            "baseLogValue": 8,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:31.220Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 12: 8.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 8,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:31.246Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 80 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 80,
+          "primaryValue": 20,
           "primaryUnit": "L",
           "strategy": "tank_volume",
           "durationMs": 17,
@@ -2033,40 +1595,40 @@
           "measurements": [
             {
               "key": "distance",
-              "value": 246,
+              "value": 84,
               "unit": "mm",
               "isPrimary": false
             },
             {
               "key": "volume",
-              "value": 80,
+              "value": 20,
               "unit": "L",
               "isPrimary": true
             }
           ],
           "rawContext": {
             "ok": 1,
-            "distance": 246,
-            "baseHwValue": 246,
+            "distance": 84,
+            "baseHwValue": 84,
             "baseHwUnit": "mm",
-            "baseLogValue": 80,
+            "baseLogValue": 20,
             "baseLogUnit": "L",
             "activeStrategy": "tank_volume"
           }
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:32.256Z"
+        "$date": "2026-01-07T13:04:29.385Z"
       },
       "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 13: 80.00 < 100.00 => TRUE (Continuing)",
+      "message": "🔄 Проверка ниво ГР: Iteration 4: 20.00 < 100.00 => TRUE (Continuing)",
       "metadata": {
         "blockId": "LOOP_1767702567019",
         "blockType": "LOOP",
@@ -2076,22 +1638,823 @@
           "action": "CHECK",
           "primaryValue": 1,
           "primaryUnit": "bool",
-          "leftValue": 80,
+          "leftValue": 20,
           "rightValue": 100,
           "operator": "<",
           "tolerance": 0,
-          "strategy": "loop_check"
+          "strategy": "loop_check",
+          "iteration": 4
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:32.315Z"
+        "$date": "2026-01-07T13:04:29.418Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 20,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 23,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 84,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 20,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 84,
+            "baseHwValue": 84,
+            "baseHwUnit": "mm",
+            "baseLogValue": 20,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:30.427Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 5: 20.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 20,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 5
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:30.461Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 20,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 24,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 84,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 20,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 84,
+            "baseHwValue": 84,
+            "baseHwUnit": "mm",
+            "baseLogValue": 20,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:31.477Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 6: 20.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 20,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 6
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:31.503Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 20,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 18,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 84,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 20,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 84,
+            "baseHwValue": 84,
+            "baseHwUnit": "mm",
+            "baseLogValue": 20,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:32.518Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 7: 20.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 20,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 7
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:32.589Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 20,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 61,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 84,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 20,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 84,
+            "baseHwValue": 84,
+            "baseHwUnit": "mm",
+            "baseLogValue": 20,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:33.596Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 8: 20.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 20,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 8
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:33.622Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 20 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 20,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 15,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 84,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 20,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 84,
+            "baseHwValue": 84,
+            "baseHwUnit": "mm",
+            "baseLogValue": 20,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:34.631Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 9: 20.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 20,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 9
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:34.657Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 30 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 30,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 17,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 111,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 30,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 111,
+            "baseHwValue": 111,
+            "baseHwUnit": "mm",
+            "baseLogValue": 30,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:35.673Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 10: 30.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 30,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 10
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:35.701Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 30 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 30,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 18,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 111,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 30,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 111,
+            "baseHwValue": 111,
+            "baseHwUnit": "mm",
+            "baseLogValue": 30,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:36.711Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 11: 30.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 30,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 11
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:36.738Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 40 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 40,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 16,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 138,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 40,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 138,
+            "baseHwValue": 138,
+            "baseHwUnit": "mm",
+            "baseLogValue": 40,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:37.746Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 12: 40.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 40,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 12
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:37.768Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 50 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 50,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 15,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 165,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 50,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 165,
+            "baseHwValue": 165,
+            "baseHwUnit": "mm",
+            "baseLogValue": 50,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:38.783Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 13: 50.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 50,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 13
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:38.808Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 50 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 50,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 18,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 165,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 50,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 165,
+            "baseHwValue": 165,
+            "baseHwUnit": "mm",
+            "baseLogValue": 50,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:39.815Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 14: 50.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 50,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 14
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:39.850Z"
       },
       "type": "INFO",
       "message": "📊 Сензор Ниво ГР: Read 80 L",
@@ -2105,7 +2468,7 @@
           "primaryValue": 80,
           "primaryUnit": "L",
           "strategy": "tank_volume",
-          "durationMs": 50,
+          "durationMs": 20,
           "deviceId": "695cf9d709a10176b895f66d",
           "deviceName": "Ultra SIM",
           "resourceRole": "volume",
@@ -2133,19 +2496,19 @@
             "activeStrategy": "tank_volume"
           }
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:33.322Z"
+        "$date": "2026-01-07T13:04:40.860Z"
       },
       "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 14: 80.00 < 100.00 => TRUE (Continuing)",
+      "message": "🔄 Проверка ниво ГР: Iteration 15: 80.00 < 100.00 => TRUE (Continuing)",
       "metadata": {
         "blockId": "LOOP_1767702567019",
         "blockType": "LOOP",
@@ -2159,21 +2522,22 @@
           "rightValue": 100,
           "operator": "<",
           "tolerance": 0,
-          "strategy": "loop_check"
+          "strategy": "loop_check",
+          "iteration": 15
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:33.351Z"
+        "$date": "2026-01-07T13:04:40.886Z"
       },
       "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 99 L",
+      "message": "📊 Сензор Ниво ГР: Read 80 L",
       "metadata": {
         "blockId": "generic_1767702656664",
         "blockType": "SENSOR_READ",
@@ -2181,244 +2545,7 @@
         "success": true,
         "logData": {
           "action": "READ",
-          "primaryValue": 99,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 21,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 297.3,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 99,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 297.3,
-            "baseHwValue": 297.3,
-            "baseHwUnit": "mm",
-            "baseLogValue": 99,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:34.361Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 15: 99.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 99,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:34.394Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 99 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 99,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 20,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 297.3,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 99,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 297.3,
-            "baseHwValue": 297.3,
-            "baseHwUnit": "mm",
-            "baseLogValue": 99,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:35.410Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 16: 99.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 99,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:35.442Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 10 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 10,
-          "primaryUnit": "L",
-          "strategy": "tank_volume",
-          "durationMs": 23,
-          "deviceId": "695cf9d709a10176b895f66d",
-          "deviceName": "Ultra SIM",
-          "resourceRole": "volume",
-          "measurements": [
-            {
-              "key": "distance",
-              "value": 57,
-              "unit": "mm",
-              "isPrimary": false
-            },
-            {
-              "key": "volume",
-              "value": 10,
-              "unit": "L",
-              "isPrimary": true
-            }
-          ],
-          "rawContext": {
-            "ok": 1,
-            "distance": 57,
-            "baseHwValue": 57,
-            "baseHwUnit": "mm",
-            "baseLogValue": 10,
-            "baseLogUnit": "L",
-            "activeStrategy": "tank_volume"
-          }
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:36.457Z"
-      },
-      "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 17: 10.00 < 100.00 => TRUE (Continuing)",
-      "metadata": {
-        "blockId": "LOOP_1767702567019",
-        "blockType": "LOOP",
-        "blockLabel": "Проверка ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "CHECK",
-          "primaryValue": 1,
-          "primaryUnit": "bool",
-          "leftValue": 10,
-          "rightValue": 100,
-          "operator": "<",
-          "tolerance": 0,
-          "strategy": "loop_check"
-        },
-        "sessionId": "695e41730374fb190bb7d5e7",
-        "windowId": "tw_1767783940364_paws173s2",
-        "windowName": "Прозорец 2",
-        "flowName": "Резервоар"
-      },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
-    },
-    {
-      "timestamp": {
-        "$date": "2026-01-07T11:20:36.484Z"
-      },
-      "type": "INFO",
-      "message": "📊 Сензор Ниво ГР: Read 101.00 L",
-      "metadata": {
-        "blockId": "generic_1767702656664",
-        "blockType": "SENSOR_READ",
-        "blockLabel": "Сензор Ниво ГР",
-        "success": true,
-        "logData": {
-          "action": "READ",
-          "primaryValue": 101.00000000000001,
+          "primaryValue": 80,
           "primaryUnit": "L",
           "strategy": "tank_volume",
           "durationMs": 19,
@@ -2428,40 +2555,120 @@
           "measurements": [
             {
               "key": "distance",
-              "value": 302.70000000000005,
+              "value": 246,
               "unit": "mm",
               "isPrimary": false
             },
             {
               "key": "volume",
-              "value": 101.00000000000001,
+              "value": 80,
               "unit": "L",
               "isPrimary": true
             }
           ],
           "rawContext": {
             "ok": 1,
-            "distance": 302.70000000000005,
-            "baseHwValue": 302.70000000000005,
+            "distance": 246,
+            "baseHwValue": 246,
             "baseHwUnit": "mm",
-            "baseLogValue": 101.00000000000001,
+            "baseLogValue": 80,
             "baseLogUnit": "L",
             "activeStrategy": "tank_volume"
           }
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:37.495Z"
+        "$date": "2026-01-07T13:04:41.898Z"
       },
       "type": "INFO",
-      "message": "🔄 Проверка ниво ГР: Iteration 18: 101.00 < 100.00 => FALSE (Done)",
+      "message": "🔄 Проверка ниво ГР: Iteration 16: 80.00 < 100.00 => TRUE (Continuing)",
+      "metadata": {
+        "blockId": "LOOP_1767702567019",
+        "blockType": "LOOP",
+        "blockLabel": "Проверка ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "CHECK",
+          "primaryValue": 1,
+          "primaryUnit": "bool",
+          "leftValue": 80,
+          "rightValue": 100,
+          "operator": "<",
+          "tolerance": 0,
+          "strategy": "loop_check",
+          "iteration": 16
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:41.927Z"
+      },
+      "type": "INFO",
+      "message": "📊 Сензор Ниво ГР: Read 100 L",
+      "metadata": {
+        "blockId": "generic_1767702656664",
+        "blockType": "SENSOR_READ",
+        "blockLabel": "Сензор Ниво ГР",
+        "success": true,
+        "logData": {
+          "action": "READ",
+          "primaryValue": 100,
+          "primaryUnit": "L",
+          "strategy": "tank_volume",
+          "durationMs": 21,
+          "deviceId": "695cf9d709a10176b895f66d",
+          "deviceName": "Ultra SIM",
+          "resourceRole": "volume",
+          "measurements": [
+            {
+              "key": "distance",
+              "value": 300,
+              "unit": "mm",
+              "isPrimary": false
+            },
+            {
+              "key": "volume",
+              "value": 100,
+              "unit": "L",
+              "isPrimary": true
+            }
+          ],
+          "rawContext": {
+            "ok": 1,
+            "distance": 300,
+            "baseHwValue": 300,
+            "baseHwUnit": "mm",
+            "baseLogValue": 100,
+            "baseLogUnit": "L",
+            "activeStrategy": "tank_volume"
+          }
+        },
+        "sessionId": "695e59da4a073efe9b2fa345",
+        "windowId": "tw_1767783940364_paws173s2",
+        "windowName": "Прозорец 2",
+        "flowName": "Резервоар"
+      },
+      "executionSessionId": "695e59da4a073efe9b2fa345"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T13:04:42.933Z"
+      },
+      "type": "INFO",
+      "message": "🔄 Проверка ниво ГР: Iteration 17: 100.00 < 100.00 => FALSE (Done)",
       "metadata": {
         "blockId": "LOOP_1767702567019",
         "blockType": "LOOP",
@@ -2471,22 +2678,23 @@
           "action": "CHECK",
           "primaryValue": 0,
           "primaryUnit": "bool",
-          "leftValue": 101.00000000000001,
+          "leftValue": 100,
           "rightValue": 100,
           "operator": "<",
           "tolerance": 0,
-          "strategy": "loop_check"
+          "strategy": "loop_check",
+          "iteration": 17
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:37.550Z"
+        "$date": "2026-01-07T13:04:42.957Z"
       },
       "type": "INFO",
       "message": "⚡ Помпа Пълнене OFF: Set OFF (State: 0)",
@@ -2504,16 +2712,16 @@
           "deviceName": "Pump Irrigation SIM",
           "resourceRole": "none"
         },
-        "sessionId": "695e41730374fb190bb7d5e7",
+        "sessionId": "695e59da4a073efe9b2fa345",
         "windowId": "tw_1767783940364_paws173s2",
         "windowName": "Прозорец 2",
         "flowName": "Резервоар"
       },
-      "executionSessionId": "695e41730374fb190bb7d5e7"
+      "executionSessionId": "695e59da4a073efe9b2fa345"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T11:20:40.008Z"
+        "$date": "2026-01-07T13:04:50.007Z"
       },
       "type": "WINDOW_EVENT",
       "message": "Прозорец \"Прозорец 2\" завърши (Изтекло време)",
@@ -2525,6 +2733,6 @@
   ],
   "isVisible": true,
   "updatedAt": {
-    "$date": "2026-01-07T11:20:40.009Z"
+    "$date": "2026-01-07T13:04:50.008Z"
   }
 }

@@ -167,7 +167,7 @@ export const analyticsService = {
 export interface ExecutionStep {
     id: string;
     timestamp: string; // ISO string from JSON
-    type: 'TRIGGER' | 'ACTION' | 'LOGIC' | 'ENVIRONMENT_SCAN' | 'FLOW_START' | 'FLOW_END' | 'ERROR';
+    type: 'TRIGGER' | 'ACTION' | 'LOGIC' | 'ENVIRONMENT_SCAN' | 'FLOW_START' | 'FLOW_END' | 'ERROR' | 'LOOP_SUMMARY';
     label: string;
     description?: string;
     status: 'SUCCESS' | 'FAILURE' | 'SKIPPED' | 'INFO';
@@ -178,8 +178,32 @@ export interface ExecutionStep {
         value: number;
         unit: string;
         isPrimary: boolean;
+        role?: string;
     }[];
     resourceRole?: string;
+
+    // Loop Support
+    loopStats?: {
+        iterations: number;
+        durationSeconds: number;
+        resources: Record<string, {
+            role: string;
+            type: 'SUM' | 'DELTA' | 'TREND' | 'NONE';
+            value: number;
+            unit: string;
+        }>;
+    };
+    children?: ExecutionStep[];
+}
+
+export interface ExecutionSession {
+    id: string;
+    type: 'TRIGGER_MATCH' | 'FALLBACK' | 'SCHEDULED' | 'MANUAL';
+    description: string;
+    startTime: string;
+    endTime: string;
+    steps: ExecutionStep[];
+    totals: Record<string, number>;
 }
 
 export interface ExecutionTrace {
@@ -187,11 +211,7 @@ export interface ExecutionTrace {
     windowName: string;
     startTime: string;
     endTime: string;
-    triggerInfo: {
-        type: string;
-        message: string;
-    } | null;
-    steps: ExecutionStep[];
+    sessions: ExecutionSession[];
     durationSeconds: number;
     totals: {
         dosedMl: number;
@@ -205,3 +225,4 @@ export interface SessionTimelineResponse {
     date: string;
     sessions: ExecutionTrace[];
 }
+

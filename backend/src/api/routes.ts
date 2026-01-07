@@ -90,6 +90,13 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/automation/status', AutomationController.getStatus);
     app.get('/api/system/status', AutomationController.getSystemStatus);
 
+    // Resource Roles Management
+    const resourceRoleController = new (require('./controllers/ResourceRoleController').ResourceRoleController)();
+    app.get('/api/system/roles', resourceRoleController.list);
+    app.post('/api/system/roles/sync', resourceRoleController.sync);
+    app.put('/api/system/roles/:key', resourceRoleController.update);
+
+
     // Session Routes
     // Session Routes
     app.get('/api/sessions/:id', SessionController.getSession);

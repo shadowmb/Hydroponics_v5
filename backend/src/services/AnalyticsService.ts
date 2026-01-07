@@ -1,6 +1,8 @@
 import { programDailyLogRepository } from '../modules/persistence/repositories/ProgramDailyLogRepository';
 import { ProgramDailyLogModel } from '../modules/persistence/schemas/ProgramDailyLog.schema';
 import { logger } from '../core/LoggerService';
+import ResourceRoleManager from './ResourceRoleManager';
+import { AnalyticsType } from '../models/ResourceRole';
 
 interface AnalyticsFilters {
     programId: string;
@@ -73,12 +75,12 @@ interface AnalyticsResponse {
     };
 }
 
-// ========== SESSION TRACE TYPES (REFACTORED) ==========
+// ========== SESSION TRACE TYPES (REFACTORED V2) ==========
 
-interface ExecutionStep {
+export interface ExecutionStep {
     id: string;
     timestamp: Date;
-    type: 'TRIGGER' | 'ACTION' | 'LOGIC' | 'ENVIRONMENT_SCAN' | 'FLOW_START' | 'FLOW_END' | 'ERROR';
+    type: 'TRIGGER' | 'ACTION' | 'LOGIC' | 'ENVIRONMENT_SCAN' | 'FLOW_START' | 'FLOW_END' | 'ERROR' | 'LOOP_SUMMARY';
     label: string;
     description?: string;
     status: 'SUCCESS' | 'FAILURE' | 'SKIPPED' | 'INFO';
@@ -90,20 +92,42 @@ interface ExecutionStep {
         value: number;
         unit: string;
         isPrimary: boolean;
+        role?: string;
     }[];
-    resourceRole?: string; // Added resourceRole for better identification
+    resourceRole?: string;
+    // For Loop Summary
+    loopStats?: {
+        iterations: number;
+        durationSeconds: number;
+        resources: Record<string, {
+            role: string;
+            type: 'SUM' | 'DELTA' | 'TREND' | 'NONE';
+            value: number; // Sum or Delta or End
+            startValue?: number; // For Delta/Trend
+            endValue?: number;   // For Delta/Trend
+            unit: string;
+        }>;
+    };
+    // If it's a folded loop, it contains children
+    children?: ExecutionStep[];
 }
 
-interface ExecutionTrace {
+export interface ExecutionSession {
+    id: string;
+    type: 'TRIGGER_MATCH' | 'FALLBACK' | 'SCHEDULED' | 'MANUAL';
+    description: string; // e.g. "Trigger: Moist < 30%"
+    startTime: Date;
+    endTime: Date;
+    steps: ExecutionStep[];
+    totals: Record<string, number>; // Totals just for this session
+}
+
+export interface ExecutionTrace {
     windowId: string;
     windowName: string;
     startTime: Date;
     endTime: Date;
-    triggerInfo: {
-        type: string;
-        message: string;
-    } | null;
-    steps: ExecutionStep[];
+    sessions: ExecutionSession[]; // New Hierarchy
     durationSeconds: number;
     totals: {
         dosedMl: number;
@@ -503,232 +527,364 @@ export class AnalyticsService {
      * Get execution trace - detailed diagnostic view of session execution
      */
     async getSessionTimeline(programId: string, date: string): Promise<ExecutionTrace[]> {
-        logger.info(`[AnalyticsService] Getting session timeline for program ${programId} on ${date}`);
+        logger.info(`[AnalyticsService] Getting session timeline V2 for program ${programId} on ${date}`);
 
-        // Fetch all logs for this program and date
-        const logs = await ProgramDailyLogModel.find({
-            programId,
-            date
-        }).lean();
+        const logs = await ProgramDailyLogModel.find({ programId, date }).lean();
+        if (!logs || logs.length === 0) return [];
 
-        if (!logs || logs.length === 0) {
-            return [];
-        }
+        const rolesList = await ResourceRoleManager.getAllRoles();
+        const roleMap = new Map<string, { type: AnalyticsType, unit?: string }>();
+        rolesList.forEach(r => roleMap.set(r.key, { type: r.analyticsType, unit: r.unit }));
 
-        // Flatten all events from all log documents
         const allEvents: any[] = [];
         for (const log of logs) {
-            if (log.events && Array.isArray(log.events)) {
-                allEvents.push(...log.events);
-            }
+            if (log.events && Array.isArray(log.events)) allEvents.push(...log.events);
         }
-
-        // Sort by timestamp
         allEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-        // Group by windowId
-        const windowGroups: Map<string, any[]> = new Map();
-
+        const windowGroups = new Map<string, any[]>();
         for (const event of allEvents) {
             const windowId = event.metadata?.windowId || 'unknown';
-            if (!windowGroups.has(windowId)) {
-                windowGroups.set(windowId, []);
-            }
+            if (!windowGroups.has(windowId)) windowGroups.set(windowId, []);
             windowGroups.get(windowId)!.push(event);
         }
 
-        // Build traces
         const traces: ExecutionTrace[] = [];
 
         for (const [windowId, events] of windowGroups) {
             if (windowId === 'unknown' || events.length === 0) continue;
 
             const windowName = events[0].metadata?.windowName || windowId;
-            const steps: ExecutionStep[] = [];
-            let totalDosedMl = 0;
-            const totalsByRole: Record<string, number> = {};
+            const startTime = new Date(events[0].timestamp);
+            const endTime = new Date(events[events.length - 1].timestamp);
 
-            // 1. Identification Trigger
-            const triggerEvent = events.find(e => e.type === 'TRIGGER_MATCH');
-            const triggerInfo = triggerEvent ? {
-                type: 'CONDITION',
-                message: triggerEvent.message || 'Trigger Matched'
-            } : events.find(e => e.type === 'WINDOW_EVENT' && e.message?.includes('стартира')) ? {
-                type: 'SCHEDULE',
-                message: 'Scheduled Start'
-            } : null;
-
-            // 2. Process events into Linear Steps
-            // We want to group sequential SENSOR_READs into one 'ENVIRONMENT_SCAN'
-            let currentScan: { device: string; value: number; unit: string; isPrimary: boolean }[] | null = null;
-            let currentScanTime: Date | null = null;
-
-            // Helper to flush current scan
-            const flushScan = () => {
-                if (currentScan && currentScan.length > 0 && currentScanTime) {
-                    steps.push({
-                        id: `scan_${currentScanTime.getTime()}`,
-                        timestamp: currentScanTime,
-                        type: 'ENVIRONMENT_SCAN',
-                        label: 'Environment Scan',
-                        status: 'INFO',
-                        readings: [...currentScan]
-                    });
-                    currentScan = null;
-                    currentScanTime = null;
-                }
-            };
-
-            for (const event of events) {
-                const logData = event.metadata?.logData;
-                const blockType = event.metadata?.blockType;
-                const timestamp = new Date(event.timestamp);
-
-                // --- SENSOR READ ---
-                if (blockType === 'SENSOR_READ' && logData) {
-                    if (!currentScan) {
-                        currentScan = [];
-                        currentScanTime = timestamp;
-                    }
-
-                    const label = event.metadata?.blockLabel || logData.deviceName || 'Unknown Sensor';
-
-                    // Add measurements
-                    if (logData.measurements && Array.isArray(logData.measurements)) {
-                        for (const m of logData.measurements) {
-                            currentScan.push({
-                                device: label, // Use block label if available
-                                value: m.value,
-                                unit: m.unit,
-                                isPrimary: m.isPrimary
-                            });
-                        }
-                    } else if (logData.primaryValue !== undefined) {
-                        currentScan.push({
-                            device: label,
-                            value: logData.primaryValue,
-                            unit: logData.primaryUnit,
-                            isPrimary: true
-                        });
-                    }
-                    continue; // Skip pushing individual step, wait for flush
-                } else {
-                    // Non-sensor event breaks the scan group
-                    flushScan();
-                }
-
-                // --- ACTUATOR ---
-                if (blockType === 'ACTUATOR_SET' && logData) {
-                    const actionName = logData.action === 'DOSE' ? 'Dosing' :
-                        logData.action === 'ON' ? 'Turn ON' :
-                            logData.action === 'OFF' ? 'Turn OFF' : logData.action;
-
-                    // Prefer Block Label (User defined name) over Device Name
-                    const mainLabel = event.metadata?.blockLabel || logData.deviceName;
-
-                    let details = logData.primaryValue ? `${logData.primaryValue} ${logData.primaryUnit}` : '';
-
-                    // Add calculated volume if distinct and available
-                    if (logData.calculatedVolumeMl && logData.primaryUnit !== 'ml') {
-                        details += ` (${logData.calculatedVolumeMl.toFixed(1)} ml)`;
-                    }
-
-                    // Add device name context if using block label
-                    if (event.metadata?.blockLabel && logData.deviceName && event.metadata.blockLabel !== logData.deviceName) {
-                        details += ` • ${logData.deviceName}`;
-                    }
-
-                    steps.push({
-                        id: event._id || `act_${timestamp.getTime()}`,
-                        timestamp,
-                        type: 'ACTION',
-                        label: mainLabel, // Clean label matching Program Analytics
-                        description: details,
-                        status: logData.success === false ? 'FAILURE' : 'SUCCESS',
-                        icon: 'zap',
-                        resourceRole: logData.resourceRole // Pass resource role to frontend
-                    });
-
-                    if (logData.calculatedVolumeMl) {
-                        totalDosedMl += logData.calculatedVolumeMl;
-
-                        // Track detailed totals by role
-                        if (logData.resourceRole) {
-                            totalsByRole[logData.resourceRole] = (totalsByRole[logData.resourceRole] || 0) + logData.calculatedVolumeMl;
-                        }
-                    }
-                }
-
-                // --- FLOW CONTROL ---
-                if (event.type === 'FLOW_EXECUTED') {
-                    steps.push({
-                        id: event._id,
-                        timestamp,
-                        type: 'FLOW_START',
-                        label: `Start Flow: ${event.metadata?.flowName || 'Unknown'}`,
-                        status: 'SUCCESS'
-                    });
-                }
-
-                // --- LOGIC (IF/LOOP) ---
-                if ((blockType === 'IF' || blockType === 'LOOP') && logData) {
-                    const isLoop = blockType === 'LOOP';
-                    const left = logData.leftValue;
-                    const right = logData.rightValue;
-                    const op = logData.operator;
-                    const result = logData.primaryValue === 1 ? 'TRUE' : 'FALSE';
-
-                    steps.push({
-                        id: event._id,
-                        timestamp,
-                        type: 'LOGIC',
-                        label: `${isLoop ? 'Loop Condition' : 'Check'}: ${logData.strategy || 'Comparison'}`,
-                        description: `${left} ${op} ${right} => ${result}`,
-                        status: result === 'TRUE' ? 'SUCCESS' : 'SKIPPED'
-                    });
-                }
-
-                // --- TRIGGER INFO (Within window) ---
-                if (event.type === 'TRIGGER_MATCH') {
-                    steps.push({
-                        id: event._id,
-                        timestamp,
-                        type: 'TRIGGER',
-                        label: 'Trigger Matched',
-                        description: event.message,
-                        status: 'SUCCESS'
-                    });
-                }
-            }
-            // Final flush
-            flushScan();
-
-            // Calculate duration
-            const startTime = events[0] ? new Date(events[0].timestamp) : new Date();
-            const endTime = events[events.length - 1] ? new Date(events[events.length - 1].timestamp) : new Date();
-            const durationSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+            const { sessions, windowTotals } = this.processWindowEvents(events, roleMap);
 
             traces.push({
                 windowId,
                 windowName,
                 startTime,
                 endTime,
-                durationSeconds,
-                triggerInfo,
-                steps,
+                durationSeconds: (endTime.getTime() - startTime.getTime()) / 1000,
+                sessions,
                 totals: {
-                    dosedMl: totalDosedMl,
-                    energyWh: 0, // Placeholder
-                    byRole: totalsByRole
+                    dosedMl: windowTotals['volume'] || 0,
+                    energyWh: 0,
+                    byRole: windowTotals
                 }
             });
         }
 
-        // Sort traces by start time
-        traces.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        return traces.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+    }
 
-        return traces;
+    private processWindowEvents(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string }>) {
+        const sessions: ExecutionSession[] = [];
+        const windowTotals: Record<string, number> = {};
+
+        let currentSession: ExecutionSession | null = null;
+        let sessionEvents: any[] = [];
+
+        const flushSession = () => {
+            if (currentSession) {
+                const { steps, sessionTotals } = this.processSessionSteps(sessionEvents, roleMap);
+                currentSession.steps = steps;
+                currentSession.totals = sessionTotals;
+                currentSession.endTime = new Date(sessionEvents[sessionEvents.length - 1]?.timestamp || currentSession.startTime);
+                sessions.push(currentSession);
+                Object.entries(sessionTotals).forEach(([key, val]) => {
+                    windowTotals[key] = (windowTotals[key] || 0) + val;
+                });
+            }
+        };
+
+        const startNewSession = (type: ExecutionSession['type'], description: string, time: Date) => {
+            flushSession();
+            currentSession = {
+                id: `sess_${time.getTime()}_${Math.random().toString(36).substr(2, 5)}`,
+                type,
+                description,
+                startTime: time,
+                endTime: time,
+                steps: [],
+                totals: {}
+            };
+            sessionEvents = [];
+        };
+
+        for (const event of events) {
+            const type = event.type;
+            const msg = event.message || '';
+
+            if (type === 'TRIGGER_MATCH') {
+                startNewSession('TRIGGER_MATCH', msg || 'Trigger Condition Matched', new Date(event.timestamp));
+            } else if (type === 'WINDOW_EVENT' && msg.includes('стартира')) {
+                if (!currentSession) {
+                    startNewSession('SCHEDULED', 'Window Started', new Date(event.timestamp));
+                }
+            } else if (type === 'WINDOW_EVENT' && msg.includes('Fallback')) {
+                startNewSession('FALLBACK', 'Fallback Activation', new Date(event.timestamp));
+            }
+
+            if (!currentSession) {
+                startNewSession('SCHEDULED', 'Execution Segment', new Date(event.timestamp));
+            }
+            sessionEvents.push(event);
+        }
+
+        flushSession();
+        return { sessions, windowTotals };
+    }
+
+    private processSessionSteps(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string }>) {
+        const steps: ExecutionStep[] = [];
+        const sessionTotals: Record<string, number> = {};
+
+        interface LoopContext {
+            blockId: string;
+            step: ExecutionStep;
+            events: any[];
+        }
+        const loopStack: LoopContext[] = [];
+
+        let currentScan: { device: string; value: number; unit: string; isPrimary: boolean, role?: string }[] | null = null;
+        let currentScanTime: Date | null = null;
+
+        const flushScan = () => {
+            if (currentScan && currentScan.length > 0 && currentScanTime) {
+                const step: ExecutionStep = {
+                    id: `scan_${currentScanTime.getTime()}`,
+                    timestamp: currentScanTime,
+                    type: 'ENVIRONMENT_SCAN',
+                    label: 'Read Sensors',
+                    status: 'INFO',
+                    readings: [...currentScan]
+                };
+                if (loopStack.length > 0) {
+                    const ctx = loopStack[loopStack.length - 1];
+                    ctx.step.children = ctx.step.children || [];
+                    ctx.step.children.push(step);
+                } else {
+                    steps.push(step);
+                }
+                currentScan = null;
+                currentScanTime = null;
+            }
+        };
+
+        for (const event of events) {
+            const meta = event.metadata || {};
+            const logData = meta.logData;
+            const timestamp = new Date(event.timestamp);
+            const blockType = meta.blockType;
+
+            // --- LOOP LOGIC ---
+            if (blockType === 'LOOP') {
+                flushScan();
+                const blockId = meta.blockId;
+                const iteration = logData?.iteration;
+                const isContinuing = event.message?.includes('(Continuing)') ?? false;
+                const isDone = event.message?.includes('(Done)') ?? false;
+
+                // 1. Loop Start (Iteration 1 & Continuing)
+                if (iteration === 1 && isContinuing) {
+                    const loopStep: ExecutionStep = {
+                        id: `loop_${timestamp.getTime()}_${blockId}`,
+                        timestamp,
+                        type: 'LOOP_SUMMARY',
+                        label: meta.blockLabel || 'Loop Cycle',
+                        status: 'SUCCESS',
+                        children: [],
+                        loopStats: { iterations: 1, durationSeconds: 0, resources: {} }
+                    };
+
+                    if (loopStack.length > 0) {
+                        const parent = loopStack[loopStack.length - 1];
+                        parent.step.children = parent.step.children || [];
+                        parent.step.children.push(loopStep);
+                    } else {
+                        steps.push(loopStep);
+                    }
+
+                    loopStack.push({ blockId, step: loopStep, events: [event] });
+                    continue;
+                }
+
+                // 2. Loop Iteration > 1 (Continuing)
+                if (iteration > 1 && isContinuing) {
+                    if (loopStack.length > 0) {
+                        const ctx = loopStack[loopStack.length - 1];
+                        if (ctx.blockId === blockId) {
+                            ctx.step.loopStats!.iterations = iteration;
+                        }
+                    }
+                    continue;
+                }
+
+                // 3. Loop End (Done)
+                if (isDone) {
+                    if (loopStack.length > 0) {
+                        const ctx = loopStack[loopStack.length - 1];
+                        if (ctx.blockId === blockId) {
+                            loopStack.pop();
+                            if (ctx.events.length > 0) {
+                                const start = new Date(ctx.events[0].timestamp).getTime();
+                                const end = timestamp.getTime();
+                                ctx.step.loopStats!.durationSeconds = (end - start) / 1000;
+                            }
+                        }
+                    }
+                    continue;
+                }
+            }
+
+            // --- SENSOR LOGIC ---
+            if (blockType === 'SENSOR_READ' && logData) {
+                if (!currentScan) { currentScan = []; currentScanTime = timestamp; }
+                const label = meta.blockLabel || logData.deviceName || 'Unknown';
+                const role = logData.resourceRole;
+
+                if (logData.measurements) {
+                    logData.measurements.forEach((m: any) => currentScan!.push({
+                        device: label, value: m.value, unit: m.unit, isPrimary: m.isPrimary, role
+                    }));
+                } else if (logData.primaryValue !== undefined) {
+                    currentScan!.push({
+                        device: label, value: logData.primaryValue, unit: logData.primaryUnit, isPrimary: true, role
+                    });
+                }
+
+                if (role && logData.primaryValue !== undefined) {
+                    const rType = roleMap.get(role)?.type || 'NONE';
+                    const rUnit = logData.primaryUnit || roleMap.get(role)?.unit || '';
+
+                    this.accumulateStats(sessionTotals, role, logData.primaryValue, rType);
+
+                    if (loopStack.length > 0) {
+                        const ctx = loopStack[loopStack.length - 1];
+                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, logData.primaryValue, rType, rUnit);
+                    }
+                }
+                if (loopStack.length > 0) loopStack[loopStack.length - 1].events.push(event);
+                continue;
+            } else {
+                flushScan();
+            }
+
+            // --- ACTUATOR LOGIC ---
+            if (blockType === 'ACTUATOR_SET' && logData) {
+                const role = logData.resourceRole;
+
+                // Determine amount and unit
+                // Prefer calculatedVolumeMl for normalization to liquid volume
+                let amount = 0;
+                let unit = logData.unit || logData.primaryUnit || '';
+
+                if (logData.calculatedVolumeMl !== undefined) {
+                    amount = Number(logData.calculatedVolumeMl);
+                    unit = 'ml'; // Enforce normalized unit 'ml'
+                } else if (logData.primaryValue !== undefined) {
+                    amount = Number(logData.primaryValue);
+                } else {
+                    // Legacy/Fallback
+                    amount = Number(logData.amount) || 0;
+                }
+
+                const step: ExecutionStep = {
+                    id: `act_${timestamp.getTime()}`,
+                    timestamp,
+                    type: 'ACTION',
+                    label: meta.blockLabel || logData.deviceName,
+                    status: 'SUCCESS',
+                    resourceRole: role,
+                    metadata: logData
+                };
+
+                if (loopStack.length > 0) {
+                    const ctx = loopStack[loopStack.length - 1];
+                    ctx.step.children = ctx.step.children || [];
+                    ctx.step.children.push(step);
+                    ctx.events.push(event);
+
+                    if (role && amount > 0) {
+                        const rType = roleMap.get(role)?.type || 'NONE';
+                        // Use determined unit, or fallback to role default
+                        const rUnit = unit || roleMap.get(role)?.unit || '';
+                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit);
+                    }
+                } else {
+                    steps.push(step);
+                }
+
+                if (role && amount > 0) {
+                    this.accumulateStats(sessionTotals, role, amount, roleMap.get(role)?.type || 'NONE');
+                }
+                continue;
+            }
+
+            // --- WAIT/IF/LOG LOGIC ---
+            // If inside loop, capture them for duration tracking, otherwise ignore or add as steps?
+            // User mostly cares about Sensors and Actions. But IF blocks are useful.
+            // --- GENERIC EVENT LOGIC ---
+            let stepType: ExecutionStep['type'] = 'LOGIC';
+            if (event.type === 'TRIGGER_MATCH') stepType = 'TRIGGER';
+            else if (event.type === 'FLOW_EXECUTED') stepType = 'FLOW_START';
+
+            const genericStep: ExecutionStep = {
+                id: `evt_${timestamp.getTime()}_${Math.random()}`,
+                timestamp,
+                type: stepType,
+                label: event.message || meta.blockType || 'Event',
+                status: 'INFO',
+                description: event.metadata?.description,
+                metadata: event.metadata
+            };
+
+            // If inside loop, capture them for duration tracking, otherwise ignore or add as steps?
+            // User mostly cares about Sensors and Actions. But IF blocks are useful.
+            if (loopStack.length > 0) {
+                // Only add children if it's significant? 
+                // For now, let's keep it clean and NOT add every generic step to avoiding spamming the folded loop
+                // unless it is an important control flow event.
+                // loopStack[loopStack.length - 1].step.children?.push(genericStep);
+                loopStack[loopStack.length - 1].events.push(event);
+            } else {
+                if (event.type === 'TRIGGER_MATCH' ||
+                    event.type === 'WINDOW_EVENT' ||
+                    event.type === 'FLOW_EXECUTED' ||
+                    meta.blockType === 'IF') {
+                    steps.push(genericStep);
+                }
+            }
+        }
+        flushScan();
+        return { steps, sessionTotals };
+    }
+
+    private countLoopIterations(events: any[]): number {
+        return events.filter(e => e.message === 'Loop Condition Check').length || 1;
+    }
+
+    private accumulateStats(totals: Record<string, number>, role: string, value: number, type: AnalyticsType) {
+        if (type === 'SUM') {
+            totals[role] = (totals[role] || 0) + value;
+        }
+    }
+
+    private accumulateLoopStats(
+        stats: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }>,
+        role: string,
+        value: number,
+        type: AnalyticsType,
+        unit: string
+    ) {
+        if (!stats[role]) {
+            stats[role] = { role, type, value: 0, unit };
+        }
+
+        if (type === 'SUM') {
+            stats[role].value += value;
+        }
     }
 }
-
 export const analyticsService = new AnalyticsService();

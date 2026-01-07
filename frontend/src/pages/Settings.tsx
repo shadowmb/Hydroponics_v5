@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NotificationCenter } from "../components/notifications/NotificationCenter";
 import { SystemRecoveryPanel } from "../components/settings/SystemRecoveryPanel";
+import { ResourceRolesPanel } from "../components/settings/ResourceRolesPanel";
 
 export function Settings() {
     return (
@@ -15,6 +16,7 @@ export function Settings() {
                 <TabsList>
                     <TabsTrigger value="notifications">Notifications</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="roles">Roles & Analytics</TabsTrigger>
                     <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
                 </TabsList>
 
@@ -24,6 +26,10 @@ export function Settings() {
 
                 <TabsContent value="general">
                     <SystemRecoveryPanel />
+                </TabsContent>
+
+                <TabsContent value="roles">
+                    <ResourceRolesPanel />
                 </TabsContent>
 
                 <TabsContent value="backup">

@@ -5,7 +5,7 @@
       "A0_14"
     ],
     "values": {
-      "ph": 347.33333333333337
+      "ph": 266.6666666666667
     },
     "calibrationPoints": [
       {
@@ -44,7 +44,7 @@
       "D11_11"
     ],
     "values": {
-      "distance": 302.70000000000005
+      "distance": 300
     },
     "calibrationPoints": [
       {
@@ -63,9 +63,18 @@
       "A2_16"
     ],
     "values": {
-      "soil_moisture": 15
+      "soil_moisture": 30
     },
-    "calibrationPoints": []
+    "calibrationPoints": [
+      {
+        "value": 0,
+        "raw": 0
+      },
+      {
+        "value": 100,
+        "raw": 100
+      }
+    ]
   },
   {
     "sensorId": "dfrobot_par_rs485",
@@ -74,7 +83,7 @@
       "D1_1"
     ],
     "values": {
-      "par": 305
+      "par": 60
     }
   },
   {
