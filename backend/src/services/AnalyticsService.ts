@@ -91,6 +91,7 @@ interface ExecutionStep {
         unit: string;
         isPrimary: boolean;
     }[];
+    resourceRole?: string; // Added resourceRole for better identification
 }
 
 interface ExecutionTrace {
@@ -644,7 +645,8 @@ export class AnalyticsService {
                         label: mainLabel, // Clean label matching Program Analytics
                         description: details,
                         status: logData.success === false ? 'FAILURE' : 'SUCCESS',
-                        icon: 'zap'
+                        icon: 'zap',
+                        resourceRole: logData.resourceRole // Pass resource role to frontend
                     });
 
                     if (logData.calculatedVolumeMl) {

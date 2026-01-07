@@ -50,6 +50,14 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
         }
     };
 
+    const getRoleColor = (role?: string) => {
+        if (!role) return 'border-l-yellow-500';
+        if (role.includes('ph')) return 'border-l-purple-500';
+        if (role.includes('nutrient')) return 'border-l-blue-500';
+        if (role.includes('water')) return 'border-l-cyan-500';
+        return 'border-l-yellow-500';
+    };
+
     // Helper to get unit-specific icons for sensor readings
     const getSensorIcon = (unit: string) => {
         if (unit.includes('°')) return <Thermometer className="h-3 w-3" />;
@@ -59,10 +67,11 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
     };
 
     const getRoleIcon = (role: string) => {
-        if (role.includes('ph')) return <Activity className="h-4 w-4 text-purple-500" />;
-        if (role.includes('nutrient')) return <Droplet className="h-4 w-4 text-blue-500" />;
-        if (role.includes('water')) return <Waves className="h-4 w-4 text-cyan-500" />;
-        return <Zap className="h-4 w-4 text-yellow-500" />;
+        if (!role) return <Zap className="h-3 w-3" />;
+        if (role.includes('ph')) return <Activity className="h-3 w-3" />;
+        if (role.includes('nutrient')) return <Droplet className="h-3 w-3" />;
+        if (role.includes('water')) return <Waves className="h-3 w-3" />;
+        return <Zap className="h-3 w-3" />;
     };
 
     return (
@@ -119,7 +128,7 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
                         {/* Step Card */}
                         <Card className={cn(
                             "transition-all hover:shadow-sm",
-                            getStatusColor(step.status)
+                            step.type === 'ACTION' ? getRoleColor(step.resourceRole) : getStatusColor(step.status)
                         )}>
                             <CardContent className="p-3">
                                 <div className="flex items-start gap-3">
@@ -129,8 +138,15 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start">
-                                            <span className="font-semibold text-sm truncate pr-2">
+                                            <span className="font-semibold text-sm truncate pr-2 flex items-center gap-2">
                                                 {step.label}
+                                                {/* Device Badge (moved to header) */}
+                                                {step.description && step.description.includes('•') && (
+                                                    <Badge variant="outline" className="text-[10px] h-5 bg-muted/50 text-muted-foreground border-border font-normal">
+                                                        <Settings className="h-3 w-3 mr-1 opacity-70" />
+                                                        {step.description.split('•')[1].trim()}
+                                                    </Badge>
+                                                )}
                                             </span>
                                             <span className="text-xs font-mono text-muted-foreground shrink-0">
                                                 {formatTime(step.timestamp)}
@@ -139,18 +155,20 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
 
                                         {step.description && (
                                             <div className="text-xs text-muted-foreground mt-0.5 flex items-center flex-wrap gap-2">
-                                                {/* Split description to separate details from device name if '•' exists */}
-                                                {step.description.includes('•') ? (
-                                                    <>
-                                                        <span>{step.description.split('•')[0].trim()}</span>
-                                                        <Badge variant="outline" className="text-[10px] h-5 bg-muted/50 text-muted-foreground border-border font-normal">
-                                                            <Settings className="h-3 w-3 mr-1 opacity-70" />
-                                                            {step.description.split('•')[1].trim()}
-                                                        </Badge>
-                                                    </>
-                                                ) : (
-                                                    step.description
+                                                {/* Role Badge (moved to details row) */}
+                                                {step.resourceRole && (
+                                                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-medium border-0 bg-secondary/80">
+                                                        {getRoleIcon(step.resourceRole)}
+                                                        <span className="ml-1 capitalize">{step.resourceRole.replace('_', ' ')}</span>
+                                                    </Badge>
                                                 )}
+
+                                                {/* Details */}
+                                                <span>
+                                                    {step.description.includes('•')
+                                                        ? step.description.split('•')[0].trim()
+                                                        : step.description}
+                                                </span>
                                             </div>
                                         )}
 

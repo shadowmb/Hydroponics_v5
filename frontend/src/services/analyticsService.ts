@@ -179,6 +179,7 @@ export interface ExecutionStep {
         unit: string;
         isPrimary: boolean;
     }[];
+    resourceRole?: string;
 }
 
 export interface ExecutionTrace {
