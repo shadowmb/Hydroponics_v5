@@ -9,6 +9,10 @@
             "baseUnit": "mm"
         }
     },
+    "resourceRoles": [
+        "distance",
+        "volume"
+    ],
     "roles": {
         "distance": {
             "label": "Distance Monitor",

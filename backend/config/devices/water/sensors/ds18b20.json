@@ -9,6 +9,9 @@
             "baseUnit": "C"
         }
     },
+    "resourceRoles": [
+        "temp"
+    ],
     "roles": {
         "temp": {
             "label": "Temperature",

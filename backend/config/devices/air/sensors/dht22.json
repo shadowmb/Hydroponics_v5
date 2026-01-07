@@ -17,6 +17,10 @@
             "max": 100
         }
     },
+    "resourceRoles": [
+        "temp",
+        "humidity"
+    ],
     "roles": {
         "temp": {
             "label": "Air Temperature",

@@ -9,6 +9,9 @@
             "baseUnit": "µmol/m²/s"
         }
     },
+    "resourceRoles": [
+        "par"
+    ],
     "defaultRole": "par",
     "roles": {
         "par": {
