@@ -570,20 +570,41 @@ export class AnalyticsService {
                 for (const event of flowEvents) {
                     const blockType = event.metadata?.blockType;
                     const logData = event.metadata?.logData;
-                    const device = event.metadata?.blockLabel || 'Unknown';
+                    // Use deviceName/deviceId from logData (reliable), fallback to blockLabel (legacy)
+                    const deviceKey = logData?.deviceId || logData?.deviceName || event.metadata?.blockLabel || 'Unknown';
+                    const deviceName = logData?.deviceName || event.metadata?.blockLabel || 'Unknown';
 
-                    if (blockType === 'SENSOR_READ' && logData?.primaryValue !== undefined) {
-                        sensorMap.set(device, {
-                            value: logData.primaryValue,
-                            unit: logData.primaryUnit || ''
-                        });
+                    if (blockType === 'SENSOR_READ' && logData) {
+                        // Support multi-value sensors via allReadings
+                        if (logData.allReadings && typeof logData.allReadings === 'object') {
+                            // Extract all numeric readings from allReadings
+                            for (const [key, val] of Object.entries(logData.allReadings)) {
+                                if (typeof val === 'number' && !isNaN(val)) {
+                                    const readingKey = `${deviceName}:${key}`;
+                                    sensorMap.set(readingKey, { value: val, unit: key });
+                                }
+                            }
+                        }
+                        // Also store primaryValue for backward compatibility
+                        if (logData.primaryValue !== undefined) {
+                            sensorMap.set(deviceName, {
+                                value: logData.primaryValue,
+                                unit: logData.primaryUnit || ''
+                            });
+                        }
                     }
 
                     if (blockType === 'ACTUATOR_SET' && logData) {
-                        const existing = actuatorMap.get(device) || { action: logData.action, totalValue: 0, unit: logData.primaryUnit || '', count: 0 };
+                        const existing = actuatorMap.get(deviceKey) || {
+                            action: logData.action,
+                            totalValue: 0,
+                            unit: logData.primaryUnit || '',
+                            count: 0,
+                            resourceRole: logData.resourceRole
+                        };
                         existing.totalValue += logData.primaryValue || 0;
                         existing.count += 1;
-                        actuatorMap.set(device, existing);
+                        actuatorMap.set(deviceKey, existing);
                     }
                 }
 
