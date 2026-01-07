@@ -9,6 +9,9 @@
             "baseUnit": "pH"
         }
     },
+    "resourceRoles": [
+        "ph"
+    ],
     "roles": {
         "ph": {
             "label": "pH Meter",

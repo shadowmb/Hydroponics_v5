@@ -9,6 +9,9 @@
     "capabilities": [
         "READ"
     ],
+    "resourceRoles": [
+        "flow_rate"
+    ],
     "commands": {
         "READ": {
             "hardwareCmd": "PULSE_RATE",

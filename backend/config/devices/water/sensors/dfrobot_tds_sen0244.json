@@ -9,6 +9,9 @@
             "baseUnit": "ppm"
         }
     },
+    "resourceRoles": [
+        "tds"
+    ],
     "roles": {
         "tds": {
             "label": "TDS Meter",

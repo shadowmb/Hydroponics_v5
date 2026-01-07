@@ -7,7 +7,8 @@ import { cn } from '../../../lib/utils';
 
 import { useFlowContext } from '../../../context/FlowContext';
 
-export const LoopNode = memo(({ data, selected }: NodeProps) => {
+export const LoopNode = memo((props: NodeProps) => {
+    const { data, selected } = props as any;
     const { variables } = useFlowContext();
 
     // Helper to format variable names (strip {{ }}), resolving to readable name if possible

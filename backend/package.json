@@ -15,10 +15,12 @@
     "dependencies": {
         "@fastify/cors": "^9.0.1",
         "@types/cron": "^2.0.1",
+        "@types/glob": "^8.1.0",
         "cron": "^4.3.5",
         "dotenv": "^16.4.5",
         "eventemitter2": "^6.4.9",
         "fastify": "^4.26.2",
+        "glob": "^13.0.0",
         "mongoose": "^8.2.4",
         "pino": "^8.19.0",
         "pino-pretty": "^11.0.0",

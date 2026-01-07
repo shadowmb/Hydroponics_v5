@@ -214,7 +214,10 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                     primaryValue: Number(amount),
                     primaryUnit: logUnit || 'ml',
                     durationMs: pulseDuration,
-                    calculatedVolumeMl: (targetAmountMl !== undefined) ? targetAmountMl : 0
+                    calculatedVolumeMl: (targetAmountMl !== undefined) ? targetAmountMl : 0,
+                    deviceId: device._id?.toString(),
+                    deviceName: device.name,
+                    resourceRole: (device as any).resourceRole || device.config?.activeRole
                 };
             } else if (action === 'PULSE_ON' || action === 'PULSE_OFF') {
                 summary = `Pulsed ${action === 'PULSE_ON' ? 'ON' : 'OFF'} for ${(pulseDuration / 1000).toFixed(1)}s`;
@@ -223,7 +226,10 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                     strategy: 'time_based',
                     primaryValue: inputDurationSec,
                     primaryUnit: 's',
-                    durationMs: pulseDuration
+                    durationMs: pulseDuration,
+                    deviceId: device._id?.toString(),
+                    deviceName: device.name,
+                    resourceRole: (device as any).resourceRole || device.config?.activeRole
                 };
             } else {
                 summary = `Set ${action} (State: ${targetState})`;
@@ -231,7 +237,10 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                     action: action,
                     strategy: 'simple',
                     primaryValue: targetState,
-                    primaryUnit: 'bool'
+                    primaryUnit: 'bool',
+                    deviceId: device._id?.toString(),
+                    deviceName: device.name,
+                    resourceRole: (device as any).resourceRole || device.config?.activeRole
                 };
             }
 

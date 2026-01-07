@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, Trash2, Save, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { hardwareService } from '../../../../services/hardwareService';
 

@@ -1,6 +1,8 @@
 import { programDailyLogRepository } from '../modules/persistence/repositories/ProgramDailyLogRepository';
 import { ProgramDailyLogModel } from '../modules/persistence/schemas/ProgramDailyLog.schema';
 import { logger } from '../core/LoggerService';
+import ResourceRoleManager from './ResourceRoleManager';
+import { AnalyticsType } from '../models/ResourceRole';
 
 interface AnalyticsFilters {
     programId: string;
@@ -72,6 +74,86 @@ interface AnalyticsResponse {
         limit: number;
     };
 }
+
+// ========== SESSION TRACE TYPES (REFACTORED V2) ==========
+
+export interface ExecutionStep {
+    id: string;
+    timestamp: Date;
+    type: 'TRIGGER' | 'ACTION' | 'LOGIC' | 'ENVIRONMENT_SCAN' | 'FLOW_START' | 'FLOW_END' | 'ERROR' | 'LOOP_SUMMARY';
+    label: string;
+    description?: string;
+    status: 'SUCCESS' | 'FAILURE' | 'SKIPPED' | 'INFO';
+    icon?: string;
+    metadata?: any;
+    // For sensor scans
+    readings?: {
+        device: string;
+        value: number;
+        unit: string;
+        isPrimary: boolean;
+        role?: string;
+    }[];
+    resourceRole?: string;
+    // For Loop Summary
+    loopStats?: {
+        iterations: number;
+        durationSeconds: number;
+        resources: Record<string, {
+            role: string;
+            type: 'SUM' | 'DELTA' | 'TREND' | 'NONE';
+            value: number; // Sum or Delta or End
+            startValue?: number; // For Delta/Trend
+            endValue?: number;   // For Delta/Trend
+            unit: string;
+        }>;
+    };
+    // If it's a folded loop, it contains children
+    children?: ExecutionStep[];
+}
+
+export interface ExecutionSession {
+    id: string;
+    type: 'TRIGGER_MATCH' | 'FALLBACK' | 'SCHEDULED' | 'MANUAL';
+    description: string; // e.g. "Trigger: Moist < 30%"
+    startTime: Date;
+    endTime: Date;
+    steps: ExecutionStep[];
+    totals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }>;
+}
+
+export interface ExecutionTrace {
+    windowId: string;
+    windowName: string;
+    startTime: Date;
+    endTime: Date;
+    sessions: ExecutionSession[]; // New Hierarchy
+    durationSeconds: number;
+    totals: {
+        dosedMl: number;
+        energyWh: number;
+        byRole: Record<string, { role: string; type: 'SUM' | 'DELTA' | 'TREND' | 'NONE'; value: number; unit: string }>;
+    };
+}
+
+interface SessionTimelineResponse {
+    programId: string;
+    date: string;
+    sessions: ExecutionTrace[];
+}
+
+// Assuming ILogEvent is defined elsewhere or needs to be defined here
+// For the purpose of this change, I'll assume a basic structure based on usage
+interface ILogEvent {
+    timestamp: Date;
+    programId: string;
+    windowId?: string;
+    eventId?: string;
+    type: string;
+    message: string;
+    metadata?: any;
+}
+
 
 export class AnalyticsService {
 
@@ -452,6 +534,440 @@ export class AnalyticsService {
 
         return stats;
     }
-}
 
+    // ========== SESSION TIMELINE AGGREGATION ==========
+
+    /**
+     * Get session timeline - aggregates events by windowId to show
+     * the "chain" of flows executed in each time window
+     */
+    /**
+     * Get execution trace - detailed diagnostic view of session execution
+     */
+    async getSessionTimeline(programId: string, date: string): Promise<ExecutionTrace[]> {
+        logger.info(`[AnalyticsService] Getting session timeline V2 for program ${programId} on ${date}`);
+
+        const logs = await ProgramDailyLogModel.find({ programId, date }).lean();
+        if (!logs || logs.length === 0) return [];
+
+        const rolesList = await ResourceRoleManager.getAllRoles();
+        const roleMap = new Map<string, { type: AnalyticsType, unit?: string, measuredBy?: string }>();
+        rolesList.forEach(r => roleMap.set(r.key, { type: r.analyticsType, unit: r.unit, measuredBy: r.measuredBy }));
+
+        const allEvents: any[] = [];
+        for (const log of logs) {
+            if (log.events && Array.isArray(log.events)) allEvents.push(...log.events);
+        }
+        allEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        const windowGroups = new Map<string, any[]>();
+        for (const event of allEvents) {
+            const windowId = event.metadata?.windowId || 'unknown';
+            if (!windowGroups.has(windowId)) windowGroups.set(windowId, []);
+            windowGroups.get(windowId)!.push(event);
+        }
+
+        const traces: ExecutionTrace[] = [];
+
+        for (const [windowId, events] of windowGroups) {
+            if (windowId === 'unknown' || events.length === 0) continue;
+
+            const windowName = events[0].metadata?.windowName || windowId;
+            const startTime = new Date(events[0].timestamp);
+            const endTime = new Date(events[events.length - 1].timestamp);
+
+            const { sessions, windowTotals } = this.processWindowEvents(events, roleMap);
+
+            traces.push({
+                windowId,
+                windowName,
+                startTime,
+                endTime,
+                durationSeconds: (endTime.getTime() - startTime.getTime()) / 1000,
+                sessions,
+                totals: {
+                    dosedMl: windowTotals['volume']?.value || 0,
+                    energyWh: 0,
+                    byRole: windowTotals
+                }
+            });
+        }
+
+        return traces.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+    }
+
+    private processWindowEvents(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string, measuredBy?: string }>) {
+        // Since processSessionSteps handles segmentation locally now, we just pass all events
+        const { formattedSessions } = this.processSessionSteps(events, roleMap);
+
+        // Updated to Detailed Structure
+        const windowTotals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }> = {};
+
+        // Aggregate totals from all sessions
+        for (const session of formattedSessions) {
+            for (const [role, stat] of Object.entries(session.totals)) {
+                if (!windowTotals[role]) {
+                    windowTotals[role] = { ...stat, value: 0 };
+                }
+                windowTotals[role].value += stat.value;
+            }
+        }
+
+        return { sessions: formattedSessions, windowTotals };
+    }
+
+
+
+    private processSessionSteps(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string, measuredBy?: string }>) {
+        const sessions: ExecutionSession[] = [];
+        let currentSession: ExecutionSession = {
+            id: `sess_init_${Date.now()}`,
+            type: 'SCHEDULED',
+            description: 'Initializing',
+            startTime: new Date(events[0]?.timestamp || Date.now()),
+            endTime: new Date(events[0]?.timestamp || Date.now()),
+            steps: [],
+            totals: {}
+        };
+
+        let sessionTotals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }> = {};
+
+        // Track sensor readings by role for measuredBy delta calculation
+        const sensorReadingsByRole: Record<string, number[]> = {};
+        // Track which actuator roles have measuredBy links
+        const actuatorMeasuredByRoles: Set<string> = new Set();
+
+        const flushSession = () => {
+            // Finalize measuredBy delta calculations
+            for (const actuatorRole of actuatorMeasuredByRoles) {
+                const measuredByRole = roleMap.get(actuatorRole)?.measuredBy;
+                if (measuredByRole && sensorReadingsByRole[measuredByRole]?.length >= 1) {
+                    const readings = sensorReadingsByRole[measuredByRole];
+                    const startValue = readings[0];
+                    const endValue = readings[readings.length - 1];
+                    const delta = endValue - startValue;
+
+                    // Get unit from the linked sensor role
+                    const linkedRoleConfig = roleMap.get(measuredByRole);
+                    const unit = linkedRoleConfig?.unit || sessionTotals[measuredByRole]?.unit || '';
+
+                    // Update or create the actuator role stats with delta
+                    sessionTotals[actuatorRole] = {
+                        role: actuatorRole,
+                        type: 'DELTA',
+                        value: delta,
+                        unit: unit
+                    };
+                }
+            }
+
+            // Finalize current session
+            currentSession.totals = sessionTotals;
+            if (currentSession.steps.length > 0) {
+                currentSession.endTime = new Date(currentSession.steps[currentSession.steps.length - 1]?.timestamp || currentSession.startTime);
+                sessions.push(currentSession);
+            }
+            // Reset totals and tracking for new session
+            sessionTotals = {};
+            for (const key in sensorReadingsByRole) delete sensorReadingsByRole[key];
+            actuatorMeasuredByRoles.clear();
+        };
+
+        const startNewSession = (type: ExecutionSession['type'], description: string, time: Date) => {
+            flushSession();
+            currentSession = {
+                id: `sess_${time.getTime()}_${Math.random().toString(36).substr(2, 5)}`,
+                type,
+                description,
+                startTime: time,
+                endTime: time,
+                steps: [],
+                totals: {}
+            };
+        };
+
+        interface LoopContext {
+            blockId: string;
+            step: ExecutionStep;
+            events: any[];
+        }
+        const loopStack: LoopContext[] = [];
+
+        let currentScan: { device: string; value: number; unit: string; isPrimary: boolean, role?: string }[] | null = null;
+        let currentScanTime: Date | null = null;
+
+        const flushScan = () => {
+            if (currentScan && currentScan.length > 0 && currentScanTime) {
+                const step: ExecutionStep = {
+                    id: `scan_${currentScanTime.getTime()}`,
+                    timestamp: currentScanTime,
+                    type: 'ENVIRONMENT_SCAN',
+                    label: 'Read Sensors',
+                    status: 'INFO',
+                    readings: [...currentScan]
+                };
+                if (loopStack.length > 0) {
+                    const ctx = loopStack[loopStack.length - 1];
+                    ctx.step.children = ctx.step.children || [];
+                    ctx.step.children.push(step);
+                } else {
+                    currentSession.steps.push(step);
+                }
+                currentScan = null;
+                currentScanTime = null;
+            }
+        };
+
+        for (const event of events) {
+            // --- SESSION SEGMENTATION ---
+            const type = event.type;
+            const msg = event.message || '';
+            const timestamp = new Date(event.timestamp);
+
+            if (type === 'TRIGGER_MATCH') {
+                startNewSession('TRIGGER_MATCH', msg || 'Trigger Condition Matched', timestamp);
+            } else if (type === 'WINDOW_EVENT' && msg.includes('стартира')) {
+                if (sessions.length === 0 && currentSession.steps.length === 0) {
+                    // First session, just update metadata
+                    currentSession.startTime = timestamp;
+                    currentSession.description = 'Window Started';
+                } else {
+                    startNewSession('SCHEDULED', 'Window Started', timestamp);
+                }
+            } else if (type === 'WINDOW_EVENT' && msg.includes('Fallback')) {
+                startNewSession('FALLBACK', 'Fallback Activation', timestamp);
+            }
+
+            // --- EVENT PROCESSING ---
+            const meta = event.metadata || {};
+            const logData = meta.logData;
+            // const timestamp = new Date(event.timestamp); // Already defined above
+            const blockType = meta.blockType;
+
+            // --- LOOP LOGIC ---
+            if (blockType === 'LOOP') {
+                flushScan();
+                const blockId = meta.blockId;
+                const iteration = logData?.iteration;
+                const isContinuing = event.message?.includes('(Continuing)') ?? false;
+                const isDone = event.message?.includes('(Done)') ?? false;
+
+                // 1. Loop Start (Iteration 1 & Continuing)
+                if (iteration === 1 && isContinuing) {
+                    const loopStep: ExecutionStep = {
+                        id: `loop_${timestamp.getTime()}_${blockId}`,
+                        timestamp,
+                        type: 'LOOP_SUMMARY',
+                        label: meta.blockLabel || 'Loop Cycle',
+                        status: 'SUCCESS',
+                        children: [],
+                        loopStats: { iterations: 1, durationSeconds: 0, resources: {} }
+                    };
+
+                    if (loopStack.length > 0) {
+                        const parent = loopStack[loopStack.length - 1];
+                        parent.step.children = parent.step.children || [];
+                        parent.step.children.push(loopStep);
+                    } else {
+                        currentSession.steps.push(loopStep);
+                    }
+
+                    loopStack.push({ blockId, step: loopStep, events: [event] });
+                    continue;
+                }
+
+                // ... (Iterations & End Logic unchanged) ...
+                // 2. Loop Iteration > 1
+                if (iteration > 1 && isContinuing) {
+                    if (loopStack.length > 0 && loopStack[loopStack.length - 1].blockId === blockId) {
+                        loopStack[loopStack.length - 1].step.loopStats!.iterations = iteration;
+                    }
+                    continue;
+                }
+
+                // 3. Loop End
+                if (isDone) {
+                    if (loopStack.length > 0 && loopStack[loopStack.length - 1].blockId === blockId) {
+                        const ctx = loopStack.pop()!;
+                        if (ctx.events.length > 0) {
+                            const start = new Date(ctx.events[0].timestamp).getTime();
+                            const end = timestamp.getTime();
+                            ctx.step.loopStats!.durationSeconds = (end - start) / 1000;
+                        }
+                    }
+                    continue;
+                }
+            }
+
+            // --- SENSOR LOGIC ---
+            if (blockType === 'SENSOR_READ' && logData) {
+                if (!currentScan) { currentScan = []; currentScanTime = timestamp; }
+                const label = meta.blockLabel || logData.deviceName || 'Unknown';
+                const role = logData.resourceRole;
+
+                if (logData.measurements) {
+                    logData.measurements.forEach((m: any) => currentScan!.push({
+                        device: label, value: m.value, unit: m.unit, isPrimary: m.isPrimary, role
+                    }));
+                } else if (logData.primaryValue !== undefined) {
+                    currentScan!.push({
+                        device: label, value: logData.primaryValue, unit: logData.primaryUnit, isPrimary: true, role
+                    });
+                }
+
+                if (role && logData.primaryValue !== undefined) {
+                    const rType = roleMap.get(role)?.type || 'NONE';
+                    const rUnit = logData.primaryUnit || roleMap.get(role)?.unit || '';
+
+                    // Track sensor readings for measuredBy delta calculation
+                    if (!sensorReadingsByRole[role]) sensorReadingsByRole[role] = [];
+                    sensorReadingsByRole[role].push(logData.primaryValue);
+
+                    this.accumulateLoopStats(sessionTotals, role, logData.primaryValue, rType, rUnit);
+
+                    if (loopStack.length > 0) {
+                        const ctx = loopStack[loopStack.length - 1];
+                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, logData.primaryValue, rType, rUnit);
+                    }
+                }
+                if (loopStack.length > 0) loopStack[loopStack.length - 1].events.push(event);
+                continue;
+            } else {
+                flushScan();
+            }
+
+            // --- ACTUATOR LOGIC ---
+            if (blockType === 'ACTUATOR_SET' && logData) {
+                const role = logData.resourceRole;
+                let amount = 0;
+                let unit = logData.unit || logData.primaryUnit || '';
+
+                if (logData.calculatedVolumeMl !== undefined) {
+                    amount = Number(logData.calculatedVolumeMl);
+                    unit = 'ml';
+                } else if (logData.primaryValue !== undefined) {
+                    amount = Number(logData.primaryValue);
+                } else {
+                    amount = Number(logData.amount) || 0;
+                }
+
+                const step: ExecutionStep = {
+                    id: `act_${timestamp.getTime()}`,
+                    timestamp,
+                    type: 'ACTION',
+                    label: meta.blockLabel || logData.deviceName,
+                    status: 'SUCCESS',
+                    resourceRole: role,
+                    metadata: logData
+                };
+
+                if (role && amount > 0) {
+                    const rType = roleMap.get(role)?.type || 'NONE';
+                    const rUnit = unit || roleMap.get(role)?.unit || '';
+                    const measuredBy = roleMap.get(role)?.measuredBy;
+
+                    // If this role has measuredBy (NONE + linked sensor), track for delta calculation
+                    if (rType === 'NONE' && measuredBy) {
+                        actuatorMeasuredByRoles.add(role);
+                        // Don't accumulate actuator value - delta will be calculated from sensor
+                    } else {
+                        // Normal accumulation for SUM/DELTA/TREND roles
+                        this.accumulateLoopStats(sessionTotals, role, amount, rType, rUnit);
+                    }
+
+                    if (loopStack.length > 0) {
+                        const ctx = loopStack[loopStack.length - 1];
+                        if (!(rType === 'NONE' && measuredBy)) {
+                            this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit);
+                        }
+                    }
+                }
+
+                if (loopStack.length > 0) {
+                    const ctx = loopStack[loopStack.length - 1];
+                    ctx.step.children = ctx.step.children || [];
+                    ctx.step.children.push(step);
+                    ctx.events.push(event);
+                } else {
+                    currentSession.steps.push(step);
+                }
+                continue;
+            }
+
+            // --- WAIT/IF/LOG LOGIC ---
+            // If inside loop, capture them for duration tracking, otherwise ignore or add as steps?
+            // User mostly cares about Sensors and Actions. But IF blocks are useful.
+            // --- GENERIC EVENT LOGIC ---
+            let stepType: ExecutionStep['type'] = 'LOGIC';
+            if (event.type === 'TRIGGER_MATCH') stepType = 'TRIGGER';
+            else if (event.type === 'FLOW_EXECUTED') stepType = 'FLOW_START';
+
+            const genericStep: ExecutionStep = {
+                id: `evt_${timestamp.getTime()}_${Math.random()}`,
+                timestamp,
+                type: stepType,
+                label: event.message || meta.blockType || 'Event',
+                status: 'INFO',
+                description: event.metadata?.description,
+                metadata: event.metadata
+            };
+
+            if (loopStack.length > 0) {
+                loopStack[loopStack.length - 1].events.push(event);
+            } else {
+                if (event.type === 'TRIGGER_MATCH' ||
+                    event.type === 'WINDOW_EVENT' ||
+                    event.type === 'FLOW_EXECUTED' ||
+                    meta.blockType === 'IF') {
+                    // steps.push(genericStep); // Don't push generic steps to session steps for now or it duplicates with currentSession.steps?
+                    // Actually, processSessionSteps collects steps into `steps` array but now we want to segment.
+                    // Wait, my previous huge replace block put the segmentation loop INSIDE processSessionSteps.
+
+                    // Let's stick to the Segmentation Logic:
+                    // Top level in session
+                    currentSession.steps.push(genericStep);
+                }
+            }
+        }
+
+        // Flush the last session to assign sessionTotals to currentSession.totals
+        flushSession();
+
+        return { formattedSessions: sessions };
+    }
+
+    private countLoopIterations(events: any[]): number {
+        return events.filter(e => e.message === 'Loop Condition Check').length || 1;
+    }
+
+    // Legacy method removed or kept if needed elsewhere, but for now we only use accumulateLoopStats
+    // private accumulateStats... 
+
+    private accumulateLoopStats(
+        stats: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }>,
+        role: string,
+        value: number,
+        type: AnalyticsType,
+        unit: string
+    ) {
+        if (!stats[role]) {
+            stats[role] = { role, type, value: 0, unit };
+        }
+
+        // SUM: Add values (dosages, ml, doses)
+        if (type === 'SUM') {
+            stats[role].value += value;
+        }
+        // DELTA/TREND: Track first and last values, calculate delta
+        else if (type === 'DELTA' || type === 'TREND') {
+            if (stats[role].startValue === undefined) {
+                stats[role].startValue = value;
+            }
+            stats[role].endValue = value;
+            // Calculate delta: END - START
+            stats[role].value = (stats[role].endValue ?? 0) - (stats[role].startValue ?? 0);
+        }
+        // NONE: Skip accumulation (unless handled via measuredBy elsewhere)
+    }
+}
 export const analyticsService = new AnalyticsService();

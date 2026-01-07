@@ -145,5 +145,84 @@ export const analyticsService = {
         }
 
         return json.data;
+    },
+
+    /**
+     * Fetch session timeline for a program on a specific date
+     */
+    async getSessionTimeline(programId: string, date: string): Promise<SessionTimelineResponse> {
+        const response = await fetch(`${API_BASE_URL}/api/analytics/program/${programId}/sessions?date=${date}`);
+        const json = await response.json();
+
+        if (!json.success) {
+            throw new Error(json.error || 'Failed to fetch session timeline');
+        }
+
+        return json.data;
     }
 };
+
+// ========== SESSION TIMELINE TYPES ==========
+
+export interface ExecutionStep {
+    id: string;
+    timestamp: string; // ISO string from JSON
+    type: 'TRIGGER' | 'ACTION' | 'LOGIC' | 'ENVIRONMENT_SCAN' | 'FLOW_START' | 'FLOW_END' | 'ERROR' | 'LOOP_SUMMARY';
+    label: string;
+    description?: string;
+    status: 'SUCCESS' | 'FAILURE' | 'SKIPPED' | 'INFO';
+    icon?: string;
+    metadata?: any;
+    readings?: {
+        device: string;
+        value: number;
+        unit: string;
+        isPrimary: boolean;
+        role?: string;
+    }[];
+    resourceRole?: string;
+
+    // Loop Support
+    loopStats?: {
+        iterations: number;
+        durationSeconds: number;
+        resources: Record<string, {
+            role: string;
+            type: 'SUM' | 'DELTA' | 'TREND' | 'NONE';
+            value: number;
+            unit: string;
+        }>;
+    };
+    children?: ExecutionStep[];
+}
+
+export interface ExecutionSession {
+    id: string;
+    type: 'TRIGGER_MATCH' | 'FALLBACK' | 'SCHEDULED' | 'MANUAL';
+    description: string;
+    startTime: string;
+    endTime: string;
+    steps: ExecutionStep[];
+    totals: Record<string, number>;
+}
+
+export interface ExecutionTrace {
+    windowId: string;
+    windowName: string;
+    startTime: string;
+    endTime: string;
+    sessions: ExecutionSession[];
+    durationSeconds: number;
+    totals: {
+        dosedMl: number;
+        energyWh: number;
+        byRole: Record<string, { role: string; type: 'SUM' | 'DELTA' | 'TREND' | 'NONE'; value: number; unit: string }>;
+    };
+}
+
+export interface SessionTimelineResponse {
+    programId: string;
+    date: string;
+    sessions: ExecutionTrace[];
+}
+

@@ -7,7 +7,7 @@ interface SensorValueCardProps {
     value: string | number | null;
     unit?: string;
     icon?: React.ReactNode;
-    lastUpdate?: Date;
+
     status?: 'normal' | 'warning' | 'error';
     variant?: 'default' | 'primary' | 'raw';
 
@@ -18,7 +18,7 @@ interface SensorValueCardProps {
 }
 
 export const SensorValueCard: React.FC<SensorValueCardProps> = ({
-    label, value, unit, icon, lastUpdate, status = 'normal', variant = 'default',
+    label, value, unit, icon, status = 'normal', variant = 'default',
     baseValue, baseUnit, subValue
 }) => {
     const isConverted = baseValue !== undefined && baseValue !== null && baseUnit && baseUnit !== unit;

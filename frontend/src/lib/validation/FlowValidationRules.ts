@@ -53,7 +53,7 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
         {
             field: 'duration',
             message: 'Duration must use a time unit variable (s, ms, min, h)',
-            validate: (val, data, context) => {
+            validate: (val, _data, context) => {
                 // Only validate if it's a variable reference
                 if (typeof val !== 'string' || !val.startsWith('{{')) return true;
                 if (!context || !context.variables) return true;

@@ -9,6 +9,15 @@
             "baseUnit": "boolean"
         }
     },
+    "resourceRoles": [
+        "ph_up",
+        "ph_down",
+        "nutrient_a",
+        "nutrient_b",
+        "water",
+        "mixer",
+        "none"
+    ],
     "roles": {
         "manual": {
             "label": "Manual Switch",

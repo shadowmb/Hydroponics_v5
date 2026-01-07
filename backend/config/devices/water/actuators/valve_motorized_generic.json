@@ -9,6 +9,13 @@
             "baseUnit": "%"
         }
     },
+    "resourceRoles": [
+        "water_in",
+        "water_out",
+        "drain",
+        "nutrient_supply",
+        "none"
+    ],
     "roles": {
         "positioning": {
             "label": "Valve Positioning",

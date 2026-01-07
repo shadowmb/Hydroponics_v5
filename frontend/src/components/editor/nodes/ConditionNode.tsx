@@ -7,7 +7,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { cn } from '../../../lib/utils';
 import { useFlowContext } from '../../../context/FlowContext';
 
-export const ConditionNode = memo(({ data, selected }: NodeProps<any>) => {
+export const ConditionNode = memo((props: NodeProps) => {
+    const { data, selected } = props as any;
     const { variables } = useFlowContext();
     const nodes = useNodes();
 

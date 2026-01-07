@@ -9,6 +9,10 @@
             "baseUnit": "mm"
         }
     },
+    "resourceRoles": [
+        "distance",
+        "volume"
+    ],
     "defaultRole": "distance",
     "roles": {
         "distance": {

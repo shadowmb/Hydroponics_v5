@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Play, Check, AlertCircle, Activity, Info, Wind, Droplets } from 'lucide-react';
+import { Check, Activity, Info, Wind, Droplets } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EcSmartWizardProps {
@@ -23,7 +23,7 @@ export const EcSmartWizard: React.FC<EcSmartWizardProps> = ({ onSave, onRunComma
         high: { raw: 0, value: 12880, active: false }
     });
 
-    const [health, setHealth] = useState<any>({});
+
     const [temperature, setTemperature] = useState<number>(25.0);
 
     // Capture current temperature for UI adjustments
@@ -85,7 +85,7 @@ export const EcSmartWizard: React.FC<EcSmartWizardProps> = ({ onSave, onRunComma
             return;
         }
 
-        onSave({ points: activePoints });
+        onSave({ points: sorted });
     };
 
     const renderCard = (key: string, label: string, color: string, icon: any) => {

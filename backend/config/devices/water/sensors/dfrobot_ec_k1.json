@@ -9,6 +9,9 @@
             "baseUnit": "µS/cm"
         }
     },
+    "resourceRoles": [
+        "ec"
+    ],
     "roles": {
         "ec": {
             "label": "EC Meter",

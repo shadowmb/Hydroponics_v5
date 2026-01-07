@@ -152,5 +152,39 @@ export const AnalyticsController = {
                 error: error.message
             });
         }
+    },
+
+    /**
+     * GET /api/analytics/program/:programId/sessions
+     * Get session timeline - aggregated view of flows per window
+     */
+    async getSessionTimeline(
+        request: FastifyRequest<{ Params: AnalyticsParams; Querystring: { date?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { programId } = request.params;
+            const { date } = request.query;
+
+            // Default date: today
+            const targetDate = date || new Date().toISOString().split('T')[0];
+
+            const timeline = await analyticsService.getSessionTimeline(programId, targetDate);
+
+            return reply.send({
+                success: true,
+                data: {
+                    programId,
+                    date: targetDate,
+                    sessions: timeline
+                }
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting session timeline:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
     }
 };

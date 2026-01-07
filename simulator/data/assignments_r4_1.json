@@ -5,7 +5,7 @@
       "A0_14"
     ],
     "values": {
-      "ph": 326.6666666666667
+      "ph": 266.6666666666667
     },
     "calibrationPoints": [
       {
@@ -24,7 +24,7 @@
       "A1_15"
     ],
     "values": {
-      "ec": 440.84494636783813
+      "ec": 205.46952123484783
     },
     "calibrationPoints": [
       {
@@ -63,9 +63,18 @@
       "A2_16"
     ],
     "values": {
-      "soil_moisture": 25
+      "soil_moisture": 30
     },
-    "calibrationPoints": []
+    "calibrationPoints": [
+      {
+        "value": 0,
+        "raw": 0
+      },
+      {
+        "value": 100,
+        "raw": 100
+      }
+    ]
   },
   {
     "sensorId": "dfrobot_par_rs485",
@@ -74,7 +83,17 @@
       "D1_1"
     ],
     "values": {
-      "par": 80
+      "par": 150
+    }
+  },
+  {
+    "sensorId": "dht22",
+    "pins": [
+      "D6_6"
+    ],
+    "values": {
+      "temp": 22,
+      "humidity": 80
     }
   }
 ]

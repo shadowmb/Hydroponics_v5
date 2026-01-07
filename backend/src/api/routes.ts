@@ -14,6 +14,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/analytics/programs', AnalyticsController.getExecutedPrograms);
     app.get('/api/analytics/program/:programId', AnalyticsController.getAnalytics);
     app.get('/api/analytics/program/:programId/filters', AnalyticsController.getFilterOptions);
+    app.get('/api/analytics/program/:programId/sessions', AnalyticsController.getSessionTimeline);
 
     // Notification Routes
     app.get('/api/notifications/channels', NotificationController.getChannels);
@@ -88,6 +89,13 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/automation/resume', AutomationController.resume);
     app.get('/api/automation/status', AutomationController.getStatus);
     app.get('/api/system/status', AutomationController.getSystemStatus);
+
+    // Resource Roles Management
+    const resourceRoleController = new (require('./controllers/ResourceRoleController').ResourceRoleController)();
+    app.get('/api/system/roles', resourceRoleController.list);
+    app.post('/api/system/roles/sync', resourceRoleController.sync);
+    app.put('/api/system/roles/:key', resourceRoleController.update);
+
 
     // Session Routes
     // Session Routes

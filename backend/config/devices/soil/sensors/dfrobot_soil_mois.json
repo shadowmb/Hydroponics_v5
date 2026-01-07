@@ -2,6 +2,15 @@
     "id": "dfrobot_soil_mois",
     "name": "DFRobot Soil Moisture",
     "category": "SENSOR",
+    "measurements": {
+        "soil_moisture": {
+            "rawUnit": "%",
+            "baseUnit": "%"
+        }
+    },
+    "resourceRoles": [
+        "soil_moisture"
+    ],
     "supportedStrategies": [
         "linear"
     ],
