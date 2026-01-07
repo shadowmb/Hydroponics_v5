@@ -39,8 +39,8 @@ export const FlowHealthDashboard = memo(({ nodes, edges, variables, onSelectBloc
             const cleanRef = (val: any) => typeof val === 'string' ? val.replace(/{{|}}/g, '') : val;
 
             nodes.forEach(n => {
-                const type = n.data.type;
-                const label = (n.data.label as string) || n.data.type || 'Block';
+                const type = n.data.type as string;
+                const label = (n.data.label as string) || (n.data.type as string) || 'Block';
 
                 // Writers
                 if (type === 'SENSOR_READ' && cleanRef(n.data.variable) === v.id) writers.push({ id: n.id, label });
@@ -196,7 +196,7 @@ export const FlowHealthDashboard = memo(({ nodes, edges, variables, onSelectBloc
                                         <span className="text-muted-foreground block mb-1.5 uppercase tracking-wide text-[10px]">Written By</span>
                                         {v.writers.length > 0 ? (
                                             <div className="flex flex-wrap gap-1.5">
-                                                {v.writers.map(ref => (
+                                                {v.writers.map((ref: { id: string; label: string }) => (
                                                     <Badge
                                                         key={ref.id}
                                                         variant="outline"
@@ -215,7 +215,7 @@ export const FlowHealthDashboard = memo(({ nodes, edges, variables, onSelectBloc
                                         <span className="text-muted-foreground block mb-1.5 uppercase tracking-wide text-[10px]">Read By</span>
                                         {v.readers.length > 0 ? (
                                             <div className="flex flex-wrap gap-1.5">
-                                                {v.readers.map(ref => (
+                                                {v.readers.map((ref: { id: string; label: string }) => (
                                                     <Badge
                                                         key={ref.id}
                                                         variant="outline"
