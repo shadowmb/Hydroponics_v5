@@ -15,7 +15,8 @@ const getIcon = (type: string) => {
     }
 };
 
-export const ActionNode = memo(({ data, selected }: NodeProps) => {
+export const ActionNode = memo((props: NodeProps) => {
+    const { data, selected } = props as any;
     return (
         <Tooltip>
             <TooltipTrigger asChild>

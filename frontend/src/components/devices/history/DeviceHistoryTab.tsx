@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,7 +28,7 @@ const METRIC_COLORS: Record<string, string> = {
     default: '#64748b' // Slate
 };
 
-export function DeviceHistoryTab({ deviceId, deviceType }: DeviceHistoryTabProps) {
+export function DeviceHistoryTab({ deviceId }: DeviceHistoryTabProps) {
     const [readings, setReadings] = useState<Reading[]>([]);
     const [loading, setLoading] = useState(false);
     const [limit, setLimit] = useState('50');

@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ReactFlow, Background, Controls, useNodesState, useEdgesState, addEdge, ReactFlowProvider } from '@xyflow/react';
-import type { Node, Connection, Edge } from '@xyflow/react';
+import type { Node, Connection, Edge, NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Sidebar } from '../components/editor/Sidebar';
 import { PropertiesPanel } from '../components/editor/PropertiesPanel';
@@ -31,7 +31,7 @@ import { slugify } from '../lib/string-utils';
 import { FlowValidator } from '../lib/validation/FlowValidator';
 import { FlowProvider } from '../context/FlowContext';
 
-const nodeTypes = {
+const nodeTypes: NodeTypes = {
     action: ActionNode,
     condition: ConditionNode,
     generic: GenericBlockNode,

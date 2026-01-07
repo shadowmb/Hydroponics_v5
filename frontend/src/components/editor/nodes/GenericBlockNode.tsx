@@ -69,7 +69,8 @@ const getActuatorConfig = (action: string): { header: string; icon: any; headerC
     }
 };
 
-export const GenericBlockNode = memo(({ data, selected }: NodeProps<any>) => {
+export const GenericBlockNode = memo((props: NodeProps) => {
+    const { data, selected } = props as any;
     const { devices } = useStore();
     const { variables } = useFlowContext();
     const isStart = data.type === 'START';

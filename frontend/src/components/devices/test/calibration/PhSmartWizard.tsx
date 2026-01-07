@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Play, Check, AlertCircle, Activity, Info } from 'lucide-react';
+import { Check, Activity, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 
@@ -24,35 +24,7 @@ export const PhSmartWizard: React.FC<PhSmartWizardProps> = ({ onSave, onRunComma
         high: { raw: 0, value: 10.0, active: false }
     });
 
-    const [health, setHealth] = useState<any>({});
 
-    // Calculate basic health metrics for UI feedback
-    useEffect(() => {
-        const h: any = {};
-
-        if (points.neutral.active) {
-            // Offset logic (Assuming 5000mV VRef and 10-bit ADC for estimation if not provided)
-            // Ideally we'd need VRef/Res from the device, but we can show ADC raw shift
-            // Base ADC for 7.0 is usually 512 (10-bit) or 2048 (12-bit)
-            const neutralRaw = points.neutral.raw;
-            h.offset = neutralRaw;
-        }
-
-        if (points.neutral.active && points.low.active) {
-            const rawDiff = Math.abs(points.neutral.raw - points.low.raw);
-            const valDiff = Math.abs(points.neutral.value - points.low.value);
-            // Rough estimation of efficiency
-            h.lowSlope = (rawDiff / valDiff);
-        }
-
-        if (points.neutral.active && points.high.active) {
-            const rawDiff = Math.abs(points.high.raw - points.neutral.raw);
-            const valDiff = Math.abs(points.high.value - points.neutral.value);
-            h.highSlope = (rawDiff / valDiff);
-        }
-
-        setHealth(h);
-    }, [points]);
 
     const handlePointChange = (key: string, field: 'raw' | 'value', val: number) => {
         setPoints(prev => ({
@@ -94,7 +66,7 @@ export const PhSmartWizard: React.FC<PhSmartWizardProps> = ({ onSave, onRunComma
             return;
         }
 
-        onSave({ points: activePoints });
+        onSave({ points: sorted });
     };
 
     const renderCard = (key: string, label: string, color: string) => {

@@ -5,7 +5,8 @@ import { Flag, DoorOpen, AlertCircle, RefreshCw, Anchor, FastForward } from 'luc
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { cn } from '../../../lib/utils';
 
-export const FlowControlNode = memo(({ data, selected }: NodeProps<any>) => {
+export const FlowControlNode = memo((props: NodeProps) => {
+    const { data, selected } = props as any;
     const nodes = useNodes();
     const controlType = data.controlType as string || 'LABEL';
     const labelName = data.labelName as string || 'Unknown';

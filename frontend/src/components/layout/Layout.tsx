@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Outlet, NavLink } from "react-router-dom"
-import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Repeat, Calendar, Play } from "lucide-react"
+import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Calendar, Play } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { useStore } from "../../core/useStore"
