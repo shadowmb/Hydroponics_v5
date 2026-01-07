@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { History } from './History';
 import { ProgramAnalytics } from '../components/analytics/ProgramAnalytics';
-import { BarChart3, LineChart, ScrollText } from 'lucide-react';
+import { SessionTimeline } from '../components/analytics/SessionTimeline';
+import { BarChart3, LineChart, ScrollText, GitBranch } from 'lucide-react';
 
 export function AnalyticsPage() {
-    const [activeTab, setActiveTab] = useState('program');
+    const [activeTab, setActiveTab] = useState('sessions');
 
     return (
         <div className="h-full flex flex-col">
@@ -22,6 +23,10 @@ export function AnalyticsPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                 <div className="border-b bg-card/50 px-6">
                     <TabsList className="h-12">
+                        <TabsTrigger value="sessions" className="gap-2">
+                            <GitBranch className="h-4 w-4" />
+                            Сесии (Timeline)
+                        </TabsTrigger>
                         <TabsTrigger value="sensors" className="gap-2">
                             <LineChart className="h-4 w-4" />
                             Sensor History
@@ -36,6 +41,10 @@ export function AnalyticsPage() {
                         </TabsTrigger>
                     </TabsList>
                 </div>
+
+                <TabsContent value="sessions" className="flex-1 m-0 overflow-auto p-6">
+                    <SessionTimeline />
+                </TabsContent>
 
                 <TabsContent value="sensors" className="flex-1 m-0 overflow-hidden">
                     <History />

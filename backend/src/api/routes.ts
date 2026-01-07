@@ -14,6 +14,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/analytics/programs', AnalyticsController.getExecutedPrograms);
     app.get('/api/analytics/program/:programId', AnalyticsController.getAnalytics);
     app.get('/api/analytics/program/:programId/filters', AnalyticsController.getFilterOptions);
+    app.get('/api/analytics/program/:programId/sessions', AnalyticsController.getSessionTimeline);
 
     // Notification Routes
     app.get('/api/notifications/channels', NotificationController.getChannels);

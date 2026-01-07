@@ -73,6 +73,42 @@ interface AnalyticsResponse {
     };
 }
 
+// ========== SESSION TIMELINE TYPES ==========
+
+interface SessionFlowSummary {
+    flowName: string;
+    sessionId: string;
+    startTime: Date;
+    endTime: Date;
+    sensorReadings: {
+        device: string;
+        value: number;
+        unit: string;
+    }[];
+    actuatorActions: {
+        device: string;
+        action: string;
+        totalValue: number;
+        unit: string;
+        count: number;
+    }[];
+}
+
+interface SessionTimelineEntry {
+    windowId: string;
+    windowName: string;
+    startTime: Date;
+    endTime: Date;
+    triggerInfo: string | null;
+    flows: SessionFlowSummary[];
+    // Aggregated context at start and end
+    contextStart: Record<string, { value: number; unit: string }>;
+    contextEnd: Record<string, { value: number; unit: string }>;
+    // Totals
+    totalDosedMl: number;
+    totalPulseSeconds: number;
+}
+
 export class AnalyticsService {
 
     /**
@@ -451,6 +487,188 @@ export class AnalyticsService {
         }
 
         return stats;
+    }
+
+    // ========== SESSION TIMELINE AGGREGATION ==========
+
+    /**
+     * Get session timeline - aggregates events by windowId to show
+     * the "chain" of flows executed in each time window
+     */
+    async getSessionTimeline(programId: string, date: string): Promise<SessionTimelineEntry[]> {
+        logger.info(`[AnalyticsService] Getting session timeline for program ${programId} on ${date}`);
+
+        // Fetch all logs for this program and date
+        const logs = await ProgramDailyLogModel.find({
+            programId,
+            date
+        }).lean();
+
+        if (!logs || logs.length === 0) {
+            return [];
+        }
+
+        // Flatten all events from all log documents
+        const allEvents: any[] = [];
+        for (const log of logs) {
+            if (log.events && Array.isArray(log.events)) {
+                allEvents.push(...log.events);
+            }
+        }
+
+        // Sort by timestamp
+        allEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        // Group by windowId
+        const windowGroups: Map<string, any[]> = new Map();
+
+        for (const event of allEvents) {
+            const windowId = event.metadata?.windowId || 'unknown';
+            if (!windowGroups.has(windowId)) {
+                windowGroups.set(windowId, []);
+            }
+            windowGroups.get(windowId)!.push(event);
+        }
+
+        // Build timeline entries
+        const timeline: SessionTimelineEntry[] = [];
+
+        for (const [windowId, events] of windowGroups) {
+            if (windowId === 'unknown' || events.length === 0) continue;
+
+            // Get window metadata from first event
+            const windowName = events[0].metadata?.windowName || windowId;
+
+            // Find trigger info
+            const triggerEvent = events.find(e => e.type === 'TRIGGER_MATCH');
+            const triggerInfo = triggerEvent?.message || null;
+
+            // Group events by flow (executionSessionId)
+            const flowGroups: Map<string, any[]> = new Map();
+            for (const event of events) {
+                const sessionId = event.executionSessionId || event.metadata?.sessionId;
+                if (sessionId) {
+                    if (!flowGroups.has(sessionId)) {
+                        flowGroups.set(sessionId, []);
+                    }
+                    flowGroups.get(sessionId)!.push(event);
+                }
+            }
+
+            // Build flow summaries
+            const flows: SessionFlowSummary[] = [];
+            for (const [sessionId, flowEvents] of flowGroups) {
+                const flowName = flowEvents[0]?.metadata?.flowName || 'Unknown Flow';
+                const timestamps = flowEvents.map(e => new Date(e.timestamp).getTime());
+                const startTime = new Date(Math.min(...timestamps));
+                const endTime = new Date(Math.max(...timestamps));
+
+                // Extract sensor readings (last known value per device)
+                const sensorMap: Map<string, { value: number; unit: string }> = new Map();
+                const actuatorMap: Map<string, { action: string; totalValue: number; unit: string; count: number }> = new Map();
+
+                for (const event of flowEvents) {
+                    const blockType = event.metadata?.blockType;
+                    const logData = event.metadata?.logData;
+                    const device = event.metadata?.blockLabel || 'Unknown';
+
+                    if (blockType === 'SENSOR_READ' && logData?.primaryValue !== undefined) {
+                        sensorMap.set(device, {
+                            value: logData.primaryValue,
+                            unit: logData.primaryUnit || ''
+                        });
+                    }
+
+                    if (blockType === 'ACTUATOR_SET' && logData) {
+                        const existing = actuatorMap.get(device) || { action: logData.action, totalValue: 0, unit: logData.primaryUnit || '', count: 0 };
+                        existing.totalValue += logData.primaryValue || 0;
+                        existing.count += 1;
+                        actuatorMap.set(device, existing);
+                    }
+                }
+
+                flows.push({
+                    flowName,
+                    sessionId,
+                    startTime,
+                    endTime,
+                    sensorReadings: Array.from(sensorMap.entries()).map(([device, data]) => ({
+                        device,
+                        value: data.value,
+                        unit: data.unit
+                    })),
+                    actuatorActions: Array.from(actuatorMap.entries()).map(([device, data]) => ({
+                        device,
+                        action: data.action,
+                        totalValue: data.totalValue,
+                        unit: data.unit,
+                        count: data.count
+                    }))
+                });
+            }
+
+            // Sort flows by start time
+            flows.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+            // Calculate context start/end (first and last sensor readings across all flows)
+            const contextStart: Record<string, { value: number; unit: string }> = {};
+            const contextEnd: Record<string, { value: number; unit: string }> = {};
+
+            if (flows.length > 0) {
+                // Context Start: from first flow
+                for (const reading of flows[0].sensorReadings) {
+                    contextStart[reading.device] = { value: reading.value, unit: reading.unit };
+                }
+                // Context End: from last flow
+                for (const reading of flows[flows.length - 1].sensorReadings) {
+                    contextEnd[reading.device] = { value: reading.value, unit: reading.unit };
+                }
+            }
+
+            // Calculate totals
+            let totalDosedMl = 0;
+            let totalPulseSeconds = 0;
+
+            for (const flow of flows) {
+                for (const act of flow.actuatorActions) {
+                    if (act.unit === 'doses' || act.unit === 'ml') {
+                        totalDosedMl += act.totalValue;
+                    }
+                    if (act.unit === 's') {
+                        totalPulseSeconds += act.totalValue;
+                    }
+                }
+            }
+
+            // Timestamps from window events or first/last flow
+            const windowStartEvent = events.find(e => e.type === 'WINDOW_EVENT' && e.message?.includes('стартира'));
+            const windowEndEvent = events.find(e => e.type === 'WINDOW_EVENT' && e.message?.includes('завърши'));
+
+            const windowStartTime = windowStartEvent
+                ? new Date(windowStartEvent.timestamp)
+                : (flows.length > 0 ? flows[0].startTime : new Date());
+            const windowEndTime = windowEndEvent
+                ? new Date(windowEndEvent.timestamp)
+                : (flows.length > 0 ? flows[flows.length - 1].endTime : new Date());
+
+            timeline.push({
+                windowId,
+                windowName,
+                startTime: windowStartTime,
+                endTime: windowEndTime,
+                triggerInfo,
+                flows,
+                contextStart,
+                contextEnd,
+                totalDosedMl,
+                totalPulseSeconds
+            });
+        }
+
+        // Sort timeline by start time
+        timeline.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+        return timeline;
     }
 }
 

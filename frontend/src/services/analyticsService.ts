@@ -145,5 +145,59 @@ export const analyticsService = {
         }
 
         return json.data;
+    },
+
+    /**
+     * Fetch session timeline for a program on a specific date
+     */
+    async getSessionTimeline(programId: string, date: string): Promise<SessionTimelineResponse> {
+        const response = await fetch(`${API_BASE_URL}/api/analytics/program/${programId}/sessions?date=${date}`);
+        const json = await response.json();
+
+        if (!json.success) {
+            throw new Error(json.error || 'Failed to fetch session timeline');
+        }
+
+        return json.data;
     }
 };
+
+// ========== SESSION TIMELINE TYPES ==========
+
+export interface SessionFlowSummary {
+    flowName: string;
+    sessionId: string;
+    startTime: string;
+    endTime: string;
+    sensorReadings: {
+        device: string;
+        value: number;
+        unit: string;
+    }[];
+    actuatorActions: {
+        device: string;
+        action: string;
+        totalValue: number;
+        unit: string;
+        count: number;
+    }[];
+}
+
+export interface SessionTimelineEntry {
+    windowId: string;
+    windowName: string;
+    startTime: string;
+    endTime: string;
+    triggerInfo: string | null;
+    flows: SessionFlowSummary[];
+    contextStart: Record<string, { value: number; unit: string }>;
+    contextEnd: Record<string, { value: number; unit: string }>;
+    totalDosedMl: number;
+    totalPulseSeconds: number;
+}
+
+export interface SessionTimelineResponse {
+    programId: string;
+    date: string;
+    sessions: SessionTimelineEntry[];
+}
