@@ -164,40 +164,42 @@ export const analyticsService = {
 
 // ========== SESSION TIMELINE TYPES ==========
 
-export interface SessionFlowSummary {
-    flowName: string;
-    sessionId: string;
-    startTime: string;
-    endTime: string;
-    sensorReadings: {
+export interface ExecutionStep {
+    id: string;
+    timestamp: string; // ISO string from JSON
+    type: 'TRIGGER' | 'ACTION' | 'LOGIC' | 'ENVIRONMENT_SCAN' | 'FLOW_START' | 'FLOW_END' | 'ERROR';
+    label: string;
+    description?: string;
+    status: 'SUCCESS' | 'FAILURE' | 'SKIPPED' | 'INFO';
+    icon?: string;
+    metadata?: any;
+    readings?: {
         device: string;
         value: number;
         unit: string;
-    }[];
-    actuatorActions: {
-        device: string;
-        action: string;
-        totalValue: number;
-        unit: string;
-        count: number;
+        isPrimary: boolean;
     }[];
 }
 
-export interface SessionTimelineEntry {
+export interface ExecutionTrace {
     windowId: string;
     windowName: string;
     startTime: string;
     endTime: string;
-    triggerInfo: string | null;
-    flows: SessionFlowSummary[];
-    contextStart: Record<string, { value: number; unit: string }>;
-    contextEnd: Record<string, { value: number; unit: string }>;
-    totalDosedMl: number;
-    totalPulseSeconds: number;
+    triggerInfo: {
+        type: string;
+        message: string;
+    } | null;
+    steps: ExecutionStep[];
+    durationSeconds: number;
+    totals: {
+        dosedMl: number;
+        energyWh: number;
+    };
 }
 
 export interface SessionTimelineResponse {
     programId: string;
     date: string;
-    sessions: SessionTimelineEntry[];
+    sessions: ExecutionTrace[];
 }

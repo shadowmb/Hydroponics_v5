@@ -8,10 +8,11 @@ import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import {
     CalendarIcon, RefreshCw, Loader2, ChevronDown, ChevronRight,
-    Clock, FlaskConical, Droplets, Activity, Timer
+    Clock, Droplets
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { analyticsService, type SessionTimelineEntry, type ExecutedProgram } from '../../services/analyticsService';
+import { analyticsService, type ExecutionTrace as ExecutionTraceType, type ExecutedProgram } from '../../services/analyticsService';
+import { ExecutionTrace } from './ExecutionTrace';
 import { toast } from 'sonner';
 
 export function SessionTimeline() {
@@ -19,7 +20,7 @@ export function SessionTimeline() {
     const [selectedProgram, setSelectedProgram] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [loadingPrograms, setLoadingPrograms] = useState(true);
-    const [sessions, setSessions] = useState<SessionTimelineEntry[]>([]);
+    const [sessions, setSessions] = useState<ExecutionTraceType[]>([]);
     const [date, setDate] = useState<Date>(new Date());
     const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
 
@@ -82,13 +83,7 @@ export function SessionTimeline() {
         return format(new Date(isoString), 'HH:mm:ss');
     };
 
-    const formatDuration = (start: string, end: string) => {
-        const diffMs = new Date(end).getTime() - new Date(start).getTime();
-        const secs = Math.round(diffMs / 1000);
-        if (secs < 60) return `${secs}s`;
-        const mins = Math.round(secs / 60);
-        return `${mins}min`;
-    };
+
 
     return (
         <div className="space-y-6">
@@ -179,19 +174,13 @@ export function SessionTimeline() {
                                                 </Badge>
                                             </div>
                                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                {session.totalDosedMl > 0 && (
+                                                {session.totals.dosedMl > 0 && (
                                                     <span className="flex items-center gap-1">
                                                         <Droplets className="h-4 w-4 text-blue-500" />
-                                                        {session.totalDosedMl.toFixed(1)} ml
+                                                        {session.totals.dosedMl.toFixed(1)} ml
                                                     </span>
                                                 )}
-                                                {session.totalPulseSeconds > 0 && (
-                                                    <span className="flex items-center gap-1">
-                                                        <Timer className="h-4 w-4 text-yellow-500" />
-                                                        {session.totalPulseSeconds.toFixed(0)}s
-                                                    </span>
-                                                )}
-                                                <span>{session.flows.length} потоци</span>
+                                                <span>{session.steps.length} steps</span>
                                             </div>
                                         </div>
                                     </CardHeader>
@@ -199,93 +188,7 @@ export function SessionTimeline() {
 
                                 <CollapsibleContent>
                                     <CardContent className="pt-0">
-                                        {/* Context Summary */}
-                                        <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-muted/30 rounded-lg">
-                                            <div>
-                                                <div className="text-xs font-medium text-muted-foreground mb-1">Начален Контекст</div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {Object.entries(session.contextStart).map(([device, data]) => (
-                                                        <Badge key={device} variant="secondary" className="text-xs">
-                                                            {device}: {data.value.toFixed(2)} {data.unit}
-                                                        </Badge>
-                                                    ))}
-                                                    {Object.keys(session.contextStart).length === 0 && (
-                                                        <span className="text-xs text-muted-foreground">Няма данни</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-medium text-muted-foreground mb-1">Краен Контекст</div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {Object.entries(session.contextEnd).map(([device, data]) => (
-                                                        <Badge key={device} variant="secondary" className="text-xs">
-                                                            {device}: {data.value.toFixed(2)} {data.unit}
-                                                        </Badge>
-                                                    ))}
-                                                    {Object.keys(session.contextEnd).length === 0 && (
-                                                        <span className="text-xs text-muted-foreground">Няма данни</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Flow Timeline */}
-                                        <div className="relative">
-                                            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
-
-                                            {session.flows.map((flow) => (
-                                                <div key={flow.sessionId} className="relative pl-10 pb-4">
-                                                    {/* Timeline dot */}
-                                                    <div className="absolute left-[11px] w-3 h-3 rounded-full bg-primary border-2 border-background" />
-
-                                                    <div className="p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors">
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="font-medium flex items-center gap-2">
-                                                                <FlaskConical className="h-4 w-4 text-purple-500" />
-                                                                {flow.flowName}
-                                                            </span>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {formatTime(flow.startTime)} ({formatDuration(flow.startTime, flow.endTime)})
-                                                            </span>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-2 gap-4 text-sm">
-                                                            {/* Sensor Readings */}
-                                                            {flow.sensorReadings.length > 0 && (
-                                                                <div>
-                                                                    <div className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                                                                        <Activity className="h-3 w-3" /> Измервания
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {flow.sensorReadings.map((r, i) => (
-                                                                            <Badge key={i} variant="outline" className="text-xs">
-                                                                                {r.device}: {r.value.toFixed(2)} {r.unit}
-                                                                            </Badge>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Actuator Actions */}
-                                                            {flow.actuatorActions.length > 0 && (
-                                                                <div>
-                                                                    <div className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                                                                        <Droplets className="h-3 w-3" /> Действия
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {flow.actuatorActions.map((a, i) => (
-                                                                            <Badge key={i} className="text-xs">
-                                                                                {a.device}: {a.totalValue.toFixed(1)} {a.unit} ({a.count}x)
-                                                                            </Badge>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <ExecutionTrace trace={session} />
                                     </CardContent>
                                 </CollapsibleContent>
                             </Collapsible>

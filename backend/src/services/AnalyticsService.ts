@@ -73,41 +73,43 @@ interface AnalyticsResponse {
     };
 }
 
-// ========== SESSION TIMELINE TYPES ==========
+// ========== SESSION TRACE TYPES (REFACTORED) ==========
 
-interface SessionFlowSummary {
-    flowName: string;
-    sessionId: string;
-    startTime: Date;
-    endTime: Date;
-    sensorReadings: {
+interface ExecutionStep {
+    id: string;
+    timestamp: Date;
+    type: 'TRIGGER' | 'ACTION' | 'LOGIC' | 'ENVIRONMENT_SCAN' | 'FLOW_START' | 'FLOW_END' | 'ERROR';
+    label: string;
+    description?: string;
+    status: 'SUCCESS' | 'FAILURE' | 'SKIPPED' | 'INFO';
+    icon?: string;
+    metadata?: any;
+    // For sensor scans
+    readings?: {
         device: string;
         value: number;
         unit: string;
-    }[];
-    actuatorActions: {
-        device: string;
-        action: string;
-        totalValue: number;
-        unit: string;
-        count: number;
+        isPrimary: boolean;
     }[];
 }
 
-interface SessionTimelineEntry {
+interface ExecutionTrace {
     windowId: string;
     windowName: string;
     startTime: Date;
     endTime: Date;
-    triggerInfo: string | null;
-    flows: SessionFlowSummary[];
-    // Aggregated context at start and end
-    contextStart: Record<string, { value: number; unit: string }>;
-    contextEnd: Record<string, { value: number; unit: string }>;
-    // Totals
-    totalDosedMl: number;
-    totalPulseSeconds: number;
+    triggerInfo: {
+        type: string;
+        message: string;
+    } | null;
+    steps: ExecutionStep[];
+    durationSeconds: number;
+    totals: {
+        dosedMl: number;
+        energyWh: number;
+    };
 }
+
 
 export class AnalyticsService {
 
@@ -495,7 +497,10 @@ export class AnalyticsService {
      * Get session timeline - aggregates events by windowId to show
      * the "chain" of flows executed in each time window
      */
-    async getSessionTimeline(programId: string, date: string): Promise<SessionTimelineEntry[]> {
+    /**
+     * Get execution trace - detailed diagnostic view of session execution
+     */
+    async getSessionTimeline(programId: string, date: string): Promise<ExecutionTrace[]> {
         logger.info(`[AnalyticsService] Getting session timeline for program ${programId} on ${date}`);
 
         // Fetch all logs for this program and date
@@ -530,169 +535,189 @@ export class AnalyticsService {
             windowGroups.get(windowId)!.push(event);
         }
 
-        // Build timeline entries
-        const timeline: SessionTimelineEntry[] = [];
+        // Build traces
+        const traces: ExecutionTrace[] = [];
 
         for (const [windowId, events] of windowGroups) {
             if (windowId === 'unknown' || events.length === 0) continue;
 
-            // Get window metadata from first event
             const windowName = events[0].metadata?.windowName || windowId;
+            const steps: ExecutionStep[] = [];
+            let totalDosedMl = 0;
 
-            // Find trigger info
+            // 1. Identification Trigger
             const triggerEvent = events.find(e => e.type === 'TRIGGER_MATCH');
-            const triggerInfo = triggerEvent?.message || null;
+            const triggerInfo = triggerEvent ? {
+                type: 'CONDITION',
+                message: triggerEvent.message || 'Trigger Matched'
+            } : events.find(e => e.type === 'WINDOW_EVENT' && e.message?.includes('стартира')) ? {
+                type: 'SCHEDULE',
+                message: 'Scheduled Start'
+            } : null;
 
-            // Group events by flow (executionSessionId)
-            const flowGroups: Map<string, any[]> = new Map();
-            for (const event of events) {
-                const sessionId = event.executionSessionId || event.metadata?.sessionId;
-                if (sessionId) {
-                    if (!flowGroups.has(sessionId)) {
-                        flowGroups.set(sessionId, []);
-                    }
-                    flowGroups.get(sessionId)!.push(event);
+            // 2. Process events into Linear Steps
+            // We want to group sequential SENSOR_READs into one 'ENVIRONMENT_SCAN'
+            let currentScan: { device: string; value: number; unit: string; isPrimary: boolean }[] | null = null;
+            let currentScanTime: Date | null = null;
+
+            // Helper to flush current scan
+            const flushScan = () => {
+                if (currentScan && currentScan.length > 0 && currentScanTime) {
+                    steps.push({
+                        id: `scan_${currentScanTime.getTime()}`,
+                        timestamp: currentScanTime,
+                        type: 'ENVIRONMENT_SCAN',
+                        label: 'Environment Scan',
+                        status: 'INFO',
+                        readings: [...currentScan]
+                    });
+                    currentScan = null;
+                    currentScanTime = null;
                 }
-            }
+            };
 
-            // Build flow summaries
-            const flows: SessionFlowSummary[] = [];
-            for (const [sessionId, flowEvents] of flowGroups) {
-                const flowName = flowEvents[0]?.metadata?.flowName || 'Unknown Flow';
-                const timestamps = flowEvents.map(e => new Date(e.timestamp).getTime());
-                const startTime = new Date(Math.min(...timestamps));
-                const endTime = new Date(Math.max(...timestamps));
+            for (const event of events) {
+                const logData = event.metadata?.logData;
+                const blockType = event.metadata?.blockType;
+                const timestamp = new Date(event.timestamp);
 
-                // Extract sensor readings (last known value per device)
-                const sensorMap: Map<string, { value: number; unit: string; isPrimary?: boolean }> = new Map();
-                const actuatorMap: Map<string, { action: string; totalValue: number; unit: string; count: number }> = new Map();
+                // --- SENSOR READ ---
+                if (blockType === 'SENSOR_READ' && logData) {
+                    if (!currentScan) {
+                        currentScan = [];
+                        currentScanTime = timestamp;
+                    }
 
-                for (const event of flowEvents) {
-                    const blockType = event.metadata?.blockType;
-                    const logData = event.metadata?.logData;
-                    // Use deviceName/deviceId from logData (reliable), fallback to blockLabel (legacy)
-                    const deviceKey = logData?.deviceId || logData?.deviceName || event.metadata?.blockLabel || 'Unknown';
-                    const deviceName = logData?.deviceName || event.metadata?.blockLabel || 'Unknown';
+                    const label = event.metadata?.blockLabel || logData.deviceName || 'Unknown Sensor';
 
-                    if (blockType === 'SENSOR_READ' && logData) {
-                        // Use structured measurements array (new format)
-                        if (logData.measurements && Array.isArray(logData.measurements)) {
-                            for (const m of logData.measurements) {
-                                if (typeof m.value === 'number' && !isNaN(m.value)) {
-                                    const readingKey = `${deviceName}:${m.key}`;
-                                    sensorMap.set(readingKey, {
-                                        value: m.value,
-                                        unit: m.unit,
-                                        isPrimary: m.isPrimary
-                                    });
-                                }
-                            }
-                        }
-                        // Also store primaryValue for backward compatibility
-                        if (logData.primaryValue !== undefined) {
-                            sensorMap.set(deviceName, {
-                                value: logData.primaryValue,
-                                unit: logData.primaryUnit || ''
+                    // Add measurements
+                    if (logData.measurements && Array.isArray(logData.measurements)) {
+                        for (const m of logData.measurements) {
+                            currentScan.push({
+                                device: label, // Use block label if available
+                                value: m.value,
+                                unit: m.unit,
+                                isPrimary: m.isPrimary
                             });
                         }
+                    } else if (logData.primaryValue !== undefined) {
+                        currentScan.push({
+                            device: label,
+                            value: logData.primaryValue,
+                            unit: logData.primaryUnit,
+                            isPrimary: true
+                        });
+                    }
+                    continue; // Skip pushing individual step, wait for flush
+                } else {
+                    // Non-sensor event breaks the scan group
+                    flushScan();
+                }
+
+                // --- ACTUATOR ---
+                if (blockType === 'ACTUATOR_SET' && logData) {
+                    const actionName = logData.action === 'DOSE' ? 'Dosing' :
+                        logData.action === 'ON' ? 'Turn ON' :
+                            logData.action === 'OFF' ? 'Turn OFF' : logData.action;
+
+                    // Prefer Block Label (User defined name) over Device Name
+                    const mainLabel = event.metadata?.blockLabel || logData.deviceName;
+
+                    let details = logData.primaryValue ? `${logData.primaryValue} ${logData.primaryUnit}` : '';
+
+                    // Add calculated volume if distinct and available
+                    if (logData.calculatedVolumeMl && logData.primaryUnit !== 'ml') {
+                        details += ` (${logData.calculatedVolumeMl.toFixed(1)} ml)`;
                     }
 
-                    if (blockType === 'ACTUATOR_SET' && logData) {
-                        const existing = actuatorMap.get(deviceKey) || {
-                            action: logData.action,
-                            totalValue: 0,
-                            unit: logData.primaryUnit || '',
-                            count: 0,
-                            resourceRole: logData.resourceRole
-                        };
-                        existing.totalValue += logData.primaryValue || 0;
-                        existing.count += 1;
-                        actuatorMap.set(deviceKey, existing);
+                    // Add device name context if using block label
+                    if (event.metadata?.blockLabel && logData.deviceName && event.metadata.blockLabel !== logData.deviceName) {
+                        details += ` • ${logData.deviceName}`;
+                    }
+
+                    steps.push({
+                        id: event._id || `act_${timestamp.getTime()}`,
+                        timestamp,
+                        type: 'ACTION',
+                        label: mainLabel, // Clean label matching Program Analytics
+                        description: details,
+                        status: logData.success === false ? 'FAILURE' : 'SUCCESS',
+                        icon: 'zap'
+                    });
+
+                    if (logData.calculatedVolumeMl) {
+                        totalDosedMl += logData.calculatedVolumeMl;
                     }
                 }
 
-                flows.push({
-                    flowName,
-                    sessionId,
-                    startTime,
-                    endTime,
-                    sensorReadings: Array.from(sensorMap.entries()).map(([device, data]) => ({
-                        device,
-                        value: data.value,
-                        unit: data.unit
-                    })),
-                    actuatorActions: Array.from(actuatorMap.entries()).map(([device, data]) => ({
-                        device,
-                        action: data.action,
-                        totalValue: data.totalValue,
-                        unit: data.unit,
-                        count: data.count
-                    }))
-                });
+                // --- FLOW CONTROL ---
+                if (event.type === 'FLOW_EXECUTED') {
+                    steps.push({
+                        id: event._id,
+                        timestamp,
+                        type: 'FLOW_START',
+                        label: `Start Flow: ${event.metadata?.flowName || 'Unknown'}`,
+                        status: 'SUCCESS'
+                    });
+                }
+
+                // --- LOGIC (IF/LOOP) ---
+                if ((blockType === 'IF' || blockType === 'LOOP') && logData) {
+                    const isLoop = blockType === 'LOOP';
+                    const left = logData.leftValue;
+                    const right = logData.rightValue;
+                    const op = logData.operator;
+                    const result = logData.primaryValue === 1 ? 'TRUE' : 'FALSE';
+
+                    steps.push({
+                        id: event._id,
+                        timestamp,
+                        type: 'LOGIC',
+                        label: `${isLoop ? 'Loop Condition' : 'Check'}: ${logData.strategy || 'Comparison'}`,
+                        description: `${left} ${op} ${right} => ${result}`,
+                        status: result === 'TRUE' ? 'SUCCESS' : 'SKIPPED'
+                    });
+                }
+
+                // --- TRIGGER INFO (Within window) ---
+                if (event.type === 'TRIGGER_MATCH') {
+                    steps.push({
+                        id: event._id,
+                        timestamp,
+                        type: 'TRIGGER',
+                        label: 'Trigger Matched',
+                        description: event.message,
+                        status: 'SUCCESS'
+                    });
+                }
             }
+            // Final flush
+            flushScan();
 
-            // Sort flows by start time
-            flows.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+            // Calculate duration
+            const startTime = events[0] ? new Date(events[0].timestamp) : new Date();
+            const endTime = events[events.length - 1] ? new Date(events[events.length - 1].timestamp) : new Date();
+            const durationSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
 
-            // Calculate context start/end (first and last sensor readings across all flows)
-            const contextStart: Record<string, { value: number; unit: string }> = {};
-            const contextEnd: Record<string, { value: number; unit: string }> = {};
-
-            if (flows.length > 0) {
-                // Context Start: from first flow
-                for (const reading of flows[0].sensorReadings) {
-                    contextStart[reading.device] = { value: reading.value, unit: reading.unit };
-                }
-                // Context End: from last flow
-                for (const reading of flows[flows.length - 1].sensorReadings) {
-                    contextEnd[reading.device] = { value: reading.value, unit: reading.unit };
-                }
-            }
-
-            // Calculate totals
-            let totalDosedMl = 0;
-            let totalPulseSeconds = 0;
-
-            for (const flow of flows) {
-                for (const act of flow.actuatorActions) {
-                    if (act.unit === 'doses' || act.unit === 'ml') {
-                        totalDosedMl += act.totalValue;
-                    }
-                    if (act.unit === 's') {
-                        totalPulseSeconds += act.totalValue;
-                    }
-                }
-            }
-
-            // Timestamps from window events or first/last flow
-            const windowStartEvent = events.find(e => e.type === 'WINDOW_EVENT' && e.message?.includes('стартира'));
-            const windowEndEvent = events.find(e => e.type === 'WINDOW_EVENT' && e.message?.includes('завърши'));
-
-            const windowStartTime = windowStartEvent
-                ? new Date(windowStartEvent.timestamp)
-                : (flows.length > 0 ? flows[0].startTime : new Date());
-            const windowEndTime = windowEndEvent
-                ? new Date(windowEndEvent.timestamp)
-                : (flows.length > 0 ? flows[flows.length - 1].endTime : new Date());
-
-            timeline.push({
+            traces.push({
                 windowId,
                 windowName,
-                startTime: windowStartTime,
-                endTime: windowEndTime,
+                startTime,
+                endTime,
+                durationSeconds,
                 triggerInfo,
-                flows,
-                contextStart,
-                contextEnd,
-                totalDosedMl,
-                totalPulseSeconds
+                steps,
+                totals: {
+                    dosedMl: totalDosedMl,
+                    energyWh: 0 // Placeholder
+                }
             });
         }
 
-        // Sort timeline by start time
-        timeline.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        // Sort traces by start time
+        traces.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-        return timeline;
+        return traces;
     }
 }
 

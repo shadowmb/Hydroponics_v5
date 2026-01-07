@@ -1,30 +1,30 @@
 {
   "_id": {
-    "$oid": "695e28753ca221d45d69da43"
+    "$oid": "695e30043ca221d45d69e1fd"
   },
-  "date": "2026-01-07",
   "programId": "prog_test_programa_seznori",
+  "date": "2026-01-07",
   "__v": 0,
   "createdAt": {
-    "$date": "2026-01-07T09:33:41.110Z"
+    "$date": "2026-01-07T10:05:56.776Z"
   },
   "deletedAt": null,
   "events": [
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:41.108Z"
+        "$date": "2026-01-07T10:05:56.775Z"
       },
       "type": "INFO",
       "message": "Програмата стартира",
       "metadata": {
         "timestamp": {
-          "$date": "2026-01-07T09:33:41.108Z"
+          "$date": "2026-01-07T10:05:56.774Z"
         }
       }
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:41.122Z"
+        "$date": "2026-01-07T10:05:56.788Z"
       },
       "type": "WINDOW_EVENT",
       "message": "Прозорец \"Прозорец 1\" стартира",
@@ -35,7 +35,7 @@
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:41.167Z"
+        "$date": "2026-01-07T10:05:56.824Z"
       },
       "type": "TRIGGER_MATCH",
       "message": "Тригер: PAR SIM (150) between 100-300",
@@ -46,19 +46,19 @@
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:41.244Z"
+        "$date": "2026-01-07T10:05:56.872Z"
       },
       "type": "FLOW_EXECUTED",
       "message": "Стартиран поток: StartStop NEW",
       "metadata": {
-        "sessionId": "695e287585ce79b02b047155",
+        "sessionId": "695e3004c434325f8fcb437e",
         "flowId": "prog_test_programa_seznori"
       },
-      "executionSessionId": "695e287585ce79b02b047155"
+      "executionSessionId": "695e3004c434325f8fcb437e"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:41.343Z"
+        "$date": "2026-01-07T10:05:56.936Z"
       },
       "type": "INFO",
       "message": "📊 Сензор Темп: Read 22 C",
@@ -72,7 +72,7 @@
           "primaryValue": 22,
           "primaryUnit": "C",
           "strategy": "linear",
-          "durationMs": 75,
+          "durationMs": 39,
           "deviceId": "695e20bb92c768e3f5d01e0d",
           "deviceName": "DTH22 SIM",
           "resourceRole": "temp",
@@ -101,16 +101,16 @@
             "activeStrategy": "linear"
           }
         },
-        "sessionId": "695e287585ce79b02b047155",
+        "sessionId": "695e3004c434325f8fcb437e",
         "windowId": "tw_1767776775372_o36rrx0ta",
         "windowName": "Прозорец 1",
         "flowName": "StartStop NEW"
       },
-      "executionSessionId": "695e287585ce79b02b047155"
+      "executionSessionId": "695e3004c434325f8fcb437e"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:41.396Z"
+        "$date": "2026-01-07T10:05:56.980Z"
       },
       "type": "INFO",
       "message": "📊 Сензор рН: Read 6.35 pH",
@@ -124,7 +124,7 @@
           "primaryValue": 6.35,
           "primaryUnit": "pH",
           "strategy": "ph_smart",
-          "durationMs": 29,
+          "durationMs": 25,
           "deviceId": "695cd1fc4e26582a9ad753fa",
           "deviceName": "PH SIM",
           "resourceRole": "ph",
@@ -155,16 +155,16 @@
             "raw_pH": 6.35
           }
         },
-        "sessionId": "695e287585ce79b02b047155",
+        "sessionId": "695e3004c434325f8fcb437e",
         "windowId": "tw_1767776775372_o36rrx0ta",
         "windowName": "Прозорец 1",
         "flowName": "StartStop NEW"
       },
-      "executionSessionId": "695e287585ce79b02b047155"
+      "executionSessionId": "695e3004c434325f8fcb437e"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:41.434Z"
+        "$date": "2026-01-07T10:05:57.024Z"
       },
       "type": "INFO",
       "message": "📊 Сенозор ЕС: Read 2.15 mS/cm",
@@ -178,7 +178,7 @@
           "primaryValue": 2.15,
           "primaryUnit": "mS/cm",
           "strategy": "ec_smart",
-          "durationMs": 24,
+          "durationMs": 33,
           "deviceId": "695cf8f309a10176b895f574",
           "deviceName": "EC SIM",
           "resourceRole": "ec",
@@ -205,16 +205,16 @@
             "beta": 0.02
           }
         },
-        "sessionId": "695e287585ce79b02b047155",
+        "sessionId": "695e3004c434325f8fcb437e",
         "windowId": "tw_1767776775372_o36rrx0ta",
         "windowName": "Прозорец 1",
         "flowName": "StartStop NEW"
       },
-      "executionSessionId": "695e287585ce79b02b047155"
+      "executionSessionId": "695e3004c434325f8fcb437e"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:41.503Z"
+        "$date": "2026-01-07T10:05:57.092Z"
       },
       "type": "INFO",
       "message": "📊 Сензор ГР: Read 88 L",
@@ -256,23 +256,23 @@
             "activeStrategy": "tank_volume"
           }
         },
-        "sessionId": "695e287585ce79b02b047155",
+        "sessionId": "695e3004c434325f8fcb437e",
         "windowId": "tw_1767776775372_o36rrx0ta",
         "windowName": "Прозорец 1",
         "flowName": "StartStop NEW"
       },
-      "executionSessionId": "695e287585ce79b02b047155"
+      "executionSessionId": "695e3004c434325f8fcb437e"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:43.560Z"
+        "$date": "2026-01-07T10:05:59.191Z"
       },
       "type": "INFO",
-      "message": "⚡ Set Actuator: Dosed 2doses",
+      "message": "⚡ Помпа рН+: Dosed 2doses",
       "metadata": {
         "blockId": "ACTUATOR_SET_1767778082120",
         "blockType": "ACTUATOR_SET",
-        "blockLabel": "Set Actuator",
+        "blockLabel": "Помпа рН+",
         "success": true,
         "logData": {
           "action": "DOSE",
@@ -285,16 +285,74 @@
           "deviceName": "Pump рН+ SIM",
           "resourceRole": "ph_up"
         },
-        "sessionId": "695e287585ce79b02b047155",
+        "sessionId": "695e3004c434325f8fcb437e",
         "windowId": "tw_1767776775372_o36rrx0ta",
         "windowName": "Прозорец 1",
         "flowName": "StartStop NEW"
       },
-      "executionSessionId": "695e287585ce79b02b047155"
+      "executionSessionId": "695e3004c434325f8fcb437e"
     },
     {
       "timestamp": {
-        "$date": "2026-01-07T09:33:50.009Z"
+        "$date": "2026-01-07T10:06:19.234Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разтвор А Доза: Dosed 4doses",
+      "metadata": {
+        "blockId": "ACTUATOR_SET_1767780233428",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разтвор А Доза",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 4,
+          "primaryUnit": "doses",
+          "durationMs": 20000,
+          "calculatedVolumeMl": 200,
+          "deviceId": "695e2f57c434325f8fcb40d1",
+          "deviceName": "Pump A SIM",
+          "resourceRole": "nutrient_a"
+        },
+        "sessionId": "695e3004c434325f8fcb437e",
+        "windowId": "tw_1767776775372_o36rrx0ta",
+        "windowName": "Прозорец 1",
+        "flowName": "StartStop NEW"
+      },
+      "executionSessionId": "695e3004c434325f8fcb437e"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T10:06:29.280Z"
+      },
+      "type": "INFO",
+      "message": "⚡ Разтвор А мл: Dosed 100ml",
+      "metadata": {
+        "blockId": "generic_1767780255185",
+        "blockType": "ACTUATOR_SET",
+        "blockLabel": "Разтвор А мл",
+        "success": true,
+        "logData": {
+          "action": "DOSE",
+          "strategy": "volumetric",
+          "primaryValue": 100,
+          "primaryUnit": "ml",
+          "durationMs": 10000,
+          "calculatedVolumeMl": 100,
+          "deviceId": "695e2f57c434325f8fcb40d1",
+          "deviceName": "Pump A SIM",
+          "resourceRole": "nutrient_a"
+        },
+        "sessionId": "695e3004c434325f8fcb437e",
+        "windowId": "tw_1767776775372_o36rrx0ta",
+        "windowName": "Прозорец 1",
+        "flowName": "StartStop NEW"
+      },
+      "executionSessionId": "695e3004c434325f8fcb437e"
+    },
+    {
+      "timestamp": {
+        "$date": "2026-01-07T10:06:30.013Z"
       },
       "type": "WINDOW_EVENT",
       "message": "Прозорец \"Прозорец 1\" завърши (Изтекло време)",
@@ -306,6 +364,6 @@
   ],
   "isVisible": true,
   "updatedAt": {
-    "$date": "2026-01-07T09:33:50.010Z"
+    "$date": "2026-01-07T10:06:30.014Z"
   }
 }
