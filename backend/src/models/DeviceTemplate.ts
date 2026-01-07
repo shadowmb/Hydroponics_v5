@@ -15,6 +15,7 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         strategies: string[];
         units?: string[];
     }>;
+    resourceRoles?: string[]; // Available resource roles for analytics (e.g., 'ph_up', 'nutrient_a')
     capabilities: string[]; // List of supported commands (e.g., ['ANALOG', 'DHT_READ'])
     commands: Record<string, any>; // Command definitions
     portRequirements: {
@@ -84,6 +85,7 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
     conversionStrategy: { type: String },
     defaultRole: { type: String },
     roles: { type: Map, of: Schema.Types.Mixed }, // Store as Mix map or strict structure
+    resourceRoles: [{ type: String }], // Available resource roles for analytics
     capabilities: [{ type: String }],
     commands: { type: Map, of: Schema.Types.Mixed },
     portRequirements: [{

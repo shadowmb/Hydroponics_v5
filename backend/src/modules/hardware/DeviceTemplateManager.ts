@@ -118,6 +118,7 @@ const DeviceTemplateSchema = z.object({
             tooltip: z.string().optional()
         })).optional()
     }).optional(),
+    resourceRoles: z.array(z.string()).optional(), // Available resource roles for analytics (e.g., 'ph_up', 'nutrient_a')
 });
 
 type DeviceTemplate = z.infer<typeof DeviceTemplateSchema>;

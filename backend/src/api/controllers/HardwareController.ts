@@ -921,7 +921,8 @@ export class HardwareController {
                 metadata: body.metadata,
                 isEnabled: body.isEnabled,
                 tags: mergedTags, // Add tags support
-                group: template.uiConfig?.category || 'Other' // Auto-populate group from template
+                group: template.uiConfig?.category || 'Other', // Auto-populate group from template
+                resourceRole: body.resourceRole // Resource role for analytics
             });
 
             await device.save();

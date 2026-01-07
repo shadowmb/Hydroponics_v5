@@ -83,7 +83,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         isEnabled: true,
         tags: [] as string[],
         invertedLogic: false,
-        settings: {} as Record<string, any>
+        settings: {} as Record<string, any>,
+        resourceRole: '' // Resource role for analytics
     });
 
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -143,7 +144,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     settings: {
                         compensation: initialData.config?.compensation || {},
                         voltage: initialData.config?.voltage || {}
-                    }
+                    },
+                    resourceRole: initialData.resourceRole || ''
                 });
                 // Determine connection type
                 if (initialData.hardware?.relayId) {
@@ -165,7 +167,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     isEnabled: true,
                     tags: [],
                     invertedLogic: false,
-                    settings: {} // Dynamic settings container
+                    settings: {}, // Dynamic settings container
+                    resourceRole: '' // Reset resource role
                 });
                 setSelectedCategory('');
                 setSelectedTemplate(null);
@@ -330,6 +333,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     description: formData.description
                 },
                 tags: formData.tags, // Include tags
+                resourceRole: formData.resourceRole || undefined, // Resource role for analytics
                 hardware: {}
             };
 
@@ -421,6 +425,14 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     };
 
     const isFormValid = () => {
+        // Name is always required
+        if (!formData.name.trim()) return false;
+
+        // Resource Role validation: required if template defines resourceRoles
+        if (selectedTemplate?.resourceRoles && selectedTemplate.resourceRoles.length > 0) {
+            if (!formData.resourceRole) return false;
+        }
+
         if (connectionType === 'relay') {
             return formData.relayId && formData.channel;
         }
@@ -845,6 +857,42 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Resource Role Selection (only if template has resourceRoles) */}
+                            {selectedTemplate?.resourceRoles && selectedTemplate.resourceRoles.length > 0 && (
+                                <Card>
+                                    <CardContent className="p-4 space-y-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Activity className="h-5 w-5 text-primary" />
+                                            <h3 className="font-semibold text-lg">Resource Role <span className="text-destructive">*</span></h3>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">
+                                            Select the resource this device will manage. This is used for consumption analytics.
+                                        </p>
+                                        <Select
+                                            value={formData.resourceRole}
+                                            onValueChange={(v) => setFormData(prev => ({ ...prev, resourceRole: v }))}
+                                        >
+                                            <SelectTrigger className={!formData.resourceRole ? 'border-destructive' : ''}>
+                                                <SelectValue placeholder="Select resource role..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {selectedTemplate.resourceRoles.map((role: string) => (
+                                                    <SelectItem key={role} value={role}>
+                                                        {role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {!formData.resourceRole && (
+                                            <p className="text-xs text-destructive flex items-center gap-1">
+                                                <AlertTriangle className="h-3 w-3" />
+                                                Resource role is required
+                                            </p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
 
                             {/* 2. Advanced Settings (Dynamic Schema) */}
                             {selectedTemplate?.settingsSchema && (

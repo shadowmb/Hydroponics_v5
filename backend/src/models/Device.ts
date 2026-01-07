@@ -73,6 +73,8 @@ export interface IDevice extends SoftDeleteDocument {
         raw: number;
         timestamp: Date;
     };
+
+    resourceRole?: string; // Resource role for analytics (e.g., 'ph_up', 'nutrient_a')
 }
 
 // --- Mongoose Schema ---
@@ -160,7 +162,9 @@ const DeviceSchema = new Schema<IDevice>(
             value: Number,
             raw: Number,
             timestamp: Date
-        }
+        },
+
+        resourceRole: { type: String } // Resource role for analytics (e.g., 'ph_up', 'nutrient_a')
     },
     {
         timestamps: true,
