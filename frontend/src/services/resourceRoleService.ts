@@ -12,6 +12,7 @@ export interface ResourceRole {
     color?: string;
     description?: string;
     showInSummary?: boolean;
+    measuredBy?: string;
     createdAt?: string;
     updatedAt?: string;
 }

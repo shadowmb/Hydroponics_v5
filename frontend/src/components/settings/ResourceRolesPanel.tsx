@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { resourceRoleService, type ResourceRole, type AnalyticsType } from "../../services/resourceRoleService";
-import { RefreshCw, Save, Loader2 } from "lucide-react";
+import { RefreshCw, Save, Loader2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function ResourceRolesPanel() {
@@ -103,6 +103,7 @@ export function ResourceRolesPanel() {
                                 <TableHead>Display Name</TableHead>
                                 <TableHead className="w-[150px]">Calculation</TableHead>
                                 <TableHead className="w-[120px]">Color</TableHead>
+                                <TableHead className="w-[200px]">Measured By</TableHead>
                                 <TableHead className="w-[100px]">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -132,7 +133,13 @@ export function ResourceRolesPanel() {
                                         <TableCell>
                                             <Select
                                                 value={current.analyticsType}
-                                                onValueChange={(val) => handleEdit(role.key, 'analyticsType', val)}
+                                                onValueChange={(val) => {
+                                                    handleEdit(role.key, 'analyticsType', val);
+                                                    // Clear measuredBy if changing away from NONE
+                                                    if (val !== 'NONE' && current.measuredBy) {
+                                                        handleEdit(role.key, 'measuredBy', null);
+                                                    }
+                                                }}
                                             >
                                                 <SelectTrigger className="h-8">
                                                     <SelectValue />
@@ -168,6 +175,39 @@ export function ResourceRolesPanel() {
                                             </Select>
                                         </TableCell>
                                         <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Switch
+                                                    checked={!!current.measuredBy}
+                                                    disabled={current.analyticsType !== 'NONE'}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) {
+                                                            // Default to first available role that isn't this one
+                                                            const firstOther = roles.find(r => r.key !== role.key);
+                                                            handleEdit(role.key, 'measuredBy', firstOther?.key || null);
+                                                        } else {
+                                                            handleEdit(role.key, 'measuredBy', null);
+                                                        }
+                                                    }}
+                                                />
+                                                {current.measuredBy && (
+                                                    <Select
+                                                        value={current.measuredBy}
+                                                        onValueChange={(val) => handleEdit(role.key, 'measuredBy', val)}
+                                                    >
+                                                        <SelectTrigger className="h-8 w-[120px]">
+                                                            <Link2 className="h-3 w-3 mr-1 text-muted-foreground" />
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {roles.filter(r => r.key !== role.key).map(r => (
+                                                                <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
                                             {isDirty && (
                                                 <Button size="sm" variant="ghost" onClick={() => handleSave(role.key)}>
                                                     <Save className="h-4 w-4 text-green-600" />
@@ -179,7 +219,7 @@ export function ResourceRolesPanel() {
                             })}
                             {roles.length === 0 && !loading && (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                         No roles found. Click "Sync Templates" to discover roles.
                                     </TableCell>
                                 </TableRow>

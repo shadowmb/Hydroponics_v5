@@ -287,6 +287,7 @@ export class LoopBlockExecutor implements IBlockExecutor {
             strategy: 'loop_check',
             iteration: currentIteration
         } : {
+            action: 'CHECK',
             iteration: currentIteration
         };
 

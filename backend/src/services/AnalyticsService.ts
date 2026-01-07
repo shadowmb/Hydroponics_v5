@@ -119,7 +119,7 @@ export interface ExecutionSession {
     startTime: Date;
     endTime: Date;
     steps: ExecutionStep[];
-    totals: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }>;
+    totals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }>;
 }
 
 export interface ExecutionTrace {
@@ -551,8 +551,8 @@ export class AnalyticsService {
         if (!logs || logs.length === 0) return [];
 
         const rolesList = await ResourceRoleManager.getAllRoles();
-        const roleMap = new Map<string, { type: AnalyticsType, unit?: string }>();
-        rolesList.forEach(r => roleMap.set(r.key, { type: r.analyticsType, unit: r.unit }));
+        const roleMap = new Map<string, { type: AnalyticsType, unit?: string, measuredBy?: string }>();
+        rolesList.forEach(r => roleMap.set(r.key, { type: r.analyticsType, unit: r.unit, measuredBy: r.measuredBy }));
 
         const allEvents: any[] = [];
         for (const log of logs) {
@@ -596,12 +596,12 @@ export class AnalyticsService {
         return traces.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
     }
 
-    private processWindowEvents(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string }>) {
+    private processWindowEvents(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string, measuredBy?: string }>) {
         // Since processSessionSteps handles segmentation locally now, we just pass all events
         const { formattedSessions } = this.processSessionSteps(events, roleMap);
 
         // Updated to Detailed Structure
-        const windowTotals: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }> = {};
+        const windowTotals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }> = {};
 
         // Aggregate totals from all sessions
         for (const session of formattedSessions) {
@@ -618,7 +618,7 @@ export class AnalyticsService {
 
 
 
-    private processSessionSteps(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string }>) {
+    private processSessionSteps(events: any[], roleMap: Map<string, { type: AnalyticsType, unit?: string, measuredBy?: string }>) {
         const sessions: ExecutionSession[] = [];
         let currentSession: ExecutionSession = {
             id: `sess_init_${Date.now()}`,
@@ -630,17 +630,47 @@ export class AnalyticsService {
             totals: {}
         };
 
-        let sessionTotals: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }> = {};
+        let sessionTotals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }> = {};
+
+        // Track sensor readings by role for measuredBy delta calculation
+        const sensorReadingsByRole: Record<string, number[]> = {};
+        // Track which actuator roles have measuredBy links
+        const actuatorMeasuredByRoles: Set<string> = new Set();
 
         const flushSession = () => {
+            // Finalize measuredBy delta calculations
+            for (const actuatorRole of actuatorMeasuredByRoles) {
+                const measuredByRole = roleMap.get(actuatorRole)?.measuredBy;
+                if (measuredByRole && sensorReadingsByRole[measuredByRole]?.length >= 1) {
+                    const readings = sensorReadingsByRole[measuredByRole];
+                    const startValue = readings[0];
+                    const endValue = readings[readings.length - 1];
+                    const delta = endValue - startValue;
+
+                    // Get unit from the linked sensor role
+                    const linkedRoleConfig = roleMap.get(measuredByRole);
+                    const unit = linkedRoleConfig?.unit || sessionTotals[measuredByRole]?.unit || '';
+
+                    // Update or create the actuator role stats with delta
+                    sessionTotals[actuatorRole] = {
+                        role: actuatorRole,
+                        type: 'DELTA',
+                        value: delta,
+                        unit: unit
+                    };
+                }
+            }
+
             // Finalize current session
             currentSession.totals = sessionTotals;
             if (currentSession.steps.length > 0) {
                 currentSession.endTime = new Date(currentSession.steps[currentSession.steps.length - 1]?.timestamp || currentSession.startTime);
                 sessions.push(currentSession);
             }
-            // Reset totals for new session
+            // Reset totals and tracking for new session
             sessionTotals = {};
+            for (const key in sensorReadingsByRole) delete sensorReadingsByRole[key];
+            actuatorMeasuredByRoles.clear();
         };
 
         const startNewSession = (type: ExecutionSession['type'], description: string, time: Date) => {
@@ -789,6 +819,10 @@ export class AnalyticsService {
                     const rType = roleMap.get(role)?.type || 'NONE';
                     const rUnit = logData.primaryUnit || roleMap.get(role)?.unit || '';
 
+                    // Track sensor readings for measuredBy delta calculation
+                    if (!sensorReadingsByRole[role]) sensorReadingsByRole[role] = [];
+                    sensorReadingsByRole[role].push(logData.primaryValue);
+
                     this.accumulateLoopStats(sessionTotals, role, logData.primaryValue, rType, rUnit);
 
                     if (loopStack.length > 0) {
@@ -830,12 +864,22 @@ export class AnalyticsService {
                 if (role && amount > 0) {
                     const rType = roleMap.get(role)?.type || 'NONE';
                     const rUnit = unit || roleMap.get(role)?.unit || '';
+                    const measuredBy = roleMap.get(role)?.measuredBy;
 
-                    this.accumulateLoopStats(sessionTotals, role, amount, rType, rUnit);
+                    // If this role has measuredBy (NONE + linked sensor), track for delta calculation
+                    if (rType === 'NONE' && measuredBy) {
+                        actuatorMeasuredByRoles.add(role);
+                        // Don't accumulate actuator value - delta will be calculated from sensor
+                    } else {
+                        // Normal accumulation for SUM/DELTA/TREND roles
+                        this.accumulateLoopStats(sessionTotals, role, amount, rType, rUnit);
+                    }
 
                     if (loopStack.length > 0) {
                         const ctx = loopStack[loopStack.length - 1];
-                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit);
+                        if (!(rType === 'NONE' && measuredBy)) {
+                            this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit);
+                        }
                     }
                 }
 
@@ -900,7 +944,7 @@ export class AnalyticsService {
     // private accumulateStats... 
 
     private accumulateLoopStats(
-        stats: Record<string, { role: string; type: AnalyticsType; value: number; unit: string }>,
+        stats: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }>,
         role: string,
         value: number,
         type: AnalyticsType,
@@ -910,12 +954,20 @@ export class AnalyticsService {
             stats[role] = { role, type, value: 0, unit };
         }
 
-        // SUM: Add values (dosages, volumes)
-        // DELTA: Also sum for now (sensors will calculate delta at display time)
-        // NONE: Default to SUM behavior for safety (ensures unconfigured roles still accumulate)
-        if (type === 'SUM' || type === 'DELTA' || type === 'NONE') {
+        // SUM: Add values (dosages, ml, doses)
+        if (type === 'SUM') {
             stats[role].value += value;
         }
+        // DELTA/TREND: Track first and last values, calculate delta
+        else if (type === 'DELTA' || type === 'TREND') {
+            if (stats[role].startValue === undefined) {
+                stats[role].startValue = value;
+            }
+            stats[role].endValue = value;
+            // Calculate delta: END - START
+            stats[role].value = (stats[role].endValue ?? 0) - (stats[role].startValue ?? 0);
+        }
+        // NONE: Skip accumulation (unless handled via measuredBy elsewhere)
     }
 }
 export const analyticsService = new AnalyticsService();

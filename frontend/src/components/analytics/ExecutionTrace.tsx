@@ -28,10 +28,12 @@ import { useState } from 'react';
 
 interface ExecutionTraceProps {
     trace: ExecutionTraceType;
+    visibleRoles?: Set<string>;
+    roleLabels?: Map<string, string>;
 }
 
 // Helper Component for Recursive Steps (Defined outside to avoid re-creation)
-function StepItem({ step, depth = 0, getIcon, getStatusColor, getRoleColor, getSensorIcon, getRoleIcon, formatTime }: any) {
+function StepItem({ step, depth = 0, getIcon, getStatusColor, getRoleColor, getSensorIcon, getRoleIcon, formatTime, visibleRoles, roleLabels }: any) {
     const isLoop = step.type === 'LOOP_SUMMARY';
     const [isOpen, setIsOpen] = useState(false); // Collapsed by default
 
@@ -57,18 +59,25 @@ function StepItem({ step, depth = 0, getIcon, getStatusColor, getRoleColor, getS
 
                                 {/* Loop Stats Summary in Header (Visible always) */}
                                 <div className="flex gap-2">
-                                    {step.loopStats && step.loopStats.resources && Object.values(step.loopStats.resources).map((res: any) => (
-                                        <Badge key={res.role} variant="secondary" className="bg-white border-indigo-100 text-indigo-800 text-xs font-normal">
-                                            {getRoleIcon(res.role)}
-                                            <span className="ml-1 font-mono">
-                                                {res.type === 'DELTA' ? (res.value > 0 ? '+' : '') : ''}
-                                                {res.value.toFixed(1)} {res.unit}
-                                            </span>
+                                    {step.loopStats && step.loopStats.resources && Object.values(step.loopStats.resources)
+                                        .filter((res: any) => !visibleRoles || visibleRoles.size === 0 || visibleRoles.has(res.role))
+                                        .map((res: any) => (
+                                            <Badge key={res.role} variant="secondary" className="bg-white border-indigo-100 text-indigo-800 text-xs font-normal">
+                                                <span className="mr-1 text-indigo-600/70">{roleLabels?.get(res.role) || res.role}:</span>
+                                                <span className="font-mono">
+                                                    {res.type === 'DELTA' ? (res.value > 0 ? '+' : '') : ''}
+                                                    {res.value.toFixed(1)} {res.unit}
+                                                </span>
+                                            </Badge>
+                                        ))}
+                                    {step.loopStats?.durationSeconds !== undefined && (
+                                        <Badge variant="outline" className="bg-white/50 text-indigo-700 text-xs font-normal">
+                                            <Clock className="h-3 w-3 mr-1" />
+                                            {step.loopStats.durationSeconds >= 60
+                                                ? `${Math.floor(step.loopStats.durationSeconds / 60)}m ${Math.round(step.loopStats.durationSeconds % 60)}s`
+                                                : `${step.loopStats.durationSeconds.toFixed(1)}s`}
                                         </Badge>
-                                    ))}
-                                    <span className="text-xs font-mono text-muted-foreground ml-2">
-                                        {formatTime(step.timestamp)}
-                                    </span>
+                                    )}
                                 </div>
                             </CardHeader>
                         </CollapsibleTrigger>
@@ -88,6 +97,8 @@ function StepItem({ step, depth = 0, getIcon, getStatusColor, getRoleColor, getS
                                             getSensorIcon={getSensorIcon}
                                             getRoleIcon={getRoleIcon}
                                             formatTime={formatTime}
+                                            visibleRoles={visibleRoles}
+                                            roleLabels={roleLabels}
                                         />
                                     ))}
                                 </div>
@@ -221,7 +232,7 @@ function StepItem({ step, depth = 0, getIcon, getStatusColor, getRoleColor, getS
     );
 }
 
-export function ExecutionTrace({ trace }: ExecutionTraceProps) {
+export function ExecutionTrace({ trace, visibleRoles, roleLabels }: ExecutionTraceProps) {
     const formatTime = (isoString: string) => {
         return format(new Date(isoString), 'HH:mm:ss.SSS');
     };
@@ -315,6 +326,8 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
                                     getSensorIcon={getSensorIcon}
                                     getRoleIcon={getRoleIcon}
                                     formatTime={formatTime}
+                                    visibleRoles={visibleRoles}
+                                    roleLabels={roleLabels}
                                 />
                             ))}
                         </div>

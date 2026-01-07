@@ -25,6 +25,7 @@ export function SessionTimeline() {
     const [date, setDate] = useState<Date>(new Date());
     const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
     const [visibleRoles, setVisibleRoles] = useState<Set<string>>(new Set());
+    const [roleLabels, setRoleLabels] = useState<Map<string, string>>(new Map());
 
     useEffect(() => {
         loadPrograms();
@@ -36,6 +37,10 @@ export function SessionTimeline() {
             const roles = await resourceRoleService.getAll();
             const visible = roles.filter(r => r.showInSummary).map(r => r.key);
             setVisibleRoles(new Set(visible));
+            // Build labels map
+            const labels = new Map<string, string>();
+            roles.forEach(r => labels.set(r.key, r.label));
+            setRoleLabels(labels);
         } catch {
             // Fallback: show all
         }
@@ -198,7 +203,7 @@ export function SessionTimeline() {
                                                     .filter(([role, stats]) => stats.value > 0 && visibleRoles.has(role))
                                                     .map(([role, stats]) => (
                                                         <Badge key={role} variant="secondary" className="text-xs font-normal">
-                                                            <span className="capitalize mr-1 text-muted-foreground">{role.replace('_', ' ')}:</span>
+                                                            <span className="mr-1 text-muted-foreground">{roleLabels.get(role) || role}:</span>
                                                             <span className="font-mono font-medium">{stats.value.toFixed(1)} {stats.unit}</span>
                                                         </Badge>
                                                     ))}
@@ -210,7 +215,7 @@ export function SessionTimeline() {
 
                                 <CollapsibleContent>
                                     <CardContent className="pt-0">
-                                        <ExecutionTrace trace={session} />
+                                        <ExecutionTrace trace={session} visibleRoles={visibleRoles} roleLabels={roleLabels} />
                                     </CardContent>
                                 </CollapsibleContent>
                             </Collapsible>

@@ -10,6 +10,7 @@ export interface IResourceRole extends Document {
     color?: string;         // UI identifier for badge color (e.g., "red", "cyan" or hex)
     description?: string;   // Optional description
     showInSummary?: boolean; // Show this role in window summary accordion header
+    measuredBy?: string;    // Link to another role for delta calculation
 }
 
 const ResourceRoleSchema: Schema = new Schema({
@@ -31,7 +32,8 @@ const ResourceRoleSchema: Schema = new Schema({
     unit: { type: String },
     color: { type: String, default: 'gray' },
     description: { type: String },
-    showInSummary: { type: Boolean, default: false }
+    showInSummary: { type: Boolean, default: false },
+    measuredBy: { type: String, default: null }  // Link to another role for delta calculation
 }, {
     timestamps: true
 });
