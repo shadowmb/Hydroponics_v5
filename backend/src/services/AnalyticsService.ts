@@ -107,6 +107,7 @@ interface ExecutionTrace {
     totals: {
         dosedMl: number;
         energyWh: number;
+        byRole: Record<string, number>;
     };
 }
 
@@ -544,6 +545,7 @@ export class AnalyticsService {
             const windowName = events[0].metadata?.windowName || windowId;
             const steps: ExecutionStep[] = [];
             let totalDosedMl = 0;
+            const totalsByRole: Record<string, number> = {};
 
             // 1. Identification Trigger
             const triggerEvent = events.find(e => e.type === 'TRIGGER_MATCH');
@@ -647,6 +649,11 @@ export class AnalyticsService {
 
                     if (logData.calculatedVolumeMl) {
                         totalDosedMl += logData.calculatedVolumeMl;
+
+                        // Track detailed totals by role
+                        if (logData.resourceRole) {
+                            totalsByRole[logData.resourceRole] = (totalsByRole[logData.resourceRole] || 0) + logData.calculatedVolumeMl;
+                        }
                     }
                 }
 
@@ -709,7 +716,8 @@ export class AnalyticsService {
                 steps,
                 totals: {
                     dosedMl: totalDosedMl,
-                    energyWh: 0 // Placeholder
+                    energyWh: 0, // Placeholder
+                    byRole: totalsByRole
                 }
             });
         }

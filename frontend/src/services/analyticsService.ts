@@ -195,6 +195,7 @@ export interface ExecutionTrace {
     totals: {
         dosedMl: number;
         energyWh: number;
+        byRole: Record<string, number>;
     };
 }
 

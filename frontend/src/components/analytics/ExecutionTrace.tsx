@@ -1,8 +1,6 @@
 import {
     Activity,
     ArrowRight,
-    CheckCircle2,
-    ChevronRight,
     Clock,
     Droplet,
     Info,
@@ -11,9 +9,7 @@ import {
     XCircle,
     Zap,
     GitBranch,
-    Repeat,
     Thermometer,
-    Wind,
     Sun,
     Waves
 } from 'lucide-react';
@@ -62,6 +58,13 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
         return <Activity className="h-3 w-3" />;
     };
 
+    const getRoleIcon = (role: string) => {
+        if (role.includes('ph')) return <Activity className="h-4 w-4 text-purple-500" />;
+        if (role.includes('nutrient')) return <Droplet className="h-4 w-4 text-blue-500" />;
+        if (role.includes('water')) return <Waves className="h-4 w-4 text-cyan-500" />;
+        return <Zap className="h-4 w-4 text-yellow-500" />;
+    };
+
     return (
         <div className="space-y-4">
             {/* Session Header */}
@@ -81,7 +84,19 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
                 )}
 
                 <div className="flex gap-4">
-                    {trace.totals.dosedMl > 0 && (
+                    {/* Render per-role totals */}
+                    {trace.totals.byRole && Object.entries(trace.totals.byRole).map(([role, total]) => (
+                        <div key={role} className="flex items-center gap-1">
+                            {getRoleIcon(role)}
+                            <span className="font-medium">
+                                <span className="capitalize text-muted-foreground mr-1">{role.replace('_', ' ')}:</span>
+                                {total.toFixed(1)} ml
+                            </span>
+                        </div>
+                    ))}
+
+                    {/* Fallback for total if no roles (legacy) */}
+                    {(!trace.totals.byRole || Object.keys(trace.totals.byRole).length === 0) && trace.totals.dosedMl > 0 && (
                         <div className="flex items-center gap-1">
                             <Droplet className="h-4 w-4 text-cyan-500" />
                             <span className="font-medium">{trace.totals.dosedMl.toFixed(1)} ml</span>
@@ -123,9 +138,20 @@ export function ExecutionTrace({ trace }: ExecutionTraceProps) {
                                         </div>
 
                                         {step.description && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                                {step.description}
-                                            </p>
+                                            <div className="text-xs text-muted-foreground mt-0.5 flex items-center flex-wrap gap-2">
+                                                {/* Split description to separate details from device name if '•' exists */}
+                                                {step.description.includes('•') ? (
+                                                    <>
+                                                        <span>{step.description.split('•')[0].trim()}</span>
+                                                        <Badge variant="outline" className="text-[10px] h-5 bg-muted/50 text-muted-foreground border-border font-normal">
+                                                            <Settings className="h-3 w-3 mr-1 opacity-70" />
+                                                            {step.description.split('•')[1].trim()}
+                                                        </Badge>
+                                                    </>
+                                                ) : (
+                                                    step.description
+                                                )}
+                                            </div>
                                         )}
 
                                         {/* Render Sensor Readings for Environment Scan */}
