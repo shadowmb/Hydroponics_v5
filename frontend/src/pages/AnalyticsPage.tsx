@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { History } from './History';
 import { ProgramAnalytics } from '../components/analytics/ProgramAnalytics';
 import { SessionTimeline } from '../components/analytics/SessionTimeline';
-import { BarChart3, LineChart, ScrollText, GitBranch } from 'lucide-react';
+import { BarChart3, LineChart, ScrollText, GitBranch, Database } from 'lucide-react';
+import { ResourceAnalyticsDashboard } from '../components/analytics/resources/ResourceAnalyticsDashboard';
 
 export function AnalyticsPage() {
     const [activeTab, setActiveTab] = useState('sessions');
@@ -35,6 +36,10 @@ export function AnalyticsPage() {
                             <BarChart3 className="h-4 w-4" />
                             Program Analytics
                         </TabsTrigger>
+                        <TabsTrigger value="resources" className="gap-2">
+                            <Database className="h-4 w-4" />
+                            Resources
+                        </TabsTrigger>
                         <TabsTrigger value="logs" className="gap-2" disabled>
                             <ScrollText className="h-4 w-4" />
                             Logs
@@ -52,6 +57,10 @@ export function AnalyticsPage() {
 
                 <TabsContent value="program" className="flex-1 m-0 overflow-auto p-6">
                     <ProgramAnalytics />
+                </TabsContent>
+
+                <TabsContent value="resources" className="flex-1 m-0 overflow-auto p-6">
+                    <ResourceAnalyticsDashboard />
                 </TabsContent>
 
                 <TabsContent value="logs" className="flex-1 m-0 p-6">

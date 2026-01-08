@@ -5,7 +5,7 @@
       "A0_14"
     ],
     "values": {
-      "ph": 353.33333333333337
+      "ph": 366.6666666666667
     },
     "calibrationPoints": [
       {
@@ -24,7 +24,7 @@
       "A1_15"
     ],
     "values": {
-      "ec": 532.9483735937908
+      "ec": 573.8832301386587
     },
     "calibrationPoints": [
       {
@@ -44,7 +44,7 @@
       "D11_11"
     ],
     "values": {
-      "distance": 294.6
+      "distance": 300
     },
     "calibrationPoints": [
       {
@@ -102,7 +102,7 @@
       "D9_9"
     ],
     "values": {
-      "temp": 22
+      "temp": 21
     }
   }
 ]
