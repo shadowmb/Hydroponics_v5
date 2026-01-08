@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import { Settings2, ArrowRight, HelpCircle, Save, Zap, ShieldAlert, FileText } from 'lucide-react';
+import { Settings2, ArrowRight, HelpCircle, Save, Zap, ShieldAlert, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 // Types (should ideally be shared, but defining here for now if not in global types)
@@ -328,19 +328,38 @@ export const VariableConfigModal = ({
                                                                                 <Button
                                                                                     variant="ghost"
                                                                                     size="icon"
-                                                                                    className="h-8 w-8 shrink-0"
+                                                                                    className="h-8 w-8 shrink-0 hover:bg-transparent"
                                                                                     onClick={() => {
-                                                                                        const mode = currentContextOverrides[variable.name + '_tolerance_mode'] === 'relative' ? 'symmetric' : 'relative';
-                                                                                        updateOverride(contextId, variable.name + '_tolerance_mode', mode);
+                                                                                        const modeKey = variable.name + '_tolerance_mode';
+                                                                                        const currentMode = currentContextOverrides[modeKey] || 'symmetric';
+
+                                                                                        let nextMode = 'symmetric';
+                                                                                        if (currentMode === 'symmetric') nextMode = 'lower';
+                                                                                        else if (currentMode === 'lower') nextMode = 'upper';
+                                                                                        else nextMode = 'symmetric';
+
+                                                                                        updateOverride(contextId, modeKey, nextMode);
                                                                                     }}
                                                                                 >
-                                                                                    <span className="text-[10px] font-bold text-muted-foreground">
-                                                                                        {currentContextOverrides[variable.name + '_tolerance_mode'] === 'relative' ? '%' : 'ABS'}
-                                                                                    </span>
+                                                                                    {(() => {
+                                                                                        const modeKey = variable.name + '_tolerance_mode';
+                                                                                        const mode = currentContextOverrides[modeKey] || 'symmetric';
+
+                                                                                        if (mode === 'lower') return <ArrowDown className="h-4 w-4 text-cyan-500" />;
+                                                                                        if (mode === 'upper') return <ArrowUp className="h-4 w-4 text-orange-500" />;
+                                                                                        return <span className="text-muted-foreground text-sm font-bold select-none">±</span>;
+                                                                                    })()}
                                                                                 </Button>
                                                                             </TooltipTrigger>
-                                                                            <TooltipContent className="text-xs">
-                                                                                <p>{currentContextOverrides[variable.name + '_tolerance_mode'] === 'relative' ? 'Relative (%)' : 'Absolute (Unit)'} Tolerance</p>
+                                                                            <TooltipContent className="text-xs" side="top">
+                                                                                {(() => {
+                                                                                    const modeKey = variable.name + '_tolerance_mode';
+                                                                                    const mode = currentContextOverrides[modeKey] || 'symmetric';
+
+                                                                                    if (mode === 'lower') return <p>Tolerance: <strong>Allow Lower Only</strong><br /><span className="text-[10px] opacity-70">(Target - Tol) to Target</span></p>;
+                                                                                    if (mode === 'upper') return <p>Tolerance: <strong>Allow Upper Only</strong><br /><span className="text-[10px] opacity-70">Target to (Target + Tol)</span></p>;
+                                                                                    return <p>Tolerance: <strong>Symmetric</strong><br /><span className="text-[10px] opacity-70">(Target - Tol) to (Target + Tol)</span></p>;
+                                                                                })()}
                                                                             </TooltipContent>
                                                                         </Tooltip>
                                                                     </TooltipProvider>

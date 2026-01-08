@@ -55,7 +55,7 @@ register('pressure', 'psi', 'bar', 'kPa', 'Pa');
 register('flow', 'l/min', 'L/min', 'l/h', 'L/h', 'ml/min', 'gpm');
 
 // Light
-register('light', 'lux', 'lx', 'klux', 'umol/m2*s', 'W/m2');
+register('light', 'lux', 'lx', 'klux', 'umol/m2*s', 'µmol/m²/s', 'W/m2');
 
 // Analytic (Chemistry/Environment)
 register('analytic', 'pH', 'ORP', 'DO');

@@ -384,6 +384,129 @@ export class ResourceSummaryService {
         const day = String(now.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
+
+    /**
+     * Find similar cases based on multiple resource criteria
+     * 
+     * @param params Search parameters
+     * @returns Array of matching records with requested resource data
+     */
+    async findSimilarCases(params: {
+        filters?: {
+            programId?: string;
+            windowId?: string;
+            flowId?: string;
+        };
+        criteria: Array<{
+            role: string;
+            field?: 'value' | 'startValue' | 'endValue' | 'min' | 'max' | 'average';
+            value?: number;
+            tolerance?: number;
+            showOnly?: boolean; // If true, don't filter, just show in results
+        }>;
+        limit?: number;
+    }): Promise<{
+        records: Array<{
+            date: string;
+            context: IExecutionContext;
+            resources: Record<string, {
+                value?: number;
+                startValue?: number;
+                endValue?: number;
+                unit: string;
+            }>;
+        }>;
+        stats?: {
+            count: number;
+            averages: Record<string, number>;
+        };
+    }> {
+        try {
+            const { filters = {}, criteria = [], limit = 10 } = params;
+
+            // Separate filtering vs show-only criteria
+            const filteringCriteria = criteria.filter(c => !c.showOnly);
+            const showOnlyCriteria = criteria.filter(c => c.showOnly);
+            const allRoles = [...new Set([...filteringCriteria.map(c => c.role), ...showOnlyCriteria.map(c => c.role)])];
+
+            // Build MongoDB query
+            const query: Record<string, unknown> = {};
+
+            // Apply context filters
+            if (filters.programId) query['context.programId'] = filters.programId;
+            if (filters.windowId) query['context.windowId'] = filters.windowId;
+            if (filters.flowId) query['context.flowId'] = filters.flowId;
+
+            // Apply filtering criteria
+            for (const criterion of filteringCriteria) {
+                const { role, field = 'value', value, tolerance = 0 } = criterion;
+
+                if (value !== undefined) {
+                    const fieldPath = `resources.${role}.${field}`;
+                    const minValue = value - tolerance;
+                    const maxValue = value + tolerance;
+
+                    query[fieldPath] = {
+                        $gte: minValue,
+                        $lte: maxValue
+                    };
+                }
+            }
+
+            // Execute query
+            const docs = await ResourceDailySummaryModel
+                .find(query)
+                .sort({ date: -1 })
+                .limit(limit)
+                .lean()
+                .exec();
+
+            // Format results
+            const records = docs.map(doc => ({
+                date: doc.date,
+                context: doc.context,
+                resources: Object.fromEntries(
+                    allRoles
+                        .filter(role => doc.resources[role])
+                        .map(role => {
+                            const res = doc.resources[role];
+                            return [
+                                role,
+                                {
+                                    value: res.value,
+                                    startValue: res.startValue,
+                                    endValue: res.endValue,
+                                    unit: res.unit
+                                }
+                            ];
+                        })
+                )
+            }));
+
+            // Calculate averages for all displayed resources
+            const averages: Record<string, number> = {};
+            for (const role of allRoles) {
+                const values = records
+                    .map(r => r.resources[role]?.value)
+                    .filter((v): v is number => v !== undefined && v !== null);
+
+                if (values.length > 0) {
+                    averages[role] = values.reduce((a, b) => a + b, 0) / values.length;
+                }
+            }
+
+            return {
+                records,
+                stats: {
+                    count: records.length,
+                    averages
+                }
+            };
+        } catch (error) {
+            logger.error({ error, params }, '❌ [ResourceSummaryService] Error finding similar cases');
+            throw error;
+        }
+    }
 }
 
 export const resourceSummaryService = ResourceSummaryService.getInstance();

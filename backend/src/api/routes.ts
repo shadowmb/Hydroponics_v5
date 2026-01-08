@@ -20,6 +20,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/analytics/resources/all', AnalyticsController.getResourceAllTotals);
     app.get('/api/analytics/resources/period', AnalyticsController.getResourcePeriodTotals);
     app.get('/api/analytics/resources/daily', AnalyticsController.getResourceDailyBreakdown);
+    app.post('/api/analytics/resources/similar', AnalyticsController.findSimilarCases);
 
     // Notification Routes
     app.get('/api/notifications/channels', NotificationController.getChannels);

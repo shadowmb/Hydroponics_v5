@@ -295,5 +295,59 @@ export const AnalyticsController = {
                 error: error.message
             });
         }
+    },
+
+    /**
+     * POST /api/analytics/resources/similar
+     * Find similar cases based on multiple resource criteria
+     */
+    async findSimilarCases(
+        request: FastifyRequest<{
+            Body: {
+                filters?: {
+                    programId?: string;
+                    windowId?: string;
+                    flowId?: string;
+                };
+                criteria: Array<{
+                    role: string;
+                    field?: 'value' | 'startValue' | 'endValue' | 'min' | 'max' | 'average';
+                    value?: number;
+                    tolerance?: number;
+                    showOnly?: boolean;
+                }>;
+                limit?: number;
+            }
+        }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const { filters, criteria, limit } = request.body;
+
+            if (!criteria || !Array.isArray(criteria)) {
+                return reply.status(400).send({
+                    success: false,
+                    error: 'Missing or invalid criteria array'
+                });
+            }
+
+            const result = await resourceSummaryService.findSimilarCases({
+                filters,
+                criteria,
+                limit
+            });
+
+            return reply.send({
+                success: true,
+                data: result
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error finding similar cases:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
     }
 };
