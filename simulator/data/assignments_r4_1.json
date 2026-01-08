@@ -5,7 +5,7 @@
       "A0_14"
     ],
     "values": {
-      "ph": 266.6666666666667
+      "ph": 353.33333333333337
     },
     "calibrationPoints": [
       {
@@ -24,7 +24,7 @@
       "A1_15"
     ],
     "values": {
-      "ec": 205.46952123484783
+      "ec": 532.9483735937908
     },
     "calibrationPoints": [
       {
@@ -44,7 +44,7 @@
       "D11_11"
     ],
     "values": {
-      "distance": 300
+      "distance": 294.6
     },
     "calibrationPoints": [
       {
@@ -83,7 +83,7 @@
       "D1_1"
     ],
     "values": {
-      "par": 150
+      "par": 155
     }
   },
   {
@@ -94,6 +94,15 @@
     "values": {
       "temp": 22,
       "humidity": 80
+    }
+  },
+  {
+    "sensorId": "ds18b20",
+    "pins": [
+      "D9_9"
+    ],
+    "values": {
+      "temp": 22
     }
   }
 ]
