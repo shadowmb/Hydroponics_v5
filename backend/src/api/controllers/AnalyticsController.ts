@@ -186,5 +186,114 @@ export const AnalyticsController = {
                 error: error.message
             });
         }
+    },
+
+    // ==================== RESOURCE SUMMARY ENDPOINTS ====================
+
+    /**
+     * GET /api/analytics/resources/all
+     * Get all-time totals for resources (ALL SUMMARY cards)
+     */
+    async getResourceAllTotals(
+        request: FastifyRequest<{ Querystring: { programId?: string; flowId?: string; windowId?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const { programId, flowId, windowId } = request.query;
+
+            const totals = await resourceSummaryService.getAllTimeTotals({
+                programId,
+                flowId,
+                windowId
+            });
+
+            return reply.send({
+                success: true,
+                data: totals
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting resource totals:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * GET /api/analytics/resources/period
+     * Get totals for a specific date range (PERIOD SUMMARY cards)
+     */
+    async getResourcePeriodTotals(
+        request: FastifyRequest<{ Querystring: { from: string; to: string; programId?: string; flowId?: string; windowId?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const { from, to, programId, flowId, windowId } = request.query;
+
+            if (!from || !to) {
+                return reply.status(400).send({
+                    success: false,
+                    error: 'Missing required parameters: from, to'
+                });
+            }
+
+            const totals = await resourceSummaryService.getByDateRange(from, to, {
+                programId,
+                flowId,
+                windowId
+            });
+
+            return reply.send({
+                success: true,
+                data: totals
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting resource period totals:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * GET /api/analytics/resources/daily
+     * Get daily breakdown for charts
+     */
+    async getResourceDailyBreakdown(
+        request: FastifyRequest<{ Querystring: { from: string; to: string; roles: string; programId?: string; flowId?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const { from, to, roles, programId, flowId } = request.query;
+
+            if (!from || !to || !roles) {
+                return reply.status(400).send({
+                    success: false,
+                    error: 'Missing required parameters: from, to, roles'
+                });
+            }
+
+            const rolesArray = roles.split(',').map(r => r.trim());
+            const breakdown = await resourceSummaryService.getDailyBreakdown(from, to, rolesArray, {
+                programId,
+                flowId
+            });
+
+            return reply.send({
+                success: true,
+                data: breakdown
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting daily breakdown:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
     }
 };

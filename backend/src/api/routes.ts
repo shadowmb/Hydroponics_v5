@@ -16,6 +16,11 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/analytics/program/:programId/filters', AnalyticsController.getFilterOptions);
     app.get('/api/analytics/program/:programId/sessions', AnalyticsController.getSessionTimeline);
 
+    // Resource Summary Routes (NEW)
+    app.get('/api/analytics/resources/all', AnalyticsController.getResourceAllTotals);
+    app.get('/api/analytics/resources/period', AnalyticsController.getResourcePeriodTotals);
+    app.get('/api/analytics/resources/daily', AnalyticsController.getResourceDailyBreakdown);
+
     // Notification Routes
     app.get('/api/notifications/channels', NotificationController.getChannels);
     app.post('/api/notifications/channels', NotificationController.createChannel);

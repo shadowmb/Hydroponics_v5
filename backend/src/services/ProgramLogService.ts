@@ -33,6 +33,25 @@ export class ProgramLogService {
                 windowName: data.windowName,
                 result: data.data?.result
             });
+
+            // Record aggregated resource summary
+            if (data.programId && data.windowId) {
+                try {
+                    const { resourceSummaryService } = require('./ResourceSummaryService');
+                    await resourceSummaryService.recordExecution({
+                        programId: data.programId,
+                        programName: data.programName || data.programId,
+                        windowId: data.windowId,
+                        windowName: data.windowName,
+                        flowId: data.flowId,
+                        flowName: data.flowName,
+                        executionType: 'WINDOW',
+                        sessionId: data.sessionId
+                    });
+                } catch (err: any) {
+                    logger.error({ err: err.message }, '❌ [ProgramLogService] Failed to record resource summary');
+                }
+            }
         });
 
         // Window Skipped

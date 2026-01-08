@@ -1,0 +1,387 @@
+import { logger } from '../core/LoggerService';
+import { ProgramDailyLogModel } from '../modules/persistence/schemas/ProgramDailyLog.schema';
+import {
+    ResourceDailySummaryModel,
+    IResourceDailySummary,
+    IResourceStat,
+    IExecutionContext,
+    AnalyticsType
+} from '../modules/persistence/schemas/ResourceDailySummary.schema';
+import ResourceRoleManager from './ResourceRoleManager';
+
+/**
+ * Service for recording and querying aggregated resource analytics.
+ * 
+ * Data Flow:
+ * 1. During execution: events are logged to ProgramDailyLog
+ * 2. At window/cycle end: this service reads events, aggregates, and saves summary
+ * 3. Query time: read from ResourceDailySummary (pre-calculated, fast)
+ */
+export class ResourceSummaryService {
+    private static instance: ResourceSummaryService;
+
+    public static getInstance(): ResourceSummaryService {
+        if (!ResourceSummaryService.instance) {
+            ResourceSummaryService.instance = new ResourceSummaryService();
+        }
+        return ResourceSummaryService.instance;
+    }
+
+    /**
+     * Record aggregated resource data after window/cycle completion.
+     * Reads raw events from ProgramDailyLog and calculates summary.
+     */
+    async recordExecution(context: IExecutionContext): Promise<IResourceDailySummary | null> {
+        try {
+            logger.info({ context }, '📊 [ResourceSummaryService] Recording execution summary');
+
+            // 1. Get today's date
+            const date = this.getLocalDateString();
+
+            // 2. Fetch events from ProgramDailyLog
+            const events = await this.fetchEventsForContext(context.programId, date, context.windowId, context.sessionId);
+
+            if (events.length === 0) {
+                logger.warn({ context }, '⚠️ [ResourceSummaryService] No events found for context');
+                return null;
+            }
+
+            // 3. Get role configurations
+            const roles = await ResourceRoleManager.getAllRoles();
+            const roleMap = new Map(
+                roles.map(r => [r.key, {
+                    type: r.analyticsType as AnalyticsType,
+                    unit: r.unit || '',
+                    measuredBy: r.measuredBy
+                }])
+            );
+
+            // 4. Aggregate resources
+            const resources = this.aggregateResources(events, roleMap);
+
+            if (Object.keys(resources).length === 0) {
+                logger.warn({ context }, '⚠️ [ResourceSummaryService] No resources aggregated');
+                return null;
+            }
+
+            // 5. Save summary
+            const summary = await ResourceDailySummaryModel.create({
+                date,
+                timestamp: new Date(),
+                context,
+                resources
+            });
+
+            logger.info({
+                summaryId: summary._id,
+                resourceCount: Object.keys(resources).length
+            }, '✅ [ResourceSummaryService] Summary saved');
+
+            return summary;
+        } catch (error: any) {
+            logger.error({ error: error.message, context }, '❌ [ResourceSummaryService] Failed to record execution');
+            return null;
+        }
+    }
+
+    /**
+     * Get all-time totals for resources (for ALL SUMMARY cards)
+     */
+    async getAllTimeTotals(filters?: {
+        programId?: string;
+        flowId?: string;
+        windowId?: string;
+    }): Promise<Record<string, IResourceStat>> {
+        const match: any = {};
+        if (filters?.programId) match['context.programId'] = filters.programId;
+        if (filters?.flowId) match['context.flowId'] = filters.flowId;
+        if (filters?.windowId) match['context.windowId'] = filters.windowId;
+
+        const results = await ResourceDailySummaryModel.find(match).lean();
+        return this.mergeResourceStats(results as any[]);
+    }
+
+    /**
+     * Get totals for a specific date range (for PERIOD SUMMARY cards)
+     */
+    async getByDateRange(
+        from: string,
+        to: string,
+        filters?: {
+            programId?: string;
+            flowId?: string;
+            windowId?: string;
+        }
+    ): Promise<Record<string, IResourceStat>> {
+        const match: any = {
+            date: { $gte: from, $lte: to }
+        };
+        if (filters?.programId) match['context.programId'] = filters.programId;
+        if (filters?.flowId) match['context.flowId'] = filters.flowId;
+        if (filters?.windowId) match['context.windowId'] = filters.windowId;
+
+        const results = await ResourceDailySummaryModel.find(match).lean();
+        return this.mergeResourceStats(results as any[]);
+    }
+
+    /**
+     * Get daily breakdown for charts
+     */
+    async getDailyBreakdown(
+        from: string,
+        to: string,
+        roles: string[],
+        filters?: {
+            programId?: string;
+            flowId?: string;
+        }
+    ): Promise<Array<{ date: string; resources: Record<string, number> }>> {
+        const match: any = {
+            date: { $gte: from, $lte: to }
+        };
+        if (filters?.programId) match['context.programId'] = filters.programId;
+        if (filters?.flowId) match['context.flowId'] = filters.flowId;
+
+        const results = await ResourceDailySummaryModel.find(match).sort({ date: 1 }).lean();
+
+        // Group by date
+        const byDate = new Map<string, Record<string, number>>();
+
+        for (const doc of results) {
+            const dateKey = doc.date;
+            if (!byDate.has(dateKey)) {
+                byDate.set(dateKey, {});
+            }
+            const dayData = byDate.get(dateKey)!;
+
+            for (const role of roles) {
+                if (doc.resources[role]) {
+                    dayData[role] = (dayData[role] || 0) + doc.resources[role].value;
+                }
+            }
+        }
+
+        return Array.from(byDate.entries()).map(([date, resources]) => ({
+            date,
+            resources
+        }));
+    }
+
+    // ==================== PRIVATE HELPERS ====================
+
+    /**
+     * Fetch relevant events from ProgramDailyLog
+     */
+    private async fetchEventsForContext(
+        programId: string,
+        date: string,
+        windowId?: string,
+        sessionId?: string
+    ): Promise<any[]> {
+        const log = await ProgramDailyLogModel.findOne({ programId, date }).lean();
+        if (!log || !log.events) return [];
+
+        // Filter by window or session if provided
+        return log.events.filter((event: any) => {
+            const meta = event.metadata || {};
+
+            // Only include SENSOR_READ and ACTUATOR_SET events
+            if (!['SENSOR_READ', 'ACTUATOR_SET'].includes(meta.blockType)) {
+                return false;
+            }
+
+            // Filter by windowId if provided
+            if (windowId && meta.windowId !== windowId) {
+                return false;
+            }
+
+            // Filter by sessionId if provided
+            if (sessionId && event.executionSessionId !== sessionId) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Aggregate resources from events
+     */
+    private aggregateResources(
+        events: any[],
+        roleMap: Map<string, { type: AnalyticsType; unit?: string; measuredBy?: string }>
+    ): Record<string, IResourceStat> {
+        const stats: Record<string, IResourceStat> = {};
+        const readingsByRole: Record<string, number[]> = {};
+        const actuatorMeasuredByRoles: Set<string> = new Set();
+
+        for (const event of events) {
+            const meta = event.metadata || {};
+            const logData = meta.logData;
+            const blockType = meta.blockType;
+
+            if (!logData) continue;
+
+            const role = logData.resourceRole;
+            if (!role) continue;
+
+            const roleConfig = roleMap.get(role);
+            const rType = roleConfig?.type || 'NONE';
+            const rUnit = logData.primaryUnit || roleConfig?.unit || '';
+
+            // SENSOR_READ
+            if (blockType === 'SENSOR_READ' && logData.primaryValue !== undefined) {
+                const value = Number(logData.primaryValue);
+                if (!readingsByRole[role]) readingsByRole[role] = [];
+                readingsByRole[role].push(value);
+                this.accumulateStat(stats, role, value, rType, rUnit);
+            }
+
+            // ACTUATOR_SET
+            if (blockType === 'ACTUATOR_SET') {
+                let amount = 0;
+                let unit = logData.unit || logData.primaryUnit || '';
+
+                if (logData.calculatedVolumeMl !== undefined) {
+                    amount = Number(logData.calculatedVolumeMl);
+                    unit = 'ml';
+                } else if (logData.primaryValue !== undefined) {
+                    amount = Number(logData.primaryValue);
+                } else {
+                    amount = Number(logData.amount) || 0;
+                }
+
+                const measuredBy = roleConfig?.measuredBy;
+
+                if (rType === 'NONE' && measuredBy) {
+                    actuatorMeasuredByRoles.add(role);
+                } else if (amount > 0) {
+                    if (!readingsByRole[role]) readingsByRole[role] = [];
+                    readingsByRole[role].push(amount);
+                    this.accumulateStat(stats, role, amount, rType, unit);
+                }
+            }
+        }
+
+        // Finalize measuredBy delta calculations
+        for (const actuatorRole of actuatorMeasuredByRoles) {
+            const measuredByRole = roleMap.get(actuatorRole)?.measuredBy;
+            if (measuredByRole && readingsByRole[measuredByRole]?.length >= 1) {
+                const readings = readingsByRole[measuredByRole];
+                const startValue = readings[0];
+                const endValue = readings[readings.length - 1];
+                const delta = endValue - startValue;
+
+                const linkedRoleConfig = roleMap.get(measuredByRole);
+                const unit = linkedRoleConfig?.unit || stats[measuredByRole]?.unit || '';
+
+                stats[actuatorRole] = {
+                    value: delta,
+                    unit: unit,
+                    type: 'DELTA',
+                    startValue,
+                    endValue
+                };
+            }
+        }
+
+        // Calculate average, min, max, count for each role
+        for (const [role, readings] of Object.entries(readingsByRole)) {
+            if (stats[role] && readings.length > 0) {
+                stats[role].count = readings.length;
+                stats[role].average = readings.reduce((a, b) => a + b, 0) / readings.length;
+                stats[role].min = Math.min(...readings);
+                stats[role].max = Math.max(...readings);
+            }
+        }
+
+        return stats;
+    }
+
+    /**
+     * Accumulate statistics based on analytics type
+     */
+    private accumulateStat(
+        stats: Record<string, IResourceStat>,
+        role: string,
+        value: number,
+        type: AnalyticsType,
+        unit: string
+    ): void {
+        if (!stats[role]) {
+            stats[role] = { value: 0, unit, type };
+        }
+
+        if (type === 'SUM') {
+            stats[role].value += value;
+        } else if (type === 'DELTA' || type === 'TREND') {
+            if (stats[role].startValue === undefined) {
+                stats[role].startValue = value;
+            }
+            stats[role].endValue = value;
+            stats[role].value = (stats[role].endValue ?? 0) - (stats[role].startValue ?? 0);
+        } else {
+            // NONE: record the last value
+            stats[role].value = value;
+        }
+    }
+
+    /**
+     * Merge multiple summary documents into one aggregated result
+     */
+    private mergeResourceStats(docs: IResourceDailySummary[]): Record<string, IResourceStat> {
+        const merged: Record<string, IResourceStat> = {};
+        const readingsByRole: Record<string, number[]> = {};
+
+        for (const doc of docs) {
+            for (const [role, stat] of Object.entries(doc.resources)) {
+                if (!merged[role]) {
+                    merged[role] = { ...stat };
+                    readingsByRole[role] = [];
+                } else {
+                    // Merge based on type
+                    if (stat.type === 'SUM') {
+                        merged[role].value += stat.value;
+                    }
+                    // For DELTA/TREND, keep first start and last end
+                    if (stat.startValue !== undefined && merged[role].startValue === undefined) {
+                        merged[role].startValue = stat.startValue;
+                    }
+                    if (stat.endValue !== undefined) {
+                        merged[role].endValue = stat.endValue;
+                    }
+                }
+
+                // Collect for average recalculation
+                if (stat.average !== undefined && stat.count !== undefined) {
+                    for (let i = 0; i < stat.count; i++) {
+                        readingsByRole[role].push(stat.average);
+                    }
+                }
+            }
+        }
+
+        // Recalculate aggregates
+        for (const [role, readings] of Object.entries(readingsByRole)) {
+            if (merged[role] && readings.length > 0) {
+                merged[role].count = readings.length;
+                merged[role].average = readings.reduce((a, b) => a + b, 0) / readings.length;
+            }
+        }
+
+        return merged;
+    }
+
+    /**
+     * Get local date string in YYYY-MM-DD format
+     */
+    private getLocalDateString(): string {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+}
+
+export const resourceSummaryService = ResourceSummaryService.getInstance();
