@@ -132,7 +132,14 @@ export function ResourceAnalyticsDashboard() {
         )
     } : null;
 
+    // Create role labels map: key -> label
+    const roleLabels: Record<string, string> = {};
+    allRoles.forEach(role => {
+        roleLabels[role.key] = role.label;
+    });
+
     return (
+
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header / Controls */}
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-end justify-between">
@@ -220,7 +227,9 @@ export function ResourceAnalyticsDashboard() {
                         allData={filteredAllTotals}
                         periodData={filteredPeriodTotals}
                         loading={loading}
+                        roleLabels={roleLabels}
                     />
+
 
                     {/* Chart - Pass only enabled roles, default to none selected */}
                     {dailyData.length > 0 && (
@@ -228,7 +237,8 @@ export function ResourceAnalyticsDashboard() {
                             data={dailyData}
                             loading={loading}
                             availableRoles={enabledRoleKeys}
-                            defaultSelected={[]} // Default: nothing selected
+                            defaultSelected={[]}
+                            roleLabels={roleLabels}
                         />
                     )}
 
@@ -238,6 +248,7 @@ export function ResourceAnalyticsDashboard() {
                             data={dailyData}
                             loading={loading}
                             columns={enabledRoleKeys}
+                            roleLabels={roleLabels}
                         />
                     )}
                 </>

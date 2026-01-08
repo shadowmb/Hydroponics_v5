@@ -12,6 +12,7 @@ interface ResourceHistoryChartProps {
     availableRoles: string[]; // List of roles that CAN be displayed (from Settings)
     loading: boolean;
     defaultSelected?: string[]; // Initial selected roles (default: empty)
+    roleLabels?: Record<string, string>; // Map: key -> display label
 }
 
 const COLORS = [
@@ -25,7 +26,9 @@ const COLORS = [
     "#4b5563", // gray-600
 ];
 
-export function ResourceHistoryChart({ data, availableRoles, loading, defaultSelected = [] }: ResourceHistoryChartProps) {
+export function ResourceHistoryChart({ data, availableRoles, loading, defaultSelected = [], roleLabels = {} }: ResourceHistoryChartProps) {
+    // Get display name from roleLabels or fallback to key
+    const getDisplayName = (key: string) => roleLabels[key] || key;
     // Selected roles (user can toggle via checkboxes)
     const [selectedRoles, setSelectedRoles] = useState<string[]>(defaultSelected);
 
@@ -77,10 +80,10 @@ export function ResourceHistoryChart({ data, availableRoles, loading, defaultSel
                             />
                             <Label
                                 htmlFor={`chart-role-${role}`}
-                                className="text-xs capitalize cursor-pointer"
+                                className="text-xs cursor-pointer"
                                 style={{ color: selectedRoles.includes(role) ? COLORS[idx % COLORS.length] : undefined }}
                             >
-                                {role}
+                                {getDisplayName(role)}
                             </Label>
                         </div>
                     ))}

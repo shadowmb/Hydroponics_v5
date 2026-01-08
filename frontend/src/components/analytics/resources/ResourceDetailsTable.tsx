@@ -9,9 +9,12 @@ interface ResourceDetailsTableProps {
     data: DailyResourceData[];
     columns?: string[]; // Optional: if provided, show only these columns
     loading: boolean;
+    roleLabels?: Record<string, string>; // Map: key -> display label
 }
 
-export function ResourceDetailsTable({ data, columns, loading }: ResourceDetailsTableProps) {
+export function ResourceDetailsTable({ data, columns, loading, roleLabels = {} }: ResourceDetailsTableProps) {
+    // Get display name from roleLabels or fallback to key
+    const getDisplayName = (key: string) => roleLabels[key] || key;
     if (loading) {
         return <div className="h-64 w-full bg-muted/20 animate-pulse rounded-lg"></div>;
     }
@@ -46,8 +49,8 @@ export function ResourceDetailsTable({ data, columns, loading }: ResourceDetails
                                     </div>
                                 </TableHead>
                                 {displayColumns.map(col => (
-                                    <TableHead key={col} className="text-right capitalize min-w-[100px]">
-                                        {col}
+                                    <TableHead key={col} className="text-right min-w-[100px]">
+                                        {getDisplayName(col)}
                                     </TableHead>
                                 ))}
                             </TableRow>
