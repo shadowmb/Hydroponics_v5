@@ -13,6 +13,7 @@ interface ResourceHistoryChartProps {
     loading: boolean;
     defaultSelected?: string[]; // Initial selected roles (default: empty)
     roleLabels?: Record<string, string>; // Map: key -> display label
+    roleUnits?: Record<string, string>; // Map: key -> unit (L, ml, pH, etc.)
 }
 
 const COLORS = [
@@ -26,9 +27,18 @@ const COLORS = [
     "#4b5563", // gray-600
 ];
 
-export function ResourceHistoryChart({ data, availableRoles, loading, defaultSelected = [], roleLabels = {} }: ResourceHistoryChartProps) {
+export function ResourceHistoryChart({
+    data,
+    availableRoles,
+    loading,
+    defaultSelected = [],
+    roleLabels = {},
+    roleUnits = {}
+}: ResourceHistoryChartProps) {
     // Get display name from roleLabels or fallback to key
     const getDisplayName = (key: string) => roleLabels[key] || key;
+    const getUnit = (key: string) => roleUnits[key] || '';
+
     // Selected roles (user can toggle via checkboxes)
     const [selectedRoles, setSelectedRoles] = useState<string[]>(defaultSelected);
 
@@ -52,6 +62,28 @@ export function ResourceHistoryChart({ data, availableRoles, loading, defaultSel
             ...day.resources
         }));
     }, [data]);
+
+    // Calculate statistics for selected roles
+    const roleStats = useMemo(() => {
+        const stats: Record<string, { min: number; max: number; avg: number; sum: number }> = {};
+
+        for (const role of selectedRoles) {
+            const values = chartData
+                .map(d => (d as Record<string, number | string>)[role] as number)
+                .filter(v => v !== undefined && v !== null && !isNaN(v));
+
+            if (values.length > 0) {
+                stats[role] = {
+                    min: Math.min(...values),
+                    max: Math.max(...values),
+                    sum: values.reduce((a, b) => a + b, 0),
+                    avg: values.reduce((a, b) => a + b, 0) / values.length
+                };
+            }
+        }
+
+        return stats;
+    }, [chartData, selectedRoles]);
 
     if (loading) {
         return <div className="h-[400px] w-full bg-muted/20 animate-pulse rounded-lg flex items-center justify-center text-muted-foreground">Зареждане на графика...</div>;
@@ -95,35 +127,80 @@ export function ResourceHistoryChart({ data, availableRoles, loading, defaultSel
                         Изберете поне един ресурс за да видите графиката
                     </div>
                 ) : (
-                    <div className="h-[400px] w-full mt-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                <XAxis
-                                    dataKey="date"
-                                    fontSize={12}
-                                    tickFormatter={(val) => val.split('-').slice(1).join('.')}
-                                />
-                                <YAxis fontSize={12} />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    labelStyle={{ fontWeight: 'bold', color: '#666' }}
-                                />
-                                <Legend />
-                                {selectedRoles.map((role, idx) => (
-                                    <Line
-                                        key={role}
-                                        type="monotone"
-                                        dataKey={role}
-                                        stroke={COLORS[idx % COLORS.length]}
-                                        strokeWidth={2}
-                                        dot={{ r: 3 }}
-                                        activeDot={{ r: 6 }}
+                    <>
+                        <div className="h-[400px] w-full mt-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                    <XAxis
+                                        dataKey="date"
+                                        fontSize={12}
+                                        tickFormatter={(val) => val.split('-').slice(1).join('.')}
                                     />
-                                ))}
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
+                                    <YAxis fontSize={12} />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        labelStyle={{ fontWeight: 'bold', color: '#666' }}
+                                    />
+                                    <Legend />
+                                    {selectedRoles.map((role, idx) => (
+                                        <Line
+                                            key={role}
+                                            type="monotone"
+                                            dataKey={role}
+                                            stroke={COLORS[idx % COLORS.length]}
+                                            strokeWidth={2}
+                                            dot={{ r: 3 }}
+                                            activeDot={{ r: 6 }}
+                                        />
+                                    ))}
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        {/* Statistics Table */}
+                        {Object.keys(roleStats).length > 0 && (
+                            <div className="mt-4 border rounded-lg overflow-hidden">
+                                <table className="w-full text-xs">
+                                    <thead className="bg-muted/50">
+                                        <tr>
+                                            <th className="text-left px-3 py-2 font-medium">Ресурс</th>
+                                            <th className="text-right px-3 py-2 font-medium">Мин</th>
+                                            <th className="text-right px-3 py-2 font-medium">Макс</th>
+                                            <th className="text-right px-3 py-2 font-medium">Средно</th>
+                                            <th className="text-right px-3 py-2 font-medium">Общо</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedRoles.map((role, idx) => {
+                                            const stat = roleStats[role];
+                                            if (!stat) return null;
+                                            const unit = getUnit(role);
+                                            return (
+                                                <tr key={role} className="border-t border-muted/30">
+                                                    <td className="px-3 py-2 font-medium" style={{ color: COLORS[idx % COLORS.length] }}>
+                                                        {getDisplayName(role)}
+                                                    </td>
+                                                    <td className="text-right px-3 py-2 text-muted-foreground">
+                                                        {stat.min.toFixed(2)} {unit}
+                                                    </td>
+                                                    <td className="text-right px-3 py-2 text-muted-foreground">
+                                                        {stat.max.toFixed(2)} {unit}
+                                                    </td>
+                                                    <td className="text-right px-3 py-2 text-muted-foreground">
+                                                        {stat.avg.toFixed(2)} {unit}
+                                                    </td>
+                                                    <td className="text-right px-3 py-2 font-medium">
+                                                        {stat.sum.toFixed(2)} {unit}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </>
                 )}
             </CardContent>
         </Card>

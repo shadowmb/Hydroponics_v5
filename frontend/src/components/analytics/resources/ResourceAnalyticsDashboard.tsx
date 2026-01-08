@@ -138,6 +138,13 @@ export function ResourceAnalyticsDashboard() {
         roleLabels[role.key] = role.label;
     });
 
+    // Create role units map: key -> unit (from periodTotals or allTotals)
+    const roleUnits: Record<string, string> = {};
+    const totalsSource = periodTotals?.current || allTotals?.totals || {};
+    Object.entries(totalsSource).forEach(([key, data]) => {
+        roleUnits[key] = data.unit || '';
+    });
+
     return (
 
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -239,6 +246,7 @@ export function ResourceAnalyticsDashboard() {
                             availableRoles={enabledRoleKeys}
                             defaultSelected={[]}
                             roleLabels={roleLabels}
+                            roleUnits={roleUnits}
                         />
                     )}
 
