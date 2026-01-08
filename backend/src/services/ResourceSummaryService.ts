@@ -340,10 +340,12 @@ export class ResourceSummaryService {
                     readingsByRole[role] = [];
                 } else {
                     // Merge based on type
-                    if (stat.type === 'SUM') {
+                    if (stat.type === 'SUM' || stat.type === 'DELTA') {
+                        // SUM: accumulate values
+                        // DELTA: each record's value is already the calculated delta, so sum them
                         merged[role].value += stat.value;
                     }
-                    // For DELTA/TREND, keep first start and last end
+                    // For DELTA/TREND, keep first start and last end (for Phase 2 analysis)
                     if (stat.startValue !== undefined && merged[role].startValue === undefined) {
                         merged[role].startValue = stat.startValue;
                     }
