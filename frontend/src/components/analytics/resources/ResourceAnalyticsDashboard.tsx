@@ -13,7 +13,6 @@ import { ResourceWaitFilters, ALL_PROGRAMS } from './ResourceWaitFilters';
 import { ResourceSummaryCards } from './ResourceSummaryCards';
 import { ResourceHistoryChart } from './ResourceHistoryChart';
 import { ResourceDetailsTable } from './ResourceDetailsTable';
-import { SimilarCasesSearch } from './SimilarCasesSearch';
 
 import {
     resourceAnalyticsService,
@@ -260,13 +259,6 @@ export function ResourceAnalyticsDashboard() {
                             roleLabels={roleLabels}
                         />
                     )}
-
-                    {/* Similar Cases Search */}
-                    <SimilarCasesSearch
-                        availableRoles={allRoles.map(r => ({ key: r.key, label: r.label, unit: roleUnits[r.key] || '' }))}
-                        programId={filters.programId || undefined}
-                        flowId={filters.flowId || undefined}
-                    />
                 </>
             )}
         </div>

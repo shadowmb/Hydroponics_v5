@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
@@ -8,12 +8,7 @@ import { Plus, Trash2, Search } from 'lucide-react';
 import { similarCasesService } from '../../../services/api/similarCases.service';
 import type { SimilarCasesCriterion, SimilarCasesResponse } from '../../../services/api/similarCases.service';
 import { toast } from 'sonner';
-
-interface SimilarCasesSearchProps {
-    availableRoles: Array<{ key: string; label: string; unit: string }>;
-    programId?: string;
-    flowId?: string;
-}
+import { resourceRoleService, type ResourceRole } from '../../../services/resourceRoleService';
 
 const FIELD_OPTIONS = [
     { value: 'value', label: 'Стойност' },
@@ -24,19 +19,82 @@ const FIELD_OPTIONS = [
     { value: 'average', label: 'Средно' }
 ] as const;
 
-export function SimilarCasesSearch({ availableRoles, programId, flowId }: SimilarCasesSearchProps) {
+export function SimilarCasesSearch() {
+    const [programId, setProgramId] = useState<string>('__all__');
+    const [flowId, setFlowId] = useState<string>('__all__');
+    const [programs, setPrograms] = useState<any[]>([]);
+
+    // State for roles
+    const [allRoles, setAllRoles] = useState<ResourceRole[]>([]);
+    const [roleUnits, setRoleUnits] = useState<Record<string, string>>({});
+
+    // State for criteria
     const [filteringCriteria, setFilteringCriteria] = useState<SimilarCasesCriterion[]>([]);
     const [showOnlyRoles, setShowOnlyRoles] = useState<string[]>([]);
+    const [selectedRoleToAdd, setSelectedRoleToAdd] = useState<string>('');
+    const [selectedShowOnlyRole, setSelectedShowOnlyRole] = useState<string>('');
+
+    // State for results
     const [results, setResults] = useState<SimilarCasesResponse | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // Load roles and programs on mount
+    useEffect(() => {
+        loadRoles();
+        loadPrograms();
+    }, []);
+
+    const loadRoles = async () => {
+        try {
+            const roles = await resourceRoleService.getAll();
+            setAllRoles(roles);
+
+            // Create units map
+            const units: Record<string, string> = {};
+            roles.forEach(role => {
+                units[role.key] = role.unit || '';
+            });
+            setRoleUnits(units);
+        } catch (error) {
+            console.error('Error loading roles:', error);
+        }
+    };
+
+    const loadPrograms = async () => {
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            const response = await fetch(`${API_URL}/api/analytics/programs`);
+            const json = await response.json();
+
+            if (!json.success) {
+                throw new Error(json.error || 'Failed to fetch programs');
+            }
+
+            setPrograms(json.data || []);
+        } catch (error) {
+            console.error('Error loading programs:', error);
+        }
+    };
+
     const addCriterion = () => {
+        if (!selectedRoleToAdd) {
+            toast.error('Изберете ресурс');
+            return;
+        }
+
+        // Check if already exists
+        if (filteringCriteria.some(c => c.role === selectedRoleToAdd)) {
+            toast.error('Този ресурс вече е добавен');
+            return;
+        }
+
         setFilteringCriteria([...filteringCriteria, {
-            role: availableRoles[0]?.key || '',
+            role: selectedRoleToAdd,
             field: 'value',
             value: 0,
             tolerance: 0
         }]);
+        setSelectedRoleToAdd(''); // Reset selection
     };
 
     const updateCriterion = (index: number, updates: Partial<SimilarCasesCriterion>) => {
@@ -49,11 +107,21 @@ export function SimilarCasesSearch({ availableRoles, programId, flowId }: Simila
         setFilteringCriteria(filteringCriteria.filter((_, i) => i !== index));
     };
 
-    const addShowOnlyRole = () => {
-        const availableRole = availableRoles.find(r => !showOnlyRoles.includes(r.key));
-        if (availableRole) {
-            setShowOnlyRoles([...showOnlyRoles, availableRole.key]);
+
+    const addShowOnlyRoleFromDropdown = () => {
+        if (!selectedShowOnlyRole) {
+            toast.error('Изберете ресурс');
+            return;
         }
+
+        // Check if already exists
+        if (showOnlyRoles.includes(selectedShowOnlyRole)) {
+            toast.error('Този ресурс вече е добавен');
+            return;
+        }
+
+        setShowOnlyRoles([...showOnlyRoles, selectedShowOnlyRole]);
+        setSelectedShowOnlyRole(''); // Reset selection
     };
 
     const removeShowOnlyRole = (role: string) => {
@@ -73,7 +141,7 @@ export function SimilarCasesSearch({ availableRoles, programId, flowId }: Simila
             if (programId && programId !== '__all__' && programId !== '') {
                 filters.programId = programId;
             }
-            if (flowId && flowId !== 'all' && flowId !== '') {
+            if (flowId && flowId !== '__all__' && flowId !== '') {
                 filters.flowId = flowId;
             }
 
@@ -93,8 +161,19 @@ export function SimilarCasesSearch({ availableRoles, programId, flowId }: Simila
         }
     };
 
-    const getRoleLabel = (key: string) => availableRoles.find(r => r.key === key)?.label || key;
-    const getRoleUnit = (key: string) => availableRoles.find(r => r.key === key)?.unit || '';
+    const getRoleLabel = (key: string) => allRoles.find(r => r.key === key)?.label || key;
+    const getRoleUnit = (key: string) => roleUnits[key] || '';
+
+    // Get available roles for dropdown (not already added)
+    const availableRolesForAdd = allRoles.filter(r =>
+        !filteringCriteria.some(c => c.role === r.key)
+    );
+
+    // Get available roles for show-only (not already added anywhere)
+    const availableRolesForShowOnly = allRoles.filter((r: ResourceRole) =>
+        !filteringCriteria.some(c => c.role === r.key) &&
+        !showOnlyRoles.includes(r.key)
+    );
 
     return (
         <Card>
@@ -108,49 +187,80 @@ export function SimilarCasesSearch({ availableRoles, programId, flowId }: Simila
                 </p>
             </CardHeader>
             <CardContent className="space-y-6">
+                {/* Own Filters */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label className="text-sm">Програма</Label>
+                        <Select value={programId} onValueChange={setProgramId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Всички програми" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__all__">Всички програми</SelectItem>
+                                {programs.map((p: any) => (
+                                    <SelectItem key={p.programId} value={p.programId}>
+                                        {p.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-sm">Поток</Label>
+                        <Select value={flowId} onValueChange={setFlowId} disabled={!programId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Всички потоци" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__all__">Всички потоци</SelectItem>
+                                {/* TODO: Load flows based on programId */}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
                 {/* Filtering Criteria */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">Филтриращи критерии</Label>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={addCriterion}
-                            className="h-8 text-xs"
-                        >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Добави критерий
-                        </Button>
+                        <div className="flex gap-2">
+                            <Select value={selectedRoleToAdd} onValueChange={setSelectedRoleToAdd}>
+                                <SelectTrigger className="w-[200px] h-8">
+                                    <SelectValue placeholder="Изберете ресурс" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableRolesForAdd.map(role => (
+                                        <SelectItem key={role.key} value={role.key} className="text-xs">
+                                            {role.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={addCriterion}
+                                className="h-8 text-xs"
+                                disabled={!selectedRoleToAdd}
+                            >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Добави
+                            </Button>
+                        </div>
                     </div>
 
                     {filteringCriteria.length === 0 && (
                         <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-4 text-center">
-                            Все още няма критерии. Добавете поне един за търсене.
+                            Все още няма критерии. Изберете ресурс и натиснете "Добави".
                         </div>
                     )}
 
                     {filteringCriteria.map((criterion, idx) => (
                         <div key={idx} className="grid grid-cols-12 gap-2 p-3 border rounded-lg bg-muted/10">
-                            <div className="col-span-3">
-                                <Label className="text-xs">Ресурс</Label>
-                                <Select
-                                    value={criterion.role}
-                                    onValueChange={(value) => updateCriterion(idx, { role: value })}
-                                >
-                                    <SelectTrigger className="h-8 text-xs">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {availableRoles.map(role => (
-                                            <SelectItem key={role.key} value={role.key} className="text-xs">
-                                                {role.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                            <div className="col-span-3 flex items-center">
+                                <span className="text-sm font-medium">{getRoleLabel(criterion.role)}</span>
                             </div>
                             <div className="col-span-3">
-                                <Label className="text-xs">Поле</Label>
                                 <Select
                                     value={criterion.field || 'value'}
                                     onValueChange={(value: any) => updateCriterion(idx, { field: value })}
@@ -168,7 +278,6 @@ export function SimilarCasesSearch({ availableRoles, programId, flowId }: Simila
                                 </Select>
                             </div>
                             <div className="col-span-2">
-                                <Label className="text-xs">Стойност</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -178,21 +287,21 @@ export function SimilarCasesSearch({ availableRoles, programId, flowId }: Simila
                                 />
                             </div>
                             <div className="col-span-2">
-                                <Label className="text-xs">Толеранс ±</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
                                     value={criterion.tolerance || 0}
                                     onChange={(e) => updateCriterion(idx, { tolerance: parseFloat(e.target.value) || 0 })}
                                     className="h-8 text-xs"
+                                    placeholder="±"
                                 />
                             </div>
-                            <div className="col-span-1 flex items-end">
+                            <div className="col-span-1 flex items-center">
                                 <span className="text-xs text-muted-foreground">
                                     {getRoleUnit(criterion.role)}
                                 </span>
                             </div>
-                            <div className="col-span-1 flex items-end">
+                            <div className="col-span-1 flex items-center">
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -210,16 +319,30 @@ export function SimilarCasesSearch({ availableRoles, programId, flowId }: Simila
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">Показвани ресурси (без филтриране)</Label>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={addShowOnlyRole}
-                            className="h-8 text-xs"
-                            disabled={showOnlyRoles.length >= availableRoles.length}
-                        >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Добави ресурс
-                        </Button>
+                        <div className="flex gap-2">
+                            <Select value={selectedShowOnlyRole} onValueChange={setSelectedShowOnlyRole}>
+                                <SelectTrigger className="w-[200px] h-8">
+                                    <SelectValue placeholder="Изберете ресурс" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableRolesForShowOnly.map(role => (
+                                        <SelectItem key={role.key} value={role.key} className="text-xs">
+                                            {role.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={addShowOnlyRoleFromDropdown}
+                                className="h-8 text-xs"
+                                disabled={!selectedShowOnlyRole}
+                            >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Добави
+                            </Button>
+                        </div>
                     </div>
 
                     {showOnlyRoles.length > 0 && (
