@@ -84,7 +84,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
         tags: [] as string[],
         invertedLogic: false,
         settings: {} as Record<string, any>,
-        resourceRole: '' // Resource role for analytics
+        resourceRole: '', // Resource role for analytics
+        analyticsLabel: '' // New: Analytics Label
     });
 
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -145,7 +146,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                         compensation: initialData.config?.compensation || {},
                         voltage: initialData.config?.voltage || {}
                     },
-                    resourceRole: initialData.resourceRole || ''
+                    resourceRole: initialData.resourceRole || '',
+                    analyticsLabel: initialData.analyticsLabel || ''
                 });
                 // Determine connection type
                 if (initialData.hardware?.relayId) {
@@ -168,7 +170,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     tags: [],
                     invertedLogic: false,
                     settings: {}, // Dynamic settings container
-                    resourceRole: '' // Reset resource role
+                    resourceRole: '', // Reset resource role
+                    analyticsLabel: ''
                 });
                 setSelectedCategory('');
                 setSelectedTemplate(null);
@@ -334,6 +337,7 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                 },
                 tags: formData.tags, // Include tags
                 resourceRole: formData.resourceRole || undefined, // Resource role for analytics
+                analyticsLabel: formData.analyticsLabel, // New field
                 hardware: {}
             };
 
@@ -424,9 +428,22 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
             .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     };
 
+    const isLabelDuplicate = useMemo(() => {
+        if (!formData.analyticsLabel.trim()) return false;
+        return devices.some((d: any) =>
+            d.analyticsLabel?.toLowerCase() === formData.analyticsLabel.trim().toLowerCase() &&
+            d._id !== initialData?._id
+        );
+    }, [formData.analyticsLabel, devices, initialData]);
+
     const isFormValid = () => {
         // Name is always required
         if (!formData.name.trim()) return false;
+
+        // Analytics Label required and must be unique
+        if (!formData.analyticsLabel.trim()) return false;
+        if (formData.analyticsLabel.length > 25) return false;
+        if (isLabelDuplicate) return false;
 
         // Resource Role validation: required if template defines resourceRoles
         if (selectedTemplate?.resourceRoles && selectedTemplate.resourceRoles.length > 0) {
@@ -767,6 +784,49 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                                             />
                                         </div>
                                         <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <Label className="text-muted-foreground">Analytics Label <span className="text-destructive">*</span></Label>
+                                                <TooltipProvider>
+                                                    <Tooltip delayDuration={300}>
+                                                        <TooltipTrigger asChild>
+                                                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="max-w-[300px] p-3">
+                                                            <div className="space-y-2 text-sm">
+                                                                <p className="font-medium">Continuity Identifier</p>
+                                                                <p className="text-muted-foreground text-xs">
+                                                                    This label groups historical data for a specific function, even if the physical device is replaced.
+                                                                </p>
+                                                                <div className="bg-muted p-2 rounded text-xs space-y-1">
+                                                                    <p className="font-semibold text-foreground">Examples:</p>
+                                                                    <ul className="list-disc list-inside text-muted-foreground">
+                                                                        <li>Water Tank pH</li>
+                                                                        <li>Tent A Temp</li>
+                                                                        <li>Main Pump Flow</li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
+                                            <div className="relative">
+                                                <Input
+                                                    value={formData.analyticsLabel}
+                                                    onChange={e => setFormData({ ...formData, analyticsLabel: e.target.value.slice(0, 25) })}
+                                                    placeholder="Short ID for charts (Max 25)"
+                                                    maxLength={25}
+                                                    className={isLabelDuplicate ? "border-destructive pr-10" : "pr-10"}
+                                                />
+                                                <span className="absolute right-3 top-2.5 text-xs text-muted-foreground pointer-events-none">
+                                                    {formData.analyticsLabel.length}/25
+                                                </span>
+                                            </div>
+                                            {isLabelDuplicate && (
+                                                <p className="text-xs text-destructive mt-1">Label already in use by another device.</p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2 col-span-1 md:col-span-2">
                                             <Label className="text-muted-foreground">Description</Label>
                                             <Input
                                                 value={formData.description}

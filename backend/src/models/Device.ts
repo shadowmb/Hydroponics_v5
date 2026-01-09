@@ -75,12 +75,15 @@ export interface IDevice extends SoftDeleteDocument {
     };
 
     resourceRole?: string; // Resource role for analytics (e.g., 'ph_up', 'nutrient_a')
+
+    analyticsLabel: string; // New: Persistent label for analytics history
 }
 
 // --- Mongoose Schema ---
 const DeviceSchema = new Schema<IDevice>(
     {
         name: { type: String, required: true, unique: true },
+        analyticsLabel: { type: String, required: true, maxLength: 25 }, // New: Max 25 chars, required
         type: { type: String, enum: ['CONTROLLER', 'SENSOR', 'ACTUATOR'], required: true },
         isEnabled: { type: Boolean, default: true },
         status: { type: String, enum: ['online', 'offline', 'error'], default: 'offline' },
@@ -175,6 +178,13 @@ const DeviceSchema = new Schema<IDevice>(
 
 // Apply Plugins
 DeviceSchema.plugin(softDeletePlugin);
+
+// Indexes
+// Unique index for analyticsLabel, but only for active (non-deleted) devices
+DeviceSchema.index({ analyticsLabel: 1 }, {
+    unique: true,
+    partialFilterExpression: { deletedAt: null }
+});
 
 // Export Model
 export const DeviceModel = (mongoose.models.Device as SoftDeleteModel<IDevice>) || mongoose.model<IDevice, SoftDeleteModel<IDevice>>('Device', DeviceSchema);
