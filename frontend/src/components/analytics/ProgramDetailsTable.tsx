@@ -88,7 +88,16 @@ export function ProgramDetailsTable({ data, loading }: ProgramDetailsTableProps)
         },
         {
             accessorKey: 'action',
-            header: 'Действие',
+            header: ({ column }) => (
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                    className="p-0 hover:bg-transparent"
+                >
+                    Действие
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            ),
             cell: ({ row }) => {
                 const action = row.getValue('action') as string;
                 return (
@@ -105,7 +114,18 @@ export function ProgramDetailsTable({ data, loading }: ProgramDetailsTableProps)
         },
         {
             accessorKey: 'value',
-            header: () => <div className="text-right">Стойност</div>,
+            header: ({ column }) => (
+                <div className="text-right">
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                        className="p-0 hover:bg-transparent"
+                    >
+                        Стойност
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                </div>
+            ),
             cell: ({ row }) => {
                 const original = row.original;
                 // Logic for IF/LOOP blocks
@@ -141,7 +161,18 @@ export function ProgramDetailsTable({ data, loading }: ProgramDetailsTableProps)
         },
         {
             accessorKey: 'duration',
-            header: () => <div className="text-right">Време</div>,
+            header: ({ column }) => (
+                <div className="text-right">
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                        className="p-0 hover:bg-transparent"
+                    >
+                        Време
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                </div>
+            ),
             cell: ({ row }) => (
                 <div className="text-right font-mono">
                     {formatDuration(row.getValue('duration'))}
@@ -150,7 +181,16 @@ export function ProgramDetailsTable({ data, loading }: ProgramDetailsTableProps)
         },
         {
             accessorKey: 'window',
-            header: 'Прозорец',
+            header: ({ column }) => (
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                    className="p-0 hover:bg-transparent"
+                >
+                    Прозорец
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            ),
             cell: ({ row }) => (
                 <div className="text-muted-foreground text-xs">
                     {row.getValue('window') || '-'}
