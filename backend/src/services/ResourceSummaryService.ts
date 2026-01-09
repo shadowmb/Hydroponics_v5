@@ -86,10 +86,16 @@ export class ResourceSummaryService {
                     continue;
                 }
 
-                // Create context with specific flowId
+                // Extract flowName from first event with metadata.flowName
+                const flowName = flowEvents.find(e => e.metadata?.flowName)?.metadata?.flowName ||
+                    flowEvents.find(e => e.metadata?.logData?.flowName)?.metadata?.logData?.flowName ||
+                    flowId;
+
+                // Create context with specific flowId and flowName
                 const flowContext: IExecutionContext = {
                     ...context,
-                    flowId: flowId
+                    flowId: flowId,
+                    flowName: flowName
                 };
 
                 const summary = await ResourceDailySummaryModel.create({
@@ -599,21 +605,33 @@ export class ResourceSummaryService {
      * Get available flow names/ids for filtering
      * @param programId Optional program ID
      * @param windowName Optional window name
-     * @returns Array of flow context strings (or IDs)
+     * @returns Array of flow objects with id and label
      */
-    async getAvailableFlows(programId?: string, windowName?: string): Promise<string[]> {
+    async getAvailableFlows(programId?: string, windowName?: string): Promise<{ id: string, label: string }[]> {
         try {
             const query: any = { deletedAt: null };
 
             if (programId) query['context.programId'] = programId;
             if (windowName) query['context.windowName'] = windowName;
 
-            const flows = await ResourceDailySummaryModel
-                .distinct('context.flowId', query)
-                .exec();
+            // Get unique flowId + flowName pairs via aggregation
+            const flowPairs = await ResourceDailySummaryModel.aggregate([
+                { $match: query },
+                {
+                    $group: {
+                        _id: '$context.flowId',
+                        flowName: { $first: '$context.flowName' }
+                    }
+                },
+                { $sort: { flowName: 1 } }
+            ]).exec();
 
-            // flowId is usually the flow name in this context due to how it's saved in context
-            return flows.filter(Boolean).sort();
+            return flowPairs
+                .filter(f => f._id) // Filter out nulls
+                .map(f => ({
+                    id: f._id,
+                    label: f.flowName || f._id
+                }));
         } catch (error) {
             logger.error({ error, programId, windowName }, '❌ [ResourceSummaryService] Error fetching available flows');
             throw error;

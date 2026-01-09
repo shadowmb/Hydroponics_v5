@@ -26,7 +26,7 @@ export function SimilarCasesSearch() {
     const [windowName, setWindowName] = useState<string>('__all__');
     const [programs, setPrograms] = useState<any[]>([]);
     const [availableWindows, setAvailableWindows] = useState<string[]>([]);
-    const [availableFlows, setAvailableFlows] = useState<string[]>([]);
+    const [availableFlows, setAvailableFlows] = useState<{ id: string, label: string }[]>([]);
     const [flowId, setFlowId] = useState<string>('__all__');
 
     // State for roles
@@ -268,9 +268,9 @@ export function SimilarCasesSearch() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="__all__">Всички потоци</SelectItem>
-                                {availableFlows.map((f: string) => (
-                                    <SelectItem key={f} value={f}>
-                                        {f}
+                                {availableFlows.map((f) => (
+                                    <SelectItem key={f.id} value={f.id}>
+                                        {f.label}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

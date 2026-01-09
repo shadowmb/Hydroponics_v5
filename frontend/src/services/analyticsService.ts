@@ -117,7 +117,7 @@ export const analyticsService = {
     /**
      * Fetch list of available flow names for filtering
      */
-    async getAvailableFlows(programId?: string, windowName?: string): Promise<string[]> {
+    async getAvailableFlows(programId?: string, windowName?: string): Promise<{ id: string, label: string }[]> {
         const params = new URLSearchParams();
         if (programId) params.append('programId', programId);
         if (windowName) params.append('windowName', windowName);
