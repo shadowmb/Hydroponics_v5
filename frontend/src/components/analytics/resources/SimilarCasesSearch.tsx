@@ -10,6 +10,7 @@ import type { SimilarCasesCriterion, SimilarCasesResponse } from '../../../servi
 import { toast } from 'sonner';
 import { resourceRoleService, type ResourceRole } from '../../../services/resourceRoleService';
 import { analyticsService } from '../../../services/analyticsService';
+import { SimilarCasesResultsTable } from './SimilarCasesResultsTable';
 
 const FIELD_OPTIONS = [
     { value: 'value', label: 'Стойност' },
@@ -439,145 +440,13 @@ export function SimilarCasesSearch() {
                         </div>
 
                         {results.records.length > 0 ? (
-                            <>
-                                <div className="border rounded-lg overflow-hidden">
-                                    <table className="w-full text-xs">
-                                        <thead className="bg-muted/50">
-                                            <tr>
-                                                <th className="text-left px-3 py-2 font-medium">Дата</th>
-                                                <th className="text-left px-3 py-2 font-medium">Програма/Поток</th>
-                                                {[...filteringCriteria.map(c => c.role), ...showOnlyRoles].map(role => (
-                                                    <th key={role} className="text-right px-3 py-2 font-medium">
-                                                        {getRoleLabel(role)}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {results.records.map((record, idx) => (
-                                                <tr key={idx} className="border-t border-muted/30">
-                                                    <td className="px-3 py-2">{record.date}</td>
-                                                    <td className="px-3 py-2 text-muted-foreground">
-                                                        {record.context.flowName || record.context.programName}
-                                                    </td>
-                                                    {[...filteringCriteria.map(c => c.role), ...showOnlyRoles].map(role => {
-                                                        const res = record.resources[role];
-                                                        if (!res) return <td key={role} className="px-3 py-2 text-center text-muted-foreground">-</td>;
-
-
-                                                        // Find if this role is in filtering criteria to get the field
-                                                        const criterion = filteringCriteria.find(c => c.role === role);
-                                                        const field = criterion?.field || 'value';
-
-                                                        // Display the specific field requested
-                                                        let displayValue: string;
-                                                        const resourceData = res as any; // Backend returns all fields
-
-                                                        // Try to display requested field, fallback to available data
-                                                        const hasRequestedField = (() => {
-                                                            switch (field) {
-                                                                case 'min': return resourceData.min !== undefined;
-                                                                case 'max': return resourceData.max !== undefined;
-                                                                case 'average': return resourceData.average !== undefined;
-                                                                case 'startValue': return res.startValue !== undefined;
-                                                                case 'endValue': return res.endValue !== undefined;
-                                                                case 'value': return res.value !== undefined;
-                                                                default: return false;
-                                                            }
-                                                        })();
-
-                                                        if (hasRequestedField) {
-                                                            switch (field) {
-                                                                case 'min':
-                                                                    displayValue = resourceData.min.toFixed(2);
-                                                                    break;
-                                                                case 'max':
-                                                                    displayValue = resourceData.max.toFixed(2);
-                                                                    break;
-                                                                case 'average':
-                                                                    displayValue = resourceData.average.toFixed(2);
-                                                                    break;
-                                                                case 'startValue':
-                                                                    displayValue = res.startValue!.toFixed(2);
-                                                                    break;
-                                                                case 'endValue':
-                                                                    displayValue = res.endValue!.toFixed(2);
-                                                                    break;
-                                                                case 'value':
-                                                                default:
-                                                                    displayValue = res.value!.toFixed(2);
-                                                                    break;
-                                                            }
-                                                        } else {
-                                                            // Fallback: show whatever data is available
-                                                            if (res.startValue !== undefined && res.endValue !== undefined) {
-                                                                displayValue = `${res.startValue.toFixed(1)}→${res.endValue.toFixed(1)}`;
-                                                            } else if (res.value !== undefined) {
-                                                                displayValue = res.value.toFixed(2);
-                                                            } else {
-                                                                displayValue = '-';
-                                                            }
-                                                        }
-
-                                                        return (
-                                                            <td key={role} className="text-right px-3 py-2">
-                                                                {displayValue} {res.unit}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Averages - calculated from displayed values */}
-                                <div className="bg-muted/20 rounded-lg p-3">
-                                    <div className="text-xs font-medium mb-2">📊 Средни стойности:</div>
-                                    <div className="flex flex-wrap gap-4 text-xs">
-                                        {[...filteringCriteria.map(c => c.role), ...showOnlyRoles].map(role => {
-                                            // Calculate average from displayed values
-                                            const criterion = filteringCriteria.find(c => c.role === role);
-                                            const field = criterion?.field || 'value';
-
-                                            const values = results.records
-                                                .map(record => {
-                                                    const res = record.resources[role];
-                                                    if (!res) return null;
-
-                                                    const resourceData = res as any;
-
-                                                    // Get the value based on requested field
-                                                    switch (field) {
-                                                        case 'min': return resourceData.min;
-                                                        case 'max': return resourceData.max;
-                                                        case 'average': return resourceData.average;
-                                                        case 'startValue': return res.startValue;
-                                                        case 'endValue': return res.endValue;
-                                                        case 'value':
-                                                        default:
-                                                            // For value or showOnly, prefer value if available
-                                                            return res.value !== undefined ? res.value : res.endValue;
-                                                    }
-                                                })
-                                                .filter((v): v is number => v !== undefined && v !== null);
-
-                                            if (values.length === 0) return null;
-
-                                            const avg = values.reduce((a, b) => a + b, 0) / values.length;
-
-                                            return (
-                                                <div key={role}>
-                                                    <span className="font-medium">{getRoleLabel(role)}:</span>{' '}
-                                                    <span className="text-muted-foreground">
-                                                        {avg.toFixed(2)} {getRoleUnit(role)}
-                                                    </span>
-                                                </div>
-                                            );
-                                        }).filter(Boolean)}
-                                    </div>
-                                </div>
-                            </>
+                            <SimilarCasesResultsTable
+                                results={results}
+                                filteringCriteria={filteringCriteria}
+                                showOnlyRoles={showOnlyRoles}
+                                getRoleLabel={getRoleLabel}
+                                getRoleUnit={getRoleUnit}
+                            />
                         ) : (
                             <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-4 text-center">
                                 Няма намерени резултати с тези критерии
