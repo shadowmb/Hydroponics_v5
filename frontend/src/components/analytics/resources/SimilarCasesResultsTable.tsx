@@ -46,53 +46,56 @@ export function SimilarCasesResultsTable({
     });
 
     // Get all resource roles (filtering + show-only)
-    const resourceRoles = useMemo(
-        () => [...filteringCriteria.map(c => c.role), ...showOnlyRoles],
-        [filteringCriteria, showOnlyRoles]
-    );
 
-    // Helper to get the value for a specific field from resource data
-    const getResourceValue = (record: SimilarCaseRecord, role: string): number | null => {
-        const res = record.resources[role];
+
+    // Helper to get the matching measurement for a criterion/role
+    const getMeasurement = (record: SimilarCaseRecord, role: string, source?: string): any => {
+        if (record.measurements) {
+            // Find measurement that matches role and source (if specified)
+            // If source is NOT specified, we match the first one with that role? 
+            // Or ideally the "primary" one?
+            // For now: First match.
+            return record.measurements.find(m =>
+                m.role === role &&
+                (!source || m.source === source)
+            );
+        }
+        // Fallback to old resources map
+        return record.resources[role];
+    };
+
+    const getResourceValue = (record: SimilarCaseRecord, role: string, source?: string, fieldOverride?: string): number | null => {
+        const res = getMeasurement(record, role, source);
         if (!res) return null;
 
-        const criterion = filteringCriteria.find(c => c.role === role);
-        const field = criterion?.field || 'value';
-
-        const resourceData = res as any;
+        const criterion = filteringCriteria.find(c => c.role === role && c.analyticsLabel === source);
+        const field = fieldOverride || criterion?.field || 'value';
 
         switch (field) {
-            case 'min':
-                return resourceData.min !== undefined ? resourceData.min : null;
-            case 'max':
-                return resourceData.max !== undefined ? resourceData.max : null;
-            case 'average':
-                return resourceData.average !== undefined ? resourceData.average : null;
-            case 'startValue':
-                return res.startValue !== undefined ? res.startValue : null;
-            case 'endValue':
-                return res.endValue !== undefined ? res.endValue : null;
+            case 'min': return res.min !== undefined ? res.min : null;
+            case 'max': return res.max !== undefined ? res.max : null;
+            case 'average': return res.average !== undefined ? res.average : null;
+            case 'startValue': return res.startValue !== undefined ? res.startValue : null;
+            case 'endValue': return res.endValue !== undefined ? res.endValue : null;
             case 'value':
-            default:
-                return res.value !== undefined ? res.value : null;
+            default: return res.value !== undefined ? res.value : null;
         }
     };
 
-    // Helper to format the display value
-    const formatResourceValue = (record: SimilarCaseRecord, role: string): string => {
-        const res = record.resources[role];
+    const formatResourceValue = (record: SimilarCaseRecord, role: string, source?: string): string => {
+        const res = getMeasurement(record, role, source);
         if (!res) return '-';
 
-        const criterion = filteringCriteria.find(c => c.role === role);
+        // If we are showing a criterion column, respect its field preference
+        // checking equality with source as well
+        const criterion = filteringCriteria.find(c => c.role === role && c.analyticsLabel === source);
         const field = criterion?.field || 'value';
-        const resourceData = res as any;
 
-        // Check if requested field exists
         const hasRequestedField = (() => {
             switch (field) {
-                case 'min': return resourceData.min !== undefined;
-                case 'max': return resourceData.max !== undefined;
-                case 'average': return resourceData.average !== undefined;
+                case 'min': return res.min !== undefined;
+                case 'max': return res.max !== undefined;
+                case 'average': return res.average !== undefined;
                 case 'startValue': return res.startValue !== undefined;
                 case 'endValue': return res.endValue !== undefined;
                 case 'value': return res.value !== undefined;
@@ -101,23 +104,9 @@ export function SimilarCasesResultsTable({
         })();
 
         if (hasRequestedField) {
-            switch (field) {
-                case 'min':
-                    return resourceData.min.toFixed(2);
-                case 'max':
-                    return resourceData.max.toFixed(2);
-                case 'average':
-                    return resourceData.average.toFixed(2);
-                case 'startValue':
-                    return res.startValue!.toFixed(2);
-                case 'endValue':
-                    return res.endValue!.toFixed(2);
-                case 'value':
-                default:
-                    return res.value!.toFixed(2);
-            }
+            const val = getResourceValue(record, role, source, field);
+            return val !== null ? val.toFixed(2) : '-';
         } else {
-            // Fallback: show whatever data is available
             if (res.startValue !== undefined && res.endValue !== undefined) {
                 return `${res.startValue.toFixed(1)}→${res.endValue.toFixed(1)}`;
             } else if (res.value !== undefined) {
@@ -126,7 +115,7 @@ export function SimilarCasesResultsTable({
                 return '-';
             }
         }
-    };
+    }
 
     // Define columns
     const columns = useMemo<ColumnDef<SimilarCaseRecord>[]>(() => {
@@ -166,77 +155,105 @@ export function SimilarCasesResultsTable({
             },
         ];
 
-        // Dynamic resource columns
-        const resourceColumns: ColumnDef<SimilarCaseRecord>[] = resourceRoles.map(role => ({
-            id: role,
-            accessorFn: (row) => getResourceValue(row, role),
-            header: ({ column }) => (
-                <div className="text-right">
-                    <Button
-                        variant="ghost"
-                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="p-0 hover:bg-transparent"
-                    >
-                        {getRoleLabel(role)}
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                </div>
-            ),
-            cell: ({ row }) => {
-                const res = row.original.resources[role];
-                if (!res) {
-                    return <div className="text-center text-muted-foreground text-xs">-</div>;
-                }
-
-                return (
-                    <div className="text-right text-xs">
-                        {formatResourceValue(row.original, role)} {res.unit}
+        // 1. Columns for Filtering Criteria
+        const criteriaColumns: ColumnDef<SimilarCaseRecord>[] = filteringCriteria.map((fc, idx) => {
+            const uniqueId = `crit_${fc.role}_${fc.analyticsLabel || 'any'}_${idx}`;
+            return {
+                id: uniqueId,
+                accessorFn: (row) => getResourceValue(row, fc.role, fc.analyticsLabel),
+                header: ({ column }) => (
+                    <div className="text-right">
+                        <Button
+                            variant="ghost"
+                            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                            className="p-0 hover:bg-transparent"
+                        >
+                            <span className="flex flex-col items-end">
+                                <span>{getRoleLabel(fc.role)}</span>
+                                {fc.analyticsLabel && <span className="text-[10px] text-muted-foreground">({fc.analyticsLabel})</span>}
+                            </span>
+                            <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
                     </div>
-                );
-            },
-        }));
+                ),
+                cell: ({ row }) => {
+                    const res = getMeasurement(row.original, fc.role, fc.analyticsLabel);
+                    if (!res) return <div className="text-center text-muted-foreground text-xs">-</div>;
+                    return (
+                        <div className="text-right text-xs">
+                            {formatResourceValue(row.original, fc.role, fc.analyticsLabel)} {res.unit}
+                        </div>
+                    );
+                }
+            };
+        });
 
-        return [...staticColumns, ...resourceColumns];
-    }, [resourceRoles, filteringCriteria, getRoleLabel]);
+        // 2. Columns for Show Only Roles
+        // For distinctness, if a role is in showOnly, we simply show valid measurements?
+        // Issue: If ShowOnly has 'ph', and we have 2 ph sources, which one to show?
+        // We will default to showing the first one found, or maybe iterate unique sources?
+        // Keeping it simple: One column per ShowOnly role, showing first source found.
+        const showOnlyColumns: ColumnDef<SimilarCaseRecord>[] = showOnlyRoles.map((role, idx) => {
+            const uniqueId = `show_${role}_${idx}`;
+            return {
+                id: uniqueId,
+                accessorFn: (row) => getResourceValue(row, role), // No source preference
+                header: ({ column }) => (
+                    <div className="text-right">
+                        <Button
+                            variant="ghost"
+                            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                            className="p-0 hover:bg-transparent"
+                        >
+                            {getRoleLabel(role)} (Any)
+                            <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    </div>
+                ),
+                cell: ({ row }) => {
+                    const res = getMeasurement(row.original, role); // No source preference
+                    if (!res) return <div className="text-center text-muted-foreground text-xs">-</div>;
+                    return (
+                        <div className="text-right text-xs">
+                            {formatResourceValue(row.original, role)} {res.unit}
+                        </div>
+                    );
+                }
+            };
+        });
 
-    // Calculate averages from ALL records (not just paginated)
+        return [...staticColumns, ...criteriaColumns, ...showOnlyColumns];
+    }, [filteringCriteria, showOnlyRoles, getRoleLabel]);
+
+    // Calculate averages from ALL records
     const averages = useMemo(() => {
-        return resourceRoles.map(role => {
-            const criterion = filteringCriteria.find(c => c.role === role);
-            const field = criterion?.field || 'value';
+        // Collect all definitions (Criteria + ShowOnly)
+        const defs = [
+            ...filteringCriteria.map(c => ({ role: c.role, source: c.analyticsLabel, field: c.field })),
+            ...showOnlyRoles.map(r => ({ role: r, source: undefined, field: 'value' }))
+        ];
 
+        return defs.map(def => {
             const values = results.records
-                .map(record => {
-                    const res = record.resources[role];
-                    if (!res) return null;
-
-                    const resourceData = res as any;
-
-                    switch (field) {
-                        case 'min': return resourceData.min;
-                        case 'max': return resourceData.max;
-                        case 'average': return resourceData.average;
-                        case 'startValue': return res.startValue;
-                        case 'endValue': return res.endValue;
-                        case 'value':
-                        default:
-                            return res.value !== undefined ? res.value : res.endValue;
-                    }
-                })
-                .filter((v): v is number => v !== undefined && v !== null);
+                .map(record => getResourceValue(record, def.role, def.source, def.field))
+                .filter((v): v is number => v !== null);
 
             if (values.length === 0) return null;
 
             const avg = values.reduce((a, b) => a + b, 0) / values.length;
 
+            // Get unit from first record?
+            const firstUnit = results.records.find(r => getMeasurement(r, def.role, def.source))?.measurements?.find(m => m.role === def.role)?.unit || getRoleUnit(def.role);
+
             return {
-                role,
+                role: def.role,
+                source: def.source,
                 avg,
-                unit: getRoleUnit(role),
-                label: getRoleLabel(role),
+                unit: firstUnit,
+                label: getRoleLabel(def.role) + (def.source ? ` (${def.source})` : ''),
             };
         }).filter(Boolean);
-    }, [results.records, resourceRoles, filteringCriteria, getRoleLabel, getRoleUnit]);
+    }, [results.records, filteringCriteria, showOnlyRoles, getRoleLabel, getRoleUnit]);
 
     const table = useReactTable({
         data: results.records,

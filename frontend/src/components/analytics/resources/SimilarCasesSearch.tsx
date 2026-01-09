@@ -27,6 +27,7 @@ export function SimilarCasesSearch() {
     const [programs, setPrograms] = useState<any[]>([]);
     const [availableWindows, setAvailableWindows] = useState<string[]>([]);
     const [availableFlows, setAvailableFlows] = useState<{ id: string, label: string }[]>([]);
+    const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [flowId, setFlowId] = useState<string>('__all__');
 
     // State for roles
@@ -47,7 +48,17 @@ export function SimilarCasesSearch() {
     useEffect(() => {
         loadRoles();
         loadPrograms();
+        loadSources();
     }, []);
+
+    const loadSources = async () => {
+        try {
+            const sources = await similarCasesService.getUniqueSources();
+            setAvailableSources(sources);
+        } catch (error) {
+            console.error('Error loading sources:', error);
+        }
+    };
 
     const loadRoles = async () => {
         try {
@@ -316,10 +327,30 @@ export function SimilarCasesSearch() {
 
                     {filteringCriteria.map((criterion, idx) => (
                         <div key={idx} className="grid grid-cols-12 gap-2 p-3 border rounded-lg bg-muted/10">
-                            <div className="col-span-3 flex items-center">
-                                <span className="text-sm font-medium">{getRoleLabel(criterion.role)}</span>
+                            <div className="col-span-2 flex items-center">
+                                <span className="text-sm font-medium truncat" title={getRoleLabel(criterion.role)}>
+                                    {getRoleLabel(criterion.role)}
+                                </span>
                             </div>
-                            <div className="col-span-3">
+                            <div className="col-span-2">
+                                <Select
+                                    value={criterion.analyticsLabel || '__any__'}
+                                    onValueChange={(val) => updateCriterion(idx, { analyticsLabel: val === '__any__' ? undefined : val })}
+                                >
+                                    <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Всички" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__any__" className="text-xs text-muted-foreground">Всички източници</SelectItem>
+                                        {availableSources.map(s => (
+                                            <SelectItem key={s} value={s} className="text-xs">
+                                                {s}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="col-span-2">
                                 <Select
                                     value={criterion.field || 'value'}
                                     onValueChange={(value: any) => updateCriterion(idx, { field: value })}
@@ -360,7 +391,7 @@ export function SimilarCasesSearch() {
                                     {getRoleUnit(criterion.role)}
                                 </span>
                             </div>
-                            <div className="col-span-1 flex items-center">
+                            <div className="col-span-1 flex items-center justify-end">
                                 <Button
                                     variant="ghost"
                                     size="icon"

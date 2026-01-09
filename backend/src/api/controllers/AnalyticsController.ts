@@ -396,5 +396,30 @@ export const AnalyticsController = {
                 error: error.message
             });
         }
+    },
+
+    /**
+     * GET /api/analytics/resources/sources
+     * Get list of all unique analytics sources (labels)
+     */
+    async getUniqueSources(
+        request: FastifyRequest,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const sources = await resourceSummaryService.getUniqueSources();
+
+            return reply.send({
+                success: true,
+                data: sources
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting unique sources:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
     }
 };

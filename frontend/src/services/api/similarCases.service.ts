@@ -9,6 +9,7 @@ export interface SimilarCasesCriterion {
     value?: number;
     tolerance?: number;
     showOnly?: boolean;
+    analyticsLabel?: string;
 }
 
 export interface SimilarCasesFilters {
@@ -33,6 +34,18 @@ export interface SimilarCaseRecord {
         startValue?: number;
         endValue?: number;
         unit: string;
+    }>;
+    measurements?: Array<{
+        role: string;
+        source: string;
+        value: number;
+        unit: string;
+        type: string;
+        startValue?: number;
+        endValue?: number;
+        min?: number;
+        max?: number;
+        average?: number;
     }>;
 }
 
@@ -63,6 +76,19 @@ export const similarCasesService = {
             return response.data.data;
         } catch (error: any) {
             console.error('[similarCasesService] Error searching:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Get unique analytics sources (labels)
+     */
+    getUniqueSources: async (): Promise<string[]> => {
+        try {
+            const response = await axios.get(`${API_URL}/api/analytics/resources/sources`);
+            return response.data.data;
+        } catch (error: any) {
+            console.error('[similarCasesService] Error fetching sources:', error);
             throw error;
         }
     }
