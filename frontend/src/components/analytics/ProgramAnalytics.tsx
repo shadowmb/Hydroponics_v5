@@ -1,18 +1,19 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Calendar } from '../ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Badge } from '../ui/badge';
+// import { Badge } from '../ui/badge';
 import {
-    CalendarIcon, RefreshCw, Loader2, ArrowUpDown,
+    CalendarIcon, RefreshCw, Loader2,
     Activity, Zap, TrendingUp
 } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { analyticsService, type AnalyticsResponse, type AnalyticsFilters, type ExecutedProgram } from '../../services/analyticsService';
 import { toast } from 'sonner';
+import { ProgramDetailsTable } from './ProgramDetailsTable';
 
 export function ProgramAnalytics() {
     // State
@@ -34,8 +35,8 @@ export function ProgramAnalytics() {
     const [selectedAction, setSelectedAction] = useState<string>('all');
 
     // Sorting
-    const [sortColumn, setSortColumn] = useState<string>('timestamp');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    // const [sortColumn, setSortColumn] = useState<string>('timestamp');
+    // const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
     // Load programs on mount
     useEffect(() => {
@@ -94,6 +95,8 @@ export function ProgramAnalytics() {
     };
 
     // Sorted data
+    // Sorted data - handled by Table component now
+    /*
     const sortedData = useMemo(() => {
         if (!data?.data) return [];
 
@@ -111,7 +114,9 @@ export function ProgramAnalytics() {
             return 0;
         });
     }, [data?.data, sortColumn, sortDirection]);
+    */
 
+    /*
     const handleSort = (column: string) => {
         if (sortColumn === column) {
             setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -120,6 +125,7 @@ export function ProgramAnalytics() {
             setSortDirection('desc');
         }
     };
+    */
 
     const formatDuration = (ms: number | null) => {
         if (ms === null || ms === undefined) return '-';
@@ -127,10 +133,12 @@ export function ProgramAnalytics() {
         return `${(ms / 1000).toFixed(1)}s`;
     };
 
+    /*
     const formatValue = (val: number | null, unit: string) => {
         if (val === null || val === undefined) return '-';
         return `${val.toFixed(2)} ${unit}`;
     };
+    */
 
     return (
         <div className="space-y-6">
@@ -367,104 +375,12 @@ export function ProgramAnalytics() {
             )}
 
             {/* Data Table */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        <span>Детайли ({data?.pagination.total || 0} записа)</span>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {loading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
-                    ) : sortedData.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-12">
-                            Няма данни за избрания период
-                        </div>
-                    ) : (
-                        <div className="rounded-md border max-h-[500px] overflow-auto">
-                            <Table>
-                                <TableHeader className="sticky top-0 bg-card">
-                                    <TableRow>
-                                        <TableHead
-                                            className="cursor-pointer hover:bg-muted/50"
-                                            onClick={() => handleSort('timestamp')}
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Дата/Час
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </TableHead>
-                                        <TableHead
-                                            className="cursor-pointer hover:bg-muted/50"
-                                            onClick={() => handleSort('device')}
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Устройство
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </TableHead>
-                                        <TableHead>Действие</TableHead>
-                                        <TableHead className="text-right">Стойност</TableHead>
-                                        <TableHead className="text-right">Време</TableHead>
-                                        <TableHead>Прозорец</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {sortedData.map((row, idx) => (
-                                        <TableRow key={idx}>
-                                            <TableCell className="font-mono text-xs">
-                                                {format(new Date(row.timestamp), 'dd.MM HH:mm:ss')}
-                                            </TableCell>
-                                            <TableCell>{row.device || '-'}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={
-                                                    row.action === 'READ' ? 'secondary' :
-                                                        row.action === 'DOSE' ? 'default' :
-                                                            row.action === 'PULSE_ON' ? 'outline' :
-                                                                'secondary'
-                                                }>
-                                                    {row.action}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono">
-                                                {['IF', 'LOOP'].includes(row.blockType) ? (
-                                                    <div className="flex flex-col items-end gap-1">
-                                                        <Badge variant={row.value === 1 ? 'default' : 'destructive'}
-                                                            className={row.value === 1 ? 'bg-green-600 hover:bg-green-700' : ''}>
-                                                            {row.value === 1 ? 'TRUE' : 'FALSE'}
-                                                        </Badge>
-                                                        {row.metadata?.logData?.leftValue !== undefined ? (
-                                                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                                {row.metadata.logData.leftValue} {row.metadata.logData.operator} {row.metadata.logData.rightValue}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                                {row.message?.split('=>')[0] || row.message}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    row.volume
-                                                        ? `${row.volume.toFixed(1)} ml`
-                                                        : formatValue(row.value, row.unit)
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono">
-                                                {formatDuration(row.duration)}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-xs">
-                                                {row.window || '-'}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+            {data && (
+                <ProgramDetailsTable
+                    data={data.data}
+                    loading={loading}
+                />
+            )}
         </div>
     );
 }
