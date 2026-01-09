@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,7 +29,7 @@ export function ResourceAnalyticsDashboard() {
 
     // STATE: Date Range (Default last 7 days)
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: subDays(new Date(), 7),
+        from: new Date(),
         to: new Date()
     });
 
