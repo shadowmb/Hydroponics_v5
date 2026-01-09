@@ -562,6 +562,31 @@ export class ResourceSummaryService {
             throw error;
         }
     }
+
+    /**
+     * Get available flow names/ids for filtering
+     * @param programId Optional program ID
+     * @param windowName Optional window name
+     * @returns Array of flow context strings (or IDs)
+     */
+    async getAvailableFlows(programId?: string, windowName?: string): Promise<string[]> {
+        try {
+            const query: any = { deletedAt: null };
+
+            if (programId) query['context.programId'] = programId;
+            if (windowName) query['context.windowName'] = windowName;
+
+            const flows = await ResourceDailySummaryModel
+                .distinct('context.flowId', query)
+                .exec();
+
+            // flowId is usually the flow name in this context due to how it's saved in context
+            return flows.filter(Boolean).sort();
+        } catch (error) {
+            logger.error({ error, programId, windowName }, '❌ [ResourceSummaryService] Error fetching available flows');
+            throw error;
+        }
+    }
 }
 
 export const resourceSummaryService = ResourceSummaryService.getInstance();

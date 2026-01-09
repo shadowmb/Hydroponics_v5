@@ -25,6 +25,8 @@ export function SimilarCasesSearch() {
     const [windowName, setWindowName] = useState<string>('__all__');
     const [programs, setPrograms] = useState<any[]>([]);
     const [availableWindows, setAvailableWindows] = useState<string[]>([]);
+    const [availableFlows, setAvailableFlows] = useState<string[]>([]);
+    const [flowId, setFlowId] = useState<string>('__all__');
 
     // State for roles
     const [allRoles, setAllRoles] = useState<ResourceRole[]>([]);
@@ -93,6 +95,22 @@ export function SimilarCasesSearch() {
         loadWindows();
     }, [programId]);
 
+    const loadFlows = async () => {
+        try {
+            const pid = programId !== '__all__' ? programId : undefined;
+            const wName = windowName !== '__all__' ? windowName : undefined;
+            const flows = await analyticsService.getAvailableFlows(pid, wName);
+            setAvailableFlows(flows);
+        } catch (error) {
+            console.error('Error loading flows:', error);
+        }
+    };
+
+    // Load flows when program or window changes
+    useEffect(() => {
+        loadFlows();
+    }, [programId, windowName]);
+
     const addCriterion = () => {
         if (!selectedRoleToAdd) {
             toast.error('Изберете ресурс');
@@ -154,12 +172,15 @@ export function SimilarCasesSearch() {
             ];
 
             // Filter out "__all__" and "all" - they are UI-only values
-            const filters: { programId?: string; windowName?: string } = {};
+            const filters: { programId?: string; windowName?: string; flowId?: string } = {};
             if (programId && programId !== '__all__' && programId !== '') {
                 filters.programId = programId;
             }
             if (windowName && windowName !== '__all__' && windowName !== '') {
                 filters.windowName = windowName;
+            }
+            if (flowId && flowId !== '__all__' && flowId !== '') {
+                filters.flowId = flowId; // Backend expects this is actually the flowID/Name stored in context
             }
 
             const response = await similarCasesService.search(
@@ -205,7 +226,7 @@ export function SimilarCasesSearch() {
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* Own Filters */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                         <Label className="text-sm">Програма</Label>
                         <Select value={programId} onValueChange={setProgramId}>
@@ -233,6 +254,22 @@ export function SimilarCasesSearch() {
                                 {availableWindows.map((w: string) => (
                                     <SelectItem key={w} value={w}>
                                         {w}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-sm">Поток</Label>
+                        <Select value={flowId} onValueChange={setFlowId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Всички потоци" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__all__">Всички потоци</SelectItem>
+                                {availableFlows.map((f: string) => (
+                                    <SelectItem key={f} value={f}>
+                                        {f}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
