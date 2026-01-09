@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { analyticsService } from '../../services/AnalyticsService';
+import { resourceSummaryService } from '../../services/ResourceSummaryService';
 
 interface AnalyticsQuery {
     from?: string;
@@ -32,6 +33,30 @@ export const AnalyticsController = {
             return reply.send({
                 success: true,
                 data: programs
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * GET /api/analytics/windows?programId={optional}
+     * Get list of available window names for filtering
+     */
+    async getAvailableWindows(
+        request: FastifyRequest<{ Querystring: { programId?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { programId } = request.query;
+            const windows = await resourceSummaryService.getAvailableWindows(programId);
+            return reply.send({
+                success: true,
+                data: windows
             });
         } catch (error: any) {
             console.error('[AnalyticsController] Error:', error);
@@ -181,6 +206,167 @@ export const AnalyticsController = {
             });
         } catch (error: any) {
             console.error('[AnalyticsController] Error getting session timeline:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    // ==================== RESOURCE SUMMARY ENDPOINTS ====================
+
+    /**
+     * GET /api/analytics/resources/all
+     * Get all-time totals for resources (ALL SUMMARY cards)
+     */
+    async getResourceAllTotals(
+        request: FastifyRequest<{ Querystring: { programId?: string; windowName?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const { programId, windowName } = request.query;
+
+            const result = await resourceSummaryService.getAllTimeTotals({
+                programId,
+                windowName
+            });
+
+            return reply.send({
+                success: true,
+                data: result  // Now includes { totals, metadata }
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting resource totals:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * GET /api/analytics/resources/period
+     * Get totals for a specific date range (PERIOD SUMMARY cards)
+     */
+    async getResourcePeriodTotals(
+        request: FastifyRequest<{ Querystring: { from: string; to: string; programId?: string; windowName?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const { from, to, programId, windowName } = request.query;
+
+            if (!from || !to) {
+                return reply.status(400).send({
+                    success: false,
+                    error: 'Missing required parameters: from, to'
+                });
+            }
+
+            const totals = await resourceSummaryService.getByDateRange(from, to, {
+                programId,
+                windowName
+            });
+
+            return reply.send({
+                success: true,
+                data: totals
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting resource period totals:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * GET /api/analytics/resources/daily
+     * Get daily breakdown for charts
+     */
+    async getResourceDailyBreakdown(
+        request: FastifyRequest<{ Querystring: { from: string; to: string; roles: string; programId?: string; flowId?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const { from, to, roles, programId, flowId } = request.query;
+
+            if (!from || !to || !roles) {
+                return reply.status(400).send({
+                    success: false,
+                    error: 'Missing required parameters: from, to, roles'
+                });
+            }
+
+            const rolesArray = roles.split(',').map(r => r.trim());
+            const breakdown = await resourceSummaryService.getDailyBreakdown(from, to, rolesArray, {
+                programId,
+                flowId
+            });
+
+            return reply.send({
+                success: true,
+                data: breakdown
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting daily breakdown:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * POST /api/analytics/resources/similar
+     * Find similar cases based on multiple resource criteria
+     */
+    async findSimilarCases(
+        request: FastifyRequest<{
+            Body: {
+                filters?: {
+                    programId?: string;
+                    windowId?: string;
+                    flowId?: string;
+                };
+                criteria: Array<{
+                    role: string;
+                    field?: 'value' | 'startValue' | 'endValue' | 'min' | 'max' | 'average';
+                    value?: number;
+                    tolerance?: number;
+                    showOnly?: boolean;
+                }>;
+                limit?: number;
+            }
+        }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const { filters, criteria, limit } = request.body;
+
+            if (!criteria || !Array.isArray(criteria)) {
+                return reply.status(400).send({
+                    success: false,
+                    error: 'Missing or invalid criteria array'
+                });
+            }
+
+            const result = await resourceSummaryService.findSimilarCases({
+                filters,
+                criteria,
+                limit
+            });
+
+            return reply.send({
+                success: true,
+                data: result
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error finding similar cases:', error);
             return reply.status(500).send({
                 success: false,
                 error: error.message

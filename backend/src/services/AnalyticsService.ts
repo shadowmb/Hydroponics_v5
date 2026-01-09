@@ -106,6 +106,7 @@ export interface ExecutionStep {
             startValue?: number; // For Delta/Trend
             endValue?: number;   // For Delta/Trend
             unit: string;
+            devices?: string[]; // New: List of devices contributing to this stat
         }>;
     };
     // If it's a folded loop, it contains children
@@ -119,7 +120,7 @@ export interface ExecutionSession {
     startTime: Date;
     endTime: Date;
     steps: ExecutionStep[];
-    totals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }>;
+    totals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string; devices?: string[] }>;
 }
 
 export interface ExecutionTrace {
@@ -132,7 +133,7 @@ export interface ExecutionTrace {
     totals: {
         dosedMl: number;
         energyWh: number;
-        byRole: Record<string, { role: string; type: 'SUM' | 'DELTA' | 'TREND' | 'NONE'; value: number; unit: string }>;
+        byRole: Record<string, { role: string; type: 'SUM' | 'DELTA' | 'TREND' | 'NONE'; value: number; unit: string; devices?: string[] }>;
     };
 }
 
@@ -169,6 +170,14 @@ export class AnalyticsService {
                     count: { $sum: 1 }
                 }
             },
+            {
+                $lookup: {
+                    from: 'programs',
+                    localField: '_id',
+                    foreignField: 'id',
+                    as: 'programData'
+                }
+            },
             { $sort: { lastExecution: -1 } }
         ];
 
@@ -176,7 +185,7 @@ export class AnalyticsService {
 
         return result.map((r: any) => ({
             programId: r._id,
-            name: r._id,  // Use programId as name for now
+            name: r.programData[0]?.name || r._id,  // Use program name if found, fallback to ID
             lastExecution: r.lastExecution
         }));
     }
@@ -601,15 +610,21 @@ export class AnalyticsService {
         const { formattedSessions } = this.processSessionSteps(events, roleMap);
 
         // Updated to Detailed Structure
-        const windowTotals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }> = {};
+        const windowTotals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string; devices?: string[] }> = {};
 
         // Aggregate totals from all sessions
         for (const session of formattedSessions) {
             for (const [role, stat] of Object.entries(session.totals)) {
                 if (!windowTotals[role]) {
-                    windowTotals[role] = { ...stat, value: 0 };
+                    windowTotals[role] = { ...stat, value: 0, devices: [] };
                 }
                 windowTotals[role].value += stat.value;
+                // Merge devices
+                if (stat.devices) {
+                    const existing = new Set(windowTotals[role].devices || []);
+                    stat.devices.forEach(d => existing.add(d));
+                    windowTotals[role].devices = Array.from(existing);
+                }
             }
         }
 
@@ -630,7 +645,7 @@ export class AnalyticsService {
             totals: {}
         };
 
-        let sessionTotals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }> = {};
+        let sessionTotals: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string; devices?: string[] }> = {};
 
         // Track sensor readings by role for measuredBy delta calculation
         const sensorReadingsByRole: Record<string, number[]> = {};
@@ -823,11 +838,11 @@ export class AnalyticsService {
                     if (!sensorReadingsByRole[role]) sensorReadingsByRole[role] = [];
                     sensorReadingsByRole[role].push(logData.primaryValue);
 
-                    this.accumulateLoopStats(sessionTotals, role, logData.primaryValue, rType, rUnit);
+                    this.accumulateLoopStats(sessionTotals, role, logData.primaryValue, rType, rUnit, logData.deviceName);
 
                     if (loopStack.length > 0) {
                         const ctx = loopStack[loopStack.length - 1];
-                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, logData.primaryValue, rType, rUnit);
+                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, logData.primaryValue, rType, rUnit, logData.deviceName);
                     }
                 }
                 if (loopStack.length > 0) loopStack[loopStack.length - 1].events.push(event);
@@ -872,13 +887,13 @@ export class AnalyticsService {
                         // Don't accumulate actuator value - delta will be calculated from sensor
                     } else {
                         // Normal accumulation for SUM/DELTA/TREND roles
-                        this.accumulateLoopStats(sessionTotals, role, amount, rType, rUnit);
+                        this.accumulateLoopStats(sessionTotals, role, amount, rType, rUnit, logData.deviceName);
                     }
 
                     if (loopStack.length > 0) {
                         const ctx = loopStack[loopStack.length - 1];
                         if (!(rType === 'NONE' && measuredBy)) {
-                            this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit);
+                            this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit, logData.deviceName);
                         }
                     }
                 }
@@ -944,14 +959,23 @@ export class AnalyticsService {
     // private accumulateStats... 
 
     private accumulateLoopStats(
-        stats: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string }>,
+        stats: Record<string, { role: string; type: AnalyticsType; value: number; startValue?: number; endValue?: number; unit: string; devices?: string[] }>,
         role: string,
         value: number,
         type: AnalyticsType,
-        unit: string
+        unit: string,
+        deviceName?: string
     ) {
         if (!stats[role]) {
-            stats[role] = { role, type, value: 0, unit };
+            stats[role] = { role, type, value: 0, unit, devices: [] };
+        }
+
+        // Accumulate device name
+        if (deviceName) {
+            if (!stats[role].devices) stats[role].devices = [];
+            if (!stats[role].devices.includes(deviceName)) {
+                stats[role].devices.push(deviceName);
+            }
         }
 
         // SUM: Add values (dosages, ml, doses)

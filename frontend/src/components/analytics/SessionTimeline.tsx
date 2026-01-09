@@ -8,8 +8,9 @@ import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import {
     CalendarIcon, RefreshCw, Loader2, ChevronDown, ChevronRight,
-    Clock
+    Clock, Info
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { format } from 'date-fns';
 import { analyticsService, type ExecutionTrace as ExecutionTraceType, type ExecutedProgram } from '../../services/analyticsService';
 import { resourceRoleService } from '../../services/resourceRoleService';
@@ -202,10 +203,26 @@ export function SessionTimeline() {
                                                 {session.totals.byRole && Object.entries(session.totals.byRole)
                                                     .filter(([role, stats]) => stats.value > 0 && visibleRoles.has(role))
                                                     .map(([role, stats]) => (
-                                                        <Badge key={role} variant="secondary" className="text-xs font-normal">
-                                                            <span className="mr-1 text-muted-foreground">{roleLabels.get(role) || role}:</span>
-                                                            <span className="font-mono font-medium">{stats.value.toFixed(1)} {stats.unit}</span>
-                                                        </Badge>
+                                                        <TooltipProvider key={role}>
+                                                            <Tooltip delayDuration={300}>
+                                                                <TooltipTrigger asChild>
+                                                                    <Badge variant="secondary" className="text-xs font-normal cursor-help">
+                                                                        <span className="mr-1 text-muted-foreground">{roleLabels.get(role) || role}:</span>
+                                                                        <span className="font-mono font-medium">{stats.value.toFixed(1)} {stats.unit}</span>
+                                                                    </Badge>
+                                                                </TooltipTrigger>
+                                                                {stats.devices && stats.devices.length > 0 && (
+                                                                    <TooltipContent>
+                                                                        <div className="text-xs">
+                                                                            <span className="font-semibold text-muted-foreground block mb-1">Devices:</span>
+                                                                            {stats.devices.map(d => (
+                                                                                <div key={d}>{d}</div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </TooltipContent>
+                                                                )}
+                                                            </Tooltip>
+                                                        </TooltipProvider>
                                                     ))}
                                                 <span className="text-muted-foreground ml-2">{session.sessions.length} sessions</span>
                                             </div>

@@ -20,6 +20,7 @@ import {
 import { CardHeader } from '../ui/card';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { Card, CardContent } from '../ui/card';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
 import { cn } from '../../lib/utils';
@@ -62,13 +63,29 @@ function StepItem({ step, depth = 0, getIcon, getStatusColor, getRoleColor, getS
                                     {step.loopStats && step.loopStats.resources && Object.values(step.loopStats.resources)
                                         .filter((res: any) => !visibleRoles || visibleRoles.size === 0 || visibleRoles.has(res.role))
                                         .map((res: any) => (
-                                            <Badge key={res.role} variant="secondary" className="bg-white border-indigo-100 text-indigo-800 text-xs font-normal">
-                                                <span className="mr-1 text-indigo-600/70">{roleLabels?.get(res.role) || res.role}:</span>
-                                                <span className="font-mono">
-                                                    {res.type === 'DELTA' ? (res.value > 0 ? '+' : '') : ''}
-                                                    {res.value.toFixed(1)} {res.unit}
-                                                </span>
-                                            </Badge>
+                                            <TooltipProvider key={res.role}>
+                                                <Tooltip delayDuration={300}>
+                                                    <TooltipTrigger asChild>
+                                                        <Badge variant="secondary" className="bg-white border-indigo-100 text-indigo-800 text-xs font-normal cursor-help">
+                                                            <span className="mr-1 text-indigo-600/70">{roleLabels?.get(res.role) || res.role}:</span>
+                                                            <span className="font-mono">
+                                                                {res.type === 'DELTA' ? (res.value > 0 ? '+' : '') : ''}
+                                                                {res.value.toFixed(1)} {res.unit}
+                                                            </span>
+                                                        </Badge>
+                                                    </TooltipTrigger>
+                                                    {res.devices && res.devices.length > 0 && (
+                                                        <TooltipContent>
+                                                            <div className="text-xs">
+                                                                <span className="font-semibold text-muted-foreground block mb-1">Devices:</span>
+                                                                {res.devices.map((d: string) => (
+                                                                    <div key={d}>{d}</div>
+                                                                ))}
+                                                            </div>
+                                                        </TooltipContent>
+                                                    )}
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         ))}
                                     {step.loopStats?.durationSeconds !== undefined && (
                                         <Badge variant="outline" className="bg-white/50 text-indigo-700 text-xs font-normal">
