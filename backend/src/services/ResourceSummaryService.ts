@@ -30,6 +30,7 @@ export class ResourceSummaryService {
     /**
      * Record aggregated resource data after window/cycle completion.
      * Reads raw events from ProgramDailyLog and calculates summary.
+     * Groups events by flowId to create separate summaries per flow.
      */
     async recordExecution(context: IExecutionContext): Promise<IResourceDailySummary | null> {
         try {
@@ -56,33 +57,64 @@ export class ResourceSummaryService {
                 }])
             );
 
-            // 4. Aggregate resources
-            const resources = this.aggregateResources(events, roleMap);
+            // 4. Group events by flowId (from logData)
+            const eventsByFlow = new Map<string, any[]>();
 
-            if (Object.keys(resources).length === 0) {
-                logger.warn({ context }, '⚠️ [ResourceSummaryService] No resources aggregated');
-                return null;
+            for (const event of events) {
+                const flowId = event.metadata?.logData?.flowId || context.flowId || 'unknown';
+
+                if (!eventsByFlow.has(flowId)) {
+                    eventsByFlow.set(flowId, []);
+                }
+                eventsByFlow.get(flowId)!.push(event);
             }
 
-            // 5. Save summary
-            const summary = await ResourceDailySummaryModel.create({
-                date,
-                timestamp: new Date(),
-                context,
-                resources
-            });
-
             logger.info({
-                summaryId: summary._id,
-                resourceCount: Object.keys(resources).length
-            }, '✅ [ResourceSummaryService] Summary saved');
+                totalEvents: events.length,
+                flowGroups: eventsByFlow.size,
+                flowIds: Array.from(eventsByFlow.keys())
+            }, '📊 [ResourceSummaryService] Events grouped by flowId');
 
-            return summary;
+            // 5. Create summary for each flow group
+            let firstSummary: IResourceDailySummary | null = null;
+
+            for (const [flowId, flowEvents] of eventsByFlow) {
+                const resources = this.aggregateResources(flowEvents, roleMap);
+
+                if (Object.keys(resources).length === 0) {
+                    logger.warn({ flowId }, '⚠️ [ResourceSummaryService] No resources aggregated for flow');
+                    continue;
+                }
+
+                // Create context with specific flowId
+                const flowContext: IExecutionContext = {
+                    ...context,
+                    flowId: flowId
+                };
+
+                const summary = await ResourceDailySummaryModel.create({
+                    date,
+                    timestamp: new Date(),
+                    context: flowContext,
+                    resources
+                });
+
+                logger.info({
+                    summaryId: summary._id,
+                    flowId,
+                    resourceCount: Object.keys(resources).length
+                }, '✅ [ResourceSummaryService] Flow summary saved');
+
+                if (!firstSummary) firstSummary = summary;
+            }
+
+            return firstSummary;
         } catch (error: any) {
             logger.error({ error: error.message, context }, '❌ [ResourceSummaryService] Failed to record execution');
             return null;
         }
     }
+
 
     /**
      * Get all-time totals for resources (for ALL SUMMARY cards)
