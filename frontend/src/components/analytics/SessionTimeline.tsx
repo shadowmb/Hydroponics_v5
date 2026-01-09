@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import {
     CalendarIcon, RefreshCw, Loader2, ChevronDown, ChevronRight,
-    Clock, Info
+    Clock
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { format } from 'date-fns';

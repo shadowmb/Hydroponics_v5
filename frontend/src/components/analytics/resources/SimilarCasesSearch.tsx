@@ -4,12 +4,14 @@ import { Button } from '../../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Plus, Trash2, Search, ArrowUp, ArrowDown } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { similarCasesService } from '../../../services/api/similarCases.service';
 import type { SimilarCasesCriterion, SimilarCasesResponse } from '../../../services/api/similarCases.service';
 import { toast } from 'sonner';
 import { resourceRoleService, type ResourceRole } from '../../../services/resourceRoleService';
 import { analyticsService } from '../../../services/analyticsService';
+import { SimilarCasesResultsTable } from './SimilarCasesResultsTable';
 
 const FIELD_OPTIONS = [
     { value: 'value', label: 'Стойност' },
@@ -25,6 +27,9 @@ export function SimilarCasesSearch() {
     const [windowName, setWindowName] = useState<string>('__all__');
     const [programs, setPrograms] = useState<any[]>([]);
     const [availableWindows, setAvailableWindows] = useState<string[]>([]);
+    const [availableFlows, setAvailableFlows] = useState<{ id: string, label: string }[]>([]);
+    const [availableSources, setAvailableSources] = useState<string[]>([]);
+    const [flowId, setFlowId] = useState<string>('__all__');
 
     // State for roles
     const [allRoles, setAllRoles] = useState<ResourceRole[]>([]);
@@ -44,7 +49,17 @@ export function SimilarCasesSearch() {
     useEffect(() => {
         loadRoles();
         loadPrograms();
+        loadSources();
     }, []);
+
+    const loadSources = async () => {
+        try {
+            const sources = await similarCasesService.getUniqueSources();
+            setAvailableSources(sources);
+        } catch (error) {
+            console.error('Error loading sources:', error);
+        }
+    };
 
     const loadRoles = async () => {
         try {
@@ -93,17 +108,33 @@ export function SimilarCasesSearch() {
         loadWindows();
     }, [programId]);
 
+    const loadFlows = async () => {
+        try {
+            const pid = programId !== '__all__' ? programId : undefined;
+            const wName = windowName !== '__all__' ? windowName : undefined;
+            const flows = await analyticsService.getAvailableFlows(pid, wName);
+            setAvailableFlows(flows);
+        } catch (error) {
+            console.error('Error loading flows:', error);
+        }
+    };
+
+    // Load flows when program or window changes
+    useEffect(() => {
+        loadFlows();
+    }, [programId, windowName]);
+
     const addCriterion = () => {
         if (!selectedRoleToAdd) {
             toast.error('Изберете ресурс');
             return;
         }
 
-        // Check if already exists
-        if (filteringCriteria.some(c => c.role === selectedRoleToAdd)) {
-            toast.error('Този ресурс вече е добавен');
-            return;
-        }
+        // Check if already exists - REMOVED to allow multiple criteria for same role (e.g. min + max)
+        // if (filteringCriteria.some(c => c.role === selectedRoleToAdd)) {
+        //     toast.error('Този ресурс вече е добавен');
+        //     return;
+        // }
 
         setFilteringCriteria([...filteringCriteria, {
             role: selectedRoleToAdd,
@@ -154,12 +185,15 @@ export function SimilarCasesSearch() {
             ];
 
             // Filter out "__all__" and "all" - they are UI-only values
-            const filters: { programId?: string; windowName?: string } = {};
+            const filters: { programId?: string; windowName?: string; flowId?: string } = {};
             if (programId && programId !== '__all__' && programId !== '') {
                 filters.programId = programId;
             }
             if (windowName && windowName !== '__all__' && windowName !== '') {
                 filters.windowName = windowName;
+            }
+            if (flowId && flowId !== '__all__' && flowId !== '') {
+                filters.flowId = flowId; // Backend expects this is actually the flowID/Name stored in context
             }
 
             const response = await similarCasesService.search(
@@ -181,10 +215,8 @@ export function SimilarCasesSearch() {
     const getRoleLabel = (key: string) => allRoles.find(r => r.key === key)?.label || key;
     const getRoleUnit = (key: string) => roleUnits[key] || '';
 
-    // Get available roles for dropdown (not already added)
-    const availableRolesForAdd = allRoles.filter(r =>
-        !filteringCriteria.some(c => c.role === r.key)
-    );
+    // Get available roles for dropdown (allow same role multiple times)
+    const availableRolesForAdd = allRoles;
 
     // Get available roles for show-only (not already added anywhere)
     const availableRolesForShowOnly = allRoles.filter((r: ResourceRole) =>
@@ -205,7 +237,7 @@ export function SimilarCasesSearch() {
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* Own Filters */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                         <Label className="text-sm">Програма</Label>
                         <Select value={programId} onValueChange={setProgramId}>
@@ -233,6 +265,22 @@ export function SimilarCasesSearch() {
                                 {availableWindows.map((w: string) => (
                                     <SelectItem key={w} value={w}>
                                         {w}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-sm">Поток</Label>
+                        <Select value={flowId} onValueChange={setFlowId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Всички потоци" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__all__">Всички потоци</SelectItem>
+                                {availableFlows.map((f) => (
+                                    <SelectItem key={f.id} value={f.id}>
+                                        {f.label}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -276,12 +324,44 @@ export function SimilarCasesSearch() {
                         </div>
                     )}
 
+                    {filteringCriteria.length > 0 && (
+                        <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground px-3 mb-1 text-center">
+                            <div className="col-span-2">Ресурс</div>
+                            <div className="col-span-2">Източник</div>
+                            <div className="col-span-2">Тип</div>
+                            <div className="col-span-2">Стойност</div>
+                            <div className="col-span-2">Толеранс (±)</div>
+                            <div className="col-span-1">Ед.</div>
+                            <div className="col-span-1"></div>
+                        </div>
+                    )}
+
                     {filteringCriteria.map((criterion, idx) => (
                         <div key={idx} className="grid grid-cols-12 gap-2 p-3 border rounded-lg bg-muted/10">
-                            <div className="col-span-3 flex items-center">
-                                <span className="text-sm font-medium">{getRoleLabel(criterion.role)}</span>
+                            <div className="col-span-2 flex items-center">
+                                <span className="text-sm font-medium truncat" title={getRoleLabel(criterion.role)}>
+                                    {getRoleLabel(criterion.role)}
+                                </span>
                             </div>
-                            <div className="col-span-3">
+                            <div className="col-span-2">
+                                <Select
+                                    value={criterion.analyticsLabel || '__any__'}
+                                    onValueChange={(val) => updateCriterion(idx, { analyticsLabel: val === '__any__' ? undefined : val })}
+                                >
+                                    <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Всички" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__any__" className="text-xs text-muted-foreground">Всички източници</SelectItem>
+                                        {availableSources.map(s => (
+                                            <SelectItem key={s} value={s} className="text-xs">
+                                                {s}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="col-span-2">
                                 <Select
                                     value={criterion.field || 'value'}
                                     onValueChange={(value: any) => updateCriterion(idx, { field: value })}
@@ -308,21 +388,62 @@ export function SimilarCasesSearch() {
                                 />
                             </div>
                             <div className="col-span-2">
-                                <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={criterion.tolerance || 0}
-                                    onChange={(e) => updateCriterion(idx, { tolerance: parseFloat(e.target.value) || 0 })}
-                                    className="h-8 text-xs"
-                                    placeholder="±"
-                                />
+                                <div className="flex items-center gap-1">
+                                    <div className="relative flex-1">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">±</span>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={criterion.tolerance || 0}
+                                            onChange={(e) => updateCriterion(idx, { tolerance: parseFloat(e.target.value) || 0 })}
+                                            className="h-8 pl-5 text-xs"
+                                            placeholder="0.0"
+                                        />
+                                    </div>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 shrink-0 hover:bg-transparent"
+                                                    onClick={() => {
+                                                        const currentMode = criterion.toleranceMode || 'symmetric';
+                                                        let nextMode: 'symmetric' | 'lower' | 'upper' = 'symmetric';
+
+                                                        if (currentMode === 'symmetric') nextMode = 'lower';
+                                                        else if (currentMode === 'lower') nextMode = 'upper';
+                                                        else nextMode = 'symmetric';
+
+                                                        updateCriterion(idx, { toleranceMode: nextMode });
+                                                    }}
+                                                >
+                                                    {(() => {
+                                                        const mode = criterion.toleranceMode || 'symmetric';
+                                                        if (mode === 'lower') return <ArrowDown className="h-4 w-4 text-cyan-500" />;
+                                                        if (mode === 'upper') return <ArrowUp className="h-4 w-4 text-orange-500" />;
+                                                        return <span className="text-muted-foreground text-sm font-bold select-none">±</span>;
+                                                    })()}
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="text-xs" side="top">
+                                                {(() => {
+                                                    const mode = criterion.toleranceMode || 'symmetric';
+                                                    if (mode === 'lower') return <p>Tolerance: <strong>Allow Lower Only</strong><br /><span className="text-[10px] opacity-70">(Target - Tol) to Target</span></p>;
+                                                    if (mode === 'upper') return <p>Tolerance: <strong>Allow Upper Only</strong><br /><span className="text-[10px] opacity-70">Target to (Target + Tol)</span></p>;
+                                                    return <p>Tolerance: <strong>Symmetric</strong><br /><span className="text-[10px] opacity-70">(Target - Tol) to (Target + Tol)</span></p>;
+                                                })()}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
                             </div>
                             <div className="col-span-1 flex items-center">
                                 <span className="text-xs text-muted-foreground">
                                     {getRoleUnit(criterion.role)}
                                 </span>
                             </div>
-                            <div className="col-span-1 flex items-center">
+                            <div className="col-span-1 flex items-center justify-end">
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -402,145 +523,13 @@ export function SimilarCasesSearch() {
                         </div>
 
                         {results.records.length > 0 ? (
-                            <>
-                                <div className="border rounded-lg overflow-hidden">
-                                    <table className="w-full text-xs">
-                                        <thead className="bg-muted/50">
-                                            <tr>
-                                                <th className="text-left px-3 py-2 font-medium">Дата</th>
-                                                <th className="text-left px-3 py-2 font-medium">Програма/Поток</th>
-                                                {[...filteringCriteria.map(c => c.role), ...showOnlyRoles].map(role => (
-                                                    <th key={role} className="text-right px-3 py-2 font-medium">
-                                                        {getRoleLabel(role)}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {results.records.map((record, idx) => (
-                                                <tr key={idx} className="border-t border-muted/30">
-                                                    <td className="px-3 py-2">{record.date}</td>
-                                                    <td className="px-3 py-2 text-muted-foreground">
-                                                        {record.context.flowName || record.context.programName}
-                                                    </td>
-                                                    {[...filteringCriteria.map(c => c.role), ...showOnlyRoles].map(role => {
-                                                        const res = record.resources[role];
-                                                        if (!res) return <td key={role} className="px-3 py-2 text-center text-muted-foreground">-</td>;
-
-
-                                                        // Find if this role is in filtering criteria to get the field
-                                                        const criterion = filteringCriteria.find(c => c.role === role);
-                                                        const field = criterion?.field || 'value';
-
-                                                        // Display the specific field requested
-                                                        let displayValue: string;
-                                                        const resourceData = res as any; // Backend returns all fields
-
-                                                        // Try to display requested field, fallback to available data
-                                                        const hasRequestedField = (() => {
-                                                            switch (field) {
-                                                                case 'min': return resourceData.min !== undefined;
-                                                                case 'max': return resourceData.max !== undefined;
-                                                                case 'average': return resourceData.average !== undefined;
-                                                                case 'startValue': return res.startValue !== undefined;
-                                                                case 'endValue': return res.endValue !== undefined;
-                                                                case 'value': return res.value !== undefined;
-                                                                default: return false;
-                                                            }
-                                                        })();
-
-                                                        if (hasRequestedField) {
-                                                            switch (field) {
-                                                                case 'min':
-                                                                    displayValue = resourceData.min.toFixed(2);
-                                                                    break;
-                                                                case 'max':
-                                                                    displayValue = resourceData.max.toFixed(2);
-                                                                    break;
-                                                                case 'average':
-                                                                    displayValue = resourceData.average.toFixed(2);
-                                                                    break;
-                                                                case 'startValue':
-                                                                    displayValue = res.startValue!.toFixed(2);
-                                                                    break;
-                                                                case 'endValue':
-                                                                    displayValue = res.endValue!.toFixed(2);
-                                                                    break;
-                                                                case 'value':
-                                                                default:
-                                                                    displayValue = res.value!.toFixed(2);
-                                                                    break;
-                                                            }
-                                                        } else {
-                                                            // Fallback: show whatever data is available
-                                                            if (res.startValue !== undefined && res.endValue !== undefined) {
-                                                                displayValue = `${res.startValue.toFixed(1)}→${res.endValue.toFixed(1)}`;
-                                                            } else if (res.value !== undefined) {
-                                                                displayValue = res.value.toFixed(2);
-                                                            } else {
-                                                                displayValue = '-';
-                                                            }
-                                                        }
-
-                                                        return (
-                                                            <td key={role} className="text-right px-3 py-2">
-                                                                {displayValue} {res.unit}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Averages - calculated from displayed values */}
-                                <div className="bg-muted/20 rounded-lg p-3">
-                                    <div className="text-xs font-medium mb-2">📊 Средни стойности:</div>
-                                    <div className="flex flex-wrap gap-4 text-xs">
-                                        {[...filteringCriteria.map(c => c.role), ...showOnlyRoles].map(role => {
-                                            // Calculate average from displayed values
-                                            const criterion = filteringCriteria.find(c => c.role === role);
-                                            const field = criterion?.field || 'value';
-
-                                            const values = results.records
-                                                .map(record => {
-                                                    const res = record.resources[role];
-                                                    if (!res) return null;
-
-                                                    const resourceData = res as any;
-
-                                                    // Get the value based on requested field
-                                                    switch (field) {
-                                                        case 'min': return resourceData.min;
-                                                        case 'max': return resourceData.max;
-                                                        case 'average': return resourceData.average;
-                                                        case 'startValue': return res.startValue;
-                                                        case 'endValue': return res.endValue;
-                                                        case 'value':
-                                                        default:
-                                                            // For value or showOnly, prefer value if available
-                                                            return res.value !== undefined ? res.value : res.endValue;
-                                                    }
-                                                })
-                                                .filter((v): v is number => v !== undefined && v !== null);
-
-                                            if (values.length === 0) return null;
-
-                                            const avg = values.reduce((a, b) => a + b, 0) / values.length;
-
-                                            return (
-                                                <div key={role}>
-                                                    <span className="font-medium">{getRoleLabel(role)}:</span>{' '}
-                                                    <span className="text-muted-foreground">
-                                                        {avg.toFixed(2)} {getRoleUnit(role)}
-                                                    </span>
-                                                </div>
-                                            );
-                                        }).filter(Boolean)}
-                                    </div>
-                                </div>
-                            </>
+                            <SimilarCasesResultsTable
+                                results={results}
+                                filteringCriteria={filteringCriteria}
+                                showOnlyRoles={showOnlyRoles}
+                                getRoleLabel={getRoleLabel}
+                                getRoleUnit={getRoleUnit}
+                            />
                         ) : (
                             <div className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-4 text-center">
                                 Няма намерени резултати с тези критерии

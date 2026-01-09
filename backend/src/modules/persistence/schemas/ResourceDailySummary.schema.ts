@@ -38,6 +38,16 @@ export interface IExecutionContext {
 }
 
 /**
+ * Measurement from a specific source (device)
+ */
+export interface IMeasurement extends IResourceStat {
+    source: string;          // Analytics Label (unique per window)
+    role: string;            // Resource role (e.g., volume, ph)
+    flowId?: string;         // Flow where this measurement occurred
+    flowName?: string;       // Human readable flow name
+}
+
+/**
  * Resource Daily Summary - aggregated analytics data
  * One record per window/cycle execution
  */
@@ -45,12 +55,18 @@ export interface IResourceDailySummary extends Document, ISoftDelete {
     date: string;            // YYYY-MM-DD format
     timestamp: Date;         // Exact time of recording
     context: IExecutionContext;
-    resources: Record<string, IResourceStat>;
+    measurements: IMeasurement[];
 }
 
 // --- Mongoose Schemas ---
 
-const ResourceStatSchema = new Schema<IResourceStat>({
+const MeasurementSchema = new Schema<IMeasurement>({
+    source: { type: String, required: true },
+    role: { type: String, required: true },
+    flowId: { type: String },
+    flowName: { type: String },
+
+    // ResourceStat fields
     value: { type: Number, required: true },
     unit: { type: String, required: true },
     type: { type: String, enum: ['SUM', 'DELTA', 'TREND', 'NONE'], required: true },
@@ -67,8 +83,7 @@ const ExecutionContextSchema = new Schema<IExecutionContext>({
     programName: { type: String, required: true },
     windowId: { type: String },
     windowName: { type: String },
-    flowId: { type: String },
-    flowName: { type: String },
+    // flowId removed from context as it's now per-measurement
     cycleId: { type: String },
     cycleName: { type: String },
     executionType: { type: String, enum: ['WINDOW', 'CYCLE', 'MANUAL'], required: true },
@@ -79,7 +94,7 @@ const ResourceDailySummarySchema = new Schema<IResourceDailySummary>({
     date: { type: String, required: true, index: true },
     timestamp: { type: Date, required: true, default: Date.now },
     context: { type: ExecutionContextSchema, required: true },
-    resources: { type: Schema.Types.Mixed, required: true }
+    measurements: [MeasurementSchema]
 }, {
     timestamps: true,
     toJSON: {
@@ -93,9 +108,12 @@ const ResourceDailySummarySchema = new Schema<IResourceDailySummary>({
 
 // Indexes for fast queries
 ResourceDailySummarySchema.index({ 'context.programId': 1, date: 1 });
-ResourceDailySummarySchema.index({ 'context.flowId': 1, date: 1 });
 ResourceDailySummarySchema.index({ 'context.windowId': 1 });
 ResourceDailySummarySchema.index({ 'context.cycleId': 1 });
+
+// Index for searching specific measurements
+ResourceDailySummarySchema.index({ 'measurements.source': 1 });
+ResourceDailySummarySchema.index({ 'measurements.role': 1 });
 
 ResourceDailySummarySchema.plugin(softDeletePlugin);
 

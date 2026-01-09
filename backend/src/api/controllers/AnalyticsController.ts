@@ -68,6 +68,30 @@ export const AnalyticsController = {
     },
 
     /**
+     * GET /api/analytics/flows?programId={optional}&windowName={optional}
+     * Get list of available flows for filtering
+     */
+    async getAvailableFlows(
+        request: FastifyRequest<{ Querystring: { programId?: string; windowName?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { programId, windowName } = request.query;
+            const flows = await resourceSummaryService.getAvailableFlows(programId, windowName);
+            return reply.send({
+                success: true,
+                data: flows
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
      * GET /api/analytics/program/:programId
      * Get analytics data for a specific program
      */
@@ -367,6 +391,31 @@ export const AnalyticsController = {
             });
         } catch (error: any) {
             console.error('[AnalyticsController] Error finding similar cases:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * GET /api/analytics/resources/sources
+     * Get list of all unique analytics sources (labels)
+     */
+    async getUniqueSources(
+        request: FastifyRequest,
+        reply: FastifyReply
+    ) {
+        try {
+            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
+            const sources = await resourceSummaryService.getUniqueSources();
+
+            return reply.send({
+                success: true,
+                data: sources
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error getting unique sources:', error);
             return reply.status(500).send({
                 success: false,
                 error: error.message

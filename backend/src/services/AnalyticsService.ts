@@ -817,7 +817,7 @@ export class AnalyticsService {
             // --- SENSOR LOGIC ---
             if (blockType === 'SENSOR_READ' && logData) {
                 if (!currentScan) { currentScan = []; currentScanTime = timestamp; }
-                const label = meta.blockLabel || logData.deviceName || 'Unknown';
+                const label = meta.blockLabel || logData.analyticsLabel || logData.deviceName || 'Unknown';
                 const role = logData.resourceRole;
 
                 if (logData.measurements) {
@@ -838,11 +838,11 @@ export class AnalyticsService {
                     if (!sensorReadingsByRole[role]) sensorReadingsByRole[role] = [];
                     sensorReadingsByRole[role].push(logData.primaryValue);
 
-                    this.accumulateLoopStats(sessionTotals, role, logData.primaryValue, rType, rUnit, logData.deviceName);
+                    this.accumulateLoopStats(sessionTotals, role, logData.primaryValue, rType, rUnit, logData.deviceName, logData.analyticsLabel);
 
                     if (loopStack.length > 0) {
                         const ctx = loopStack[loopStack.length - 1];
-                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, logData.primaryValue, rType, rUnit, logData.deviceName);
+                        this.accumulateLoopStats(ctx.step.loopStats!.resources, role, logData.primaryValue, rType, rUnit, logData.deviceName, logData.analyticsLabel);
                     }
                 }
                 if (loopStack.length > 0) loopStack[loopStack.length - 1].events.push(event);
@@ -870,7 +870,7 @@ export class AnalyticsService {
                     id: `act_${timestamp.getTime()}`,
                     timestamp,
                     type: 'ACTION',
-                    label: meta.blockLabel || logData.deviceName,
+                    label: meta.blockLabel || logData.analyticsLabel || logData.deviceName,
                     status: 'SUCCESS',
                     resourceRole: role,
                     metadata: logData
@@ -887,13 +887,13 @@ export class AnalyticsService {
                         // Don't accumulate actuator value - delta will be calculated from sensor
                     } else {
                         // Normal accumulation for SUM/DELTA/TREND roles
-                        this.accumulateLoopStats(sessionTotals, role, amount, rType, rUnit, logData.deviceName);
+                        this.accumulateLoopStats(sessionTotals, role, amount, rType, rUnit, logData.deviceName, logData.analyticsLabel);
                     }
 
                     if (loopStack.length > 0) {
                         const ctx = loopStack[loopStack.length - 1];
                         if (!(rType === 'NONE' && measuredBy)) {
-                            this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit, logData.deviceName);
+                            this.accumulateLoopStats(ctx.step.loopStats!.resources, role, amount, rType, rUnit, logData.deviceName, logData.analyticsLabel);
                         }
                     }
                 }
@@ -964,17 +964,19 @@ export class AnalyticsService {
         value: number,
         type: AnalyticsType,
         unit: string,
-        deviceName?: string
+        deviceName?: string,
+        analyticsLabel?: string
     ) {
         if (!stats[role]) {
             stats[role] = { role, type, value: 0, unit, devices: [] };
         }
 
-        // Accumulate device name
-        if (deviceName) {
+        // Accumulate source (Label prioritized over Name)
+        const source = analyticsLabel || deviceName;
+        if (source) {
             if (!stats[role].devices) stats[role].devices = [];
-            if (!stats[role].devices.includes(deviceName)) {
-                stats[role].devices.push(deviceName);
+            if (!stats[role].devices.includes(source)) {
+                stats[role].devices.push(source);
             }
         }
 

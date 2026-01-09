@@ -13,6 +13,7 @@ export async function apiRoutes(app: FastifyInstance) {
     // Analytics Routes
     app.get('/api/analytics/programs', AnalyticsController.getExecutedPrograms);
     app.get('/api/analytics/windows', AnalyticsController.getAvailableWindows);
+    app.get('/api/analytics/flows', AnalyticsController.getAvailableFlows);
     app.get('/api/analytics/program/:programId', AnalyticsController.getAnalytics);
     app.get('/api/analytics/program/:programId/filters', AnalyticsController.getFilterOptions);
     app.get('/api/analytics/program/:programId/sessions', AnalyticsController.getSessionTimeline);
@@ -21,6 +22,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/analytics/resources/all', AnalyticsController.getResourceAllTotals);
     app.get('/api/analytics/resources/period', AnalyticsController.getResourcePeriodTotals);
     app.get('/api/analytics/resources/daily', AnalyticsController.getResourceDailyBreakdown);
+    app.get('/api/analytics/resources/sources', AnalyticsController.getUniqueSources);
     app.post('/api/analytics/resources/similar', AnalyticsController.findSimilarCases);
 
     // Notification Routes

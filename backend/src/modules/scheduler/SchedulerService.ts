@@ -456,7 +456,9 @@ export class SchedulerService {
                             windowId: window.id,
                             windowName: window.name,
                             result: result as any,
-                            timestamp: new Date()
+                            timestamp: new Date(),
+                            flowId: this.getFlowIdFromExecution(window, state),
+                            flowName: this.getFlowIdFromExecution(window, state) // Using ID as name fallback for now
                         });
                     }
 
@@ -523,7 +525,9 @@ export class SchedulerService {
                             windowId: window.id,
                             windowName: window.name,
                             result: result === 'triggered' ? 'triggered' : 'no_trigger',
-                            timestamp: new Date()
+                            timestamp: new Date(),
+                            flowId: this.getFlowIdFromExecution(window, state),
+                            flowName: this.getFlowIdFromExecution(window, state)
                         });
                     }
 
@@ -627,7 +631,9 @@ export class SchedulerService {
                     windowId: window.id,
                     windowName: window.name,
                     result: hasBreakExecuted ? 'triggered' : 'no_trigger',
-                    timestamp: new Date()
+                    timestamp: new Date(),
+                    flowId: this.getFlowIdFromExecution(window, state),
+                    flowName: this.getFlowIdFromExecution(window, state)
                 });
                 await activeProgram.save();
             }
@@ -692,14 +698,39 @@ export class SchedulerService {
     /**
      * Convert HH:mm string to minutes since midnight.
      */
+    /**
+     * Determine the primary Flow ID that was executed in this window session
+     */
+    private getFlowIdFromExecution(window: ITimeWindow, state: IWindowState): string | undefined {
+        // 1. Check for Break Trigger (Highest Priority)
+        const breakTrigger = window.triggers.find(t =>
+            state.triggersExecuted.includes(t.id) && t.behavior === 'break'
+        );
+        if (breakTrigger) {
+            return breakTrigger.flowId || (breakTrigger.flowIds && breakTrigger.flowIds.length > 0 ? breakTrigger.flowIds[0] : undefined);
+        }
+
+        // 2. Check for Fallback
+        if (state.triggersExecuted.includes('fallback')) {
+            return window.fallbackFlowId || (window.fallbackFlowIds && window.fallbackFlowIds.length > 0 ? window.fallbackFlowIds[0] : undefined);
+        }
+
+        // 3. Check for any executed trigger (if no break trigger)
+        for (const triggerId of state.triggersExecuted) {
+            const trigger = window.triggers.find(t => t.id === triggerId);
+            if (trigger) {
+                return trigger.flowId || (trigger.flowIds && trigger.flowIds.length > 0 ? trigger.flowIds[0] : undefined);
+            }
+        }
+
+        return undefined;
+    }
+
     private timeToMinutes(time: string): number {
         const [hours, minutes] = time.split(':').map(Number);
         return hours * 60 + minutes;
     }
 
-    /**
-     * Check if enough time has passed for next poll.
-     */
     private shouldCheck(lastCheck: Date | undefined, intervalMinutes: number): boolean {
         if (!lastCheck) return true;
         const elapsed = (Date.now() - new Date(lastCheck).getTime()) / 1000 / 60;

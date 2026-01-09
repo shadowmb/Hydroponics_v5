@@ -130,6 +130,8 @@ export class SensorReadBlockExecutor implements IBlockExecutor {
                     durationMs: duration,
                     deviceId: device._id?.toString(),
                     deviceName: device.name,
+                    analyticsLabel: (device as any).analyticsLabel,
+                    flowId: ctx.programId || 'default',
                     resourceRole: (device as any).resourceRole || device.config?.activeRole,
                     measurements, // Structured measurements from template
                     rawContext: result.details // Full context for debugging/calibration

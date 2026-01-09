@@ -115,6 +115,25 @@ export const analyticsService = {
     },
 
     /**
+     * Fetch list of available flow names for filtering
+     */
+    async getAvailableFlows(programId?: string, windowName?: string): Promise<{ id: string, label: string }[]> {
+        const params = new URLSearchParams();
+        if (programId) params.append('programId', programId);
+        if (windowName) params.append('windowName', windowName);
+
+        const url = `${API_BASE_URL}/api/analytics/flows${params.toString() ? '?' + params.toString() : ''}`;
+        const response = await fetch(url);
+        const json = await response.json();
+
+        if (!json.success) {
+            throw new Error(json.error || 'Failed to fetch flows');
+        }
+
+        return json.data;
+    },
+
+    /**
      * Fetch analytics data for a program
      */
     async getAnalytics(programId: string, filters: AnalyticsFilters = {}): Promise<AnalyticsResponse> {

@@ -69,7 +69,15 @@ export interface SystemEvents {
     'advanced:window_active': { programId?: string; windowId: string; windowName: string; timestamp: Date };
     'advanced:trigger_matched': { programId?: string; windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; flowName: string; timestamp: Date };
     'advanced:trigger_skipped': { programId?: string; windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; timestamp: Date };
-    'advanced:window_completed': { programId?: string; windowId: string; windowName: string; result: 'triggered' | 'fallback' | 'no_trigger'; timestamp: Date };
+    'advanced:window_completed': {
+        programId?: string;
+        windowId: string;
+        windowName: string;
+        result: 'triggered' | 'fallback' | 'no_trigger';
+        timestamp: Date;
+        flowId?: string;
+        flowName?: string;
+    };
     'advanced:fallback_executed': { programId?: string; windowId: string; windowName: string; flowName: string; timestamp: Date };
     'advanced:program_day_complete': { programId?: string; timestamp: Date };
     'active:program_started': { programId: string; timestamp?: Date };
