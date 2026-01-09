@@ -21,9 +21,10 @@ interface ResourceDetailsTableProps {
     columns?: string[]; // Optional: if provided, show only these columns
     loading: boolean;
     roleLabels?: Record<string, string>; // Map: key -> display label
+    roleUnits?: Record<string, string>; // Map: key -> unit
 }
 
-export function ResourceDetailsTable({ data, columns, loading, roleLabels = {} }: ResourceDetailsTableProps) {
+export function ResourceDetailsTable({ data, columns, loading, roleLabels = {}, roleUnits = {} }: ResourceDetailsTableProps) {
     const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }]);
     const [pagination, setPagination] = useState({
         pageIndex: 0,
@@ -31,7 +32,11 @@ export function ResourceDetailsTable({ data, columns, loading, roleLabels = {} }
     });
 
     // Get display name from roleLabels or fallback to key
-    const getDisplayName = (key: string) => roleLabels[key] || key;
+    const getDisplayName = (key: string) => {
+        const label = roleLabels[key] || key;
+        const unit = roleUnits[key];
+        return unit ? `${label} (${unit})` : label;
+    };
 
     // Define columns dynamically
     const tableColumns = useMemo<ColumnDef<DailyResourceData>[]>(() => {
@@ -90,7 +95,7 @@ export function ResourceDetailsTable({ data, columns, loading, roleLabels = {} }
         ];
 
         return cols;
-    }, [data, columns, roleLabels]); // Re-create if data keys or labels change
+    }, [data, columns, roleLabels, roleUnits]); // Re-create if data keys or labels change
 
     const table = useReactTable({
         data,

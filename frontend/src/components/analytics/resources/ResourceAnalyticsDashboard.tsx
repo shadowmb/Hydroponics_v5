@@ -209,6 +209,7 @@ export function ResourceAnalyticsDashboard() {
                             loading={loading}
                             columns={enabledRoleKeys}
                             roleLabels={roleLabels}
+                            roleUnits={roleUnits}
                         />
                     )}
                 </>
