@@ -220,17 +220,16 @@ export const AnalyticsController = {
      * Get all-time totals for resources (ALL SUMMARY cards)
      */
     async getResourceAllTotals(
-        request: FastifyRequest<{ Querystring: { programId?: string; flowId?: string; windowId?: string } }>,
+        request: FastifyRequest<{ Querystring: { programId?: string; windowName?: string } }>,
         reply: FastifyReply
     ) {
         try {
             const { resourceSummaryService } = require('../../services/ResourceSummaryService');
-            const { programId, flowId, windowId } = request.query;
+            const { programId, windowName } = request.query;
 
             const totals = await resourceSummaryService.getAllTimeTotals({
                 programId,
-                flowId,
-                windowId
+                windowName
             });
 
             return reply.send({
@@ -251,12 +250,12 @@ export const AnalyticsController = {
      * Get totals for a specific date range (PERIOD SUMMARY cards)
      */
     async getResourcePeriodTotals(
-        request: FastifyRequest<{ Querystring: { from: string; to: string; programId?: string; flowId?: string; windowId?: string } }>,
+        request: FastifyRequest<{ Querystring: { from: string; to: string; programId?: string; windowName?: string } }>,
         reply: FastifyReply
     ) {
         try {
             const { resourceSummaryService } = require('../../services/ResourceSummaryService');
-            const { from, to, programId, flowId, windowId } = request.query;
+            const { from, to, programId, windowName } = request.query;
 
             if (!from || !to) {
                 return reply.status(400).send({
@@ -267,8 +266,7 @@ export const AnalyticsController = {
 
             const totals = await resourceSummaryService.getByDateRange(from, to, {
                 programId,
-                flowId,
-                windowId
+                windowName
             });
 
             return reply.send({

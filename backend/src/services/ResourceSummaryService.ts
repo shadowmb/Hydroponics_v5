@@ -89,13 +89,11 @@ export class ResourceSummaryService {
      */
     async getAllTimeTotals(filters?: {
         programId?: string;
-        flowId?: string;
-        windowId?: string;
+        windowName?: string;
     }): Promise<Record<string, IResourceStat>> {
         const match: any = {};
         if (filters?.programId) match['context.programId'] = filters.programId;
-        if (filters?.flowId) match['context.flowId'] = filters.flowId;
-        if (filters?.windowId) match['context.windowId'] = filters.windowId;
+        if (filters?.windowName) match['context.windowName'] = filters.windowName;
 
         const results = await ResourceDailySummaryModel.find(match).lean();
         return this.mergeResourceStats(results as any[]);
@@ -109,16 +107,14 @@ export class ResourceSummaryService {
         to: string,
         filters?: {
             programId?: string;
-            flowId?: string;
-            windowId?: string;
+            windowName?: string;
         }
     ): Promise<Record<string, IResourceStat>> {
         const match: any = {
             date: { $gte: from, $lte: to }
         };
         if (filters?.programId) match['context.programId'] = filters.programId;
-        if (filters?.flowId) match['context.flowId'] = filters.flowId;
-        if (filters?.windowId) match['context.windowId'] = filters.windowId;
+        if (filters?.windowName) match['context.windowName'] = filters.windowName;
 
         const results = await ResourceDailySummaryModel.find(match).lean();
         return this.mergeResourceStats(results as any[]);
@@ -133,14 +129,14 @@ export class ResourceSummaryService {
         roles: string[],
         filters?: {
             programId?: string;
-            flowId?: string;
+            windowName?: string;
         }
     ): Promise<Array<{ date: string; resources: Record<string, number> }>> {
         const match: any = {
             date: { $gte: from, $lte: to }
         };
         if (filters?.programId) match['context.programId'] = filters.programId;
-        if (filters?.flowId) match['context.flowId'] = filters.flowId;
+        if (filters?.windowName) match['context.windowName'] = filters.windowName;
 
         const results = await ResourceDailySummaryModel.find(match).sort({ date: 1 }).lean();
 

@@ -1,12 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format, subDays } from 'date-fns';
-import { CalendarIcon, RefreshCw, Loader2 } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '../../ui/button';
-import { Calendar } from '../../ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
 import type { DateRange } from 'react-day-picker';
 
 import { ResourceWaitFilters, ALL_PROGRAMS } from './ResourceWaitFilters';
@@ -27,8 +24,7 @@ export function ResourceAnalyticsDashboard() {
     // STATE: Filters
     const [filters, setFilters] = useState({
         programId: '',
-        windowId: 'all',
-        flowId: 'all'
+        windowName: '__all__'
     });
 
     // STATE: Date Range (Default last 7 days)
@@ -73,8 +69,7 @@ export function ResourceAnalyticsDashboard() {
 
             const apiFilters = {
                 programId: effectiveProgramId || undefined,
-                windowId: filters.windowId !== 'all' ? filters.windowId : undefined,
-                flowId: filters.flowId !== 'all' ? filters.flowId : undefined
+                windowName: filters.windowName !== '__all__' ? filters.windowName : undefined
             };
 
             const fromStr = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '';
@@ -158,52 +153,6 @@ export function ResourceAnalyticsDashboard() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* Date Picker */}
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                    "w-[260px] justify-start text-left font-normal",
-                                    !dateRange && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dateRange?.from ? (
-                                    dateRange.to ? (
-                                        <>
-                                            {format(dateRange.from, "dd.MM.yyyy")} -{" "}
-                                            {format(dateRange.to, "dd.MM.yyyy")}
-                                        </>
-                                    ) : (
-                                        format(dateRange.from, "dd.MM.yyyy")
-                                    )
-                                ) : (
-                                    <span>Избери период</span>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                            <div className="p-2 border-b grid grid-cols-2 gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 7), to: new Date() })}>
-                                    Последни 7 дни
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={() => setDateRange({ from: subDays(new Date(), 30), to: new Date() })}>
-                                    Последни 30 дни
-                                </Button>
-                            </div>
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={dateRange?.from}
-                                selected={dateRange}
-                                onSelect={setDateRange}
-                                numberOfMonths={2}
-                            />
-                        </PopoverContent>
-                    </Popover>
-
                     <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     </Button>
@@ -214,6 +163,8 @@ export function ResourceAnalyticsDashboard() {
             <ResourceWaitFilters
                 activeFilters={filters}
                 onFilterChange={setFilters}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
             />
 
             {/* Info about enabled roles */}
@@ -235,6 +186,7 @@ export function ResourceAnalyticsDashboard() {
                         periodData={filteredPeriodTotals}
                         loading={loading}
                         roleLabels={roleLabels}
+                        dateRange={dateRange}
                     />
 
 
