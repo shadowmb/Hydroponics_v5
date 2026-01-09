@@ -17,10 +17,10 @@ export interface ResourceTotal {
 
 export interface ResourceTotalsResponse {
     totals: Record<string, ResourceTotal>;
-    meta?: {
-        totalRecords: number;
-        firstDate?: string;
-        lastDate?: string;
+    metadata?: {
+        minDate?: string;
+        maxDate?: string;
+        totalDays: number;
     };
 }
 
@@ -40,8 +40,7 @@ export interface DailyResourceData {
 
 export interface ResourceAnalyticsFilters {
     programId?: string;
-    windowId?: string;
-    flowId?: string;
+    windowName?: string;
 }
 
 export const resourceAnalyticsService = {
@@ -53,20 +52,13 @@ export const resourceAnalyticsService = {
             const params = new URLSearchParams();
             // Only add programId if it's not empty (allows "All Programs")
             if (filters.programId) params.append('programId', filters.programId);
-            if (filters.windowId) params.append('windowId', filters.windowId);
-            if (filters.flowId) params.append('flowId', filters.flowId);
+            if (filters.windowName) params.append('windowName', filters.windowName);
 
             const response = await axios.get(`${API_URL}/api/analytics/resources/all`, { params });
-            const rawData = response.data.data || {};
+            const data = response.data.data;
 
-            // Transform: Backend returns { role1: {...}, role2: {...} }
-            // Frontend expects { totals: {...}, meta: {...} }
-            return {
-                totals: rawData,
-                meta: {
-                    totalRecords: Object.keys(rawData).length
-                }
-            };
+            // Backend now returns { totals, metadata } directly
+            return data;
         } catch (error) {
             console.error('Error fetching all resource totals:', error);
             throw error;
@@ -82,8 +74,7 @@ export const resourceAnalyticsService = {
             params.append('from', from);
             params.append('to', to);
             if (filters.programId) params.append('programId', filters.programId);
-            if (filters.windowId) params.append('windowId', filters.windowId);
-            if (filters.flowId) params.append('flowId', filters.flowId);
+            if (filters.windowName) params.append('windowName', filters.windowName);
 
             const response = await axios.get(`${API_URL}/api/analytics/resources/period`, { params });
             const rawData = response.data.data || {};
@@ -111,8 +102,7 @@ export const resourceAnalyticsService = {
             params.append('to', to);
             if (roles.length > 0) params.append('roles', roles.join(','));
             if (filters.programId) params.append('programId', filters.programId);
-            if (filters.windowId) params.append('windowId', filters.windowId);
-            if (filters.flowId) params.append('flowId', filters.flowId);
+            if (filters.windowName) params.append('windowName', filters.windowName);
 
             const response = await axios.get(`${API_URL}/api/analytics/resources/daily`, { params });
             return response.data.data || [];

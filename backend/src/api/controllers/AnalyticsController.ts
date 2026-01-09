@@ -227,14 +227,14 @@ export const AnalyticsController = {
             const { resourceSummaryService } = require('../../services/ResourceSummaryService');
             const { programId, windowName } = request.query;
 
-            const totals = await resourceSummaryService.getAllTimeTotals({
+            const result = await resourceSummaryService.getAllTimeTotals({
                 programId,
                 windowName
             });
 
             return reply.send({
                 success: true,
-                data: totals
+                data: result  // Now includes { totals, metadata }
             });
         } catch (error: any) {
             console.error('[AnalyticsController] Error getting resource totals:', error);

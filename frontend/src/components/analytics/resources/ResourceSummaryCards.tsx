@@ -1,6 +1,7 @@
 import { Card, CardContent } from '../../ui/card';
-import { Droplets, FlaskConical, Thermometer, Activity, Database, Calendar, Infinity } from 'lucide-react';
+import { Droplets, FlaskConical, Thermometer, Activity, Database, Calendar, Infinity, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { cn } from '../../../lib/utils';
 import type { DateRange } from 'react-day-picker';
 import type { ResourceTotalsResponse, PeriodSummaryResponse, ResourceTotal } from '../../../services/api/resourceAnalytics.service';
 
@@ -40,25 +41,67 @@ export function ResourceSummaryCards({ allData, periodData, loading, roleLabels 
     const getDisplayName = (key: string) => roleLabels[key] || key;
 
     // Single compact card
-    const RenderCard = ({ roleKey, data }: { roleKey: string, data: ResourceTotal }) => (
-        <Card className="hover:bg-muted/30 transition-colors">
-            <CardContent className="p-2 text-center">
-                {/* Header: Icon + Name */}
-                <div className="flex items-center justify-center gap-1 mb-0.5">
-                    {getIcon(roleKey)}
-                    <span className="text-[10px] font-medium text-muted-foreground truncate">
-                        {getDisplayName(roleKey)}
-                    </span>
-                </div>
+    const RenderCard = ({ roleKey, data, showTrend = false }: { roleKey: string, data: ResourceTotal, showTrend?: boolean }) => {
+        let trend = null;
 
-                {/* Value */}
-                <div className="text-lg font-bold leading-tight">
-                    {data.value?.toFixed(2)}
-                    <span className="text-[10px] font-normal text-muted-foreground ml-0.5">{data.unit}</span>
-                </div>
-            </CardContent>
-        </Card>
-    );
+        if (showTrend && allData?.metadata?.totalDays && daysCount > 0 && allData.totals[roleKey]) {
+            const allTimeAvg = allData.totals[roleKey].value / allData.metadata.totalDays;
+            const periodAvg = data.value / daysCount;
+
+            if (allTimeAvg > 0) {
+                const percent = ((periodAvg - allTimeAvg) / allTimeAvg) * 100;
+                trend = {
+                    percent: Math.abs(percent),
+                    direction: percent > 0 ? 'up' : percent < 0 ? 'down' : 'flat',
+                    positive: percent > 0
+                };
+            }
+        }
+
+        // Determine trend color
+        const getTrendColor = () => {
+            if (!trend) return '';
+            // For consumption (SUM), increase is bad (red), decrease is good (green)
+            if (data.type === 'SUM') {
+                return trend.direction === 'up' ? "text-red-500" : "text-green-500";
+            }
+            // For others (Sensors), just show direction neutrally
+            return trend.direction === 'up' ? "text-amber-500" : "text-blue-500";
+        };
+
+        return (
+            <Card className="hover:bg-muted/30 transition-colors">
+                <CardContent className="p-2 text-center">
+                    {/* Header: Icon + Name */}
+                    <div className="flex items-center justify-center gap-1 mb-0.5">
+                        {getIcon(roleKey)}
+                        <span className="text-[10px] font-medium text-muted-foreground truncate">
+                            {getDisplayName(roleKey)}
+                        </span>
+                    </div>
+
+                    {/* Value */}
+                    <div className="text-lg font-bold leading-tight">
+                        {data.value?.toFixed(2)}
+                        <span className="text-[10px] font-normal text-muted-foreground ml-0.5">{data.unit}</span>
+                    </div>
+
+                    {/* Trend Indicator */}
+                    {trend && (
+                        <div className={cn(
+                            "flex items-center justify-center gap-1 text-[10px] font-medium mt-1",
+                            getTrendColor()
+                        )}>
+                            {trend.direction === 'up' && <ArrowUp className="h-3 w-3" />}
+                            {trend.direction === 'down' && <ArrowDown className="h-3 w-3" />}
+                            {trend.direction === 'flat' && <Minus className="h-3 w-3" />}
+                            <span>{trend.percent.toFixed(1)}%</span>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        );
+    };
 
     return (
         <div className="space-y-6">
@@ -70,9 +113,11 @@ export function ResourceSummaryCards({ allData, periodData, loading, roleLabels 
                             <Infinity className="h-3.5 w-3.5" />
                             All Time Summary
                         </h3>
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground border border-border">
-                            Всички данни
-                        </span>
+                        {allData.metadata && allData.metadata.totalDays > 0 && (
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground border border-border">
+                                {allData.metadata.totalDays} {allData.metadata.totalDays === 1 ? 'ден' : 'дни'}
+                            </span>
+                        )}
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
                         {Object.entries(allData.totals).map(([role, data]) => (
@@ -106,7 +151,7 @@ export function ResourceSummaryCards({ allData, periodData, loading, roleLabels 
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
                         {Object.entries(periodData.current).map(([role, data]) => (
-                            <RenderCard key={role} roleKey={role} data={data} />
+                            <RenderCard key={role} roleKey={role} data={data} showTrend={true} />
                         ))}
                     </div>
                 </div>

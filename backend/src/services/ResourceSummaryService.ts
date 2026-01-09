@@ -86,17 +86,49 @@ export class ResourceSummaryService {
 
     /**
      * Get all-time totals for resources (for ALL SUMMARY cards)
+     * Now includes metadata with date range and total days
      */
     async getAllTimeTotals(filters?: {
         programId?: string;
         windowName?: string;
-    }): Promise<Record<string, IResourceStat>> {
+    }): Promise<{ totals: Record<string, IResourceStat>; metadata: { minDate?: string; maxDate?: string; totalDays: number } }> {
         const match: any = {};
         if (filters?.programId) match['context.programId'] = filters.programId;
         if (filters?.windowName) match['context.windowName'] = filters.windowName;
 
+        // Get aggregated resource stats
         const results = await ResourceDailySummaryModel.find(match).lean();
-        return this.mergeResourceStats(results as any[]);
+        const totals = this.mergeResourceStats(results as any[]);
+
+        // Calculate date statistics
+        const dateStats = await ResourceDailySummaryModel.aggregate([
+            { $match: match },
+            {
+                $group: {
+                    _id: null,
+                    minDate: { $min: '$date' },
+                    maxDate: { $max: '$date' },
+                    uniqueDays: { $addToSet: '$date' }
+                }
+            },
+            {
+                $project: {
+                    minDate: 1,
+                    maxDate: 1,
+                    totalDays: { $size: '$uniqueDays' }
+                }
+            }
+        ]);
+
+        const metadata = dateStats.length > 0
+            ? {
+                minDate: dateStats[0].minDate,
+                maxDate: dateStats[0].maxDate,
+                totalDays: dateStats[0].totalDays
+            }
+            : { totalDays: 0 };
+
+        return { totals, metadata };
     }
 
     /**
