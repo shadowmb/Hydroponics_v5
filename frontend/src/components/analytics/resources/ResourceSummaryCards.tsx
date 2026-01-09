@@ -44,6 +44,11 @@ export function ResourceSummaryCards({ allData, periodData, loading, roleLabels 
     const RenderCard = ({ roleKey, data, showTrend = false }: { roleKey: string, data: ResourceTotal, showTrend?: boolean }) => {
         let trend = null;
 
+        // Calculate daily average
+        const isAllTime = !showTrend;
+        const totalDays = isAllTime ? (allData?.metadata?.totalDays || 0) : daysCount;
+        const dailyAvg = totalDays > 0 ? data.value / totalDays : 0;
+
         if (showTrend && allData?.metadata?.totalDays && daysCount > 0 && allData.totals[roleKey]) {
             const allTimeAvg = allData.totals[roleKey].value / allData.metadata.totalDays;
             const periodAvg = data.value / daysCount;
@@ -85,6 +90,13 @@ export function ResourceSummaryCards({ allData, periodData, loading, roleLabels 
                         {data.value?.toFixed(2)}
                         <span className="text-[10px] font-normal text-muted-foreground ml-0.5">{data.unit}</span>
                     </div>
+
+                    {/* Daily Average */}
+                    {dailyAvg > 0 && (
+                        <div className="text-[10px] text-muted-foreground/60 -mt-0.5 mb-0.5">
+                            ~{dailyAvg.toFixed(2)} <span className="text-[9px]">/ден</span>
+                        </div>
+                    )}
 
                     {/* Trend Indicator */}
                     {trend && (
