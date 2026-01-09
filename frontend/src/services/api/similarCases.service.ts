@@ -10,6 +10,7 @@ export interface SimilarCasesCriterion {
     tolerance?: number;
     showOnly?: boolean;
     analyticsLabel?: string;
+    toleranceMode?: 'symmetric' | 'lower' | 'upper';
 }
 
 export interface SimilarCasesFilters {

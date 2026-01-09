@@ -82,14 +82,16 @@ export function SimilarCasesResultsTable({
         }
     };
 
-    const formatResourceValue = (record: SimilarCaseRecord, role: string, source?: string): string => {
+    const formatResourceValue = (record: SimilarCaseRecord, role: string, source?: string, fieldOverride?: string): string => {
         const res = getMeasurement(record, role, source);
         if (!res) return '-';
 
-        // If we are showing a criterion column, respect its field preference
-        // checking equality with source as well
-        const criterion = filteringCriteria.find(c => c.role === role && c.analyticsLabel === source);
-        const field = criterion?.field || 'value';
+        // Use override if provided, otherwise try to find matching criterion
+        let field = fieldOverride;
+        if (!field) {
+            const criterion = filteringCriteria.find(c => c.role === role && c.analyticsLabel === source);
+            field = criterion?.field || 'value';
+        }
 
         const hasRequestedField = (() => {
             switch (field) {
@@ -198,7 +200,7 @@ export function SimilarCasesResultsTable({
             const uniqueId = `crit_${fc.role}_${fc.analyticsLabel || 'any'}_${idx}`;
             return {
                 id: uniqueId,
-                accessorFn: (row) => getResourceValue(row, fc.role, fc.analyticsLabel),
+                accessorFn: (row) => getResourceValue(row, fc.role, fc.analyticsLabel, fc.field),
                 header: ({ column }) => (
                     <div className="text-right">
                         <Button
@@ -209,6 +211,7 @@ export function SimilarCasesResultsTable({
                             <span className="flex flex-col items-end">
                                 <span>{getRoleLabel(fc.role)}</span>
                                 {fc.analyticsLabel && <span className="text-[10px] text-muted-foreground">({fc.analyticsLabel})</span>}
+                                {fc.field && fc.field !== 'value' && <span className="text-[10px] italic text-muted-foreground">({fc.field})</span>}
                             </span>
                             <ArrowUpDown className="ml-2 h-4 w-4" />
                         </Button>
@@ -219,7 +222,7 @@ export function SimilarCasesResultsTable({
                     if (!res) return <div className="text-center text-muted-foreground text-xs">-</div>;
                     return (
                         <div className="text-right text-xs">
-                            {formatResourceValue(row.original, fc.role, fc.analyticsLabel)} {res.unit}
+                            {formatResourceValue(row.original, fc.role, fc.analyticsLabel, fc.field)} {res.unit}
                         </div>
                     );
                 }

@@ -4,7 +4,8 @@ import { Button } from '../../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Plus, Trash2, Search, ArrowUp, ArrowDown } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { similarCasesService } from '../../../services/api/similarCases.service';
 import type { SimilarCasesCriterion, SimilarCasesResponse } from '../../../services/api/similarCases.service';
 import { toast } from 'sonner';
@@ -323,6 +324,18 @@ export function SimilarCasesSearch() {
                         </div>
                     )}
 
+                    {filteringCriteria.length > 0 && (
+                        <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground px-3 mb-1 text-center">
+                            <div className="col-span-2">Ресурс</div>
+                            <div className="col-span-2">Източник</div>
+                            <div className="col-span-2">Тип</div>
+                            <div className="col-span-2">Стойност</div>
+                            <div className="col-span-2">Толеранс (±)</div>
+                            <div className="col-span-1">Ед.</div>
+                            <div className="col-span-1"></div>
+                        </div>
+                    )}
+
                     {filteringCriteria.map((criterion, idx) => (
                         <div key={idx} className="grid grid-cols-12 gap-2 p-3 border rounded-lg bg-muted/10">
                             <div className="col-span-2 flex items-center">
@@ -375,14 +388,55 @@ export function SimilarCasesSearch() {
                                 />
                             </div>
                             <div className="col-span-2">
-                                <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={criterion.tolerance || 0}
-                                    onChange={(e) => updateCriterion(idx, { tolerance: parseFloat(e.target.value) || 0 })}
-                                    className="h-8 text-xs"
-                                    placeholder="±"
-                                />
+                                <div className="flex items-center gap-1">
+                                    <div className="relative flex-1">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">±</span>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={criterion.tolerance || 0}
+                                            onChange={(e) => updateCriterion(idx, { tolerance: parseFloat(e.target.value) || 0 })}
+                                            className="h-8 pl-5 text-xs"
+                                            placeholder="0.0"
+                                        />
+                                    </div>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 shrink-0 hover:bg-transparent"
+                                                    onClick={() => {
+                                                        const currentMode = criterion.toleranceMode || 'symmetric';
+                                                        let nextMode: 'symmetric' | 'lower' | 'upper' = 'symmetric';
+
+                                                        if (currentMode === 'symmetric') nextMode = 'lower';
+                                                        else if (currentMode === 'lower') nextMode = 'upper';
+                                                        else nextMode = 'symmetric';
+
+                                                        updateCriterion(idx, { toleranceMode: nextMode });
+                                                    }}
+                                                >
+                                                    {(() => {
+                                                        const mode = criterion.toleranceMode || 'symmetric';
+                                                        if (mode === 'lower') return <ArrowDown className="h-4 w-4 text-cyan-500" />;
+                                                        if (mode === 'upper') return <ArrowUp className="h-4 w-4 text-orange-500" />;
+                                                        return <span className="text-muted-foreground text-sm font-bold select-none">±</span>;
+                                                    })()}
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="text-xs" side="top">
+                                                {(() => {
+                                                    const mode = criterion.toleranceMode || 'symmetric';
+                                                    if (mode === 'lower') return <p>Tolerance: <strong>Allow Lower Only</strong><br /><span className="text-[10px] opacity-70">(Target - Tol) to Target</span></p>;
+                                                    if (mode === 'upper') return <p>Tolerance: <strong>Allow Upper Only</strong><br /><span className="text-[10px] opacity-70">Target to (Target + Tol)</span></p>;
+                                                    return <p>Tolerance: <strong>Symmetric</strong><br /><span className="text-[10px] opacity-70">(Target - Tol) to (Target + Tol)</span></p>;
+                                                })()}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
                             </div>
                             <div className="col-span-1 flex items-center">
                                 <span className="text-xs text-muted-foreground">

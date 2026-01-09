@@ -514,6 +514,7 @@ export class ResourceSummaryService {
             tolerance?: number;
             showOnly?: boolean;
             analyticsLabel?: string; // New: Filter by specific source
+            toleranceMode?: 'symmetric' | 'lower' | 'upper';
         }>;
         limit?: number;
     }): Promise<{
@@ -554,7 +555,7 @@ export class ResourceSummaryService {
             // Apply filtering criteria using $all and $elemMatch
             if (filteringCriteria.length > 0) {
                 const criteriaConditions = filteringCriteria.map(criterion => {
-                    const { role, field = 'value', value, tolerance = 0, analyticsLabel } = criterion;
+                    const { role, field = 'value', value, tolerance = 0, analyticsLabel, toleranceMode = 'symmetric' } = criterion;
 
                     const condition: any = { role };
                     if (analyticsLabel) {
@@ -562,8 +563,20 @@ export class ResourceSummaryService {
                     }
 
                     if (value !== undefined) {
-                        const minValue = value - tolerance;
-                        const maxValue = value + tolerance;
+                        let minValue, maxValue;
+
+                        if (toleranceMode === 'lower') {
+                            minValue = value - tolerance;
+                            maxValue = value;
+                        } else if (toleranceMode === 'upper') {
+                            minValue = value;
+                            maxValue = value + tolerance;
+                        } else {
+                            // symmetric (default)
+                            minValue = value - tolerance;
+                            maxValue = value + tolerance;
+                        }
+
                         condition[field] = { $gte: minValue, $lte: maxValue };
                     }
 
