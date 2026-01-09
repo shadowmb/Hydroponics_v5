@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { analyticsService } from '../../services/AnalyticsService';
+import { resourceSummaryService } from '../../services/ResourceSummaryService';
 
 interface AnalyticsQuery {
     from?: string;
@@ -32,6 +33,30 @@ export const AnalyticsController = {
             return reply.send({
                 success: true,
                 data: programs
+            });
+        } catch (error: any) {
+            console.error('[AnalyticsController] Error:', error);
+            return reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * GET /api/analytics/windows?programId={optional}
+     * Get list of available window names for filtering
+     */
+    async getAvailableWindows(
+        request: FastifyRequest<{ Querystring: { programId?: string } }>,
+        reply: FastifyReply
+    ) {
+        try {
+            const { programId } = request.query;
+            const windows = await resourceSummaryService.getAvailableWindows(programId);
+            return reply.send({
+                success: true,
+                data: windows
             });
         } catch (error: any) {
             console.error('[AnalyticsController] Error:', error);

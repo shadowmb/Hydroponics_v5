@@ -14,7 +14,7 @@ export interface SimilarCasesCriterion {
 export interface SimilarCasesFilters {
     programId?: string;
     windowId?: string;
-    flowId?: string;
+    windowName?: string;
 }
 
 export interface SimilarCaseRecord {

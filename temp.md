@@ -1,10 +1,10 @@
 {
   "_id": {
-    "$oid": "695f9ea2a24d420eac888902"
+    "$oid": "696030d8ac697d8f12b8625b"
   },
-  "date": "2026-01-08",
+  "date": "2026-01-09",
   "timestamp": {
-    "$date": "2026-01-08T12:10:10.042Z"
+    "$date": "2026-01-08T22:34:00.041Z"
   },
   "context": {
     "programId": "prog_bigtest",
@@ -15,35 +15,35 @@
   },
   "resources": {
     "volume": {
-      "value": 80,
+      "value": 60,
       "unit": "L",
       "type": "DELTA",
-      "startValue": 20,
+      "startValue": 40,
       "endValue": 100,
       "count": 7,
-      "average": 57.142857142857146,
-      "min": 20,
+      "average": 68.28571428571429,
+      "min": 40,
       "max": 100
     },
     "ec": {
-      "value": 0.7999999999999998,
+      "value": 1.4500000000000002,
       "unit": "mS/cm",
       "type": "TREND",
-      "startValue": 2,
-      "endValue": 2.8,
+      "startValue": 1,
+      "endValue": 2.45,
       "count": 4,
-      "average": 2.45,
-      "min": 2,
-      "max": 2.8
+      "average": 1.975,
+      "min": 1,
+      "max": 2.45
     },
     "nutrient_a": {
-      "value": 200,
+      "value": 100,
       "unit": "ml",
       "type": "SUM",
       "count": 2,
-      "average": 100,
-      "min": 100,
-      "max": 100
+      "average": 50,
+      "min": 50,
+      "max": 50
     },
     "nutrient_b": {
       "value": 200,
@@ -55,33 +55,33 @@
       "max": 100
     },
     "mixer": {
-      "value": 10,
+      "value": 20,
       "unit": "s",
       "type": "NONE",
-      "count": 5,
-      "average": 10,
-      "min": 10,
-      "max": 10
+      "count": 4,
+      "average": 17.5,
+      "min": 15,
+      "max": 20
     },
     "ph": {
-      "value": 2.5,
+      "value": 2.25,
       "unit": "pH",
       "type": "TREND",
       "startValue": 4,
-      "endValue": 6.5,
-      "count": 5,
-      "average": 5.4,
+      "endValue": 6.25,
+      "count": 4,
+      "average": 5.375,
       "min": 4,
-      "max": 6.5
+      "max": 6.25
     },
     "ph_up": {
       "value": 6,
       "unit": "ml",
       "type": "SUM",
-      "count": 3,
-      "average": 2,
-      "min": 2,
-      "max": 2
+      "count": 2,
+      "average": 3,
+      "min": 3,
+      "max": 3
     },
     "soil_moisture": {
       "value": 30,
@@ -96,27 +96,27 @@
       "value": 0,
       "unit": "C",
       "type": "TREND",
-      "startValue": 21,
-      "endValue": 21,
+      "startValue": 24,
+      "endValue": 24,
       "count": 1,
-      "average": 21,
-      "min": 21,
-      "max": 21
+      "average": 24,
+      "min": 24,
+      "max": 24
     },
     "water": {
-      "value": 80,
+      "value": 60,
       "unit": "L",
       "type": "DELTA",
-      "startValue": 20,
+      "startValue": 40,
       "endValue": 100
     }
   },
   "deletedAt": null,
   "createdAt": {
-    "$date": "2026-01-08T12:10:10.043Z"
+    "$date": "2026-01-08T22:34:00.042Z"
   },
   "updatedAt": {
-    "$date": "2026-01-08T12:10:10.043Z"
+    "$date": "2026-01-08T22:34:00.042Z"
   },
   "__v": 0
 }

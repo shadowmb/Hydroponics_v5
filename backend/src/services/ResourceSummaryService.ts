@@ -476,6 +476,9 @@ export class ResourceSummaryService {
                                     value: res.value,
                                     startValue: res.startValue,
                                     endValue: res.endValue,
+                                    min: res.min,
+                                    max: res.max,
+                                    average: res.average,
                                     unit: res.unit
                                 }
                             ];
@@ -504,6 +507,30 @@ export class ResourceSummaryService {
             };
         } catch (error) {
             logger.error({ error, params }, '❌ [ResourceSummaryService] Error finding similar cases');
+            throw error;
+        }
+    }
+
+    /**
+     * Get available window names for filtering
+     * @param programId Optional program ID to filter windows
+     * @returns Array of unique window names
+     */
+    async getAvailableWindows(programId?: string): Promise<string[]> {
+        try {
+            const query: any = { deletedAt: null };
+
+            if (programId) {
+                query['context.programId'] = programId;
+            }
+
+            const windows = await ResourceDailySummaryModel
+                .distinct('context.windowName', query)
+                .exec();
+
+            return windows.filter(Boolean).sort();
+        } catch (error) {
+            logger.error({ error, programId }, '❌ [ResourceSummaryService] Error fetching available windows');
             throw error;
         }
     }

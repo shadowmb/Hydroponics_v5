@@ -169,6 +169,14 @@ export class AnalyticsService {
                     count: { $sum: 1 }
                 }
             },
+            {
+                $lookup: {
+                    from: 'programs',
+                    localField: '_id',
+                    foreignField: 'id',
+                    as: 'programData'
+                }
+            },
             { $sort: { lastExecution: -1 } }
         ];
 
@@ -176,7 +184,7 @@ export class AnalyticsService {
 
         return result.map((r: any) => ({
             programId: r._id,
-            name: r._id,  // Use programId as name for now
+            name: r.programData[0]?.name || r._id,  // Use program name if found, fallback to ID
             lastExecution: r.lastExecution
         }));
     }

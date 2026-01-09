@@ -97,6 +97,24 @@ export const analyticsService = {
     },
 
     /**
+     * Fetch list of available window names for filtering
+     */
+    async getAvailableWindows(programId?: string): Promise<string[]> {
+        const params = new URLSearchParams();
+        if (programId) params.append('programId', programId);
+
+        const url = `${API_BASE_URL}/api/analytics/windows${params.toString() ? '?' + params.toString() : ''}`;
+        const response = await fetch(url);
+        const json = await response.json();
+
+        if (!json.success) {
+            throw new Error(json.error || 'Failed to fetch windows');
+        }
+
+        return json.data;
+    },
+
+    /**
      * Fetch analytics data for a program
      */
     async getAnalytics(programId: string, filters: AnalyticsFilters = {}): Promise<AnalyticsResponse> {
