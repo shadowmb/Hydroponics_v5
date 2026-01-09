@@ -145,6 +145,8 @@ export class HardwareController {
         }
     }
 
+
+
     static async updateController(req: FastifyRequest, reply: FastifyReply) {
         try {
             const { id } = req.params as { id: string };
@@ -922,7 +924,8 @@ export class HardwareController {
                 isEnabled: body.isEnabled,
                 tags: mergedTags, // Add tags support
                 group: template.uiConfig?.category || 'Other', // Auto-populate group from template
-                resourceRole: body.resourceRole // Resource role for analytics
+                resourceRole: body.resourceRole, // Resource role for analytics
+                analyticsLabel: body.analyticsLabel // Assigned from body
             });
 
             await device.save();
@@ -1147,7 +1150,7 @@ export class HardwareController {
                 device.markModified('hardware');
             }
 
-            await device.save();
+            const savedDevice = await device.save();
 
             // === INSTANT RESTART TRIGGER FOR UART DEVICES ===
             // If UART pins changed, send a READ command immediately to trigger controller auto-reset

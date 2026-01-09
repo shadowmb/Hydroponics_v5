@@ -72,6 +72,13 @@ export class WaitBlockExecutor implements IBlockExecutor {
             }
         });
 
-        return { success: true };
+        return {
+            success: true,
+            logData: {
+                action: 'WAIT',
+                durationMs: duration,
+                flowId: ctx.programId || 'default'
+            }
+        };
     }
 }

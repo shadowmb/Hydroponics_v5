@@ -10,6 +10,14 @@ export class LogBlockExecutor implements IBlockExecutor {
 
         (logger as any)[level]({ block: 'LOG', ctx: ctx.programId }, message);
 
-        return { success: true };
+        return {
+            success: true,
+            logData: {
+                action: 'LOG',
+                level,
+                message,
+                flowId: ctx.programId || 'default'
+            }
+        };
     }
 }

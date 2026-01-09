@@ -218,7 +218,7 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                     deviceId: device._id?.toString(),
                     deviceName: device.name,
                     analyticsLabel: (device as any).analyticsLabel,
-                    flowId: ctx.actionTemplateId,
+                    flowId: ctx.programId || 'default',
                     resourceRole: (device as any).resourceRole || device.config?.activeRole
                 };
             } else if (action === 'PULSE_ON' || action === 'PULSE_OFF') {
@@ -232,7 +232,7 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                     deviceId: device._id?.toString(),
                     deviceName: device.name,
                     analyticsLabel: (device as any).analyticsLabel,
-                    flowId: ctx.actionTemplateId,
+                    flowId: ctx.programId || 'default',
                     resourceRole: (device as any).resourceRole || device.config?.activeRole
                 };
             } else {
@@ -245,7 +245,7 @@ export class ActuatorSetBlockExecutor implements IBlockExecutor {
                     deviceId: device._id?.toString(),
                     deviceName: device.name,
                     analyticsLabel: (device as any).analyticsLabel,
-                    flowId: ctx.actionTemplateId,
+                    flowId: ctx.programId || 'default',
                     resourceRole: (device as any).resourceRole || device.config?.activeRole
                 };
             }
