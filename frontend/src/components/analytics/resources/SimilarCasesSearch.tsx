@@ -129,11 +129,11 @@ export function SimilarCasesSearch() {
             return;
         }
 
-        // Check if already exists
-        if (filteringCriteria.some(c => c.role === selectedRoleToAdd)) {
-            toast.error('Този ресурс вече е добавен');
-            return;
-        }
+        // Check if already exists - REMOVED to allow multiple criteria for same role (e.g. min + max)
+        // if (filteringCriteria.some(c => c.role === selectedRoleToAdd)) {
+        //     toast.error('Този ресурс вече е добавен');
+        //     return;
+        // }
 
         setFilteringCriteria([...filteringCriteria, {
             role: selectedRoleToAdd,
@@ -214,10 +214,8 @@ export function SimilarCasesSearch() {
     const getRoleLabel = (key: string) => allRoles.find(r => r.key === key)?.label || key;
     const getRoleUnit = (key: string) => roleUnits[key] || '';
 
-    // Get available roles for dropdown (not already added)
-    const availableRolesForAdd = allRoles.filter(r =>
-        !filteringCriteria.some(c => c.role === r.key)
-    );
+    // Get available roles for dropdown (allow same role multiple times)
+    const availableRolesForAdd = allRoles;
 
     // Get available roles for show-only (not already added anywhere)
     const availableRolesForShowOnly = allRoles.filter((r: ResourceRole) =>

@@ -132,26 +132,64 @@ export function SimilarCasesResultsTable({
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 ),
-                cell: ({ row }) => <div className="text-xs">{row.getValue('date')}</div>,
+                cell: ({ row }) => <div className="text-xs font-medium">{row.getValue('date')}</div>,
             },
             {
-                id: 'context',
-                accessorFn: (row) => row.context.flowName || row.context.programName,
+                id: 'programName',
+                accessorFn: (row) => row.context.programName,
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                         className="-ml-4 hover:bg-transparent"
                     >
-                        Програма/Поток
+                        Програма
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 ),
                 cell: ({ row }) => (
                     <div className="text-xs text-muted-foreground">
-                        {row.original.context.flowName || row.original.context.programName}
+                        {row.original.context.programName || '-'}
                     </div>
                 ),
+            },
+            {
+                id: 'flowNames',
+                header: 'Поток',
+                cell: ({ row }) => {
+                    const uniqueFlows = Array.from(new Set(
+                        row.original.measurements?.map(m => m.flowName || m.flowId) || []
+                    )).filter(Boolean);
+
+                    return (
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {uniqueFlows.length > 0 ? uniqueFlows.map(f => (
+                                <span key={f} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                    {f}
+                                </span>
+                            )) : <span className="text-xs text-muted-foreground">-</span>}
+                        </div>
+                    );
+                }
+            },
+            {
+                id: 'analyticsLabels',
+                header: 'Източници',
+                cell: ({ row }) => {
+                    const uniqueSources = Array.from(new Set(
+                        row.original.measurements?.map(m => m.source) || []
+                    )).filter(Boolean).sort();
+
+                    return (
+                        <div className="flex flex-wrap gap-1 max-w-[250px]">
+                            {uniqueSources.length > 0 ? uniqueSources.map(s => (
+                                <span key={s} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                                    {s}
+                                </span>
+                            )) : <span className="text-xs text-muted-foreground">-</span>}
+                        </div>
+                    );
+                }
             },
         ];
 

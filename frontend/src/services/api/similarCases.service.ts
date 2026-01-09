@@ -46,6 +46,8 @@ export interface SimilarCaseRecord {
         min?: number;
         max?: number;
         average?: number;
+        flowId?: string;
+        flowName?: string;
     }>;
 }
 
