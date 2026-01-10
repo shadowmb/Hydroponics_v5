@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Trash2, ArrowUpDown } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { aiService } from '@/services/ai.service';
 import { ShortcutDialog } from './ShortcutDialog';
 import { toast } from 'sonner';

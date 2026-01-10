@@ -1,0 +1,8 @@
+{
+    "keywords": {
+        "device|sensor|probe|pin|hardware|сензор|устройство|хардуер": "Test-Devices.md",
+        "flow|node|logic|automation|trigger|поток|логика|автоматизация": "Test-Flows.md",
+        "tutorial|start|guide|help|туториал|помощ|старт": "Tutorials/Tutorial-Basics.md",
+        "firmware|generator|builder|фърмуер|генератор|build": "Tutorials/Tutorial-Firmware.md"
+    }
+}

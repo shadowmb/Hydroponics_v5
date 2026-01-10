@@ -86,7 +86,7 @@ export function AIChatPopup() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 20, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed bottom-4 right-4 z-50 w-[400px] shadow-2xl"
+                    className="fixed bottom-4 right-4 z-[100] w-[400px] shadow-2xl"
                 >
                     <Card className="h-[600px] flex flex-col border-primary/20 bg-background/95 backdrop-blur-sm">
 

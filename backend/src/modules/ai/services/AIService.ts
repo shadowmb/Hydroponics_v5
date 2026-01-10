@@ -11,12 +11,12 @@ import { settingsService } from '../../settings/services/SettingsService';
 import { config as envConfig } from '../../../core/ConfigService';
 
 export class AIService {
-    private provider: 'gemini' | 'openai' | 'anthropic' | 'ollama' = 'gemini';
+    private provider: 'gemini' | 'openai' | 'anthropic' | 'ollama' | 'ollama-cloud' = 'gemini';
     private model: string = 'gemini-2.5-flash'; // Default
 
-    constructor() {
+    constructor(provider?: 'gemini' | 'openai' | 'anthropic' | 'ollama' | 'ollama-cloud') {
         // Initial load from env if needed, but per-request is better for dynamic updates
-        this.provider = (envConfig as any).AI_PROVIDER || 'gemini';
+        this.provider = provider || (envConfig as any).AI_PROVIDER || 'gemini';
     }
 
     /**

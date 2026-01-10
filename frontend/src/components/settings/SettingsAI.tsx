@@ -127,7 +127,9 @@ export function SettingsAI() {
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <p className="text-xs text-muted-foreground">Choose the specific model version.</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {AI_MODELS[provider]?.find(m => m.id === model)?.description || "Choose the specific model version."}
+                                    </p>
                                 </div>
                             </div>
 

@@ -1,6 +1,6 @@
 import { config } from '../../../core/ConfigService';
 
-export type AIProvider = 'gemini' | 'openai' | 'anthropic' | 'ollama';
+export type AIProvider = 'gemini' | 'openai' | 'anthropic' | 'ollama' | 'ollama-cloud';
 
 // Helper to bypass TS transpilation of dynamic imports (force native Node ESM loader)
 const dynamicImport = (pkg: string) => new Function(`return import('${pkg}')`)();
@@ -34,8 +34,23 @@ export class AIAdapterFactory {
                 return createAnthropicChat((modelOverride || 'claude-3-5-sonnet') as any, anthropicKey);
 
             case 'ollama':
-                const { createOllamaChat } = await dynamicImport('@tanstack/ai-ollama');
-                return createOllamaChat((modelOverride || 'llama3') as any, 'http://localhost:11434');
+                console.log('🦙 Ollama Adapter: Connecting...', { model: modelOverride || 'llama3' });
+                // @ts-ignore
+                const { createOllamaChat } = await new Function('return import("@tanstack/ai-ollama")')();
+                // Ensure 127.0.0.1 is used to avoid node 17+ localhost ipv6 issues
+                return createOllamaChat((modelOverride || 'llama3') as any, 'http://127.0.0.1:11434');
+
+            case 'ollama-cloud':
+                console.log('☁️ Ollama Cloud: Connecting...', { model: modelOverride });
+                // We use OpenAI adapter for Cloud Ollama to easily support Bearer Auth & Compatibility
+                const cloudKey = apiKey;
+                if (!cloudKey) throw new Error('Ollama Cloud requires an API Key');
+
+                const { createOpenaiChat: createCloudChat } = await dynamicImport('@tanstack/ai-openai');
+                // Pointing to the standardized OpenAI-compatible endpoint of Ollama
+                return createCloudChat((modelOverride || 'llama3.3') as any, cloudKey, {
+                    baseURL: 'https://ollama.com/v1' // Corrected from api.ollama.com
+                });
 
             default:
                 throw new Error(`Unsupported AI provider: ${provider}`);
