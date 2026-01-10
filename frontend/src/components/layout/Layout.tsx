@@ -8,6 +8,7 @@ import { socketService } from "../../core/SocketService"
 import { ServerClock } from "./ServerClock"
 import { AIChatButton } from "../ai/AIChatButton"
 import { AIChatPopup } from "../ai/AIChatPopup"
+import { AIInsightsButton } from "../ai/AIInsightsButton"
 
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -178,6 +179,7 @@ export function Layout() {
                 <header className="flex h-14 items-center gap-4 border-b bg-card px-6 justify-between">
                     <h1 className="text-lg font-semibold">Control Panel</h1>
                     <div className="flex items-center gap-4">
+                        <AIInsightsButton />
                         <AIChatButton />
                         <ServerClock />
                         <ThemeToggle />

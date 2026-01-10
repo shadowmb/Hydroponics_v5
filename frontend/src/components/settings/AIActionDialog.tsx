@@ -22,11 +22,16 @@ interface AIAction {
         type: 'schedule' | 'sensor';
         cron?: string; // Standard format
         sensorId?: string;
-        operator?: '>' | '<' | '=' | 'range';
+        operator?: '>' | '<' | '=' | '>=' | '<=' | '!=' | 'range';
         value?: number;
         rangeMax?: number;
         activeWindow?: { enabled: boolean; startTime: string; endTime: string; };
-        frequency?: { type: 'interval' | 'once' | 'daily' | 'date_range'; intervalMinutes?: number; };
+        frequency?: {
+            type: 'interval' | 'once' | 'daily' | 'date_range';
+            intervalMinutes?: number;
+            startDate?: Date | string;
+            endDate?: Date | string;
+        };
         cooldownMinutes?: number;
     };
     payload: {
@@ -68,22 +73,119 @@ interface AIActionDialogProps {
     devices?: any[]; // List of sensors
 }
 
+interface TimeSelectProps {
+    value?: string;
+    onChange: (value: string) => void;
+}
+
+function TimeSelect({ value, onChange }: TimeSelectProps) {
+    // Default to 00:00 if value is missing
+    const [h, m] = (value && value.includes(':')) ? value.split(':') : ['00', '00'];
+
+    const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+    const minutes = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
+
+    return (
+        <div className="flex items-center space-x-1">
+            <Select value={h} onValueChange={(newH) => onChange(`${newH}:${m}`)}>
+                <SelectTrigger className="w-[70px]">
+                    <SelectValue placeholder="HH" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                    {hours.map(hour => (
+                        <SelectItem key={hour} value={hour}>{hour}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <span className="text-muted-foreground">:</span>
+            <Select value={m} onValueChange={(newM) => onChange(`${h}:${newM}`)}>
+                <SelectTrigger className="w-[70px]">
+                    <SelectValue placeholder="MM" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                    {minutes.map(minute => (
+                        <SelectItem key={minute} value={minute}>{minute}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+
 export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [] }: AIActionDialogProps) {
     const [formData, setFormData] = useState<AIAction>(DEFAULT_ACTION);
     const [loading, setLoading] = useState(false);
 
+    const [scheduleTime, setScheduleTime] = useState<string>('09:00');
+    const [scheduleDays, setScheduleDays] = useState<number | undefined>(undefined);
+
     useEffect(() => {
         if (action) {
             setFormData(JSON.parse(JSON.stringify(action))); // Deep copy
+
+            // Parse Schedule Logic
+            if (action.trigger.type === 'schedule') {
+                // CRON to Time: "0 22 * * *" -> "22:00"
+                if (action.trigger.cron) {
+                    const parts = action.trigger.cron.split(' ');
+                    if (parts.length >= 2) {
+                        const min = parts[0].padStart(2, '0');
+                        const hour = parts[1].padStart(2, '0');
+                        setScheduleTime(`${hour}:${min}`);
+                    }
+                }
+
+                // EndDate to Days
+                if (action.trigger.frequency?.endDate && action.trigger.frequency.startDate) {
+                    const start = new Date(action.trigger.frequency.startDate);
+                    const end = new Date(action.trigger.frequency.endDate);
+                    const diffTime = Math.abs(end.getTime() - start.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    setScheduleDays(diffDays);
+                } else {
+                    setScheduleDays(undefined);
+                }
+            }
+
         } else {
             setFormData(JSON.parse(JSON.stringify(DEFAULT_ACTION)));
+            setScheduleTime('09:00');
+            setScheduleDays(undefined);
         }
     }, [action, open]);
 
     const handleSave = async () => {
         setLoading(true);
         try {
-            await onSave(formData);
+            const dataToSave = { ...formData }; // Clone trigger
+
+            if (dataToSave.trigger.type === 'schedule') {
+                // Time to CRON
+                const [h, m] = scheduleTime.split(':');
+                dataToSave.trigger.cron = `${Number(m)} ${Number(h)} * * *`;
+
+                // Days to EndDate
+                if (scheduleDays) {
+                    const now = new Date();
+                    const endDate = new Date();
+                    endDate.setDate(now.getDate() + scheduleDays);
+
+                    dataToSave.trigger.frequency = {
+                        type: 'daily', // Implicitly daily if purely time based 
+                        startDate: now,
+                        endDate: endDate
+                    };
+                } else {
+                    // Reset frequency if no days specified or handle differently?
+                    // Assuming basic schedule implies daily repetition without end
+                    dataToSave.trigger.frequency = {
+                        type: 'daily',
+                        intervalMinutes: 1440 // 24h
+                    };
+                }
+            }
+
+            await onSave(dataToSave);
             onOpenChange(false);
         } catch (error) {
             console.error(error);
@@ -172,14 +274,29 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
 
                         {formData.trigger.type === 'schedule' && (
                             <div className="space-y-4 bg-muted/30 p-4 rounded-md">
-                                <div className="space-y-2">
-                                    <Label>CRON Израз (Временно поле)</Label>
-                                    <Input
-                                        value={formData.trigger.cron}
-                                        onChange={(e) => updateTrigger('cron', e.target.value)}
-                                        placeholder="0 22 * * *"
-                                    />
-                                    <p className="text-xs text-muted-foreground">Формат: Min Hour Day Month Weekday</p>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Час на изпълнение</Label>
+                                        <TimeSelect
+                                            value={scheduleTime}
+                                            onChange={setScheduleTime}
+                                        />
+                                        <p className="text-xs text-muted-foreground">Всеки ден в този час.</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Продължителност (Дни)</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            placeholder="Безкрайно (ако е празно)"
+                                            value={scheduleDays || ''}
+                                            onChange={(e) => setScheduleDays(e.target.value ? Number(e.target.value) : undefined)}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Колко дни да бъде активен този график (напр. 7 дни). Ако е празно, е постоянно.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -198,7 +315,7 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
                                         </SelectTrigger>
                                         <SelectContent>
                                             {devices.map(d => (
-                                                <SelectItem key={d.id} value={d.id}>{d.name} ({d.driverType})</SelectItem>
+                                                <SelectItem key={d.id} value={d.id}>{d.name} ({d.type})</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -216,8 +333,11 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
                                             <SelectContent>
                                                 <SelectItem value=">">По-голямо от (&gt;)</SelectItem>
                                                 <SelectItem value="<">По-малко от (&lt;)</SelectItem>
+                                                <SelectItem value=">=">По-голямо или равно (&ge;)</SelectItem>
+                                                <SelectItem value="<=">По-малко или равно (&le;)</SelectItem>
                                                 <SelectItem value="=">Равно на (=)</SelectItem>
-                                                <SelectItem value="range">В диапазон (Range)</SelectItem>
+                                                <SelectItem value="!=">Различно от (&ne;)</SelectItem>
+                                                <SelectItem value="range">Между (диапазон)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -273,18 +393,16 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
                                         <div className="grid grid-cols-2 gap-4 mt-2 ml-6">
                                             <div className="space-y-1">
                                                 <Label className="text-xs">Начало</Label>
-                                                <Input
-                                                    type="time"
+                                                <TimeSelect
                                                     value={formData.trigger.activeWindow.startTime}
-                                                    onChange={(e) => updateNestedTrigger('activeWindow', 'startTime', e.target.value)}
+                                                    onChange={(v) => updateNestedTrigger('activeWindow', 'startTime', v)}
                                                 />
                                             </div>
                                             <div className="space-y-1">
                                                 <Label className="text-xs">Край</Label>
-                                                <Input
-                                                    type="time"
+                                                <TimeSelect
                                                     value={formData.trigger.activeWindow.endTime}
-                                                    onChange={(e) => updateNestedTrigger('activeWindow', 'endTime', e.target.value)}
+                                                    onChange={(v) => updateNestedTrigger('activeWindow', 'endTime', v)}
                                                 />
                                             </div>
                                         </div>

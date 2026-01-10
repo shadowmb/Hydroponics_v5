@@ -40,9 +40,11 @@ export function AIActionsSection() {
 
     const fetchDevices = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/devices`);
+            const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/hardware/devices`);
             if (res.data.success) {
-                setDevices(res.data.data);
+                // Filter only sensors
+                const sensors = res.data.data.filter((d: any) => d.type === 'SENSOR');
+                setDevices(sensors);
             }
         } catch (error) {
             console.error("Failed to fetch devices", error);
@@ -81,7 +83,12 @@ export function AIActionsSection() {
 
     const handleSave = async (action: AIAction) => {
         try {
-            if (editingAction && editingAction.id) {
+            if (action.id && action.id.trim() !== '') {
+                // If the payload has an ID, use it for update
+                await aiService.updateAction(action.id, action);
+                toast.success('Действието е обновено');
+            } else if (editingAction && editingAction.id) {
+                // Fallback to editingAction state
                 await aiService.updateAction(editingAction.id, action);
                 toast.success('Действието е обновено');
             } else {
@@ -133,7 +140,23 @@ export function AIActionsSection() {
                                         {action.trigger.type === 'schedule' ? (
                                             <div className="flex items-center space-x-1">
                                                 <span>🕒</span>
-                                                <Badge variant="outline">{action.trigger.cron}</Badge>
+                                                <Badge variant="outline">
+                                                    {(() => {
+                                                        const cron = action.trigger.cron?.split(' ') || [];
+                                                        const time = cron.length >= 2 ? `${cron[1].padStart(2, '0')}:${cron[0].padStart(2, '0')}` : action.trigger.cron;
+
+                                                        let durationStr = '';
+                                                        if (action.trigger.frequency?.endDate && action.trigger.frequency.startDate) {
+                                                            const start = new Date(action.trigger.frequency.startDate);
+                                                            const end = new Date(action.trigger.frequency.endDate);
+                                                            const diffTime = Math.abs(end.getTime() - start.getTime());
+                                                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                                            durationStr = ` (${diffDays} дни)`;
+                                                        }
+
+                                                        return `${time}${durationStr}`;
+                                                    })()}
+                                                </Badge>
                                             </div>
                                         ) : (
                                             <div className="flex items-center space-x-1">

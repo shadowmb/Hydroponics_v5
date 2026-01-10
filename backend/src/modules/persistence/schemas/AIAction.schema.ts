@@ -14,7 +14,7 @@ export interface IAIAction extends Document, ISoftDelete {
 
         // Sensor specific
         sensorId?: string;
-        operator?: '>' | '<' | '=' | 'range';
+        operator?: '>' | '<' | '=' | '>=' | '<=' | '!=' | 'range';
         value?: number;
         rangeMax?: number;    // If operator is range
 
@@ -64,7 +64,7 @@ const AIActionSchema = new Schema<IAIAction>({
         cron: { type: String },
 
         sensorId: { type: String },
-        operator: { type: String, enum: ['>', '<', '=', 'range'] },
+        operator: { type: String, enum: ['>', '<', '=', '>=', '<=', '!=', 'range'] },
         value: { type: Number },
         rangeMax: { type: Number },
 
@@ -101,6 +101,7 @@ const AIActionSchema = new Schema<IAIAction>({
     timestamps: true,
     toJSON: {
         transform: (doc, ret: any) => {
+            ret.id = ret._id;
             delete ret._id;
             delete ret.__v;
             return ret;

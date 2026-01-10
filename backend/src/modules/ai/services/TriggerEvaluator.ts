@@ -36,18 +36,18 @@ export class TriggerEvaluator {
                 return currentValue > value;
             case '<':
                 return currentValue < value;
+            case '>=':
+                return currentValue >= value;
+            case '<=':
+                return currentValue <= value;
             case '=':
-                // Fuzzy equality for floats? Let's use exact for now or small epsilon if needed
+                // Fuzzy equality for floats
                 return Math.abs(currentValue - value) < 0.01;
+            case '!=':
+                return Math.abs(currentValue - value) >= 0.01;
             case 'range':
                 if (rangeMax === undefined) return false;
-                // Typically 'range' means "inside range" or "outside range"? 
-                // Usually for alarms it's "outside safe range". 
-                // But let's assume the user wants to trigger when INSIDE a specific range 
-                // OR maybe they define a "safe zone" and trigger if OUTSIDE.
-                // Given the context of "Anomaly", usually it means "Value is < min OR Value > max".
-                // But let's stick to the operator name. If user selects "Range", does it mean "Target is in range"?
-                // Let's implement as INCLUSIVE RANGE for now: value <= x <= rangeMax
+                // INCLUSIVE RANGE: value <= x <= rangeMax
                 return currentValue >= value && currentValue <= rangeMax;
             default:
                 return false;

@@ -150,8 +150,17 @@ export class AIService {
 
             // 4. Handle Outputs
             if (action.outputs.saveInsight) {
-                // TODO: Save to Insights Collection
-                console.log(`💾 Insight saved: ${fullResponse}`);
+                // Dynamic import to avoid circular dependency
+                const { insightsService } = await import('./InsightsService');
+
+                await insightsService.createInsight({
+                    actionId: action.id,
+                    actionName: action.name,
+                    content: fullResponse,
+                    type: 'info', // TODO: Let AI determine severity
+                    isRead: false
+                });
+                console.log(`💾 Insight saved to DB: ${action.name}`);
             }
 
             if (action.outputs.notifyTelegram) {
