@@ -58,5 +58,11 @@ export const aiService = {
     deleteShortcut: async (id: string): Promise<boolean> => {
         const response = await axios.delete(`${API_URL}/ai/shortcuts/${id}`);
         return response.data.success;
+    },
+
+    // Settings
+    getSettings: async (): Promise<any> => {
+        const response = await axios.get(`${API_URL}/settings/ai`);
+        return response.data;
     }
 };

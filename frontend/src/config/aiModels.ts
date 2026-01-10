@@ -27,11 +27,7 @@ export const AI_MODELS: Record<string, { id: string; name: string; description?:
     ],
     ollama: [
         { id: 'llama3.2', name: 'Llama 3.2' },
-        { id: 'llama3', name: 'Llama 3 (8B)' },
-        { id: 'mistral', name: 'Mistral (7B)' },
-        { id: 'gemma2', name: 'Gemma 2 (9B)' },
-        { id: 'phi3', name: 'Phi-3 (Medium)' },
-        { id: 'codellama', name: 'CodeLlama' }
+        { id: 'llama3.1:8b', name: 'Llama 3.1 (8B)' }
     ],
     'ollama-cloud': [
         { id: 'cogito-2.1:671b', name: 'Cogito 2.1 (671B)', description: 'Използва се за мащабни индустриални анализи и е силен в следването на комплексни, многостъпкови технически инструкции.' },

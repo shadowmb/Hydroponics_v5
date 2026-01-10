@@ -1,3 +1,4 @@
+// Force refresh
 import { useState, useEffect } from 'react';
 import { ChatSessionSidebar } from '@/components/ai/ChatSessionSidebar';
 import { FullScreenChat } from '@/components/ai/FullScreenChat';
@@ -37,7 +38,7 @@ export function AIAssistantPage() {
                 refreshTrigger={refreshTrigger}
             />
             <div className="flex-1 h-full relative">
-                <FullScreenChat sessionId={activeSessionId} />
+                <FullScreenChat key={activeSessionId} sessionId={activeSessionId} />
             </div>
         </div>
     );

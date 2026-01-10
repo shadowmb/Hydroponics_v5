@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from '@tanstack/ai-react';
 import { fetchServerSentEvents } from '@tanstack/ai-client';
@@ -7,6 +8,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, AlertCircle } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { aiService } from '@/services/ai.service';
+import { AI_MODELS } from '@/config/aiModels';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -20,33 +24,87 @@ export function FullScreenChat({ sessionId }: FullScreenChatProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [inputValue, setInputValue] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [activeModelName, setActiveModelName] = useState<string | null>(null);
 
-    // Dynamic API URL based on session
-    // If we have a sessionId, we might want to append it to the URL or send it as header/body
-    // For now, let's assume the backend handles basic chat, but we need to pass sessionId in headers or body.
-    // Tanstack AI's fetchServerSentEvents supports additional headers.
+    // Fetch Active Model
+    useEffect(() => {
+        const fetchModel = async () => {
+            try {
+                const settings = await aiService.getSettings();
 
-    // UPDATE: The useChat hook URL should point to our chat endpoint.
-    // If sessionId exists, we should probably load history first. This hook might not handle "loading history" automatically unless the backend returns it specific format.
-    // For specific session chat, we might need a custom adapter or URL parameter.
+                const config = settings?.data;
+                if (!config) {
+                    return;
+                }
 
-    // Let's look at how we can pass the sessionId. 
-    // We can use the 'api' option to point to `/api/ai/chat`. 
-    // We can use `headers` to pass `x-session-id`.
+                let modelId = '';
 
-    // Construct the API URL. If sessionId exists, we might want to pass it.
-    // However, fetchServerSentEvents takes a URL.
-    // If we want to persist specific sessions, the API endpoint needs to handle it.
-    // Let's append sessionId as query param for now: ?sessionId=...
-    const apiUrl = 'http://localhost:3000/api/ai/chat' + (sessionId ? `?sessionId=${sessionId}` : '');
+                // 1. Check mode
+                if (config.mode === 'advanced' && config.roles?.assistant) {
+                    modelId = config.roles.assistant.model;
+                } else {
+                    modelId = config.global?.model; // Safe access
+                }
 
-    const { messages, sendMessage, isLoading } = useChat({
+                // 2. Find Name
+                if (modelId) {
+                    let foundName = modelId;
+                    let foundMatch = false;
+                    // Iterate providers
+                    for (const [providerKey, models] of Object.entries(AI_MODELS)) {
+                        const match = models.find(m => m.id === modelId);
+                        if (match) {
+                            foundName = match.name;
+                            foundMatch = true;
+                            break;
+                        }
+                    }
+
+                    setActiveModelName(foundName);
+                } else {
+                    setActiveModelName('No Model Selected');
+                }
+            } catch (e) {
+                console.error("💥 Failed to load AI settings", e);
+                setActiveModelName('Error Loading');
+            }
+        };
+        fetchModel();
+    }, []);
+
+    const apiUrl = `http://localhost:3000/api/ai/chat${sessionId ? `?sessionId=${sessionId}` : ''}`;
+
+    const { messages, sendMessage, isLoading, setMessages } = useChat({
         connection: fetchServerSentEvents(apiUrl),
+        body: { sessionId },
         onError: (err) => {
             console.error("Chat Error:", err);
             setError(err.message || "An unknown error occurred.");
         },
     });
+
+    // Load History
+    useEffect(() => {
+        if (!sessionId) return;
+
+        const loadHistory = async () => {
+            try {
+                const res = await axios.get(`http://localhost:3000/api/ai/sessions/${sessionId}`);
+                if (res.data.success && res.data.data.messages) {
+                    const history = res.data.data.messages.map((m: any) => ({
+                        id: m._id || m.id || Math.random().toString(36),
+                        role: m.role,
+                        content: m.content,
+                        parts: [{ type: 'text', content: m.content }]
+                    }));
+                    setMessages(history);
+                }
+            } catch (err) {
+                console.error("Failed to load history", err);
+            }
+        };
+        loadHistory();
+    }, [sessionId, setMessages]);
 
     // EFFECT to reload/clear chat when sessionId changes
     // Note: useChat doesn't support changing URL/Headers easily on the fly without remounting key.
@@ -98,6 +156,11 @@ export function FullScreenChat({ sessionId }: FullScreenChatProps) {
                 <CardTitle className="text-lg font-medium flex items-center gap-2">
                     <Bot size={20} className="text-primary" />
                     AI Assistant
+                    {activeModelName && (
+                        <Badge variant="outline" className="ml-2 text-xs font-normal text-muted-foreground border-primary/20 bg-primary/5">
+                            {activeModelName}
+                        </Badge>
+                    )}
                 </CardTitle>
             </CardHeader>
 
@@ -111,10 +174,11 @@ export function FullScreenChat({ sessionId }: FullScreenChatProps) {
                     ) : (
                         <div className="space-y-6 max-w-3xl mx-auto">
                             {messages.map((m) => {
-                                const textContent = m.parts
-                                    .filter(p => p.type === 'text')
-                                    .map(p => (p as any).content || '')
-                                    .join('');
+                                const textContent = typeof (m as any).content === 'string'
+                                    ? (m as any).content
+                                    : Array.isArray(m.parts)
+                                        ? m.parts.filter(p => p.type === 'text').map(p => (p as any).content || '').join('')
+                                        : '';
 
                                 return (
                                     <div key={m.id} className={cn("flex w-full gap-4", m.role === 'user' ? "justify-end" : "justify-start")}>
