@@ -3,14 +3,14 @@ import { useState, useEffect } from 'react';
 import { ChatSessionSidebar } from '@/components/ai/ChatSessionSidebar';
 import { FullScreenChat } from '@/components/ai/FullScreenChat';
 import { useAI } from '@/context/AIContext';
-import axios from 'axios';
+import { aiService } from '@/services/ai.service';
 
 export function AIAssistantPage() {
-    const [activeSessionId, setActiveSessionId] = useState<string | undefined>(undefined);
-    const { closeChat } = useAI();
+    const { activeSessionId, setActiveSessionId, closeChat, sessionRefreshTrigger } = useAI();
+    const [localRefresh, setLocalRefresh] = useState(0);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    // Combine triggers
+    const refreshKey = sessionRefreshTrigger + localRefresh;
 
     // Auto-close popup when entering this page
     useEffect(() => {
@@ -19,10 +19,15 @@ export function AIAssistantPage() {
 
     const handleNewChat = async () => {
         try {
-            const res = await axios.post(`${API_URL}/ai/sessions`);
-            if (res.data.success) {
-                setActiveSessionId(res.data.data.id);
-                setRefreshTrigger(prev => prev + 1);
+            const res = await aiService.createSession();
+            // Check if response is the object itself or wrapped in success
+            // In aiService we returned response.data.data for createSession
+            // Wait, look at aiService.ts:
+            // createSession: async (): Promise<any> => { const response = ...; return response.data.data; }
+            // So res is the session object directly.
+            if (res && res._id) {
+                setActiveSessionId(res._id);
+                setLocalRefresh(prev => prev + 1);
             }
         } catch (error) {
             console.error("Failed to create session", error);
@@ -32,13 +37,13 @@ export function AIAssistantPage() {
     return (
         <div className="flex h-full bg-background">
             <ChatSessionSidebar
-                activeSessionId={activeSessionId}
+                activeSessionId={activeSessionId || undefined}
                 onSelectSession={setActiveSessionId}
                 onNewChat={handleNewChat}
-                refreshTrigger={refreshTrigger}
+                refreshTrigger={refreshKey}
             />
             <div className="flex-1 h-full relative">
-                <FullScreenChat key={activeSessionId} sessionId={activeSessionId} />
+                <FullScreenChat key={activeSessionId} sessionId={activeSessionId || undefined} />
             </div>
         </div>
     );

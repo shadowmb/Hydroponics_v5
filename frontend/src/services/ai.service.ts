@@ -64,5 +64,31 @@ export const aiService = {
     getSettings: async (): Promise<any> => {
         const response = await axios.get(`${API_URL}/settings/ai`);
         return response.data;
+    },
+
+    // Sessions
+    getSessions: async (): Promise<any[]> => {
+        const response = await axios.get(`${API_URL}/ai/sessions`);
+        return response.data.data;
+    },
+
+    getSession: async (id: string): Promise<any> => {
+        const response = await axios.get(`${API_URL}/ai/sessions/${id}`);
+        return response.data.data;
+    },
+
+    createSession: async (): Promise<any> => {
+        const response = await axios.post(`${API_URL}/ai/sessions`);
+        return response.data.data;
+    },
+
+    deleteSession: async (id: string): Promise<boolean> => {
+        const response = await axios.delete(`${API_URL}/ai/sessions/${id}`);
+        return response.data.success;
+    },
+
+    updateSessionTitle: async (id: string, title: string): Promise<any> => {
+        const response = await axios.put(`${API_URL}/ai/sessions/${id}`, { title });
+        return response.data.data;
     }
 };
