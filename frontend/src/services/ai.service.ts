@@ -36,11 +36,27 @@ export const aiService = {
 
     // Run Manually (Test)
     runAction: async (id: string): Promise<void> => {
-        // We might need a specific endpoint for running an action manually
-        // Currently the backend logic is in ActionScheduler / AIService.
-        // We probably need to expose POST /api/ai/actions/:id/run
-        // I haven't implemented that Endpoint yet in AIActionsController.
-        // I should add it.
         await axios.post(`${API_URL}/ai/actions/${id}/run`);
+    },
+
+    // Shortcuts CRUD
+    getShortcuts: async (): Promise<any[]> => {
+        const response = await axios.get(`${API_URL}/ai/shortcuts`);
+        return response.data.data;
+    },
+
+    createShortcut: async (data: any): Promise<any> => {
+        const response = await axios.post(`${API_URL}/ai/shortcuts`, data);
+        return response.data.data;
+    },
+
+    updateShortcut: async (id: string, data: any): Promise<any> => {
+        const response = await axios.put(`${API_URL}/ai/shortcuts/${id}`, data);
+        return response.data.data;
+    },
+
+    deleteShortcut: async (id: string): Promise<boolean> => {
+        const response = await axios.delete(`${API_URL}/ai/shortcuts/${id}`);
+        return response.data.success;
     }
 };

@@ -9,7 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { cn } from '@/lib/utils'; // Ensure this path is correct
+import { cn } from '@/lib/utils';
+import { ShortcutSelector } from './ShortcutSelector';
 
 interface FullScreenChatProps {
     sessionId?: string;
@@ -163,8 +164,11 @@ export function FullScreenChat({ sessionId }: FullScreenChatProps) {
                 </ScrollArea>
             </CardContent>
 
-            <CardFooter className="p-4 border-t bg-muted/10">
-                <div className="max-w-3xl mx-auto w-full">
+            <CardFooter className="p-4 border-t bg-muted/10 flex-col gap-2 items-stretch">
+                <div className="max-w-3xl mx-auto w-full space-y-2">
+                    <ShortcutSelector
+                        onSelect={(prompt) => setInputValue(prompt)}
+                    />
                     <form onSubmit={handleSubmit} className="flex gap-2 items-center">
                         <Input
                             value={inputValue}

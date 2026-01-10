@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { AI_PROVIDERS, AI_MODELS } from '@/config/aiModels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIActionsSection } from './AIActionsSection';
+import { ChatShortcutsSection } from './ChatShortcutsSection';
 
 export function SettingsAI() {
     const [enabled, setEnabled] = useState(true);
@@ -67,9 +68,10 @@ export function SettingsAI() {
     return (
         <div className="space-y-6">
             <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="general">Общи Настройки (General)</TabsTrigger>
-                    <TabsTrigger value="actions">Действия (Actions)</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="general">Общи настройки</TabsTrigger>
+                    <TabsTrigger value="actions">Действия & Автоматизация</TabsTrigger>
+                    <TabsTrigger value="shortcuts">Бързи Въпроси</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-6">
@@ -187,8 +189,12 @@ export function SettingsAI() {
                     </Card>
                 </TabsContent>
 
-                <TabsContent value="actions">
+                <TabsContent value="actions" className="mt-6">
                     <AIActionsSection />
+                </TabsContent>
+
+                <TabsContent value="shortcuts" className="mt-6">
+                    <ChatShortcutsSection />
                 </TabsContent>
             </Tabs>
         </div>
