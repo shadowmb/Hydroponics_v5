@@ -57,6 +57,13 @@ async function bootstrap() {
         console.log('Registering Routes...');
         app.register(apiRoutes);
 
+        // Register AI Module if enabled
+        if (config.AI_ENABLED) {
+            // Dynamic import to avoid loading if disabled
+            const { aiModule } = await import('./modules/ai');
+            app.register(aiModule);
+        }
+
         automation.registerExecutor(new WaitBlockExecutor());
         automation.registerExecutor(new ActuatorSetBlockExecutor());
         automation.registerExecutor(new StartBlockExecutor());

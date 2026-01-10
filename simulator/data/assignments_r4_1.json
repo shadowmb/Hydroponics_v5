@@ -5,16 +5,16 @@
       "A0_14"
     ],
     "values": {
-      "ph": 353.33333333333337
+      "ph": 620
     },
     "calibrationPoints": [
       {
         "value": 4,
-        "raw": 200
+        "raw": 400
       },
       {
         "value": 7,
-        "raw": 400
+        "raw": 700
       }
     ]
   },
@@ -24,7 +24,7 @@
       "A1_15"
     ],
     "values": {
-      "ec": 512.4809453213569
+      "ec": 205.46952123484783
     },
     "calibrationPoints": [
       {
@@ -44,7 +44,7 @@
       "D11_11"
     ],
     "values": {
-      "distance": 300
+      "distance": 100
     },
     "calibrationPoints": [
       {
@@ -53,7 +53,7 @@
       },
       {
         "value": 100,
-        "raw": 300
+        "raw": 100
       }
     ]
   },
@@ -63,7 +63,7 @@
       "A2_16"
     ],
     "values": {
-      "soil_moisture": 30
+      "soil_moisture": 40
     },
     "calibrationPoints": [
       {
@@ -83,26 +83,16 @@
       "D1_1"
     ],
     "values": {
-      "par": 155
-    }
-  },
-  {
-    "sensorId": "dht22",
-    "pins": [
-      "D6_6"
-    ],
-    "values": {
-      "temp": 22,
-      "humidity": 80
+      "par": 131.682389937107
     }
   },
   {
     "sensorId": "ds18b20",
     "pins": [
-      "D9_9"
+      "D2_2"
     ],
     "values": {
-      "temp": 24
+      "temp": 11.0849056603774
     }
   }
 ]

@@ -8,6 +8,13 @@ const configSchema = z.object({
   PORT: z.string().transform(Number).default('3000'),
   MONGO_URI: z.string().url(),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+
+  // AI Module
+  AI_ENABLED: z.string().transform(v => v === 'true').default('false'),
+  GEMINI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  // OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -18,7 +25,7 @@ class ConfigService {
 
   private constructor() {
     const result = configSchema.safeParse(process.env);
-    
+
     if (!result.success) {
       console.error('❌ Invalid environment variables:', result.error.format());
       process.exit(1);
