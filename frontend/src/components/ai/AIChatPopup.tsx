@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
-import { X, Send, Trash2, Bot } from 'lucide-react';
+import { X, Send, Trash2, Bot, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,11 +20,25 @@ export function AIChatPopup() {
 
     // Local state for input since useChat doesn't manage it in this lib
     const [inputValue, setInputValue] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     // TanStack AI Hook
     const { messages, sendMessage, isLoading, clear } = useChat({
         connection: fetchServerSentEvents('http://localhost:3000/api/ai/chat'),
-        onError: (err) => console.error("Chat Error:", err),
+        onError: (err) => {
+            console.error("Chat Error:", err);
+            // Try to parse friendly error message
+            let msg = err.message || "An unknown error occurred.";
+
+            // Should try to distinguish between simple network fail and backend detailed error
+            if (msg.includes('500') || msg.includes('400')) {
+                // Often the error message from fetch includes the status text, 
+                // but ideally the adapter extracts the body. 
+                // If the backend returns JSON { error: "...", details: "..." }, 
+                // the adapter might put that in err.message.
+            }
+            setError(msg);
+        },
     });
 
     // Auto-scroll to bottom
@@ -32,13 +46,18 @@ export function AIChatPopup() {
         if (scrollRef.current) {
             scrollRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages, isLoading]);
+    }, [messages, isLoading, error]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputValue.trim() || isLoading) return;
 
-        await sendMessage(inputValue);
+        setError(null); // Clear previous errors
+        try {
+            await sendMessage(inputValue);
+        } catch (e) {
+            // Error is handled by onError callback usually, but fallback here
+        }
         setInputValue('');
     };
 
@@ -63,7 +82,7 @@ export function AIChatPopup() {
                                 <CardTitle className="text-base font-medium">Hydroponics AI</CardTitle>
                             </div>
                             <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => clear()}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { clear(); setError(null); }}>
                                     <Trash2 size={16} />
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeChat}>
@@ -75,7 +94,7 @@ export function AIChatPopup() {
                         {/* Messages Area */}
                         <CardContent className="flex-1 p-0 overflow-hidden relative">
                             <ScrollArea className="h-full p-4">
-                                {messages.length === 0 ? (
+                                {messages.length === 0 && !error ? (
                                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground space-y-4 mt-20 opacity-50">
                                         <Bot size={48} />
                                         <p className="text-sm">Ask me about your system,<br />sensors, or general advice.</p>
@@ -118,7 +137,8 @@ export function AIChatPopup() {
                                                 </div>
                                             );
                                         })}
-                                        {/* Loading indicator is handled by stream status usually, but we can verify */}
+
+                                        {/* Loading Indicator */}
                                         {isLoading && (
                                             <div className="flex w-full gap-2 justify-start">
                                                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
@@ -131,6 +151,24 @@ export function AIChatPopup() {
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* Error Alert Bubble */}
+                                        {error && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="flex w-full gap-2 justify-center"
+                                            >
+                                                <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-xl px-4 py-3 text-sm flex items-start gap-2 max-w-[90%]">
+                                                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                                                    <div className="flex-1">
+                                                        <p className="font-semibold">System Error</p>
+                                                        <p className="opacity-90">{error}</p>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+
                                         <div ref={scrollRef} />
                                     </div>
                                 )}

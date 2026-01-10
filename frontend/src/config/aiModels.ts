@@ -9,7 +9,7 @@ export const AI_MODELS: Record<string, { id: string; name: string }[]> = {
     gemini: [
         // The 'id' MUST be the exact model identifier from Google.
         // The 'name' is just what is shown in the list.
-        { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.0 Flash' },
         { id: 'gemini-flash-latest', name: 'Gemini Flash Latest' },
         { id: 'gemini-3-flash-preview', name: 'Gemini 3.0 Flash Preview' },
 
