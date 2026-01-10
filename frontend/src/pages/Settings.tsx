@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { NotificationCenter } from "../components/notifications/NotificationCenter";
 import { SystemRecoveryPanel } from "../components/settings/SystemRecoveryPanel";
 import { ResourceRolesPanel } from "../components/settings/ResourceRolesPanel";
+import { SettingsAI } from "../components/settings/SettingsAI";
 
 export function Settings() {
     return (
@@ -12,13 +13,18 @@ export function Settings() {
                 <p className="text-muted-foreground">Manage global configuration, notifications, and specialized hardware rules.</p>
             </div>
 
-            <Tabs defaultValue="notifications" className="space-y-4">
+            <Tabs defaultValue="ai" className="space-y-4">
                 <TabsList>
+                    <TabsTrigger value="ai">Artificial Intelligence</TabsTrigger>
                     <TabsTrigger value="notifications">Notifications</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="roles">Roles & Analytics</TabsTrigger>
                     <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="ai">
+                    <SettingsAI />
+                </TabsContent>
 
                 <TabsContent value="notifications" className="space-y-4">
                     <NotificationCenter />

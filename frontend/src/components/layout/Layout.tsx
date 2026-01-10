@@ -6,6 +6,8 @@ import { ThemeToggle } from "./ThemeToggle"
 import { useStore } from "../../core/useStore"
 import { socketService } from "../../core/SocketService"
 import { ServerClock } from "./ServerClock"
+import { AIChatButton } from "../ai/AIChatButton"
+import { AIChatPopup } from "../ai/AIChatPopup"
 
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -176,6 +178,7 @@ export function Layout() {
                 <header className="flex h-14 items-center gap-4 border-b bg-card px-6 justify-between">
                     <h1 className="text-lg font-semibold">Control Panel</h1>
                     <div className="flex items-center gap-4">
+                        <AIChatButton />
                         <ServerClock />
                         <ThemeToggle />
                     </div>
@@ -183,6 +186,7 @@ export function Layout() {
                 <main className="flex-1 overflow-auto p-0">
                     <Outlet />
                 </main>
+                <AIChatPopup />
             </div>
         </div>
     )
