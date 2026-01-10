@@ -64,6 +64,11 @@ async function bootstrap() {
             app.register(aiModule);
         }
 
+        // Register Settings Module
+        const { settingsModule } = await import('./modules/settings');
+        app.register(settingsModule, { prefix: '/api' });
+
+
         automation.registerExecutor(new WaitBlockExecutor());
         automation.registerExecutor(new ActuatorSetBlockExecutor());
         automation.registerExecutor(new StartBlockExecutor());

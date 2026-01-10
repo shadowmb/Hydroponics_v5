@@ -6,26 +6,41 @@ const dynamicImport = (pkg: string) => new Function(`return import('${pkg}')`)()
 // We need to import the official SDK statically because we installed it and it supports CJS usually, 
 // or if it is ESM only we use dynamic import. @google/generative-ai is usually dual or ESM.
 // Let's use dynamic to be safe given the environment.
+import { settingsService } from '../../settings/services/SettingsService';
+// import { UIMessage } from '@tanstack/ai-client/react'; // Removed frontend import
+import { config as envConfig } from '../../../core/ConfigService';
 
 export class AIService {
-    private provider: AIProvider;
-    private model?: string;
+    private provider: 'gemini' | 'openai' | 'anthropic' | 'ollama' = 'gemini';
+    private model: string = 'gemini-2.5-flash'; // Default
 
-    constructor(provider: AIProvider = 'gemini', model?: string) {
-        this.provider = provider;
-        this.model = model || (provider === 'gemini' ? 'gemini-2.5-flash' : undefined);
+    constructor() {
+        // Initial load from env if needed, but per-request is better for dynamic updates
+        this.provider = (envConfig as any).AI_PROVIDER || 'gemini';
     }
 
+    /**
+     * Main chat entry point
+     */
     async chat(messages: any[], tools: any[] = []) {
-        // 1. Custom Path for Gemini (Bypass TanStack Adapter due to 404/ESM issues)
-        if (this.provider === 'gemini') {
-            return this.chatGemini(messages);
-        }
+        // 1. Fetch Dynamic Config
+        const dbConfig = await settingsService.getAIConfig();
 
-        // 2. Standard Path for others (OpenAI, etc) using TanStack AI
-        const { chat } = await dynamicImport('@tanstack/ai');
-        const adapter = await AIAdapterFactory.createAdapter(this.provider, this.model);
+        // Priority: DB Config > Env Config > Defaults
+        const provider = dbConfig.provider || this.provider;
+        const model = dbConfig.model || this.model;
+        const apiKey = dbConfig.apiKey || envConfig.GEMINI_API_KEY; // Fallback to env
 
+        console.log(`🧠 AI Service: Using ${provider} / ${model}`);
+
+        // Dynamic import for the main library
+        // @ts-ignore
+        const { chat } = await new Function('return import("@tanstack/ai")')();
+
+        // Create adapter dynamically with Specific Config
+        const adapter = await AIAdapterFactory.createAdapter(provider, apiKey, model);
+
+        // Cast adapter to any to satisfy the generic 'Adapter' constraints
         return chat({
             adapter: adapter as any,
             messages,

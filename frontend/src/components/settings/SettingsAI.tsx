@@ -1,19 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Bot, Save, Key, Cpu } from 'lucide-react';
-import { useStore } from '@/core/useStore'; // Assuming we might want to store state here later, or local state for now
+import { Bot, Save, Key, Cpu, Loader2 } from 'lucide-react';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { AI_PROVIDERS, AI_MODELS } from '@/config/aiModels';
 
 export function SettingsAI() {
-    // Local state for UI demo purposes (later linked to backend/store)
     const [enabled, setEnabled] = useState(true);
-    const [provider, setProvider] = useState('gemini');
+    const [provider, setProvider] = useState<string>('gemini');
     const [apiKey, setApiKey] = useState('');
     const [model, setModel] = useState('gemini-2.5-flash');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Fetch settings on mount
+    useEffect(() => {
+        const fetchSettings = async () => {
+            setIsLoading(true);
+            try {
+                const response = await axios.get('http://localhost:3000/api/settings/ai');
+                if (response.data.success && response.data.data) {
+                    const config = response.data.data;
+                    if (config.provider) setProvider(config.provider);
+                    if (config.apiKey) setApiKey(config.apiKey); // Will be masked
+                    if (config.model) setModel(config.model);
+                    // if (config.enabled !== undefined) setEnabled(config.enabled); // Not yet in specific config
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+                // Don't toast on load error to avoid annoying users if backend is cold
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await axios.post('http://localhost:3000/api/settings/ai', {
+                provider,
+                apiKey,
+                model
+            });
+            toast.success('AI Configuration saved successfully');
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            toast.error('Failed to save configuration');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (isLoading) {
+        return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-muted-foreground" /></div>;
+    }
 
     return (
         <div className="space-y-6">
@@ -40,15 +87,18 @@ export function SettingsAI() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="provider">AI Provider</Label>
-                            <Select value={provider} onValueChange={setProvider} disabled={!enabled}>
+                            <Select value={provider} onValueChange={(val) => {
+                                setProvider(val);
+                                // Auto-select first model of new provider
+                                setModel(AI_MODELS[val]?.[0]?.id || '');
+                            }} disabled={!enabled}>
                                 <SelectTrigger id="provider">
                                     <SelectValue placeholder="Select provider" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="gemini">Google Gemini</SelectItem>
-                                    <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
-                                    <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-                                    <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                                    {AI_PROVIDERS.map(p => (
+                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">Select the backend service for intelligence.</p>
@@ -61,26 +111,9 @@ export function SettingsAI() {
                                     <SelectValue placeholder="Select model" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {provider === 'gemini' && (
-                                        <>
-                                            <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                                            <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
-                                            <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                                        </>
-                                    )}
-                                    {provider === 'openai' && (
-                                        <>
-                                            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                                            <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                                            <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                                        </>
-                                    )}
-                                    {provider === 'anthropic' && (
-                                        <>
-                                            <SelectItem value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet</SelectItem>
-                                            <SelectItem value="claude-3-opus-20240229">Claude 3 Opus</SelectItem>
-                                        </>
-                                    )}
+                                    {AI_MODELS[provider]?.map(m => (
+                                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">Choose the specific model version.</p>
@@ -95,8 +128,8 @@ export function SettingsAI() {
                             <Input
                                 id="api-key"
                                 type="password"
-                                placeholder={enabled ? "Enter your API key..." : "AI is disabled"}
-                                className="pl-9"
+                                placeholder={enabled ? (apiKey ? "********" : "Enter your API key...") : "AI is disabled"}
+                                className="pl-9 font-mono"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
                                 disabled={!enabled}
@@ -108,8 +141,9 @@ export function SettingsAI() {
                     </div>
 
                     <div className="flex justify-end pt-4">
-                        <Button disabled={!enabled}>
-                            <Save className="mr-2 h-4 w-4" /> Save Configuration
+                        <Button disabled={!enabled || isSaving} onClick={handleSave}>
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Configuration
                         </Button>
                     </div>
                 </CardContent>
