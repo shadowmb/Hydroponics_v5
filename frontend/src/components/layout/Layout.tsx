@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Outlet, NavLink } from "react-router-dom"
-import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Calendar, Play } from "lucide-react"
+import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Calendar, Play, Bot } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { useStore } from "../../core/useStore"
@@ -130,6 +130,18 @@ function Sidebar({ className }: SidebarProps) {
                         >
                             <Settings className="mr-2 h-4 w-4" />
                             Settings
+                        </NavLink>
+                        <NavLink
+                            to="/assistant"
+                            className={({ isActive }) =>
+                                cn(
+                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
+                                )
+                            }
+                        >
+                            <Bot className="mr-2 h-4 w-4" />
+                            AI Assistant
                         </NavLink>
                     </div>
                 </div>

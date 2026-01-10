@@ -409,16 +409,44 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
                                     )}
                                 </div>
 
+
                                 {/* Cooldown */}
-                                <div className="space-y-2 pt-2">
-                                    <Label>Cooldown (минути след изпълнение)</Label>
-                                    <Input
-                                        type="number"
-                                        value={formData.trigger.cooldownMinutes}
-                                        onChange={(e) => updateTrigger('cooldownMinutes', Number(e.target.value))}
-                                    />
-                                    <p className="text-xs text-muted-foreground">Колко време да се изчака преди повторно задействане.</p>
+                                <div className="space-y-3 pt-2">
+                                    <Label>Режим на повторение (Cooldown)</Label>
+                                    <RadioGroup
+                                        value={formData.trigger.cooldownMinutes === -1 ? 'once' : 'minutes'}
+                                        onValueChange={(v) => {
+                                            if (v === 'once') updateTrigger('cooldownMinutes', -1);
+                                            else updateTrigger('cooldownMinutes', 60); // Default to 60 min if switching back
+                                        }}
+                                        className="flex flex-col space-y-2"
+                                    >
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="minutes" id="cd-minutes" />
+                                            <Label htmlFor="cd-minutes">На всеки (минути)</Label>
+                                        </div>
+                                        {formData.trigger.cooldownMinutes !== -1 && (
+                                            <div className="ml-6">
+                                                <Input
+                                                    type="number"
+                                                    value={formData.trigger.cooldownMinutes}
+                                                    onChange={(e) => updateTrigger('cooldownMinutes', Number(e.target.value))}
+                                                    className="w-32"
+                                                />
+                                                <p className="text-[10px] text-muted-foreground mt-1">Минути след последното изпълнение.</p>
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="once" id="cd-once" />
+                                            <Label htmlFor="cd-once">Само веднъж</Label>
+                                        </div>
+                                    </RadioGroup>
+                                    <p className="text-xs text-muted-foreground pt-1">
+                                        При "Само веднъж", действието няма да се изпълни повторно автоматично, докато не бъде рестартирано.
+                                    </p>
                                 </div>
+
 
                             </div>
                         )}

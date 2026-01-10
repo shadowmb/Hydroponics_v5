@@ -21,6 +21,10 @@ class InsightsService {
     async markAllAsRead() {
         return await InsightModel.updateMany({ isRead: false }, { isRead: true });
     }
+
+    async deleteInsight(id: string) {
+        return await InsightModel.findByIdAndDelete(id);
+    }
 }
 
 export const insightsService = new InsightsService();

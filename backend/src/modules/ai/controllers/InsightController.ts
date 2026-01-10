@@ -32,4 +32,15 @@ export async function InsightController(fastify: FastifyInstance) {
             return reply.status(500).send({ success: false, error: 'Failed to mark read' });
         }
     });
+
+    fastify.delete('/:id', async (req, reply) => {
+        try {
+            const { id } = req.params as any;
+            await insightsService.deleteInsight(id);
+            return { success: true };
+        } catch (error) {
+            fastify.log.error(error);
+            return reply.status(500).send({ success: false, error: 'Failed to delete insight' });
+        }
+    });
 }

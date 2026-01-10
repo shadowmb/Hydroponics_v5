@@ -14,9 +14,12 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 // import { aiService } from '@/services/ai.service'; 
 
+import { useLocation } from 'react-router-dom';
+
 export function AIChatPopup() {
     const { isOpen, closeChat } = useAI();
     const scrollRef = useRef<HTMLDivElement>(null);
+    const location = useLocation();
 
     // Local state for input since useChat doesn't manage it in this lib
     const [inputValue, setInputValue] = useState('');
@@ -70,6 +73,10 @@ export function AIChatPopup() {
         }
         setInputValue('');
     };
+
+
+
+    if (location.pathname === '/assistant') return null;
 
     return (
         <AnimatePresence>

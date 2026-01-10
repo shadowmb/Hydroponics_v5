@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, Check } from 'lucide-react';
+import { Bell, Check, MessageCircle, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { bg } from 'date-fns/locale';
@@ -19,11 +27,15 @@ interface Insight {
     createdAt: string;
 }
 
+import { useNavigate } from 'react-router-dom';
+
 export function AIInsightsButton() {
-    const { openChat, setInitialMessage } = useAI();
+    const { setInitialMessage } = useAI();
+    const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const [insights, setInsights] = useState<Insight[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -47,7 +59,23 @@ export function AIInsightsButton() {
 Моля, обясни повече за това състояние и какво трябва да направя?
 `;
         setInitialMessage(contextPrompt);
-        openChat();
+        navigate('/assistant');
+    };
+
+    const confirmDelete = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        setDeleteId(id);
+    };
+
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        try {
+            await axios.delete(`${API_URL}/ai/insights/${deleteId}`);
+            setDeleteId(null);
+            fetchData(); // Refresh list
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const fetchData = async () => {
@@ -111,29 +139,58 @@ export function AIInsightsButton() {
                             {insights.map((insight) => (
                                 <div
                                     key={insight.id}
-                                    className={`p-4 hover:bg-muted/50 transition-colors ${!insight.isRead ? 'bg-muted/20' : ''} cursor-pointer`}
+                                    className={`p-3 rounded-lg border transition-colors relative group ${insight.isRead ? 'bg-background hover:bg-muted/50 border-border/50' : 'bg-primary/5 border-primary/20 hover:bg-primary/10'
+                                        }`}
                                     onClick={() => handleInsightClick(insight)}
                                 >
-                                    <div className="flex justify-between items-start mb-1">
-                                        <Badge variant="outline" className="text-[10px] font-normal">
+                                    <div className="flex justify-between items-start mb-1 pr-6">
+                                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-background border">
                                             {insight.actionName}
-                                        </Badge>
-                                        <span className="text-[10px] text-muted-foreground">
-                                            {formatDistanceToNow(new Date(insight.createdAt), { addSuffix: true, locale: bg })}
                                         </span>
                                     </div>
-                                    <p className="text-sm mt-1 whitespace-pre-wrap leading-snug text-foreground/90 line-clamp-2">
+                                    <p className="text-sm leading-relaxed text-foreground/90 mb-3">
                                         {insight.content}
                                     </p>
-                                    <div className="text-xs text-primary mt-2">
-                                        💬 Кликни за анализ
+
+                                    <div className="flex items-center justify-between mt-2">
+                                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                            {formatDistanceToNow(new Date(insight.createdAt), { addSuffix: true, locale: bg })}
+                                        </span>
+                                        <div className="flex items-center text-xs text-primary font-medium opacity-80 group-hover:opacity-100">
+                                            <MessageCircle size={12} className="mr-1.5" />
+                                            Кликни за анализ
+                                        </div>
                                     </div>
+
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => confirmDelete(e, insight.id)}
+                                    >
+                                        <Trash2 className="h-3 w-3 text-muted-foreground hover:text-red-500" />
+                                    </Button>
                                 </div>
                             ))}
                         </div>
                     )}
                 </ScrollArea>
             </PopoverContent>
+
+            <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Изтриване на известие</DialogTitle>
+                        <DialogDescription>
+                            Сигурни ли сте, че искате да изтриете това известие?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteId(null)}>Отказ</Button>
+                        <Button variant="destructive" onClick={handleDelete}>Изтрий</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Popover>
     );
 }

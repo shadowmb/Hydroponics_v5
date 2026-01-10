@@ -20,6 +20,7 @@ import { Settings } from './pages/Settings';
 import { useStore } from './core/useStore';
 import { hardwareService } from './services/hardwareService';
 import { socketService } from './core/SocketService';
+import { AIAssistantPage } from './pages/AIAssistantPage';
 
 import { AIProvider } from './context/AIContext';
 
@@ -61,6 +62,7 @@ function App() {
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/history" element={<History />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/assistant" element={<AIAssistantPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

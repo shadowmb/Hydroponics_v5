@@ -19,6 +19,11 @@ export class TriggerEvaluator {
 
         // 2. Check Cooldown
         if (action.lastRun && cooldownMinutes) {
+            // Special case: -1 means "Run Once" (Run and never again unless manually reset)
+            if (cooldownMinutes === -1) {
+                return false;
+            }
+
             const now = new Date();
             const lastRunTime = new Date(action.lastRun);
             const diffMinutes = (now.getTime() - lastRunTime.getTime()) / (1000 * 60);
