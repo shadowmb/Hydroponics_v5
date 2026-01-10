@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { AIService } from '../services/AIService';
+import { aiService } from '../services/AIService';
 import { config } from '../../../core/ConfigService';
 
 export default async function AIController(fastify: FastifyInstance) {
@@ -7,11 +7,10 @@ export default async function AIController(fastify: FastifyInstance) {
     fastify.post('/chat', async (request, reply) => {
         // Basic validation
         // TODO: Add Zod validation for body
-        const { messages } = request.body as any;
+        const { messages, role = 'assistant' } = request.body as any; // Extract role
 
-        // Determine provider from config or request (Phase 1 uses default/config)
-        const provider = 'gemini'; // Default for Phase 1
-        const service = new AIService(provider);
+        // Use singleton service
+        // const service = new AIService(provider); // REMOVED
 
         // EXPERIMENTAL: Keyword-based RAG & System Overview
         try {
@@ -73,7 +72,8 @@ ${specificContext}
 
         try {
             // 1. Get the chat stream (AsyncIterable)
-            const stream = await service.chat(messages);
+            // Pass the extracted role to the service
+            const stream = await aiService.chat(messages, role);
 
             // 2. Set SSE Headers
             reply.raw.setHeader('Content-Type', 'text/event-stream');

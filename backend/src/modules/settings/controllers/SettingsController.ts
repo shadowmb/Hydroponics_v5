@@ -11,6 +11,14 @@ export const SettingsController = async (fastify: FastifyInstance) => {
             if (config.apiKey) {
                 config.apiKey = '********'; // Masked
             }
+            if (config.roles) {
+                // Mask keys inside roles
+                Object.keys(config.roles).forEach(role => {
+                    if (config.roles[role].apiKey) {
+                        config.roles[role].apiKey = '********';
+                    }
+                });
+            }
             return reply.send({ success: true, data: config });
         } catch (error) {
             request.log.error(error);
@@ -25,9 +33,22 @@ export const SettingsController = async (fastify: FastifyInstance) => {
 
             // If the key is masked ('********'), we should NOT overwrite the real key.
             // We need to fetch the existing config and preserve the old key if the new one is masked.
+            // Security: Handle Masked Keys
+            // If the key is masked ('********'), we MUST restore the original key from DB.
+            const existing = await settingsService.getAIConfig();
+
+            // 1. Global Key
             if (newConfig.apiKey === '********') {
-                const existing = await settingsService.getAIConfig();
                 newConfig.apiKey = existing.apiKey;
+            }
+
+            // 2. Role Keys
+            if (newConfig.roles && existing.roles) {
+                for (const role of ['assistant', 'analyzer', 'sentinel']) {
+                    if (newConfig.roles[role]?.apiKey === '********') {
+                        newConfig.roles[role].apiKey = existing.roles[role].apiKey;
+                    }
+                }
             }
 
             await settingsService.saveAIConfig(newConfig);

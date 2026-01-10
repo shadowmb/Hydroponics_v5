@@ -15,9 +15,20 @@ import { ChatShortcutsSection } from './ChatShortcutsSection';
 
 export function SettingsAI() {
     const [enabled, setEnabled] = useState(true);
+    const [mode, setMode] = useState<'basic' | 'advanced'>('basic');
+
+    // Global/Basic State
     const [provider, setProvider] = useState<string>('gemini');
     const [apiKey, setApiKey] = useState('');
     const [model, setModel] = useState('gemini-2.5-flash');
+
+    // Advanced Roles State
+    const [roles, setRoles] = useState({
+        assistant: { provider: 'gemini', model: 'gemini-2.5-flash', apiKey: '' },
+        analyzer: { provider: 'ollama-cloud', model: 'deepseek-v3.1', apiKey: '' },
+        sentinel: { provider: 'ollama-cloud', model: 'mistral-large-3:675b', apiKey: '' },
+    });
+
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -29,14 +40,19 @@ export function SettingsAI() {
                 const response = await axios.get('http://localhost:3000/api/settings/ai');
                 if (response.data.success && response.data.data) {
                     const config = response.data.data;
+
+                    if (config.mode) setMode(config.mode);
+
+                    // Load Global
                     if (config.provider) setProvider(config.provider);
-                    if (config.apiKey) setApiKey(config.apiKey); // Will be masked
+                    if (config.apiKey) setApiKey(config.apiKey);
                     if (config.model) setModel(config.model);
-                    // if (config.enabled !== undefined) setEnabled(config.enabled); // Not yet in specific config
+
+                    // Load Roles
+                    if (config.roles) setRoles(config.roles);
                 }
             } catch (error) {
                 console.error('Failed to load settings:', error);
-                // Don't toast on load error to avoid annoying users if backend is cold
             } finally {
                 setIsLoading(false);
             }
@@ -44,13 +60,24 @@ export function SettingsAI() {
         fetchSettings();
     }, []);
 
+    const updateRole = (role: keyof typeof roles, field: string, value: string) => {
+        setRoles(prev => ({
+            ...prev,
+            [role]: { ...prev[role], [field]: value }
+        }));
+    };
+
     const handleSave = async () => {
         setIsSaving(true);
         try {
             await axios.post('http://localhost:3000/api/settings/ai', {
+                mode,
+                // Global settings (used for Basic mode AND as fallback)
                 provider,
                 apiKey,
-                model
+                model,
+                // Advanced Roles
+                roles
             });
             toast.success('AI Configuration saved successfully');
         } catch (error) {
@@ -59,6 +86,64 @@ export function SettingsAI() {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const renderRoleConfig = (roleId: 'assistant' | 'analyzer' | 'sentinel') => {
+        const roleConfig = roles[roleId];
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <Label className="text-xs">Provider</Label>
+                    <Select
+                        value={roleConfig.provider}
+                        onValueChange={(val) => {
+                            updateRole(roleId, 'provider', val);
+                            updateRole(roleId, 'model', AI_MODELS[val]?.[0]?.id || '');
+                        }}
+                    >
+                        <SelectTrigger className="h-8">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {AI_PROVIDERS.map(p => (
+                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-1">
+                    <Label className="text-xs">Model</Label>
+                    <Select
+                        value={roleConfig.model}
+                        onValueChange={(val) => updateRole(roleId, 'model', val)}
+                    >
+                        <SelectTrigger className="h-8">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {AI_MODELS[roleConfig.provider]?.map(m => (
+                                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">API Key (Optional override)</Label>
+                    <Input
+                        type="password"
+                        className="h-8 font-mono text-xs"
+                        placeholder={apiKey ? "Using Global Key" : "Set specific key..."}
+                        value={roleConfig.apiKey}
+                        onChange={(e) => updateRole(roleId, 'apiKey', e.target.value)}
+                    />
+                </div>
+                <div className="col-span-2">
+                    <p className="text-[10px] text-muted-foreground truncate">
+                        {AI_MODELS[roleConfig.provider]?.find(m => m.id === roleConfig.model)?.description}
+                    </p>
+                </div>
+            </div>
+        );
     };
 
     if (isLoading) {
@@ -94,66 +179,112 @@ export function SettingsAI() {
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {/* Provider Configuration */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="provider">AI Provider</Label>
-                                    <Select value={provider} onValueChange={(val) => {
-                                        setProvider(val);
-                                        // Auto-select first model of new provider
-                                        setModel(AI_MODELS[val]?.[0]?.id || '');
-                                    }} disabled={!enabled}>
-                                        <SelectTrigger id="provider">
-                                            <SelectValue placeholder="Select provider" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {AI_PROVIDERS.map(p => (
-                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-xs text-muted-foreground">Select the backend service for intelligence.</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="model">Model</Label>
-                                    <Select value={model} onValueChange={setModel} disabled={!enabled}>
-                                        <SelectTrigger id="model">
-                                            <SelectValue placeholder="Select model" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {AI_MODELS[provider]?.map(m => (
-                                                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-xs text-muted-foreground">
-                                        {AI_MODELS[provider]?.find(m => m.id === model)?.description || "Choose the specific model version."}
+                            {/* Basic vs Advanced Toggle */}
+                            <div className="flex items-center justify-between border p-4 rounded-lg bg-muted/20">
+                                <div className="space-y-0.5">
+                                    <Label className="text-base">Advanced Mode</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Configure separate AI models for different system roles.
                                     </p>
                                 </div>
+                                <Switch
+                                    checked={mode === 'advanced'}
+                                    onCheckedChange={(c) => setMode(c ? 'advanced' : 'basic')}
+                                    disabled={!enabled}
+                                />
                             </div>
 
-                            {/* API Key */}
-                            <div className="space-y-2">
-                                <Label htmlFor="api-key">API Key</Label>
-                                <div className="relative">
-                                    <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="api-key"
-                                        type="password"
-                                        placeholder={enabled ? (apiKey ? "********" : "Enter your API key...") : "AI is disabled"}
-                                        className="pl-9 font-mono"
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                        disabled={!enabled}
-                                    />
+                            {mode === 'basic' ? (
+                                /* BASIC MODE: Single Global Configuration */
+                                <div className="border p-4 rounded-lg space-y-6">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        <Bot className="h-4 w-4" /> Global AI Settings
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="provider">AI Provider</Label>
+                                            <Select value={provider} onValueChange={(val) => {
+                                                setProvider(val);
+                                                setModel(AI_MODELS[val]?.[0]?.id || '');
+                                            }} disabled={!enabled}>
+                                                <SelectTrigger id="provider">
+                                                    <SelectValue placeholder="Select provider" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {AI_PROVIDERS.map(p => (
+                                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="model">Model</Label>
+                                            <Select value={model} onValueChange={setModel} disabled={!enabled}>
+                                                <SelectTrigger id="model">
+                                                    <SelectValue placeholder="Select model" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {AI_MODELS[provider]?.map(m => (
+                                                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <p className="text-xs text-muted-foreground">
+                                                {AI_MODELS[provider]?.find(m => m.id === model)?.description || "Choose the specific model version."}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="api-key">API Key</Label>
+                                        <div className="relative">
+                                            <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="api-key"
+                                                type="password"
+                                                placeholder={apiKey ? "********" : "Enter API Key..."}
+                                                className="pl-9 font-mono"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
+                                                disabled={!enabled}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Your key is stored locally/encrypted. We never share it.
+                            ) : (
+                                /* ADVANCED MODE: 3 Separate Roles */
+                                <div className="space-y-6">
+                                    {/* Helper function to render a role card */}
+                                    {[
+                                        { id: 'assistant', title: 'AI Assistant', icon: Bot, desc: 'Chat & Tutorials' },
+                                        { id: 'analyzer', title: 'AI Analyst', icon: Cpu, desc: 'Log Analysis & Diagnostics' },
+                                        { id: 'sentinel', title: 'AI Sentinel', icon: Loader2, desc: 'System Monitoring & Events' }
+                                    ].map((role) => (
+                                        <div key={role.id} className="border p-4 rounded-lg space-y-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <role.icon className="h-5 w-5 text-primary" />
+                                                <div>
+                                                    <h4 className="font-semibold">{role.title}</h4>
+                                                    <p className="text-xs text-muted-foreground">{role.desc}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* We need separate state for each role. For simplicity in this diff, we assume new state variables exist */}
+                                            {/* Note: I will need to update the component state definitions in the next step to support this map properly */}
+                                            {renderRoleConfig(role.id as any)}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="flex justify-start pt-2 border-t mt-4">
+                                <p className="text-xs text-muted-foreground italic">
+                                    * Changes require saving. Advanced roles allow specialized models for better performance.
                                 </p>
                             </div>
 
-                            <div className="flex justify-end pt-4">
+                            <div className="flex justify-end pt-2">
                                 <Button disabled={!enabled || isSaving} onClick={handleSave}>
                                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                     Save Configuration

@@ -11,89 +11,81 @@ import { settingsService } from '../../settings/services/SettingsService';
 import { config as envConfig } from '../../../core/ConfigService';
 
 export class AIService {
-    private provider: 'gemini' | 'openai' | 'anthropic' | 'ollama' | 'ollama-cloud' = 'gemini';
-    private model: string = 'gemini-2.5-flash'; // Default
+    private adapters: Map<string, any> = new Map();
 
-    constructor(provider?: 'gemini' | 'openai' | 'anthropic' | 'ollama' | 'ollama-cloud') {
-        // Initial load from env if needed, but per-request is better for dynamic updates
-        this.provider = provider || (envConfig as any).AI_PROVIDER || 'gemini';
+    constructor() {
+        // Adapters are created on demand.
+    }
+
+    /**
+     * Gets or creates an adapter for a specific role based on current configuration.
+     * @param role 'assistant' | 'analyzer' | 'sentinel'
+     */
+    private async getAdapter(role: 'assistant' | 'analyzer' | 'sentinel' = 'assistant') {
+        const config = await settingsService.getAIConfig();
+        const mode = config.mode || 'basic';
+        let provider, model, apiKey;
+
+        if (mode === 'advanced' && config.roles && config.roles[role]) {
+            // Advanced Mode: Use specific role config
+            const roleConfig = config.roles[role];
+            provider = roleConfig.provider;
+            model = roleConfig.model;
+            // FALLBACK: If role key is empty, use global key
+            apiKey = roleConfig.apiKey || config.apiKey;
+        } else {
+            // Basic Mode (or missing role config): Use Global Fallback
+            provider = config.provider;
+            model = config.model;
+            apiKey = config.apiKey;
+        }
+
+        // Validate
+        if (!provider || !model) {
+            throw new Error(`AI Configuration missing for role: ${role} (Mode: ${mode})`);
+        }
+
+        // Cache Key: We cache adapters by "provider:model:apiKey" to reuse connections
+        const cacheKey = `${provider}:${model}:${apiKey ? 'custom-key' : 'env-key'}`;
+
+        if (this.adapters.has(cacheKey)) {
+            return this.adapters.get(cacheKey);
+        }
+
+        console.log(`🔌 AI Service: creating adapter for [${role}] -> ${provider}/${model}`);
+        const adapter = await AIAdapterFactory.createAdapter(
+            provider as any,
+            apiKey,
+            model
+        );
+
+        this.adapters.set(cacheKey, adapter);
+        return adapter;
     }
 
     /**
      * Main chat entry point
      */
-    async chat(messages: any[], tools: any[] = []) {
-        // 1. Fetch Dynamic Config
-        const dbConfig = await settingsService.getAIConfig();
-
-        // Priority: DB Config > Env Config > Defaults
-        const provider = dbConfig.provider || this.provider;
-        const model = dbConfig.model || this.model;
-        const apiKey = dbConfig.apiKey || envConfig.GEMINI_API_KEY; // Fallback to env
-
-        console.log(`🧠 AI Service: Using ${provider} / ${model}`);
-
-        // Dynamic import for the main library
+    async chat(messages: any[], role: 'assistant' | 'analyzer' | 'sentinel' = 'assistant', tools: any[] = []) {
+        // Ensure core AI library is loaded
         // @ts-ignore
         const { chat } = await new Function('return import("@tanstack/ai")')();
 
-        // Create adapter dynamically with Specific Config
-        const adapter = await AIAdapterFactory.createAdapter(provider, apiKey, model);
-
-        // Cast adapter to any to satisfy the generic 'Adapter' constraints
-        return chat({
-            adapter: adapter as any,
-            messages,
-            tools,
-        });
-    }
-
-    // Custom implementation using the stable @google/generative-ai
-    private async *chatGemini(messages: any[]) {
-        const { GoogleGenerativeAI } = await dynamicImport('@google/generative-ai');
-        const { config } = await import('../../../core/ConfigService'); // dynamic or static is fine here
-
-        if (!config.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
-
-        const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: this.model || 'gemini-1.5-flash' });
-
-        // Convert messages to Gemini format
-        // TanStack/OpenAI format: [{ role: 'user', content: '...' }]
-        // Gemini format history: [{ role: 'user' | 'model', parts: [{ text: '...' }] }]
-
-        const history = messages.slice(0, -1).map((m: any) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }]
-        }));
-
-        const lastMessage = messages[messages.length - 1].content;
-
-        const chat = model.startChat({
-            history,
-            generationConfig: {
-                maxOutputTokens: 1000,
-            },
-        });
-
         try {
-            const result = await chat.sendMessageStream(lastMessage);
+            const adapter = await this.getAdapter(role);
 
-            for await (const chunk of result.stream) {
-                const chunkText = chunk.text();
-                // Mimic TanStack AI StreamChunk structure
-                yield {
-                    type: 'content',
-                    delta: chunkText,
-                    role: 'assistant'
-                };
-            }
-        } catch (err: any) {
-            console.error("Gemini Stream Error:", err);
-            yield {
-                type: 'error',
-                error: err.message
-            };
+            // Log for debugging
+            console.log(`💬 AI Chat Request [Role: ${role}]`);
+
+            // Use TanStack AI chat
+            return await chat({
+                adapter: adapter,
+                messages: messages,
+                // tools: tools // Tools not yet fully implemented
+            });
+        } catch (error) {
+            console.error('❌ AI Chat Error:', error);
+            throw error; // Let Controller handle 500
         }
     }
 

@@ -46,11 +46,24 @@ export class AIAdapterFactory {
                 const cloudKey = apiKey;
                 if (!cloudKey) throw new Error('Ollama Cloud requires an API Key');
 
-                const { createOpenaiChat: createCloudChat } = await dynamicImport('@tanstack/ai-openai');
+
+
+                // Use consistent dynamic import pattern
+                // @ts-ignore
+                const { createOpenaiChat: createCloudChat } = await new Function('return import("@tanstack/ai-openai")')();
+
+                if (typeof createCloudChat !== 'function') {
+                    throw new Error('Failed to load createOpenaiChat from @tanstack/ai-openai');
+                }
+
                 // Pointing to the standardized OpenAI-compatible endpoint of Ollama
-                return createCloudChat((modelOverride || 'llama3.3') as any, cloudKey, {
-                    baseURL: 'https://ollama.com/v1' // Corrected from api.ollama.com
+                const adapter = createCloudChat((modelOverride || 'llama3.3') as any, cloudKey, {
+                    baseURL: 'https://ollama.com/v1'
                 });
+
+                console.log('✅ AIAdapterFactory: Adapter created.', adapter ? 'Object found' : 'UNDEFINED');
+                if (adapter) console.log('Keys:', Object.keys(adapter));
+                return adapter;
 
             default:
                 throw new Error(`Unsupported AI provider: ${provider}`);
