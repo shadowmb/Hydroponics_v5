@@ -8,6 +8,8 @@ import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { bg } from 'date-fns/locale';
 
+import { useAI } from '../../context/AIContext';
+
 interface Insight {
     id: string;
     actionName: string;
@@ -18,11 +20,35 @@ interface Insight {
 }
 
 export function AIInsightsButton() {
+    const { openChat, setInitialMessage } = useAI();
     const [open, setOpen] = useState(false);
     const [insights, setInsights] = useState<Insight[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+    const handleInsightClick = async (insight: Insight) => {
+        setOpen(false); // Close popover
+
+        // Mark as read if needed
+        if (!insight.isRead) {
+            // allow async mark read to happen in background
+            axios.post(`${API_URL}/ai/insights/mark-read`).catch(console.error);
+        }
+
+        // Context Prompt
+        const contextPrompt = `
+**Анализ на Insight:**
+Действие: "${insight.actionName}"
+Съобщение:
+"${insight.content}"
+
+---
+Моля, обясни повече за това състояние и какво трябва да направя?
+`;
+        setInitialMessage(contextPrompt);
+        openChat();
+    };
 
     const fetchData = async () => {
         try {
@@ -85,7 +111,8 @@ export function AIInsightsButton() {
                             {insights.map((insight) => (
                                 <div
                                     key={insight.id}
-                                    className={`p-4 hover:bg-muted/50 transition-colors ${!insight.isRead ? 'bg-muted/20' : ''}`}
+                                    className={`p-4 hover:bg-muted/50 transition-colors ${!insight.isRead ? 'bg-muted/20' : ''} cursor-pointer`}
+                                    onClick={() => handleInsightClick(insight)}
                                 >
                                     <div className="flex justify-between items-start mb-1">
                                         <Badge variant="outline" className="text-[10px] font-normal">
@@ -95,9 +122,12 @@ export function AIInsightsButton() {
                                             {formatDistanceToNow(new Date(insight.createdAt), { addSuffix: true, locale: bg })}
                                         </span>
                                     </div>
-                                    <p className="text-sm mt-1 whitespace-pre-wrap leading-snug text-foreground/90">
+                                    <p className="text-sm mt-1 whitespace-pre-wrap leading-snug text-foreground/90 line-clamp-2">
                                         {insight.content}
                                     </p>
+                                    <div className="text-xs text-primary mt-2">
+                                        💬 Кликни за анализ
+                                    </div>
                                 </div>
                             ))}
                         </div>

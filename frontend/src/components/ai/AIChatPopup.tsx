@@ -48,6 +48,16 @@ export function AIChatPopup() {
         }
     }, [messages, isLoading, error]);
 
+    const { initialMessage, setInitialMessage } = useAI();
+
+    // Check for context injection
+    useEffect(() => {
+        if (isOpen && initialMessage && !isLoading) {
+            sendMessage(initialMessage);
+            setInitialMessage(null); // Clear after sending
+        }
+    }, [isOpen, initialMessage, isLoading, sendMessage, setInitialMessage]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputValue.trim() || isLoading) return;
