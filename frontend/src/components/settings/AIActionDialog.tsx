@@ -123,7 +123,17 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
         if (action) {
             setFormData(JSON.parse(JSON.stringify(action))); // Deep copy
 
-            // Parse Schedule Logic
+            // Parse Schedule Logic (Common for both or specific)
+            if (action.trigger.frequency?.endDate && action.trigger.frequency.startDate) {
+                const start = new Date(action.trigger.frequency.startDate);
+                const end = new Date(action.trigger.frequency.endDate);
+                const diffTime = Math.abs(end.getTime() - start.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                setScheduleDays(diffDays);
+            } else {
+                setScheduleDays(undefined);
+            }
+
             if (action.trigger.type === 'schedule') {
                 // CRON to Time: "0 22 * * *" -> "22:00"
                 if (action.trigger.cron) {
@@ -133,17 +143,6 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
                         const hour = parts[1].padStart(2, '0');
                         setScheduleTime(`${hour}:${min}`);
                     }
-                }
-
-                // EndDate to Days
-                if (action.trigger.frequency?.endDate && action.trigger.frequency.startDate) {
-                    const start = new Date(action.trigger.frequency.startDate);
-                    const end = new Date(action.trigger.frequency.endDate);
-                    const diffTime = Math.abs(end.getTime() - start.getTime());
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    setScheduleDays(diffDays);
-                } else {
-                    setScheduleDays(undefined);
                 }
             }
 
@@ -159,31 +158,35 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
         try {
             const dataToSave = { ...formData }; // Clone trigger
 
+            // Common Frequency/Duration Logic
+            let frequencyObj: any = dataToSave.trigger.frequency || {};
+            if (scheduleDays) {
+                const now = new Date();
+                const endDate = new Date();
+                endDate.setDate(now.getDate() + scheduleDays);
+
+                frequencyObj = {
+                    ...frequencyObj,
+                    startDate: now,
+                    endDate: endDate
+                };
+            } else {
+                // Remove dates if cleared? Or keep existing?
+                // For now, if user clears days, we remove constraints
+                delete frequencyObj.startDate;
+                delete frequencyObj.endDate;
+            }
+
             if (dataToSave.trigger.type === 'schedule') {
                 // Time to CRON
                 const [h, m] = scheduleTime.split(':');
                 dataToSave.trigger.cron = `${Number(m)} ${Number(h)} * * *`;
 
-                // Days to EndDate
-                if (scheduleDays) {
-                    const now = new Date();
-                    const endDate = new Date();
-                    endDate.setDate(now.getDate() + scheduleDays);
-
-                    dataToSave.trigger.frequency = {
-                        type: 'daily', // Implicitly daily if purely time based 
-                        startDate: now,
-                        endDate: endDate
-                    };
-                } else {
-                    // Reset frequency if no days specified or handle differently?
-                    // Assuming basic schedule implies daily repetition without end
-                    dataToSave.trigger.frequency = {
-                        type: 'daily',
-                        intervalMinutes: 1440 // 24h
-                    };
-                }
+                // Ensure type is set
+                frequencyObj.type = frequencyObj.type || 'daily';
             }
+
+            dataToSave.trigger.frequency = frequencyObj as any;
 
             await onSave(dataToSave);
             onOpenChange(false);
@@ -408,6 +411,23 @@ export function AIActionDialog({ open, onOpenChange, action, onSave, devices = [
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Duration (Days) - MOVED HERE AS REQUESTED */}
+                                <div className="space-y-2 pt-2 border-t">
+                                    <Label>Продължителност (Дни)</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Безкрайно (ако е празно)"
+                                        value={scheduleDays || ''}
+                                        onChange={(e) => setScheduleDays(e.target.value ? Number(e.target.value) : undefined)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        На колко дни да е активен този сензорен тригер. След това ще спре.
+                                    </p>
+                                </div>
+
+
 
 
                                 {/* Cooldown */}

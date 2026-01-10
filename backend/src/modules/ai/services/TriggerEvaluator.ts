@@ -8,7 +8,14 @@ export class TriggerEvaluator {
     static shouldTrigger(action: IAIAction, currentValue: number): boolean {
         if (!action.enabled || !action.trigger || action.trigger.type !== 'sensor') return false;
 
-        const { operator, value, rangeMax, cooldownMinutes, activeWindow } = action.trigger;
+        const { operator, value, rangeMax, cooldownMinutes, activeWindow, frequency } = action.trigger;
+
+        // 0. Check Date Range (Duration/Validity)
+        if (frequency) {
+            const now = new Date();
+            if (frequency.startDate && now < new Date(frequency.startDate)) return false;
+            if (frequency.endDate && now > new Date(frequency.endDate)) return false;
+        }
 
         // 1. Check Active Window (Time of Day)
         if (activeWindow && activeWindow.enabled) {
