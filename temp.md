@@ -1,162 +1,113 @@
+Имплементационен План: Фаза 4 - AI Действия и Автоматизация
+Цел: Създаване на система за автоматично изпълнение на AI задачи, базирани на времеви график или сензорни събития.
+
+1. Архитектура на Данните (Backend)
+Ще създадем нова колекция ai_actions в MongoDB.
+
+Schema: IAIAction
 {
-  "_id": {
-    "$oid": "6961693a5c1285455e74a6f4"
+  name: String,        // "Дневен отчет", "Ниско pH"
+  enabled: Boolean,    // true/false
+  
+  // 1. КОГА? (Trigger)
+  trigger: {
+    type: 'schedule' | 'sensor',
+    
+    // Ако е Schedule (График)
+    cron: String,      // "0 22 * * *" (CRON формат)
+    humanTime: String, // "22:00" (За UI)
+    days: [Number],    // [1, 2, 3, 4, 5] (Дни от седмицата)
+    
+    // Ако е Sensor (Събитие)
+    sensorId: String,  // "ph_meter_main"
+    operator: '>' | '<' | '=',
+    value: Number,     // 5.5
+    cooldownMinutes: Number // 60 (Да не спами)
   },
-  "date": "2026-01-09",
-  "timestamp": {
-    "$date": "2026-01-09T20:46:50.036Z"
-  },
-  "context": {
-    "programId": "prog_bigtest",
-    "programName": "prog_bigtest",
-    "windowId": "tw_1767861565496_ku2rqdpw9",
-    "windowName": "Прозорец 1",
-    "executionType": "WINDOW"
-  },
-  "measurements": [
-    {
-      "source": "Сензор ниво ГР домати",
-      "role": "volume",
-      "flowId": "rezervoar",
-      "flowName": "Резервоар",
-      "value": 100,
-      "unit": "L",
-      "type": "DELTA",
-      "startValue": 0,
-      "endValue": 100,
-      "average": 44.44444444444444,
-      "min": 0,
-      "max": 100,
-      "count": 9
-    },
-    {
-      "source": "Помпа  поливане домати",
-      "role": "water",
-      "flowId": "rezervoar",
-      "flowName": "Резервоар",
-      "value": 100,
-      "unit": "L",
-      "type": "DELTA",
-      "startValue": 0,
-      "endValue": 100
-    },
-    {
-      "source": "Сензор за ЕС Домати",
-      "role": "ec",
-      "flowId": "ec_sim",
-      "flowName": "EC SIM",
-      "value": 1.5,
-      "unit": "mS/cm",
-      "type": "TREND",
-      "startValue": 1,
-      "endValue": 2.5,
-      "average": 2.0780000000000003,
-      "min": 1,
-      "max": 2.5,
-      "count": 5
-    },
-    {
-      "source": "Помпа Разтвор А домати",
-      "role": "nutrient_a",
-      "flowId": "ec_sim",
-      "flowName": "EC SIM",
-      "value": 150,
-      "unit": "ml",
-      "type": "SUM",
-      "average": 50,
-      "min": 50,
-      "max": 50,
-      "count": 3
-    },
-    {
-      "source": "Помпа Разтвор Б домати",
-      "role": "nutrient_b",
-      "flowId": "ec_sim",
-      "flowName": "EC SIM",
-      "value": 150,
-      "unit": "ml",
-      "type": "SUM",
-      "average": 50,
-      "min": 50,
-      "max": 50,
-      "count": 3
-    },
-    {
-      "source": "Помпа разбъркване домати",
-      "role": "mixer",
-      "flowId": "ec_sim",
-      "flowName": "EC SIM",
-      "value": 10,
-      "unit": "s",
-      "type": "NONE",
-      "average": 10,
-      "min": 10,
-      "max": 10,
-      "count": 5
-    },
-    {
-      "source": "Сензор за рН домати",
-      "role": "ph",
-      "flowId": "ph_sim",
-      "flowName": "pH Sim",
-      "value": 3.3,
-      "unit": "pH",
-      "type": "TREND",
-      "startValue": 3,
-      "endValue": 6.3,
-      "average": 4.9,
-      "min": 3,
-      "max": 6.3,
-      "count": 4
-    },
-    {
-      "source": "pH+ помпа домати",
-      "role": "ph_up",
-      "flowId": "ph_sim",
-      "flowName": "pH Sim",
-      "value": 4,
-      "unit": "ml",
-      "type": "SUM",
-      "average": 2,
-      "min": 2,
-      "max": 2,
-      "count": 2
-    },
-    {
-      "source": "Влажност почва домати",
-      "role": "soil_moisture",
-      "flowId": "polivane",
-      "flowName": "Поливане SIM",
-      "value": 30,
-      "unit": "%",
-      "type": "NONE",
-      "average": 30,
-      "min": 30,
-      "max": 30,
-      "count": 1
-    },
-    {
-      "source": "Read Sensor",
-      "role": "temp",
-      "flowId": "polivane",
-      "flowName": "Поливане SIM",
-      "value": 0,
-      "unit": "C",
-      "type": "TREND",
-      "startValue": 24,
-      "endValue": 24,
-      "average": 24,
-      "min": 24,
-      "max": 24,
-      "count": 1
+  // 2. КАКВО? (Intelligence)
+  payload: {
+    systemPrompt: String, // "Ти си агроном. Анализирай..."
+    
+    // Какви данни да се подадат на AI преди въпроса?
+    context: {
+      includeSensorValue: Boolean, // true (За sensor triggers)
+      includeHistory: 'none' | '1h' | '24h' // Исторически данни
     }
-  ],
-  "deletedAt": null,
-  "createdAt": {
-    "$date": "2026-01-09T20:46:50.041Z"
   },
-  "updatedAt": {
-    "$date": "2026-01-09T20:46:50.041Z"
+  // 3. КЪДЕ? (Output)
+  outputs: {
+    saveInsight: Boolean, // Запис в "Insights" панела
+    notifyTelegram: Boolean, // Изпращане в Telegram
+    notifyEmail: Boolean  // (Опционално)
   },
-  "__v": 0
+  lastRun: Date,       // Последно изпълнение
+  createdAt: Date
 }
+2. Backend Логика
+2.1 Services
+AIActionsService: CRUD операции за действията (Create, Read, Update, Delete).
+ActionScheduler:
+При старт на сървъра зарежда всички активни schedule действия.
+Използва node-cron за да ги планира.
+SensorWatcher:
+Abonira се (Subscribe) към Event Emitter-а на системата за нови данни.
+При всяко отчитане проверява: Има ли активно действие за този сензор? -> Минало ли е отряме (cooldown)? -> Изпълнено ли е условието?.
+2.2 Execution Flow (executeAction)
+Когато настъпи часът или условието:
+
+Събиране на контекст:
+Ако е сензор -> взима текущата стойност.
+Ако е избрана история -> прави заявка към InfluxDB/Mongo за последните X часа.
+Форматиране на Prompt:
+Слепва: System Prompt + Context Data (като JSON/Text).
+AI Заявка:
+Изпраща към конфигурирания Provider (Gemini/ChatGPT).
+Обработка на резултата:
+Ако outputs.notifyTelegram -> вика TelegramService.
+Ако outputs.saveInsight -> записва в базата данни.
+3. UI/UX (Frontend)
+Ще разширим 
+SettingsAI
+ компонента с нов таб "Действия".
+
+3.1 Списък с Действия (List View)
+Таблица, показваща:
+
+Име на действието.
+Тригер (напр. "Всеки ден 22:00" или "pH < 5.5").
+Статус (Активно/Спряно).
+Бутони: Edit, Delete, Run Now (Тест).
+3.2 Редактор на Действие (Action Dialog)
+wizard-style диалог в 3 стъпки (Tabs):
+
+Tab 1: Тригер (Trigger)
+
+Radio: [🕒 По Време] или [🌡️ По Сензор]
+Ако е Време: Time Picker, Day Selector.
+Ако е Сензор: Dropdown със сензори, Оператор (> <), Стойност, Cooldown Input.
+Tab 2: Интелект (Brain)
+
+Label: "Инструкция към AI"
+Textarea: (Място за промпта)
+Checkbox: [x] Прикачи история за последните 24ч (полезно за анализи).
+Tab 3: Известия (Output)
+
+Switch: Включи Telegram
+Switch: Запази като Insight
+4. План за изпълнение (Steps)
+Backend Setup:
+Създаване на AIAction модел.
+Създаване на API endpoints (GET/POST/PUT /api/ai/actions).
+Scheduler & Watcher Core:
+Имплементация на Cron logic.
+Имплементация на Event Listener за сензори.
+Service Integration:
+Свързване на executeAction с 
+AIService
+.
+Frontend UI:
+Създаване на AIActionsList.
+Създаване на ActionDialog (React Hook Form).
+Testing:
+Тест с "Дневен отчет" (ръчно стартиране).
+Тест със "Сензорен тригер" (симулиране на ниско pH).

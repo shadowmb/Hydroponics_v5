@@ -96,4 +96,77 @@ export class AIService {
             };
         }
     }
+
+    /**
+     * Executes a defined AI Action.
+     * 1. Fetches Action
+     * 2. Gathers Context
+     * 3. Sends to AI
+     * 4. Handles Output
+     */
+    async executeAction(actionId: string, triggerContext: any = {}) {
+        // dynamic import to avoid circular dependency issues at runtime if any
+        const { aiActionsService } = await import('./AIActionsService');
+        const action = await aiActionsService.getAction(actionId);
+
+        if (!action || !action.enabled) {
+            console.log(`⚠️ AI Action ${actionId} not found or disabled.`);
+            return;
+        }
+
+        console.log(`🚀 Executing AI Action: ${action.name}`);
+
+        // 1. Gather Context
+        // Placeholder: in real implementation, query Influx/Mongo for history
+        let contextData = `Current System Time: ${new Date().toISOString()}\n`;
+
+        if (triggerContext.value !== undefined) {
+            contextData += `Trigger value: ${triggerContext.value}\n`;
+        }
+
+        if (action.payload?.contextConfiguration) {
+            // Logic to fetch 1h or 24h history would go here
+            // const history = await historyService.get(...)
+            // contextData += ...
+            contextData += `(History data placeholder)\n`;
+        }
+
+        // 2. Construct Prompt
+        const systemPrompt = action.payload.systemPrompt;
+        // Inject context into prompt if using template strings, or just append
+        const fullPrompt = `${systemPrompt}\n\n=== CONTEXT DATA ===\n${contextData}\n==================`;
+
+        // 3. Call AI
+        // We use a non-streaming chat call here effectively.
+        try {
+            const stream = await this.chat([{ role: 'user', content: fullPrompt }]);
+
+            let fullResponse = '';
+            for await (const chunk of stream) {
+                if (chunk.delta) fullResponse += chunk.delta;
+            }
+
+            console.log(`🤖 AI Response for '${action.name}':`, fullResponse.substring(0, 50) + '...');
+
+            // 4. Handle Outputs
+            if (action.outputs.saveInsight) {
+                // TODO: Save to Insights Collection
+                console.log(`💾 Insight saved: ${fullResponse}`);
+            }
+
+            if (action.outputs.notifyTelegram) {
+                // TODO: Call Telegram Service
+                console.log(`📱 Telegram sent: ${fullResponse}`);
+            }
+
+            // Update Last Run
+            await aiActionsService.updateAction(action.id, { lastRun: new Date() });
+
+        } catch (error) {
+            console.error(`❌ Error executing AI Action ${action.name}:`, error);
+        }
+    }
+
 }
+
+export const aiService = new AIService();

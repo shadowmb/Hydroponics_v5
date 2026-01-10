@@ -28,6 +28,7 @@
         "fastify": "^4.26.2",
         "glob": "^13.0.0",
         "mongoose": "^8.2.4",
+        "node-cron": "^4.2.1",
         "pino": "^8.19.0",
         "pino-pretty": "^11.0.0",
         "serialport": "^13.0.0",
@@ -40,6 +41,7 @@
     },
     "devDependencies": {
         "@types/node": "^20.11.30",
+        "@types/node-cron": "^3.0.11",
         "@types/uuid": "^10.0.0",
         "ts-node": "^10.9.2",
         "ts-node-dev": "^2.0.0",
