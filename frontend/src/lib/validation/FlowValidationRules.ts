@@ -86,20 +86,32 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
         {
             field: 'variable',
             required: false,
-            message: 'Variable is required for WHILE loops',
-            validate: (val, data) => data?.loopType !== 'WHILE' || (!!val)
+            message: 'Variable to check is required',
+            validate: (val, data) => {
+                const hasAny = !!data.variable || !!data.operator || (data.value !== undefined && data.value !== '');
+                if (hasAny && !val) return false;
+                return true;
+            }
         },
         {
             field: 'operator',
             required: false,
-            message: 'Operator is required for WHILE loops',
-            validate: (val, data) => data?.loopType !== 'WHILE' || (!!val)
+            message: 'Operator is required',
+            validate: (val, data) => {
+                const hasAny = !!data.variable || !!data.operator || (data.value !== undefined && data.value !== '');
+                if (hasAny && !val) return false;
+                return true;
+            }
         },
         {
             field: 'value',
             required: false,
-            message: 'Value is required for WHILE loops',
-            validate: (val, data) => data?.loopType !== 'WHILE' || (val !== undefined && val !== '')
+            message: 'Comparison value is required',
+            validate: (val, data) => {
+                const hasAny = !!data.variable || !!data.operator || (data.value !== undefined && data.value !== '');
+                if (hasAny && (val === undefined || val === '')) return false;
+                return true;
+            }
         },
         // --- Limit Mode Validation ---
         {

@@ -69,13 +69,15 @@ export const FlowControlNode = memo((props: NodeProps) => {
         <Tooltip>
             <TooltipTrigger asChild>
                 <div className={cn(
-                    "flex flex-col shadow-sm rounded-md bg-card border-2 min-w-[140px] overflow-hidden transition-all",
+                    "flex flex-col rounded-md bg-card border-2 min-w-[140px] transition-all duration-200",
                     cardBorderClass,
-                    selected ? "border-primary ring-1 ring-primary" : "",
+                    selected
+                        ? "border-green-500 ring-[10px] ring-green-500/20 shadow-[0_0_25px_rgba(34,197,94,0.4)] z-50 scale-[1.03] outline outline-2 outline-green-500"
+                        : "shadow-sm",
                     !!data.hasError && "border-destructive ring-destructive ring-1"
                 )}>
                     {/* Input Handle - Always present */}
-                    <Handle type="target" position={Position.Left} className="w-3 h-3 bg-muted-foreground" />
+                    <Handle type="target" position={Position.Top} id="target" className="input-handle-triangle" />
 
                     {/* Header */}
                     <div className={cn(
@@ -98,7 +100,7 @@ export const FlowControlNode = memo((props: NodeProps) => {
 
                     {/* Output Handle - ONLY for LABEL (Passthrough) */}
                     {controlType === 'LABEL' && (
-                        <Handle type="source" position={Position.Right} className="w-3 h-3 bg-muted-foreground" />
+                        <Handle type="source" position={Position.Bottom} id="source" className="w-3 h-3 bg-muted-foreground" />
                     )}
 
                     {!!data.hasError && (

@@ -50,12 +50,13 @@ export const ConditionNode = memo((props: NodeProps) => {
         <Tooltip>
             <TooltipTrigger asChild>
                 <div className={cn(
-                    "flex flex-col shadow-md rounded-md bg-card border-2 min-w-[200px] transition-all",
-                    selected ? "border-primary ring-1 ring-primary" : "border-border",
+                    "flex flex-col rounded-md bg-card border-2 min-w-[200px] transition-all duration-200",
+                    "border-border shadow-md",
                     !!data.hasError && "border-destructive ring-destructive ring-1",
-                    !!data.mirrorOf && "border-blue-400 border-dashed bg-blue-50/10"
+                    !!data.mirrorOf && "border-blue-400 border-dashed bg-blue-50/10",
+                    selected && "border-green-500 ring-[10px] ring-green-500/20 shadow-[0_0_25px_rgba(34,197,94,0.4)] z-50 scale-[1.03] outline outline-2 outline-green-500"
                 )}>
-                    <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
+                    <Handle type="target" position={Position.Top} className="input-handle-triangle" />
 
                     {/* Header */}
                     <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-t-sm">

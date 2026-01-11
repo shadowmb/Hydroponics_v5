@@ -141,11 +141,12 @@ export const GenericBlockNode = memo((props: NodeProps) => {
             <Tooltip>
                 <TooltipTrigger asChild>
                     <div className={cn(
-                        "flex flex-col shadow-md rounded-md bg-card border-2 min-w-[180px] overflow-hidden transition-all",
-                        selected ? "border-primary ring-1 ring-primary" : "border-border",
-                        !!displayData.hasError && "border-destructive ring-destructive ring-1"
+                        "flex flex-col rounded-md bg-card border-2 min-w-[180px] overflow-hidden transition-all duration-200",
+                        "border-border shadow-md",
+                        !!displayData.hasError && "border-destructive ring-destructive ring-1",
+                        selected && "border-green-500 ring-[10px] ring-green-500/20 shadow-[0_0_25px_rgba(34,197,94,0.4)] z-50 scale-[1.03] outline outline-2 outline-green-500"
                     )}>
-                        <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
+                        <Handle type="target" position={Position.Top} id="target" className="input-handle-triangle" />
 
                         {/* Header */}
                         <div className={cn(
@@ -184,7 +185,7 @@ export const GenericBlockNode = memo((props: NodeProps) => {
                             </div>
                         )}
 
-                        <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground" />
+                        <Handle type="source" position={Position.Bottom} id="source" className="w-3 h-3 bg-muted-foreground" />
 
                         {!!displayData.hasError && (
                             <div className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 animate-pulse" title={String(displayData.error)}>
@@ -213,11 +214,12 @@ export const GenericBlockNode = memo((props: NodeProps) => {
             <Tooltip>
                 <TooltipTrigger asChild>
                     <div className={cn(
-                        "flex flex-col shadow-md rounded-md bg-card border-2 min-w-[200px] overflow-hidden transition-all",
-                        selected ? "border-primary ring-1 ring-primary" : "border-border",
-                        !!displayData.hasError && "border-destructive ring-destructive ring-1"
+                        "flex flex-col rounded-md bg-card border-2 min-w-[200px] overflow-hidden transition-all duration-200",
+                        "border-border shadow-md",
+                        !!displayData.hasError && "border-destructive ring-destructive ring-1",
+                        selected && "border-green-500 ring-[10px] ring-green-500/20 shadow-[0_0_25px_rgba(34,197,94,0.4)] z-50 scale-[1.03] outline outline-2 outline-green-500"
                     )}>
-                        <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
+                        <Handle type="target" position={Position.Top} id="target" className="input-handle-triangle" />
 
                         {/* Header */}
                         <div className="flex items-center gap-2 px-3 py-1.5 border-b text-xs font-bold uppercase tracking-wide bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border-b-cyan-200 dark:border-cyan-800">
@@ -244,7 +246,7 @@ export const GenericBlockNode = memo((props: NodeProps) => {
                             <span className="text-cyan-600 font-bold truncate">➜ [{varName || '?'}]</span>
                         </div>
 
-                        <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground" />
+                        <Handle type="source" position={Position.Bottom} id="source" className="w-3 h-3 bg-muted-foreground" />
 
                         {!!displayData.hasError && (
                             <div className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 animate-pulse" title={String(displayData.error)}>
@@ -267,15 +269,16 @@ export const GenericBlockNode = memo((props: NodeProps) => {
         <Tooltip>
             <TooltipTrigger asChild>
                 <div className={cn(
-                    "px-4 py-2 shadow-md rounded-md bg-card border-2 min-w-[150px]",
-                    selected ? "border-primary" : "border-border",
+                    "px-4 py-2 rounded-md bg-card border-2 min-w-[150px] transition-all duration-200",
+                    "border-border shadow-md",
                     isStart && "border-green-500 bg-green-50/10",
                     isEnd && "border-red-500 bg-red-50/10",
                     isMirror && "border-dashed border-blue-400 bg-blue-50/5",
-                    !!displayData.hasError && "border-destructive bg-destructive/5"
+                    !!displayData.hasError && "border-destructive bg-destructive/5",
+                    selected && "border-green-500 ring-[10px] ring-green-500/20 shadow-[0_0_25px_rgba(34,197,94,0.4)] z-50 scale-[1.03] outline outline-2 outline-green-500"
                 )}>
                     {!isStart && (
-                        <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
+                        <Handle type="target" position={Position.Top} id="target" className="input-handle-triangle" />
                     )}
 
                     <div className="flex items-center gap-2">
@@ -317,7 +320,7 @@ export const GenericBlockNode = memo((props: NodeProps) => {
                     </div>
 
                     {!isEnd && (
-                        <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground" />
+                        <Handle type="source" position={Position.Bottom} id="source" className="w-3 h-3 bg-muted-foreground" />
                     )}
 
                     {!!displayData.hasError && (

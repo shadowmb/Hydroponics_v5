@@ -107,12 +107,28 @@ export const flowToReactFlow = (flow: Partial<Flow>): { nodes: Node[]; edges: Ed
 
     if (flow.edges) {
         flow.edges.forEach((edge) => {
+            const targetNode = nodes.find(n => n.id === edge.target);
+            const sourceNode = nodes.find(n => n.id === edge.source);
+
+            let targetHandle = edge.targetHandle;
+            let sourceHandle = edge.sourceHandle;
+
+            // Repair for FlowControl and other nodes when handles were moved to Top/Bottom
+            const singletonTypes = ['flowControl', 'action', 'generic'];
+
+            if (singletonTypes.includes(targetNode?.type || '') && !targetHandle) {
+                targetHandle = 'target';
+            }
+            if (singletonTypes.includes(sourceNode?.type || '') && !sourceHandle) {
+                sourceHandle = 'source';
+            }
+
             edges.push({
                 id: edge.id,
                 source: edge.source,
                 target: edge.target,
-                sourceHandle: edge.sourceHandle,
-                targetHandle: edge.targetHandle,
+                sourceHandle,
+                targetHandle,
                 type: edge.type || 'smoothstep',
                 animated: edge.animated,
                 label: edge.label,

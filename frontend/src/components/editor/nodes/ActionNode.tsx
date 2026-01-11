@@ -21,12 +21,12 @@ export const ActionNode = memo((props: NodeProps) => {
         <Tooltip>
             <TooltipTrigger asChild>
                 <div className={cn(
-                    "px-4 py-2 shadow-md rounded-md bg-card border-2 min-w-[150px]",
-                    "px-4 py-2 shadow-md rounded-md bg-card border-2 min-w-[150px]",
-                    selected ? "border-primary" : "border-border",
-                    !!data.hasError && "border-destructive bg-destructive/5"
+                    "px-4 py-2 rounded-md bg-card border-2 min-w-[150px] transition-all duration-200",
+                    "border-border shadow-md",
+                    !!data.hasError && "border-destructive bg-destructive/5",
+                    selected && "border-green-500 ring-[10px] ring-green-500/20 shadow-[0_0_25px_rgba(34,197,94,0.4)] z-50 scale-[1.03] outline outline-2 outline-green-500"
                 )}>
-                    <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
+                    <Handle type="target" position={Position.Top} id="target" className="input-handle-triangle" />
 
                     <div className="flex items-center gap-2">
                         <div className="p-1 rounded bg-muted">
@@ -38,7 +38,7 @@ export const ActionNode = memo((props: NodeProps) => {
                         </div>
                     </div>
 
-                    <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground" />
+                    <Handle type="source" position={Position.Bottom} id="source" className="w-3 h-3 bg-muted-foreground" />
 
                     {!!data.hasError && (
                         <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1" title={String(data.error)}>

@@ -546,6 +546,10 @@ const FlowEditorContent: React.FC = () => {
                             onEdgeClick={onEdgeClick}
                             onPaneClick={onPaneClick}
                             nodeTypes={nodeTypes}
+                            defaultEdgeOptions={{
+                                style: { strokeWidth: 2 },
+                                type: 'smoothstep'
+                            }}
                             fitView
                         >
                             <Background />
