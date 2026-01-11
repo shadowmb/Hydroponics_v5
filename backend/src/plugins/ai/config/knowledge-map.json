@@ -4,5 +4,11 @@
         "flow|node|logic|automation|trigger|поток|логика|автоматизация": "Test-Flows.md",
         "tutorial|start|guide|help|туториал|помощ|старт": "Tutorials/Tutorial-Basics.md",
         "firmware|generator|builder|фърмуер|генератор|build|arduino|esp32": "Firmware-Generator-Walkthrough.md"
+    },
+    "path_mappings": {
+        "/flows": "Test-Flows.md",
+        "/editor": "Test-Flows.md",
+        "/hardware": "Test-Devices.md",
+        "/settings": "System-Overview.md"
     }
 }

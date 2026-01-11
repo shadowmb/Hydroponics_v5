@@ -8,6 +8,7 @@ export interface WizardConteXtData {
     step?: number;
     config?: any;
     name?: string; // 'FirmwareBuilder', 'DeviceWizard', etc.
+    locale?: string; // 'bg', 'en' - for future i18n support
 }
 
 interface UIState {

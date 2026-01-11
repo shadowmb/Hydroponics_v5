@@ -67,17 +67,33 @@ export default async function AIController(fastify: FastifyInstance) {
         try {
             const fs = require('fs');
             const path = require('path');
-            const projectRoot = path.join(process.cwd(), '../');
-            const mapFile = path.join(projectRoot, 'Docs/UserManual/knowledge-map.json');
-            const overviewFile = path.join(projectRoot, 'Docs/UserManual/System-Overview.md');
+            const docsBasePath = path.join(process.cwd(), 'src/plugins/ai/docs');
+            const mapFile = path.join(process.cwd(), 'src/plugins/ai/config/knowledge-map.json');
+            const overviewFile = path.join(docsBasePath, 'System-Overview.md');
 
             // Context extracted above (Step 1)
 
             const lastMessageLower = lastMessageContent.toLowerCase();
 
+            // Helper function for safe file reading
+            const safeReadFile = (filePath: string, label: string): string => {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        return fs.readFileSync(filePath, 'utf-8');
+                    } else {
+                        console.warn(`⚠️ RAG Warning: File not found - ${label} (${filePath})`);
+                        return '';
+                    }
+                } catch (err) {
+                    console.error(`❌ RAG Error: Failed to read ${label}`, err);
+                    return '';
+                }
+            };
+
             let systemPrompt = '';
-            if (fs.existsSync(overviewFile)) {
-                systemPrompt += fs.readFileSync(overviewFile, 'utf-8') + '\n\n';
+            const overviewContent = safeReadFile(overviewFile, 'System Overview');
+            if (overviewContent) {
+                systemPrompt += overviewContent + '\n\n';
             }
 
             let specificContext = '';
@@ -85,40 +101,71 @@ export default async function AIController(fastify: FastifyInstance) {
             // --- STATE-DRIVEN RAG: Dynamic Document Injection ---
             // 1. Wizard-Specific Docs
             if (uiContext?.wizard === 'FirmwareBuilder') {
-                const fwDoc = path.join(projectRoot, 'Docs/UserManual/Firmware-Generator-Walkthrough.md');
-                if (fs.existsSync(fwDoc)) {
-                    specificContext += `\n=== WIZARD GUIDE: Firmware Builder ===\n` + fs.readFileSync(fwDoc, 'utf-8') + '\n';
+                const fwDoc = path.join(docsBasePath, 'Firmware-Generator-Walkthrough.md');
+                const fwContent = safeReadFile(fwDoc, 'Firmware Builder Guide');
+                if (fwContent) {
+                    specificContext += `\n=== WIZARD GUIDE: Firmware Builder ===\n` + fwContent + '\n';
                 }
 
-                // Supplemental for specific steps
-                if (uiContext.step === 4) {
-                    const deviceDoc = path.join(projectRoot, 'Docs/UserManual/Test-Devices.md');
-                    if (fs.existsSync(deviceDoc)) {
-                        specificContext += `\n=== SUPPLEMENTAL: Devices Configuration ===\n` + fs.readFileSync(deviceDoc, 'utf-8') + '\n';
+                // Granular Step-Based Loading
+                const stepDocs: Record<number, { file: string; label: string }> = {
+                    2: { file: 'Transport-Config.md', label: 'Transport Configuration' },
+                    3: { file: 'Plugins-Reference.md', label: 'Plugins Reference' },
+                    4: { file: 'Test-Devices.md', label: 'Devices Configuration' }
+                };
+
+                if (uiContext.step && stepDocs[uiContext.step]) {
+                    const stepInfo = stepDocs[uiContext.step];
+                    const stepDocPath = path.join(docsBasePath, stepInfo.file);
+                    const stepContent = safeReadFile(stepDocPath, stepInfo.label);
+                    if (stepContent) {
+                        specificContext += `\n=== SUPPLEMENTAL: ${stepInfo.label} ===\n` + stepContent + '\n';
                     }
                 }
             }
 
-            // 2. Path-Specific Docs
-            if (uiContext?.path === '/flows' || uiContext?.path?.startsWith('/editor')) {
-                const flowDoc = path.join(projectRoot, 'Docs/UserManual/Test-Flows.md');
-                if (fs.existsSync(flowDoc)) {
-                    specificContext += `\n=== PAGE GUIDE: Flows & Logic ===\n` + fs.readFileSync(flowDoc, 'utf-8') + '\n';
-                }
-            }
+            // 2. Path-Specific Docs (Dynamic from knowledge-map.json)
+            if (role === 'assistant') {
+                try {
+                    const mapContent = safeReadFile(mapFile, 'Knowledge Map');
+                    if (mapContent) {
+                        const map = JSON.parse(mapContent);
 
-            // 3. Keyword-based RAG (Fallback/Additive)
-            if (role === 'assistant' && fs.existsSync(mapFile)) {
-                const map = JSON.parse(fs.readFileSync(mapFile, 'utf-8'));
-                for (const [pattern, filename] of Object.entries(map.keywords)) {
-                    const regex = new RegExp(pattern, 'i');
-                    if (regex.test(lastMessageLower)) {
-                        const filePath = path.join(projectRoot, 'Docs/UserManual', filename as string);
-                        // Avoid duplicating if already loaded by state
-                        if (fs.existsSync(filePath) && !specificContext.includes(filename as string)) {
-                            specificContext += `\n=== SEARCHED TOPIC: ${filename} ===\n` + fs.readFileSync(filePath, 'utf-8') + '\n';
+                        // Check for path mappings
+                        if (map.path_mappings && uiContext?.path) {
+                            for (const [pathPattern, filename] of Object.entries(map.path_mappings)) {
+                                // Exact match or startsWith for nested routes
+                                if (uiContext.path === pathPattern || uiContext.path.startsWith(pathPattern + '/')) {
+                                    const filePath = path.join(docsBasePath, filename as string);
+                                    if (!specificContext.includes(filename as string)) {
+                                        const pathContent = safeReadFile(filePath, `Path Guide: ${filename as string}`);
+                                        if (pathContent) {
+                                            specificContext += `\n=== PAGE GUIDE: ${(filename as string).replace('.md', '')} ===\n` + pathContent + '\n';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. Keyword-based RAG (Fallback/Additive)
+                        if (map.keywords) {
+                            for (const [pattern, filename] of Object.entries(map.keywords)) {
+                                const regex = new RegExp(pattern, 'i');
+                                if (regex.test(lastMessageLower)) {
+                                    const filePath = path.join(docsBasePath, filename as string);
+                                    // Avoid duplicating if already loaded by state or path
+                                    if (!specificContext.includes(filename as string)) {
+                                        const keywordContent = safeReadFile(filePath, `Keyword Match: ${filename}`);
+                                        if (keywordContent) {
+                                            specificContext += `\n=== SEARCHED TOPIC: ${filename} ===\n` + keywordContent + '\n';
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
+                } catch (err) {
+                    console.error('❌ RAG Error: Failed to parse knowledge map', err);
                 }
             }
 
