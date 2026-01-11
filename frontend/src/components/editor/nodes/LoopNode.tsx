@@ -75,14 +75,14 @@ export const LoopNode = memo((props: NodeProps) => {
         <Tooltip>
             <TooltipTrigger asChild>
                 <div className={cn(
-                    "shadow-md rounded-md bg-card border-2 min-w-[180px] overflow-hidden transition-all",
+                    "flex flex-col shadow-md rounded-md bg-card border-2 min-w-[180px] transition-all",
                     selected ? "border-primary ring-1 ring-primary" : "border-border",
                     !!data.hasError && "border-destructive bg-destructive/5"
                 )}>
                     {/* Input Handle */}
                     <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
 
-                    {/* --- HEADER: The "WHAT" --- */}
+                    {/* --- HEADER --- */}
                     <div className={cn(
                         "px-3 py-2 flex items-center gap-2 border-b",
                         isTimeMode ? "bg-purple-50/50 dark:bg-purple-900/20" : "bg-blue-50/50 dark:bg-blue-900/20"
@@ -152,9 +152,8 @@ export const LoopNode = memo((props: NodeProps) => {
                         </div>
                     </div>
 
-                    {/* --- BODY: The "HOW" --- */}
+                    {/* --- BODY --- */}
                     <div className="p-3 bg-card space-y-2">
-                        {/* Interval Row */}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Timer className="h-3.5 w-3.5 opacity-70" />
                             <span>Every</span>
@@ -164,7 +163,7 @@ export const LoopNode = memo((props: NodeProps) => {
                         </div>
                     </div>
 
-                    {/* --- FOOTER: The "STOP IF" (Condition) --- */}
+                    {/* --- CONDITION FOOTER (IF STOP CONDITION EXISTS) --- */}
                     {hasCondition && (
                         <div className="px-3 py-2 bg-orange-50/50 dark:bg-orange-900/10 border-t border-orange-100 dark:border-orange-900/30">
                             <div className="flex items-center gap-2 mb-1">
@@ -187,35 +186,31 @@ export const LoopNode = memo((props: NodeProps) => {
                         </div>
                     )}
 
-                    {/* Outputs */}
-
-                    {/* Body Path */}
-                    <div className="absolute -right-8 top-8 text-[9px] font-bold text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">BODY</div>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Handle
-                                type="source"
-                                position={Position.Right}
-                                id="body"
-                                className="w-3 h-3 bg-green-500 hover:scale-125 transition-transform border-2 border-background"
-                            />
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="text-xs">Loop Body</TooltipContent>
-                    </Tooltip>
-
-                    {/* Exit Path */}
-                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[9px] font-bold text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">EXIT</div>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
+                    {/* --- EXIT PATHS FOOTER --- */}
+                    <div className="flex text-[10px] font-bold h-7 border-t mt-auto">
+                        {/* DONE Path (Left, Green) */}
+                        <div className="flex-1 flex items-center justify-center gap-1 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-500 border-r relative rounded-bl-sm">
+                            DONE
                             <Handle
                                 type="source"
                                 position={Position.Bottom}
                                 id="exit"
-                                className="w-3 h-3 bg-red-500 hover:scale-125 transition-transform border-2 border-background"
+                                className="w-3 h-3 bg-green-500 !bottom-[-6px]"
                             />
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">Exit Loop</TooltipContent>
-                    </Tooltip>
+                        </div>
+
+                        {/* LOOP Path (Right, Purple) */}
+                        <div className="flex-1 flex items-center justify-center gap-1 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-500 relative rounded-br-sm">
+                            <Repeat className="h-3 w-3" />
+                            LOOP
+                            <Handle
+                                type="source"
+                                position={Position.Bottom}
+                                id="body"
+                                className="w-3 h-3 bg-purple-500 !bottom-[-6px]"
+                            />
+                        </div>
+                    </div>
 
                     {/* Error Indicator */}
                     {!!data.hasError && (
