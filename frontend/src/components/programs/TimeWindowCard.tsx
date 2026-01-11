@@ -92,65 +92,100 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
                     <div className="border-t pt-4">
                         {/* Triggers List */}
                         <div className="space-y-2">
-                            {window.triggers.map((trigger, triggerIndex) => (
-                                <div
-                                    key={trigger.id}
-                                    className={cn(
-                                        "flex items-center justify-between p-3 rounded-md border-l-4",
-                                        trigger.behavior === 'break'
-                                            ? "border-l-red-500 bg-red-500/5"
-                                            : "border-l-green-500 bg-green-500/5"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="text-muted-foreground">{triggerIndex + 1}.</span>
-                                        <span className="font-medium">
-                                            {sensorsMap[trigger.sensorId] || trigger.sensorId}
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                            {formatOperator(trigger.operator)}
-                                        </span>
-                                        <span className="font-mono">
-                                            {trigger.value}
-                                            {trigger.operator === 'between' && trigger.valueMax && ` - ${trigger.valueMax}`}
-                                        </span>
-                                        <span className="text-muted-foreground">→</span>
-                                        <span className="text-primary font-medium">
-                                            {trigger.flowIds && trigger.flowIds.length > 0 ? (
-                                                trigger.flowIds.map(fid => flowsMap[fid] || fid).join(' + ')
-                                            ) : (
-                                                flowsMap[trigger.flowId!] || trigger.flowId
-                                            )}
-                                        </span>
-                                        <span className={cn(
-                                            "text-xs px-2 py-0.5 rounded",
+                            {window.triggers.map((trigger, triggerIndex) => {
+                                // Normalize conditions (handle legacy)
+                                const conditions = trigger.conditions?.length
+                                    ? trigger.conditions
+                                    : [{ sensorId: trigger.sensorId, operator: trigger.operator, value: trigger.value, valueMax: trigger.valueMax }];
+
+                                return (
+                                    <div
+                                        key={trigger.id}
+                                        className={cn(
+                                            "flex items-center justify-between p-3 rounded-md border-l-4",
                                             trigger.behavior === 'break'
-                                                ? "bg-red-500/20 text-red-600"
-                                                : "bg-green-500/20 text-green-600"
-                                        )}>
-                                            {trigger.behavior === 'break' ? '🛑 Break' : '⏭️ Continue'}
-                                        </span>
+                                                ? "border-l-red-500 bg-red-500/5"
+                                                : "border-l-green-500 bg-green-500/5"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-4 text-sm flex-1">
+                                            <span className="text-muted-foreground font-mono w-4">{triggerIndex + 1}.</span>
+
+                                            {/* Conditions Stack */}
+                                            <div className="flex flex-col">
+                                                {conditions.map((cond, cIndex) => (
+                                                    <React.Fragment key={cIndex}>
+                                                        {cIndex > 0 && (
+                                                            <div className="flex items-center gap-2 my-0.5">
+                                                                <div className="h-4 w-0.5 bg-muted-foreground/30 mx-2"></div>
+                                                                <span className={cn(
+                                                                    "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded",
+                                                                    trigger.logicalOperator === 'OR'
+                                                                        ? "bg-orange-500/20 text-orange-600"
+                                                                        : "bg-blue-500/20 text-blue-600"
+                                                                )}>
+                                                                    {trigger.logicalOperator || 'AND'}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium">
+                                                                {sensorsMap[cond.sensorId || ''] || cond.sensorId}
+                                                            </span>
+                                                            <span className="text-muted-foreground">
+                                                                {formatOperator(cond.operator!)}
+                                                            </span>
+                                                            <span className="font-mono">
+                                                                {cond.value}
+                                                                {cond.operator === 'between' && cond.valueMax && ` - ${cond.valueMax}`}
+                                                            </span>
+                                                        </div>
+                                                    </React.Fragment>
+                                                ))}
+                                            </div>
+
+                                            <span className="text-muted-foreground px-2">→</span>
+
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-primary font-medium">
+                                                    {trigger.flowIds && trigger.flowIds.length > 0 ? (
+                                                        trigger.flowIds.map(fid => flowsMap[fid] || fid).join(' + ')
+                                                    ) : (
+                                                        flowsMap[trigger.flowId!] || trigger.flowId
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            <span className={cn(
+                                                "text-xs px-2 py-0.5 rounded ml-auto mr-2",
+                                                trigger.behavior === 'break'
+                                                    ? "bg-red-500/20 text-red-600"
+                                                    : "bg-green-500/20 text-green-600"
+                                            )}>
+                                                {trigger.behavior === 'break' ? '🛑 Break' : '⏭️ Continue'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => onEditTrigger(trigger.id)}
+                                            >
+                                                <Pencil className="h-3 w-3" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-destructive"
+                                                onClick={() => onDeleteTrigger(trigger.id)}
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => onEditTrigger(trigger.id)}
-                                        >
-                                            <Pencil className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-destructive"
-                                            onClick={() => onDeleteTrigger(trigger.id)}
-                                        >
-                                            <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
 
                             {window.triggers.length === 0 && (
                                 <div className="text-center py-4 text-muted-foreground text-sm">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, differenceInMinutes, parse, isValid } from 'date-fns';
 import type { IActiveProgram, IVariable, IContext } from '../../types/ActiveProgram';
 import { activeProgramService } from '../../services/activeProgramService';
@@ -1016,6 +1016,11 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                     const isExecuted = executedTriggers.includes(trigger.id);
                                                     const canEdit = isWindowEditable(window) && !isExecuted;
 
+                                                    // Normalize conditions
+                                                    const conditions = trigger.conditions?.length
+                                                        ? trigger.conditions
+                                                        : [{ sensorId: trigger.sensorId, operator: trigger.operator, value: trigger.value, valueMax: trigger.valueMax }];
+
                                                     return (
                                                         <div
                                                             key={trigger.id}
@@ -1028,42 +1033,70 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                         : "border-l-orange-500 bg-orange-500/5"
                                                             )}
                                                         >
-                                                            <div className="flex items-center gap-2">
-                                                                {isExecuted ? (
-                                                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                                                ) : (
-                                                                    <Circle className="h-4 w-4 text-muted-foreground" />
-                                                                )}
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    #{triggerIndex + 1}
-                                                                </span>
-                                                                <Activity className="h-3.5 w-3.5 text-cyan-500" />
-                                                                <span className={cn("font-medium", isExecuted && "line-through")}>
-                                                                    {getSensorName(trigger.sensorId)}
-                                                                </span>
-
-                                                                {/* Display Trigger Condition */}
-                                                                <span
-                                                                    className={cn(
-                                                                        "font-mono text-sm",
-                                                                        canEdit && "cursor-pointer hover:bg-muted/50 px-1 rounded"
+                                                            <div className="flex items-center gap-4 flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    {isExecuted ? (
+                                                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                                    ) : (
+                                                                        <Circle className="h-4 w-4 text-muted-foreground" />
                                                                     )}
-                                                                    onClick={(e) => canEdit && handleEditTrigger(window.id, trigger, e)}
-                                                                    title={canEdit ? "Кликнете за пълна редакция" : undefined}
-                                                                >
-                                                                    {formatOperator(trigger.operator)} {trigger.value}
-                                                                    {trigger.operator === 'between' && ` - ${trigger.valueMax}`}
-                                                                </span>
+                                                                    <span className="text-xs text-muted-foreground mr-1">
+                                                                        #{triggerIndex + 1}
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* Conditions Stack */}
+                                                                <div className="flex flex-col">
+                                                                    {conditions.map((cond: any, cIndex: number) => (
+                                                                        <React.Fragment key={cIndex}>
+                                                                            {cIndex > 0 && (
+                                                                                <div className="flex items-center gap-2 my-0.5">
+                                                                                    <div className="h-4 w-0.5 bg-muted-foreground/30 mx-2"></div>
+                                                                                    <span className={cn(
+                                                                                        "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded",
+                                                                                        trigger.logicalOperator === 'OR'
+                                                                                            ? "bg-orange-500/20 text-orange-600"
+                                                                                            : "bg-blue-500/20 text-blue-600"
+                                                                                    )}>
+                                                                                        {trigger.logicalOperator || 'AND'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Activity className="h-3.5 w-3.5 text-cyan-500" />
+                                                                                <span className={cn("font-medium", isExecuted && "line-through")}>
+                                                                                    {getSensorName(cond.sensorId)}
+                                                                                </span>
+
+                                                                                <span
+                                                                                    className={cn(
+                                                                                        "font-mono text-sm",
+                                                                                        canEdit && "cursor-pointer hover:bg-muted/50 px-1 rounded"
+                                                                                    )}
+                                                                                    onClick={(e) => canEdit && handleEditTrigger(window.id, trigger, e)}
+                                                                                    title={canEdit ? "Кликнете за пълна редакция" : undefined}
+                                                                                >
+                                                                                    {formatOperator(cond.operator)} {cond.value}
+                                                                                    {cond.operator === 'between' && ` - ${cond.valueMax}`}
+                                                                                </span>
+                                                                            </div>
+                                                                        </React.Fragment>
+                                                                    ))}
+                                                                </div>
 
                                                                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                                                <Zap className="h-3.5 w-3.5 text-yellow-500" />
-                                                                <span className="text-sm text-primary font-medium">
-                                                                    {trigger.flowIds && trigger.flowIds.length > 0
-                                                                        ? trigger.flowIds.map((fid: string) => getFlowName(fid)).join(' + ')
-                                                                        : getFlowName(trigger.flowId)
-                                                                    }
-                                                                </span>
+
+                                                                <div className="flex items-center gap-2">
+                                                                    <Zap className="h-3.5 w-3.5 text-yellow-500" />
+                                                                    <span className="text-sm text-primary font-medium">
+                                                                        {trigger.flowIds && trigger.flowIds.length > 0
+                                                                            ? trigger.flowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                            : getFlowName(trigger.flowId)
+                                                                        }
+                                                                    </span>
+                                                                </div>
                                                             </div>
+
                                                             <div className="flex items-center gap-2">
                                                                 {isExecuted && (
                                                                     <span className="text-xs text-green-600 font-medium">

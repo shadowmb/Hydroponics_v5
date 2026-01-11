@@ -67,11 +67,41 @@ export class ProgramLogService {
             // data usually has { programId, windowId, sensorName, sensorValue, condition, flowId ... }
             await this.logEvent(data.programId, 'TRIGGER_MATCH', `Тригер: ${data.sensorName} (${data.sensorValue}) ${data.condition}`, {
                 windowId: data.windowId,
-                windowName: data.windowName, // Using windowId as fallback if name missing? No, TriggerEvaluator sends it.
+                windowName: data.windowName,
                 sensorId: data.sensorId,
                 value: data.sensorValue,
                 flowIds: data.flowIds
             });
+        });
+
+        // Trigger Evaluation (Detailed Logging)
+        events.on('advanced:trigger_evaluation', async (data: any) => {
+            if (!data.programId) return;
+
+            // Use deduplication to update the last log entry if it's the same trigger evaluation
+            // This prevents spamming the log every second
+            await programDailyLogRepository.addOrUpdateEvent(
+                data.programId,
+                {
+                    timestamp: new Date(),
+                    type: 'TRIGGER_EVALUATION',
+                    message: '🎯 [TriggerEvaluator] Evaluation Result',
+                    metadata: {
+                        windowId: data.windowId,
+                        triggerId: data.triggerId,
+                        triggerIndex: data.triggerIndex,
+                        logicalOp: data.logicalOp,
+                        conditions: data.conditions,
+                        results: data.results,
+                        isTriggered: data.isTriggered
+                    }
+                },
+                {
+                    type: 'TRIGGER_EVALUATION',
+                    triggerId: data.triggerId,
+                    windowId: data.windowId
+                }
+            );
         });
 
         // Trigger Skipped (sensor error or condition not met)

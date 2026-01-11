@@ -7,12 +7,25 @@ export type TriggerOperator = '>' | '<' | '>=' | '<=' | '=' | '!=' | 'between';
 export type TriggerBehavior = 'continue' | 'break';
 export type DataSource = 'cached' | 'live';
 
-export interface ITrigger {
-    id: string;
+export interface ITriggerCondition {
     sensorId: string;
     operator: TriggerOperator;
     value: number;
-    valueMax?: number;  // For 'between' operator
+    valueMax?: number;
+}
+
+export interface ITrigger {
+    id: string;
+    // Single condition (Deprecated, kept for migration)
+    sensorId?: string;
+    operator?: TriggerOperator;
+    value?: number;
+    valueMax?: number;
+
+    // Multi-condition support
+    conditions?: ITriggerCondition[];
+    logicalOperator?: 'AND' | 'OR';
+
     flowId?: string;    // Deprecated: verify migration
     flowIds?: string[]; // New: Multiple flows support
     behavior: TriggerBehavior;
@@ -59,12 +72,26 @@ export interface IProgram extends Document, ISoftDelete {
 }
 
 // --- Trigger Sub-Schema ---
-const TriggerSchema = new Schema({
-    id: { type: String, required: true },
+const TriggerConditionSchema = new Schema({
     sensorId: { type: String, required: true },
     operator: { type: String, enum: ['>', '<', '>=', '<=', '=', '!=', 'between'], required: true },
     value: { type: Number, required: true },
-    valueMax: { type: Number },  // For 'between' operator
+    valueMax: { type: Number }
+}, { _id: false });
+
+const TriggerSchema = new Schema({
+    id: { type: String, required: true },
+
+    // Legacy single fields (not required anymore)
+    sensorId: { type: String },
+    operator: { type: String, enum: ['>', '<', '>=', '<=', '=', '!=', 'between'] },
+    value: { type: Number },
+    valueMax: { type: Number },
+
+    // New multi-condition fields
+    conditions: { type: [TriggerConditionSchema], default: [] },
+    logicalOperator: { type: String, enum: ['AND', 'OR'], default: 'AND' },
+
     flowId: { type: String },    // Deprecated, optional
     flowIds: { type: [String], default: [] }, // New
     behavior: { type: String, enum: ['continue', 'break'], default: 'break' },

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
@@ -95,7 +95,78 @@ const getIcon = (type: LogEntry['type']) => {
     }
 };
 
-const formatMessage = (entry: LogEntry): string => {
+const formatMessage = (entry: LogEntry): React.ReactNode => {
+    // 1. Detailed Trigger Evaluation
+    if (entry.message && entry.message.includes('[TriggerEvaluator] Evaluation Result') && entry.metadata) {
+        const { conditions, results, isTriggered, logicalOp, triggerIndex } = entry.metadata;
+
+        if (conditions && Array.isArray(conditions)) {
+            return (
+                <div className="mt-0.5">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-muted-foreground">
+                            Evaluation Result {triggerIndex ? `- Trigger #${triggerIndex}` : ''}
+                        </span>
+                        <span className={cn(
+                            "text-xs px-1.5 py-0.5 rounded font-bold uppercase",
+                            isTriggered ? "bg-green-500/20 text-green-600" : "bg-gray-500/20 text-gray-500"
+                        )}>
+                            {isTriggered ? "TRUE" : "FALSE"}
+                        </span>
+                    </div>
+                    <div className="border rounded-md bg-background/50 overflow-hidden text-xs max-w-[500px]">
+                        {conditions.map((cond: any, idx: number) => {
+                            const result = results?.[idx];
+                            const isError = cond.error;
+
+                            return (
+                                <div key={idx} className={cn(
+                                    "flex items-center gap-2 px-2 py-1.5 border-b last:border-0",
+                                    result ? "bg-green-500/5" : "bg-red-500/5"
+                                )}>
+                                    {isError ? (
+                                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                                    ) : result ? (
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                                    ) : (
+                                        <XCircle className="h-3.5 w-3.5 text-red-500/70" />
+                                    )}
+
+                                    <div className="flex flex-1 items-baseline gap-2 overflow-hidden">
+                                        <span className="font-semibold text-foreground/90 truncate max-w-[150px]" title={cond.sensorName || cond.sensorId}>
+                                            {cond.sensorName || cond.sensorId}
+                                        </span>
+
+                                        {!isError && (
+                                            <span className="font-mono text-muted-foreground">
+                                                ({typeof cond.sensorValue === 'number' ? cond.sensorValue.toFixed(1) : cond.sensorValue})
+                                            </span>
+                                        )}
+
+                                        <span className="font-mono text-xs opacity-80 whitespace-nowrap">
+                                            {cond.operator} {cond.value}
+                                            {cond.valueMax ? ` - ${cond.valueMax}` : ''}
+                                        </span>
+                                    </div>
+
+                                    {/* Show Logic Operator between items */}
+                                    {idx < conditions.length - 1 && (
+                                        <span className={cn(
+                                            "ml-auto text-[10px] uppercase font-bold px-1.5 rounded",
+                                            logicalOp === 'OR' ? "bg-orange-500/10 text-orange-600" : "bg-blue-500/10 text-blue-600"
+                                        )}>
+                                            {logicalOp || 'AND'}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        }
+    }
+
     // Backend Format
     if (entry.message) return entry.message;
 
@@ -268,6 +339,7 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
             'advanced:window_skipped',
             'advanced:trigger_matched',
             'advanced:trigger_skipped',
+            'advanced:trigger_evaluation', // <-- Add this
             'advanced:fallback_executed',
             'advanced:program_day_complete',
             'active:program_started',

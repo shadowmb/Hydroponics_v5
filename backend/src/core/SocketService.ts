@@ -56,6 +56,7 @@ export class SocketService {
             'advanced:window_active',
             'advanced:trigger_matched',
             'advanced:trigger_skipped',
+            'advanced:trigger_evaluation',
             'advanced:window_completed',
             'advanced:fallback_executed',
             'advanced:program_day_complete',

@@ -27,8 +27,8 @@ export class TriggerEvaluator {
         window: ITimeWindow,
         windowState: IWindowState,
         globalOverrides: Record<string, any> = {},
-        contextOverrides: Record<string, any> = {}, // Nest: { contextId: { var: val } }
-        programId?: string // Added for logging context
+        contextOverrides: Record<string, any> = {},
+        programId?: string
     ): Promise<EvaluationResult> {
 
         const pendingTriggers = window.triggers.filter(
@@ -40,89 +40,138 @@ export class TriggerEvaluator {
             return 'all_done';
         }
 
-        // Evaluate triggers in order (priority is implicit by array order)
+        // Evaluate triggers in order
         for (const trigger of pendingTriggers) {
             try {
-                // Determine original index for context generation
                 const originalTIdx = window.triggers.findIndex(t => t.id === trigger.id);
 
-                // Get sensor name first (needed for logging/events)
-                const sensorDevice = await DeviceModel.findById(trigger.sensorId);
-                const sensorName = sensorDevice?.name || trigger.sensorId;
+                // --- Condition Evaluation Logic ---
+                let isTriggered = false;
+                let logDetails: any = { matchingConditions: [] };
 
-                const sensorValue = await this.readSensor(trigger.sensorId, window.dataSource);
+                // 1. Determine conditions list (New vs Legacy)
+                let conditionsToCheck = trigger.conditions || [];
 
-                if (sensorValue === null) {
-                    logger.warn({ triggerId: trigger.id, sensorId: trigger.sensorId },
-                        '⚠️ Sensor read returned null, skipping trigger');
+                // Fallback: If no conditions array, build one from legacy fields
+                if (conditionsToCheck.length === 0 && trigger.sensorId) {
+                    conditionsToCheck = [{
+                        sensorId: trigger.sensorId,
+                        operator: trigger.operator!,
+                        value: trigger.value!,
+                        valueMax: trigger.valueMax
+                    }];
+                }
 
-                    // Emit skipped event for visibility
-                    events.emit('advanced:trigger_skipped', {
-                        programId,
-                        windowId: window.id,
-                        triggerId: trigger.id,
-                        sensorName,
-                        sensorValue: 0, // Placeholder
-                        condition: 'SENSOR ERROR',
-                        timestamp: new Date()
-                    });
+                // 2. Evaluate based on Logical Operator (AND vs OR)
+                const logicalOp = trigger.logicalOperator || 'AND';
+
+                if (conditionsToCheck.length === 0) {
+                    logger.warn({ triggerId: trigger.id }, '⚠️ Trigger has no conditions defined');
                     continue;
                 }
 
-                const matches = this.matchesCondition(sensorValue, trigger);
-                logger.info({ sensorValue, condition: `${trigger.operator} ${trigger.value}`, matches }, '🎯 [TriggerEvaluator] Condition check result');
+                // We need to check ALL conditions for AND, or ANY for OR
+                const results: boolean[] = [];
+                const detailedConditions: any[] = [];
 
-                if (matches) {
+                for (const condition of conditionsToCheck) {
+                    // Resolve sensor name
+                    let sensorName = condition.sensorId;
+                    try {
+                        const device = await DeviceModel.findById(condition.sensorId).select('name').lean();
+                        if (device && device.name) sensorName = device.name;
+                    } catch (e) { /* ignore */ }
+
+                    const sensorValue = await this.readSensor(condition.sensorId, window.dataSource);
+
+                    if (sensorValue === null) {
+                        // If a sensor fails, AND logic fails immediately. OR logic ignores it (treats as false).
+                        logger.warn({ triggerId: trigger.id, sensorId: condition.sensorId }, '⚠️ Sensor read null');
+                        results.push(false);
+                        detailedConditions.push({ ...condition, sensorName, sensorValue: 'ERR', error: true });
+                        continue;
+                    }
+
+                    const match = this.matchesCondition(sensorValue, condition);
+                    results.push(match);
+                    detailedConditions.push({ ...condition, sensorName, sensorValue });
+
+                    if (match) {
+                        logDetails.matchingConditions.push(`${sensorName} ${condition.operator} ${condition.value}`);
+                    }
+                }
+
+                if (logicalOp === 'AND') {
+                    isTriggered = results.every(r => r === true);
+                } else {
+                    // OR
+                    isTriggered = results.some(r => r === true);
+                }
+
+                logger.info({
+                    triggerId: trigger.id,
+                    triggerIndex: originalTIdx + 1,
+                    logicalOp,
+                    conditions: detailedConditions,
+                    results,
+                    isTriggered
+                }, '🎯 [TriggerEvaluator] Evaluation Result');
+
+                // Emit detailed evaluation for UI logging
+                events.emit('advanced:trigger_evaluation', {
+                    programId,
+                    windowId: window.id,
+                    triggerId: trigger.id,
+                    triggerIndex: originalTIdx + 1,
+                    logicalOp,
+                    conditions: detailedConditions,
+                    results,
+                    isTriggered
+                });
+
+                // --- Action Execution ---
+                if (isTriggered) {
                     logger.info({
                         triggerId: trigger.id,
                         flowIds: trigger.flowIds,
                         flowId: trigger.flowId,
                         behavior: trigger.behavior
-                    }, '⚡ Trigger condition matched - executing flow(s)');
+                    }, '⚡ Trigger matched - executing flow(s)');
 
-                    // Construct steps from multiple flows or legacy single flow
+                    // Emit matched event
+                    events.emit('advanced:trigger_matched', {
+                        programId,
+                        windowId: window.id,
+                        triggerId: trigger.id,
+                        sensorName: 'Multi-Condition', // TODO: List names?
+                        sensorValue: 0, // Not applicable for multi
+                        condition: `${conditionsToCheck.length} conditions (${logicalOp})`,
+                        flowName: trigger.flowIds?.length ? `${trigger.flowIds.length} Flows` : 'Flow',
+                        timestamp: new Date()
+                    });
+
+                    // Construct steps
                     let steps: { flowId: string, overrides: any }[] = [];
 
                     if (trigger.flowIds && trigger.flowIds.length > 0) {
                         steps = trigger.flowIds.map((fid, fIdx) => {
                             const contextId = `t_${originalTIdx}_f_${fIdx}`;
-                            const specificOverrides = contextOverrides[contextId] || {};
                             return {
                                 flowId: fid,
-                                overrides: { ...globalOverrides, ...specificOverrides }
+                                overrides: { ...globalOverrides, ...contextOverrides[contextId] || {} }
                             };
                         });
                     } else if (trigger.flowId) {
                         const contextId = `t_${originalTIdx}_f_0`;
-                        const specificOverrides = contextOverrides[contextId] || {};
                         steps = [{
                             flowId: trigger.flowId,
-                            overrides: { ...globalOverrides, ...specificOverrides }
+                            overrides: { ...globalOverrides, ...contextOverrides[contextId] || {} }
                         }];
                     } else {
-                        logger.warn({ triggerId: trigger.id }, '⚠️ Trigger matched but no flows defined');
                         return 'pending';
                     }
 
-                    // Emit trigger_matched event for Live Execution Log
-                    // For multi-flow, we show "Multiple Flows" or the first one
-                    const flowDisplayName = steps.length > 1 ? `${steps.length} Flows` : steps[0]?.flowId;
-
-                    events.emit('advanced:trigger_matched', {
-                        programId,
-                        windowId: window.id,
-                        triggerId: trigger.id,
-                        sensorName,
-                        sensorValue,
-                        condition: `${trigger.operator} ${trigger.value}${trigger.valueMax ? `-${trigger.valueMax}` : ''}`,
-                        flowName: flowDisplayName,
-                        timestamp: new Date()
-                    });
-
-                    // Execute the flow(s) with variable overrides
-                    // Add activeProgramId + window context so ProgramLogService can track flow executions
-                    // NOTE: The overrides are now per-step, but we pass merged session overrides for tracking
-                    // We'll use the first step's overrides as base context, or global
+                    // Context injection
                     const baseContext = {
                         ...globalOverrides,
                         activeProgramId: programId,
@@ -130,50 +179,27 @@ export class TriggerEvaluator {
                         windowName: window.name
                     };
 
-                    // We need to inject the context into EACH step's overrides
                     steps = steps.map(s => ({
                         ...s,
                         overrides: { ...s.overrides, ...baseContext }
                     }));
 
                     const flowSessionId = await cycleManager.startCycle(
-                        trigger.id,  // cycleId
-                        `Trigger: ${trigger.id}`,  // name
+                        trigger.id,
+                        `Trigger: ${trigger.id}`,
                         steps,
-                        baseContext  // session overrides (base)
+                        baseContext
                     );
 
-                    // Mark trigger as executing (will be moved to executed when flow completes)
                     if (!windowState.triggersExecuting) windowState.triggersExecuting = [];
                     windowState.triggersExecuting.push(trigger.id);
                     windowState.currentFlowSessionId = flowSessionId;
 
-                    logger.info({
-                        windowId: window.id,
-                        triggerId: trigger.id,
-                        flowSessionId,
-                        stepsCount: steps.length
-                    }, '🚀 Trigger flow(s) started - waiting for completion');
-
                     return 'executing';
-                } else {
-                    // Trigger condition NOT met
-                    events.emit('advanced:trigger_skipped', {
-                        programId,
-                        windowId: window.id,
-                        triggerId: trigger.id,
-                        sensorName,
-                        sensorValue,
-                        condition: `${trigger.operator} ${trigger.value}${trigger.valueMax ? `-${trigger.valueMax}` : ''}`,
-                        timestamp: new Date()
-                    });
                 }
+
             } catch (error: any) {
-                logger.error({
-                    triggerId: trigger.id,
-                    error: error.message
-                }, '❌ Error evaluating trigger');
-                // Continue to next trigger (safe default)
+                logger.error({ triggerId: trigger.id, error: error.message }, '❌ Error evaluating trigger');
             }
         }
 
@@ -290,8 +316,14 @@ export class TriggerEvaluator {
     /**
      * Check if a sensor value matches a trigger condition.
      */
-    private matchesCondition(value: number, trigger: ITrigger): boolean {
-        const { operator, value: target, valueMax } = trigger;
+    /**
+     * Check if a sensor value matches a trigger condition.
+     */
+    private matchesCondition(value: number, condition: { operator: TriggerOperator, value: number, valueMax?: number }): boolean {
+        const { operator, value: target, valueMax } = condition;
+
+        // Ensure values are numbers (runtime safety)
+        if (typeof target !== 'number') return false;
 
         switch (operator) {
             case '>':
@@ -307,7 +339,9 @@ export class TriggerEvaluator {
             case '!=':
                 return value !== target;
             case 'between':
-                return value >= target && value <= (valueMax ?? target);
+                // For 'between', we need valueMax
+                if (typeof valueMax !== 'number') return false;
+                return value >= target && value <= valueMax;
             default:
                 logger.warn({ operator }, '⚠️ Unknown operator');
                 return false;

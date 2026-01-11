@@ -44,7 +44,7 @@
       "D11_11"
     ],
     "values": {
-      "distance": 100
+      "distance": 75.5
     },
     "calibrationPoints": [
       {
@@ -83,7 +83,7 @@
       "D1_1"
     ],
     "values": {
-      "par": 80
+      "par": 85
     }
   },
   {
