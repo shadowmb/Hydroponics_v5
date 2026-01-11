@@ -129,11 +129,22 @@ export default async function AIController(fastify: FastifyInstance) {
                 if (cwContent) {
                     specificContext += `\n=== WIZARD GUIDE: Controller Wizard ===\n` + cwContent + '\n';
                 }
+
+                // Granular Step-Based Section Guidance
+                // Note: We use the same file but AI should focus on the current step
+                if (uiContext.step) {
+                    specificContext += `\n[!IMPORTANT] AI INSTRUCTION: The user is on STEP ${uiContext.step} of the Controller Wizard. Provide guidance only for this step.\n`;
+                }
             } else if (uiContext?.wizard === 'DeviceWizard') {
                 const dwDoc = path.join(docsBasePath, 'Device-Wizard-Guide.md');
                 const dwContent = safeReadFile(dwDoc, 'Device Wizard Guide');
                 if (dwContent) {
                     specificContext += `\n=== WIZARD GUIDE: Device Wizard ===\n` + dwContent + '\n';
+                }
+
+                // Granular Step-Based Section Guidance
+                if (uiContext.step) {
+                    specificContext += `\n[!IMPORTANT] AI INSTRUCTION: The user is on STEP ${uiContext.step} of the Device Wizard. Provide guidance only for this step.\n`;
                 }
             }
 
@@ -144,16 +155,24 @@ export default async function AIController(fastify: FastifyInstance) {
                     if (mapContent) {
                         const map = JSON.parse(mapContent);
 
-                        // Check for path mappings
                         if (map.path_mappings && uiContext?.path) {
-                            for (const [pathPattern, filename] of Object.entries(map.path_mappings)) {
+                            for (const [pathPattern, value] of Object.entries(map.path_mappings)) {
                                 // Exact match or startsWith for nested routes
                                 if (uiContext.path === pathPattern || uiContext.path.startsWith(pathPattern + '/')) {
-                                    const filePath = path.join(docsBasePath, filename as string);
-                                    if (!specificContext.includes(filename as string)) {
-                                        const pathContent = safeReadFile(filePath, `Path Guide: ${filename as string}`);
-                                        if (pathContent) {
-                                            specificContext += `\n=== PAGE GUIDE: ${(filename as string).replace('.md', '')} ===\n` + pathContent + '\n';
+
+                                    // Normalize to array to support single string or multiple files
+                                    const files = Array.isArray(value) ? value : [value];
+
+                                    for (const filename of files) {
+                                        const fileStr = String(filename);
+                                        const filePath = path.join(docsBasePath, fileStr);
+
+                                        // Avoid duplicating if already loaded
+                                        if (!specificContext.includes(fileStr)) {
+                                            const pathContent = safeReadFile(filePath, `Path Guide: ${fileStr}`);
+                                            if (pathContent) {
+                                                specificContext += `\n=== PAGE GUIDE: ${fileStr.replace('.md', '')} ===\n` + pathContent + '\n';
+                                            }
                                         }
                                     }
                                 }
@@ -162,15 +181,23 @@ export default async function AIController(fastify: FastifyInstance) {
 
                         // 3. Keyword-based RAG (Fallback/Additive)
                         if (map.keywords) {
-                            for (const [pattern, filename] of Object.entries(map.keywords)) {
+                            for (const [pattern, value] of Object.entries(map.keywords)) {
                                 const regex = new RegExp(pattern, 'i');
                                 if (regex.test(lastMessageLower)) {
-                                    const filePath = path.join(docsBasePath, filename as string);
-                                    // Avoid duplicating if already loaded by state or path
-                                    if (!specificContext.includes(filename as string)) {
-                                        const keywordContent = safeReadFile(filePath, `Keyword Match: ${filename}`);
-                                        if (keywordContent) {
-                                            specificContext += `\n=== SEARCHED TOPIC: ${filename} ===\n` + keywordContent + '\n';
+
+                                    // Normalize to array
+                                    const files = Array.isArray(value) ? value : [value];
+
+                                    for (const filename of files) {
+                                        const fileStr = String(filename);
+                                        const filePath = path.join(docsBasePath, fileStr);
+
+                                        // Avoid duplicating if already loaded
+                                        if (!specificContext.includes(fileStr)) {
+                                            const keywordContent = safeReadFile(filePath, `Keyword Match: ${fileStr}`);
+                                            if (keywordContent) {
+                                                specificContext += `\n=== SEARCHED TOPIC: ${fileStr} ===\n` + keywordContent + '\n';
+                                            }
                                         }
                                     }
                                 }

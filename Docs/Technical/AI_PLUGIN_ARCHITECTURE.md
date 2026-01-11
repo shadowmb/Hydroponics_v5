@@ -173,60 +173,68 @@ AI зарежда документация автоматично, когато 
 
 ### 5.4 Wizard Логика (Многостъпкови процеси)
 
-За Wizard-и (като Firmware Builder), документацията се зарежда **автоматично според стъпката**, а не само по ключови думи.
+За сложни Wizard-и (като Firmware Builder, Add Controller), AI може да следи **конкретната стъпка** на потребителя.
 
-#### Къде се конфигурира
+#### А. Frontend Интеграция (React)
+
+Компонентът на Wizard-а трябва да "излъчва" своето състояние към `UIStateContext`.
+
+1. **Импортирайте хука:**
+   ```typescript
+   import { useUIState } from '@/context/UIStateContext';
+   ```
+
+2. **Извикайте `setWizardState` в `useEffect`:**
+   ```typescript
+   const { setWizardState, clearWizardState } = useUIState();
+
+   // Мапване на стъпки (ако са string) към число
+   const stepMap = { 'select-type': 1, 'configure': 2, 'review': 3 };
+
+   useEffect(() => {
+       if (open) {
+           setWizardState({
+               active: true,
+               name: 'MyNewWizard', // Уникално име за Backend-а
+               step: stepMap[currentStep], // Число (1, 2, 3...)
+               config: formData // Полезни данни за AI
+           });
+       }
+       return () => clearWizardState();
+   }, [open, currentStep, formData]);
+   ```
+
+#### Б. Backend Логика (Node.js)
 
 Файл: `backend/src/plugins/ai/controllers/AIController.ts`
 
-#### Структура на кода
+AI контролерът чете `uiContext.step` и може да инжектира специфични инструкции.
 
 ```typescript
-// 1. Проверка за активен Wizard
-if (uiContext?.wizard === 'FirmwareBuilder') {
-    // Зареди основното ръководство
-    const fwDoc = path.join(docsBasePath, 'Firmware-Generator-Walkthrough.md');
+if (uiContext?.wizard === 'MyNewWizard') {
+    // 1. Зареждане на основния файл
+    const docPath = path.join(docsBasePath, 'My-Wizard-Guide.md');
+    const content = safeReadFile(docPath, 'Wizard Guide');
     
-    // 2. Допълнителни файлове по стъпка
-    const stepDocs: Record<number, { file: string; label: string }> = {
-        2: { file: 'Transport-Config.md', label: 'Transport Configuration' },
-        3: { file: 'Plugins-Reference.md', label: 'Plugins Reference' },
-        4: { file: 'Test-Devices.md', label: 'Devices Configuration' }
-    };
+    if (content) {
+        specificContext += `\n=== WIZARD GUIDE: My New Wizard ===\n` + content + '\n';
+    }
+
+    // 2. Инструкции за конкретна стъпка (Step-Awareness)
+    if (uiContext.step) {
+        specificContext += `\n[!IMPORTANT] AI INSTRUCTION: The user is on STEP ${uiContext.step} of MyNewWizard. Provide guidance ONLY for this step.\n`;
+        
+        // Опционално: Зареждане на допълнителен файл само за тази стъпка
+        if (uiContext.step === 2) {
+             // load 'Step2-Advanced-Config.md'
+        }
+    }
 }
 ```
 
-#### Добавяне на нов Wizard
+#### В. Документиране
 
-1. **Създайте документация** за новия Wizard:
-   ```
-   backend/src/plugins/ai/docs/Device-Wizard-Guide.md
-   ```
-
-2. **Редактирайте `AIController.ts`**, добавете нов блок:
-   ```typescript
-   if (uiContext?.wizard === 'DeviceWizard') {
-       const doc = path.join(docsBasePath, 'Device-Wizard-Guide.md');
-       const content = safeReadFile(doc, 'Device Wizard Guide');
-       if (content) {
-           specificContext += `\n=== WIZARD GUIDE: Device Wizard ===\n` + content + '\n';
-       }
-   }
-   ```
-
-3. **Свържете Frontend-а** (ако не е направено): В компонента на Wizard-а добавете синхронизация с `UIStateContext`:
-   ```typescript
-   const { setWizardState } = useUIState();
-   
-   useEffect(() => {
-       setWizardState({
-           active: true,
-           name: 'DeviceWizard',
-           step: currentStep,
-           config: wizardConfig
-       });
-   }, [currentStep, wizardConfig]);
-   ```
+В самия `.md` файл на ръководството (`My-Wizard-Guide.md`) е добра практика да се разделят секциите ясно, за да може AI лесно да намира информацията за "Step 1", "Step 2" и т.н.
 
 ### 5.5 Приоритет на зареждане
 
