@@ -17,15 +17,21 @@ export default async function AIController(fastify: FastifyInstance) {
 
         // 1. Save User Message (if sessionId provided)
         if (sessionId) {
+            console.log(`💾 Attempting to save message to session ${sessionId}`);
             // The last message is the new user input
             const lastUserMsg = messages[messages.length - 1];
             if (lastUserMsg && lastUserMsg.role === 'user') {
-                await chatSessionService.addMessage(sessionId, {
+                const saveResult = await chatSessionService.addMessage(sessionId, {
                     role: 'user',
                     content: lastUserMsg.content,
                     timestamp: new Date()
                 });
+                console.log(`💾 User message saved: ${!!saveResult}`);
+            } else {
+                console.warn('⚠️ Last message is not from user or missing content', lastUserMsg);
             }
+        } else {
+            console.warn('⚠️ No sessionId provided, skipping save.');
         }
 
         // EXPERIMENTAL: Keyword-based RAG & System Overview
@@ -145,4 +151,16 @@ ${specificContext ? `=== DETAILED CONTEXT START ===\n${specificContext}\n=== DET
             }
         }
     });
+    // Health Check Endpoint
+    fastify.get('/health', async () => ({
+        status: 'ok',
+        module: 'ai',
+        version: '1.0.0'
+    }));
+
+    // Detailed Status (optional for debugging)
+    fastify.get('/status', async () => ({
+        active: true,
+        plugins: ['chat', 'insights', 'actions']
+    }));
 }

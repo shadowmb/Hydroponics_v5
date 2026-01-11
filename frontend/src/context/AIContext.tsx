@@ -12,17 +12,28 @@ interface AIContextType {
     sessionRefreshTrigger: number;
     triggerSessionRefresh: () => void;
     isSessionValidating: boolean; // New state
+    isPluginActive: boolean;
 }
 
 const AIContext = createContext<AIContextType | undefined>(undefined);
 
 import { aiService } from '@/services/ai.service'; // Import service for validation
+import { toast } from 'sonner';
 
 export function AIProvider({ children }: { children: ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
     const [initialMessage, setInitialMessage] = useState<string | null>(null);
     const [sessionRefreshTrigger, setSessionRefreshTrigger] = useState(0);
     const [isSessionValidating, setIsSessionValidating] = useState(true); // Default true until checked
+    const [isPluginActive, setIsPluginActive] = useState(false);
+
+    // Check Plugin Health on Mount
+    useEffect(() => {
+        aiService.checkHealth().then(active => {
+            console.log('🔌 AI Plugin Status:', active);
+            setIsPluginActive(active);
+        });
+    }, []);
 
     // Initialize from localStorage if available
     const [activeSessionId, setActiveSessionIdState] = useState<string | null>(() => {
@@ -63,8 +74,19 @@ export function AIProvider({ children }: { children: ReactNode }) {
 
     const triggerSessionRefresh = () => setSessionRefreshTrigger(prev => prev + 1);
 
-    const toggleChat = () => setIsOpen(prev => !prev);
-    const openChat = () => setIsOpen(true);
+    const toggleChat = () => {
+        if (!isPluginActive) {
+            toast.info('AI Модулът не е инсталиран', {
+                description: 'Моля инсталирайте добавката за да ползвате асистента.'
+            });
+            return;
+        }
+        setIsOpen(prev => !prev);
+    };
+    const openChat = () => {
+        if (!isPluginActive) return;
+        setIsOpen(true);
+    };
     const closeChat = () => setIsOpen(false);
 
     return (
@@ -73,7 +95,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             activeSessionId, setActiveSessionId,
             toggleChat, openChat, closeChat,
             sessionRefreshTrigger, triggerSessionRefresh,
-            isSessionValidating
+            isSessionValidating, isPluginActive
         }}>
             {children}
         </AIContext.Provider>

@@ -1,4 +1,4 @@
-import { AIActionModel, IAIAction } from '../../persistence/schemas/AIAction.schema';
+import { AIActionModel, IAIAction } from '../models/AIAction.schema';
 
 export class AIActionsService {
 

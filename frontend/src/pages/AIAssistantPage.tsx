@@ -4,9 +4,11 @@ import { ChatSessionSidebar } from '@/components/ai/ChatSessionSidebar';
 import { FullScreenChat } from '@/components/ai/FullScreenChat';
 import { useAI } from '@/context/AIContext';
 import { aiService } from '@/services/ai.service';
+import { Bot } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function AIAssistantPage() {
-    const { activeSessionId, setActiveSessionId, closeChat, sessionRefreshTrigger } = useAI();
+    const { activeSessionId, setActiveSessionId, closeChat, sessionRefreshTrigger, isPluginActive } = useAI();
     const [localRefresh, setLocalRefresh] = useState(0);
 
     // Combine triggers
@@ -43,7 +45,22 @@ export function AIAssistantPage() {
                 refreshTrigger={refreshKey}
             />
             <div className="flex-1 h-full relative">
-                <FullScreenChat key={activeSessionId} sessionId={activeSessionId || undefined} />
+                {!isPluginActive ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
+                        <div className="bg-muted/30 p-6 rounded-full mb-6">
+                            <Bot className="h-16 w-16 opacity-50" />
+                        </div>
+                        <h2 className="text-2xl font-semibold mb-2">AI Модулът не е инсталиран</h2>
+                        <p className="max-w-md mb-8">
+                            За да използвате асистента, моля инсталирайте допълнителния AI плъгин.
+                        </p>
+                        <Button variant="outline" disabled>
+                            Научете повече (Coming Soon)
+                        </Button>
+                    </div>
+                ) : (
+                    <FullScreenChat key={activeSessionId} sessionId={activeSessionId || undefined} />
+                )}
             </div>
         </div>
     );

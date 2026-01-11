@@ -58,11 +58,9 @@ async function bootstrap() {
         app.register(apiRoutes);
 
         // Register AI Module if enabled
-        if (config.AI_ENABLED) {
-            // Dynamic import to avoid loading if disabled
-            const { aiModule } = await import('./modules/ai');
-            app.register(aiModule);
-        }
+        // 4.1 Load Plugins (e.g. AI)
+        const { PluginManager } = await import('./core/PluginManager');
+        await PluginManager.loadPlugins(app);
 
         // Register Settings Module
         const { settingsModule } = await import('./modules/settings');

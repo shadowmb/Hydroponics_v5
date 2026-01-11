@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useAI } from '@/context/AIContext';
+import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Plus, MessageSquare, Trash2, Search, Pencil, Check, X } from 'lucide-react';
@@ -35,6 +37,7 @@ export function ChatSessionSidebar({ onSelectSession, activeSessionId, onNewChat
     const [editTitle, setEditTitle] = useState('');
     const [deleteId, setDeleteId] = useState<string | null>(null); // For dialog
 
+    const { isPluginActive } = useAI();
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
     const fetchSessions = async () => {
@@ -103,7 +106,19 @@ export function ChatSessionSidebar({ onSelectSession, activeSessionId, onNewChat
     return (
         <div className="w-64 border-r bg-muted/20 flex flex-col h-full">
             <div className="p-4 border-b space-y-4">
-                <Button onClick={onNewChat} className="w-full justify-start" variant="default">
+                <Button
+                    onClick={() => {
+                        if (!isPluginActive) {
+                            toast.info('AI Модулът не е инсталиран', {
+                                description: 'Моля инсталирайте добавката за да ползвате асистента.'
+                            });
+                            return;
+                        }
+                        onNewChat();
+                    }}
+                    className="w-full justify-start"
+                    variant={!isPluginActive ? "secondary" : "default"} // Grey out button slightly if inactive
+                >
                     <Plus className="mr-2 h-4 w-4" /> Нов чат
                 </Button>
                 <div className="relative">
@@ -113,10 +128,11 @@ export function ChatSessionSidebar({ onSelectSession, activeSessionId, onNewChat
                         className="pl-8"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        disabled={!isPluginActive}
                     />
                 </div>
             </div>
-            <ScrollArea className="flex-1">
+            <ScrollArea className={`flex-1 ${!isPluginActive ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="p-2 space-y-1">
                     {filteredSessions.map(session => (
                         <div
@@ -195,6 +211,6 @@ export function ChatSessionSidebar({ onSelectSession, activeSessionId, onNewChat
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

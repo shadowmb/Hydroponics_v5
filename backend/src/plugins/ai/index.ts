@@ -7,7 +7,7 @@ import { ChatShortcutController } from './controllers/ChatShortcutController';
 import { actionScheduler } from './services/ActionScheduler';
 import { sensorWatcher } from './services/SensorWatcher';
 
-export async function aiModule(fastify: FastifyInstance) {
+export default async function aiModule(fastify: FastifyInstance) {
     console.log('🤖 AI Module Loaded');
     fastify.register(AIController, { prefix: '/api/ai' });
     fastify.register(AIActionsController, { prefix: '/api/ai' });

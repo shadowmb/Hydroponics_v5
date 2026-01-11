@@ -13,7 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIActionsSection } from './AIActionsSection';
 import { ChatShortcutsSection } from './ChatShortcutsSection';
 
+import { useAI } from '@/context/AIContext';
+
 export function SettingsAI() {
+    const { isPluginActive } = useAI();
     const [enabled, setEnabled] = useState(true);
     const [mode, setMode] = useState<'basic' | 'advanced'>('basic');
 
@@ -173,12 +176,26 @@ export function SettingsAI() {
                                     </CardDescription>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <Switch id="ai-mode" checked={enabled} onCheckedChange={setEnabled} />
-                                    <Label htmlFor="ai-mode">{enabled ? 'Enabled' : 'Disabled'}</Label>
+                                    <Switch
+                                        id="ai-mode"
+                                        checked={isPluginActive && enabled}
+                                        onCheckedChange={(val) => {
+                                            if (!isPluginActive) {
+                                                toast.info('AI Модулът не е инсталиран', {
+                                                    description: 'Моля инсталирайте добавката за да ползвате асистента.'
+                                                });
+                                                return;
+                                            }
+                                            setEnabled(val);
+                                        }}
+                                    />
+                                    <Label htmlFor="ai-mode">
+                                        {!isPluginActive ? 'Not Installed' : (enabled ? 'Enabled' : 'Disabled')}
+                                    </Label>
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent className="space-y-6">
+                        <CardContent className={`space-y-6 transition-opacity duration-300 ${!isPluginActive ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                             {/* Basic vs Advanced Toggle */}
                             <div className="flex items-center justify-between border p-4 rounded-lg bg-muted/20">
                                 <div className="space-y-0.5">

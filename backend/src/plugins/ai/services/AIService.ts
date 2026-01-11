@@ -6,7 +6,9 @@ const dynamicImport = (pkg: string) => new Function(`return import('${pkg}')`)()
 // We need to import the official SDK statically because we installed it and it supports CJS usually, 
 // or if it is ESM only we use dynamic import. @google/generative-ai is usually dual or ESM.
 // Let's use dynamic to be safe given the environment.
-import { settingsService } from '../../settings/services/SettingsService';
+// Adjusted import path for plugin architecture: 
+// plugins/ai/services/AIService.ts -> ../../../modules/settings
+import { settingsService } from '../../../modules/settings/services/SettingsService';
 // import { UIMessage } from '@tanstack/ai-client/react'; // Removed frontend import
 import { config as envConfig } from '../../../core/ConfigService';
 

@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { softDeletePlugin, ISoftDelete } from '../plugins/softDelete.plugin';
+import { softDeletePlugin, ISoftDelete } from '../../../modules/persistence/plugins/softDelete.plugin';
 
 export interface IAIAction extends Document, ISoftDelete {
     name: string;
@@ -111,4 +111,4 @@ const AIActionSchema = new Schema<IAIAction>({
 
 AIActionSchema.plugin(softDeletePlugin);
 
-export const AIActionModel = mongoose.model<IAIAction>('AIAction', AIActionSchema);
+export const AIActionModel = mongoose.model<IAIAction>('AIAction', AIActionSchema, 'ai_actions');

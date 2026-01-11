@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IInsight extends Document {
+export interface IAIInsight extends Document {
     actionId?: string;      // Link to the action that generated this
     actionName: string;     // Snapshot of name in case action is deleted
     content: string;        // The AI advice/analysis
@@ -9,7 +9,7 @@ export interface IInsight extends Document {
     createdAt: Date;
 }
 
-const InsightSchema = new Schema<IInsight>({
+const InsightSchema = new Schema<IAIInsight>({
     actionId: { type: String },
     actionName: { type: String, required: true },
     content: { type: String, required: true },
@@ -27,4 +27,4 @@ const InsightSchema = new Schema<IInsight>({
     }
 });
 
-export const InsightModel = mongoose.model<IInsight>('Insight', InsightSchema);
+export const AIInsightModel = mongoose.model<IAIInsight>('AIInsight', InsightSchema, 'ai_insights');

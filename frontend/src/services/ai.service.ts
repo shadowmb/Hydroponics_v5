@@ -12,7 +12,31 @@ export interface AIAction {
     lastRun?: string;
 }
 
+// Helper to safely handle missing plugin
+const safeRequest = async <T>(request: () => Promise<T>, fallback: any = null): Promise<T> => {
+    try {
+        return await request();
+    } catch (error: any) {
+        // If 404, it means plugin is missing (not installed)
+        if (error.response && error.response.status === 404) {
+            console.warn('⚠️ AI Plugin missing or endpoint not found.');
+            return fallback;
+        }
+        throw error;
+    }
+};
+
 export const aiService = {
+    // Check if AI Plugin is installed/active
+    checkHealth: async (): Promise<boolean> => {
+        try {
+            const res = await axios.get(`${API_URL}/ai/health`, { timeout: 2000 });
+            return res.status === 200 && res.data.module === 'ai';
+        } catch (e) {
+            return false;
+        }
+    },
+
     // Actions CRUD
     getActions: async (): Promise<AIAction[]> => {
         const response = await axios.get(`${API_URL}/ai/actions`);
@@ -88,7 +112,7 @@ export const aiService = {
     },
 
     updateSessionTitle: async (id: string, title: string): Promise<any> => {
-        const response = await axios.put(`${API_URL}/ai/sessions/${id}`, { title });
+        const response = await axios.patch(`${API_URL}/ai/sessions/${id}/title`, { title });
         return response.data.data;
     }
 };
