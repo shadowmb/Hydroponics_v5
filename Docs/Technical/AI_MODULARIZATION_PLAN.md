@@ -51,6 +51,13 @@ backend/src/
 *   Добавяне на извикване: `await PluginManager.loadPlugins(app);`
 *   Това гарантира, че компилаторът (TypeScript) няма да търси `modules/ai` и build-ът няма да гръмне, ако папката я няма.
 
+### 3.3. Database Schema Isolation & Naming Convention
+*   **Локация:** Всички Mongoose схеми (`.schema.ts`) ще се намират в `plugins/ai/models/`. Те **НЯМА** да бъдат част от `backend/src/models`.
+*   **Именуване (Code):** TypeScript класовете започват с `AI` (напр. `AIAction`, `AISettings`).
+*   **Именуване (DB):** Имената на колекциите в MongoDB **ЗАДЪЛЖИТЕЛНО** използват префикс `ai_` (lowercase snake_case).
+    *   Пример: `mongoose.model('AIAction', schema, 'ai_actions')`
+*   **Lifecycle:** Колекциите се създават автоматично от Mongoose при първоначалното зареждане на плъгина. Ако плъгинът бъде изтрит, данните остават в базата (за безопасност), но са невидими за приложението.
+
 ---
 
 ## 4. Frontend Адаптация ("The Lazy Shell")
@@ -78,10 +85,11 @@ backend/src/
 ### Фаза 1: Backend Refactoring
 1.  [ ] Създаване на папка `backend/src/plugins`.
 2.  [ ] Преместване на `backend/src/modules/ai` -> `backend/src/plugins/ai`.
-3.  [ ] Създаване на `backend/src/core/PluginManager.ts`.
-4.  [ ] Обновяване на `backend/src/index.ts` да ползва `PluginManager`.
-5.  [ ] Тест: Стартиране СЪС файловете (трябва да работи).
-6.  [ ] Тест: Стартиране БЕЗ файловете (трябва да работи, без AI).
+3.  [ ] **DB Update:** Преименуване на колекциите в моделите (ако е нужно) да ползват `ai_` префикс.
+4.  [ ] Създаване на `backend/src/core/PluginManager.ts`.
+5.  [ ] Обновяване на `backend/src/index.ts` да ползва `PluginManager`.
+6.  [ ] Тест: Стартиране СЪС файловете (трябва да работи).
+7.  [ ] Тест: Стартиране БЕЗ файловете (трябва да работи, без AI).
 
 ### Фаза 2: Frontend Hardening
 1.  [ ] Добавяне на `/health` endpoint в `AIController`.
