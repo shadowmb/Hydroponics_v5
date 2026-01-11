@@ -1,69 +1,67 @@
-[23:13] INFO: 🕒 Scheduler Tick
-    env: "development"
-🔍 AI Request: Role=assistant, SessionId=6962c0fe76ee3c5decdf36e3, MsgCount=1
-🔌 AI Service: creating adapter for [assistant] -> ollama/llama3.1:8b
-🦙 Ollama Adapter: Connecting... { model: 'llama3.1:8b' }
-💬 AI Chat Request [Role: assistant]
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"С","content":"С","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ъ","content":"Съ","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"жа","content":"Съжа","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ляв","content":"Съжаляв","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ам","content":"Съжалявам","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":",","content":"Съжалявам,","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" ч","content":"Съжалявам, ч","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"е","content":"Съжалявам, че","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" не","content":"Съжалявам, че не","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" съ","content":"Съжалявам, че не съ","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"м","content":"Съжалявам, че не съм","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" в","content":"Съжалявам, че не съм в","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" съ","content":"Съжалявам, че не съм в съ","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"стоя","content":"Съжалявам, че не съм в състоя","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ние","content":"Съжалявам, че не съм в състояние","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" да","content":"Съжалявам, че не съм в състояние да","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" Ви","content":"Съжалявам, че не съм в състояние да Ви","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" помог","content":"Съжалявам, че не съм в състояние да Ви помог","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"на","content":"Съжалявам, че не съм в състояние да Ви помогна","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" с","content":"Съжалявам, че не съм в състояние да Ви помогна с","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" т","content":"Съжалявам, че не съм в състояние да Ви помогна с т","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ова","content":"Съжалявам, че не съм в състояние да Ви помогна с това","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" запит","content":"Съжалявам, че не съм в състояние да Ви помогна с това запит","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ван","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитван","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"е","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":".","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване.","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" А","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. А","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ко","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" им","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако им","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ате","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" друг","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" в","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг в","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ъ","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въ","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"п","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въп","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"рос","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" или","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" проблеми","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" св","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми св","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ъ","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свъ","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"р","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свър","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"з","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свърз","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ани","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" с","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" систем","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с систем","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ата","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" на","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" Hydro","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydro","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"pon","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydropon","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ics","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" v","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"5","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":",","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5,","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" б","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, б","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"их","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" люб","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих люб","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ел","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих любел","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" да","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих любел да","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" Ви","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих любел да Ви","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":" пом","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих любел да Ви пом","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"ог","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих любел да Ви помог","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":"на","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих любел да Ви помогна","role":"assistant"}
-🔍 Chunk: {"type":"content","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"delta":".","content":"Съжалявам, че не съм в състояние да Ви помогна с това запитване. Ако имате друг въпрос или проблеми свързани с системата на Hydroponics v5, бих любел да Ви помогна.","role":"assistant"}
-🔍 Chunk: {"type":"done","id":"msg-1768079628808-hcrnp","model":"llama3.1:8b","timestamp":1768079628808,"finishReason":"stop"}
+Искам да си направя фърмуер, стъпка по стъпка
+
+Разбира се! Нека започнем със създаването на фърмуер за вашия контролер.
+
+Стъпка 1: Избор на дъна (Board Selection)
+
+Първата стъпка е да изберете модела на микроконтролера, който използвате. Системата в момента поддържа следните 4 предварително дефинирани и тествани контролера:
+
+Arduino Uno R3
+Arduino Uno R4 WiFi
+WeMos D1 R2 V2.1.0
+LilyGO T-Relay (4-Port ESP32): Релейна дъна с вграден ESP32 модул, която поддържа допълнителни сензори.
+За всеки вариант ще ви бъде показана информация за напрежението, броя на пиновете и опциите за свързаност (WiFi/Serial).
+
+Готови за Стъпка 2?
+
+Как да отворя стъпка 1?
+
+За да изпълните Стъпка 1, трябва да влезете в секцията Controllers (Контролери) в интерфейса на системата. Там обикновено има опция за добавяне на нов контролер или създаване на нов профил. Когато го направите, ще се появи списък с наличните дъна, от който трябва да изберете вашия модел (напр. Arduino Uno или LilyGO T-Relay).
+
+Готови ли сте да преминем към Стъпка 2?
+
+готов съм
+
+Стъпка 2: Именуване на контролера
+
+След като сте избрали хардуерната дъна, следва да идентифицирате устройството в софтуера.
+
+Въведете Име (Name) за вашия контролер (напр. "ESP32_Главен", "Зона_1_Контролер").
+Уверете се, че името е уникално и описващо, за да го разпознавате лесно по-късно, когато добавяте сензори или създавате потоци (Flows).
+Готови за Стъпка 3?
+
+готов съм
+
+Стъпка 3: Настройка на мрежата (WiFi)
+
+За да може контролерът да комуникира със системата и да изпраща данни от сензорите, трябва да го свържете с интернет.
+
+SSID (Име на мрежа): Изберете вашата WiFi мрежа от списъка или я въведете ръчно.
+Парола: Въведете паролата за WiFi достъп.
+IP Адрес (Опционално): Ако предпочитате, можете да зададете статичен IP адрес, за да сте сигурни, че устройството винаги е на същия адрес.
+Готови за Стъпка 4?
+
+да
+
+Стъпка 4: Преглед на конфигурацията
+
+Преди системата да генерира окончателния код за вашия фърмуер, е задължително да прегледате обобщението на въведените данни.
+
+Проверете дали Моделът на дъното е избран правилно.
+Потвърдете, че Името на контролера е изписано правилно (без специални символи, ако е необходимо).
+Уверете се, че WiFi мрежата и паролата са коректни.
+Ако всичко е наред, натиснете бутона за генериране (обикновено "Generate" или "Build").
+
+Готови за Стъпка 5?
+
+да
+
+Стъпка 5: Генериране и изтегляне на файла
+
+Сега системата ще компилира вашия персонализиран фърмуер според избраните настройки.
+
+Натиснете бутона Generate (Генериране).
+Изчакайте процесът на компилация да приключи (това обикновено отнема няколко секунди).
+Когато е готово, свалете генерирания файл (най-често във формат .bin или като .zip архив) на вашия компютър.
+Готови за Стъпка 6?
+
