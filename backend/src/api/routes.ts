@@ -164,6 +164,7 @@ export async function apiRoutes(app: FastifyInstance) {
     app.post('/api/active-program/windows/:windowId/skip', ActiveProgramController.skipWindow);
     app.post('/api/active-program/windows/:windowId/restore', ActiveProgramController.restoreWindow);
     app.patch('/api/active-program/windows/:windowId/triggers', ActiveProgramController.updateTrigger);
+    app.post('/api/active-program/force-check', ActiveProgramController.forceCheck);
 
     // Notification Rules (System)
     app.get('/api/notifications/rules', NotificationRuleController.list);

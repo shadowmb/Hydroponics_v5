@@ -7,12 +7,25 @@ export type TriggerOperator = '>' | '<' | '>=' | '<=' | '=' | '!=' | 'between';
 export type TriggerBehavior = 'continue' | 'break';
 export type DataSource = 'cached' | 'live';
 
-export interface ITrigger {
-    id: string;
+export interface ITriggerCondition {
     sensorId: string;
     operator: TriggerOperator;
     value: number;
     valueMax?: number;
+}
+
+export interface ITrigger {
+    id: string;
+    // Legacy single fields
+    sensorId?: string;
+    operator?: TriggerOperator;
+    value?: number;
+    valueMax?: number;
+
+    // Multi-condition support
+    conditions?: ITriggerCondition[];
+    logicalOperator?: 'AND' | 'OR';
+
     flowId?: string;    // Deprecated
     flowIds?: string[]; // New
     behavior: TriggerBehavior;

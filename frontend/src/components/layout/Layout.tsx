@@ -1,11 +1,14 @@
 import { useEffect } from "react"
 import { Outlet, NavLink } from "react-router-dom"
-import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Calendar, Play } from "lucide-react"
+import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Calendar, Play, Bot } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { useStore } from "../../core/useStore"
 import { socketService } from "../../core/SocketService"
 import { ServerClock } from "./ServerClock"
+import { AIChatButton } from "../ai/AIChatButton"
+import { AIChatPopup } from "../ai/AIChatPopup"
+import { AIInsightsButton } from "../ai/AIInsightsButton"
 
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -128,6 +131,18 @@ function Sidebar({ className }: SidebarProps) {
                             <Settings className="mr-2 h-4 w-4" />
                             Settings
                         </NavLink>
+                        <NavLink
+                            to="/assistant"
+                            className={({ isActive }) =>
+                                cn(
+                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
+                                )
+                            }
+                        >
+                            <Bot className="mr-2 h-4 w-4" />
+                            AI Assistant
+                        </NavLink>
                     </div>
                 </div>
             </div>
@@ -176,6 +191,8 @@ export function Layout() {
                 <header className="flex h-14 items-center gap-4 border-b bg-card px-6 justify-between">
                     <h1 className="text-lg font-semibold">Control Panel</h1>
                     <div className="flex items-center gap-4">
+                        <AIInsightsButton />
+                        <AIChatButton />
                         <ServerClock />
                         <ThemeToggle />
                     </div>
@@ -183,6 +200,7 @@ export function Layout() {
                 <main className="flex-1 overflow-auto p-0">
                     <Outlet />
                 </main>
+                <AIChatPopup />
             </div>
         </div>
     )

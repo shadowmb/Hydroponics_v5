@@ -90,6 +90,10 @@ export const activeProgramService = {
         return response.data;
     },
 
+    forceCheck: async (): Promise<void> => {
+        await axios.post(`${BASE_URL}/force-check`);
+    },
+
     // --- LOGS ---
     getLogs: async (programId: string, date?: string): Promise<any> => {
         const query = date ? `?date=${date}` : '';

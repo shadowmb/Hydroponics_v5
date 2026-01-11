@@ -57,6 +57,16 @@ async function bootstrap() {
         console.log('Registering Routes...');
         app.register(apiRoutes);
 
+        // Register AI Module if enabled
+        // 4.1 Load Plugins (e.g. AI)
+        const { PluginManager } = await import('./core/PluginManager');
+        await PluginManager.loadPlugins(app);
+
+        // Register Settings Module
+        const { settingsModule } = await import('./modules/settings');
+        app.register(settingsModule, { prefix: '/api' });
+
+
         automation.registerExecutor(new WaitBlockExecutor());
         automation.registerExecutor(new ActuatorSetBlockExecutor());
         automation.registerExecutor(new StartBlockExecutor());

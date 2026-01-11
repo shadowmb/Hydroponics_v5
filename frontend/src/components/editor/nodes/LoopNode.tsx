@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
-import { Repeat, Hourglass, Timer, Ban, AlertCircle } from 'lucide-react';
+import { Repeat, Hourglass, Timer, AlertCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import { cn } from '../../../lib/utils';
 
@@ -51,8 +51,8 @@ export const LoopNode = memo((props: NodeProps) => {
     const intervalVar = fmtVar(data.interval);
     const intervalVarUnit = getVarUnit(data.interval);
 
-    // Condition Data
-    const hasCondition = !!data.variable;
+    // Condition Data - Show section if any field has value or if there is an error
+    const hasCondition = !!data.variable || !!data.operator || (data.value !== undefined && data.value !== '') || (!!data.hasError && (data.error?.includes('Variable') || data.error?.includes('Operator') || data.error?.includes('value')));
     // Resolve condition variable name (stored as {{var_id}})
     const condVarRaw = String(data.variable || '');
     let condVarDisplay = condVarRaw;
@@ -75,14 +75,15 @@ export const LoopNode = memo((props: NodeProps) => {
         <Tooltip>
             <TooltipTrigger asChild>
                 <div className={cn(
-                    "shadow-md rounded-md bg-card border-2 min-w-[180px] overflow-hidden transition-all",
-                    selected ? "border-primary ring-1 ring-primary" : "border-border",
-                    !!data.hasError && "border-destructive bg-destructive/5"
+                    "flex flex-col rounded-md bg-card border-2 min-w-[180px] transition-all duration-200",
+                    "border-border shadow-md",
+                    !!data.hasError && "border-destructive bg-destructive/5",
+                    selected && "border-green-500 ring-[10px] ring-green-500/20 shadow-[0_0_25px_rgba(34,197,94,0.4)] z-50 scale-[1.03] outline outline-2 outline-green-500"
                 )}>
                     {/* Input Handle */}
-                    <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground" />
+                    <Handle type="target" position={Position.Top} className="input-handle-triangle" />
 
-                    {/* --- HEADER: The "WHAT" --- */}
+                    {/* --- HEADER --- */}
                     <div className={cn(
                         "px-3 py-2 flex items-center gap-2 border-b",
                         isTimeMode ? "bg-purple-50/50 dark:bg-purple-900/20" : "bg-blue-50/50 dark:bg-blue-900/20"
@@ -152,10 +153,9 @@ export const LoopNode = memo((props: NodeProps) => {
                         </div>
                     </div>
 
-                    {/* --- BODY: The "HOW" --- */}
+                    {/* --- BODY --- */}
                     <div className="p-3 bg-card space-y-2">
-                        {/* Interval Row */}
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                             <Timer className="h-3.5 w-3.5 opacity-70" />
                             <span>Every</span>
                             <span className="font-mono font-bold text-foreground bg-muted px-1.5 rounded">
@@ -164,58 +164,68 @@ export const LoopNode = memo((props: NodeProps) => {
                         </div>
                     </div>
 
-                    {/* --- FOOTER: The "STOP IF" (Condition) --- */}
+                    {/* --- CONDITION FOOTER (IF LOOP CONDITION EXISTS) --- */}
                     {hasCondition && (
-                        <div className="px-3 py-2 bg-orange-50/50 dark:bg-orange-900/10 border-t border-orange-100 dark:border-orange-900/30">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Ban className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-                                <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase">Stop If</span>
+                        <div className="px-3 py-2 bg-purple-50/50 dark:bg-purple-900/10 border-t border-purple-100 dark:border-purple-900/30">
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                                <Repeat className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase flex items-baseline">
+                                    <span className="text-[8px] opacity-70 mr-1">Keep</span>
+                                    Looping If
+                                </span>
                             </div>
-                            <div className="text-xs font-mono flex flex-wrap gap-1 items-center pl-5">
-                                <span className="px-1 py-0.5 rounded bg-background border shadow-sm text-foreground max-w-[80px] truncate" title={condVarDisplay}>
-                                    {condVarDisplay}
+                            <div className="text-xs font-mono flex flex-wrap gap-1 items-center justify-center">
+                                <span className={cn(
+                                    "px-1 py-0.5 rounded bg-background border shadow-sm text-foreground max-w-[80px] truncate",
+                                    !data.variable && "text-orange-500 italic font-bold"
+                                )} title={condVarDisplay}>
+                                    {condVarDisplay || 'Var?'}
                                 </span>
                                 <span className="font-bold text-muted-foreground">{condOp}</span>
                                 {isCondValVar ? (
-                                    <span className="px-1 py-0.5 rounded bg-background border shadow-sm text-foreground max-w-[60px] truncate" title={condVal}>
-                                        {condVal}
+                                    <span className={cn(
+                                        "px-1 py-0.5 rounded bg-background border shadow-sm text-foreground max-w-[60px] truncate",
+                                        !condVal && "text-blue-500 italic font-bold"
+                                    )} title={condVal}>
+                                        {condVal || 'Val?'}
                                     </span>
                                 ) : (
-                                    <span className="text-blue-600 dark:text-blue-400 font-bold">{condVal}</span>
+                                    <span className={cn(
+                                        "text-purple-600 dark:text-purple-400 font-bold",
+                                        (data.value === undefined || data.value === '') && "text-blue-500 italic"
+                                    )}>
+                                        {(data.value === undefined || data.value === '') ? 'Val?' : condVal}
+                                    </span>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    {/* Outputs */}
-
-                    {/* Body Path */}
-                    <div className="absolute -right-8 top-8 text-[9px] font-bold text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">BODY</div>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Handle
-                                type="source"
-                                position={Position.Right}
-                                id="body"
-                                className="w-3 h-3 bg-green-500 hover:scale-125 transition-transform border-2 border-background"
-                            />
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="text-xs">Loop Body</TooltipContent>
-                    </Tooltip>
-
-                    {/* Exit Path */}
-                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[9px] font-bold text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">EXIT</div>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
+                    {/* --- EXIT PATHS FOOTER --- */}
+                    <div className="flex text-[10px] font-bold h-7 border-t mt-auto">
+                        {/* DONE Path (Left, Green) */}
+                        <div className="flex-1 flex items-center justify-center gap-1 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-500 border-r relative rounded-bl-sm">
+                            DONE
                             <Handle
                                 type="source"
                                 position={Position.Bottom}
                                 id="exit"
-                                className="w-3 h-3 bg-red-500 hover:scale-125 transition-transform border-2 border-background"
+                                className="w-3 h-3 bg-green-500 !bottom-[-6px]"
                             />
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">Exit Loop</TooltipContent>
-                    </Tooltip>
+                        </div>
+
+                        {/* LOOP Path (Right, Purple) */}
+                        <div className="flex-1 flex items-center justify-center gap-1 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-500 relative rounded-br-sm">
+                            <Repeat className="h-3 w-3" />
+                            LOOP
+                            <Handle
+                                type="source"
+                                position={Position.Bottom}
+                                id="body"
+                                className="w-3 h-3 bg-purple-500 !bottom-[-6px]"
+                            />
+                        </div>
+                    </div>
 
                     {/* Error Indicator */}
                     {!!data.hasError && (

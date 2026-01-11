@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { ArrowRight, Cpu, Activity, Droplet, Thermometer, Zap, X, Settings2, Wind, Lightbulb, Ruler, Info, AlertTriangle, Sprout } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUIState } from '@/context/UIStateContext'; // Import State Hook
 import {
     Table,
     TableBody,
@@ -67,6 +68,9 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const [existingTags, setExistingTags] = useState<string[]>([]); // For suggestions
     const [loading, setLoading] = useState(false);
 
+    // Global AI State
+    const { setWizardState, clearWizardState } = useUIState();
+
     // Form Data
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
@@ -95,6 +99,31 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'sensor' | 'actuator'>('all');
+
+    // Sync State to AI Context
+    useEffect(() => {
+        if (open) {
+            setWizardState({
+                active: true,
+                name: 'DeviceWizard',
+                step: step,
+                config: {
+                    ...formData,
+                    category: selectedCategory,
+                    template: selectedTemplate?.name,
+                    variant: selectedVariant?.label,
+                    connectionType
+                }
+            });
+        }
+
+        // Cleanup or clear if closed
+        return () => {
+            if (!open) {
+                clearWizardState();
+            }
+        };
+    }, [open, step, formData, selectedCategory, selectedTemplate, selectedVariant, connectionType, setWizardState, clearWizardState]);
 
     // Filtered Templates Logic
     const filteredTemplates = useMemo(() => {
@@ -474,8 +503,12 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     ];
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] h-[700px] flex flex-col">
+        <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+            <DialogContent
+                className="sm:max-w-[600px] h-[700px] flex flex-col"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{isEditMode ? 'Edit Device' : `Add New Device - Step ${step}`}</DialogTitle>
                     <DialogDescription className="sr-only">

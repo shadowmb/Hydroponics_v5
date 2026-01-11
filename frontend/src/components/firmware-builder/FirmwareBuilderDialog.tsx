@@ -9,9 +9,12 @@ interface Props {
 
 export const FirmwareBuilderDialog: React.FC<Props> = ({ open, onOpenChange, trigger }) => {
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
             {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent
+                className="max-w-4xl max-h-[90vh] overflow-y-auto"
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader className="sr-only">
                     <DialogTitle>Firmware Builder</DialogTitle>
                     <DialogDescription>

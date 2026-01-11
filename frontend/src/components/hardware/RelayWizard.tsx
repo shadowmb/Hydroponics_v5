@@ -158,8 +158,12 @@ export const RelayWizard: React.FC<RelayWizardProps> = ({ open, onOpenChange, on
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+        <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+            <DialogContent
+                className="sm:max-w-[500px]"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{editRelay ? 'Edit Relay' : 'Add Relay Module'} - Step {step}</DialogTitle>
                 </DialogHeader>

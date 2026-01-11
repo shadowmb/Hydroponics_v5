@@ -1,0 +1,34 @@
+{
+    "keywords": {
+        "добави устройство|add device|сензор|sensor|actuator|актуатор|ph sensor|dht|ds18b20|ec sensor": "Device-Wizard-Guide.md",
+        "analytics label|етикет за аналитика|historical data|merge data|stat grouping|статистика|групиране даннни": "Analytics-Label-Guide.md",
+        "resource role|роля на ресурса|вид измерване|measurement type|ph|ec|temp|humidity": "Resource-Role-Guide.md",
+        "tags|groups|етикети|групи|notification channels|filter|organization": "Device-Tags-Guide.md",
+        "flow|automation|editor|поток|автоматизация|редактор": "flow_Overview.md",
+        "node|block|sensor read|actuator set|wait|log|блок|сензор|актуатор": "flow_Nodes_Reference.md",
+        "variable|scope|local|global|handlebars|променлива|обхват|{{": "flow_Variables_Guide.md",
+        "logic|loop|condition|if|jump|goto|логика|цикъл|ако|условие": "flow_Controls_Guide.md",
+        "device test|mnitor|stream|history|тест устройство|монитор|наблюдение": "device_Overview.md",
+        "live stream|read once|sensor value|actuator control|тест|четене": "device_Monitor_Test.md",
+        "calibration|role|strategy|tank volume|linear|калибрация|роля|стратегия|обем": "device_Calibration.md",
+        "noise filter|valid range|retry|settings|median|шум|филтър|диапазон|настройки": "device_Settings.md",
+        "program|schedule|timer|програма|график|таймер|basic|advanced": "program_Overview.md",
+        "daily schedule|auto fix|steps|event|събитие|автоматична поправка": "program_Basic_Guide.md",
+        "trigger|window|fallback|break|continue|прозорец|тригер|условие|диапазон": "program_Advanced_Guide.md",
+        "active|run|log|execution|start|history|start program|variable|активна|лог|история|старт": "program_Run_Active.md",
+        "tutorial|start|guide|help|туториал|помощ|старт": "Tutorials/Tutorial-Basics.md",
+        "firmware|generator|builder|фърмуер|генератор|build": "Firmware-Generator-Walkthrough.md",
+        "command|команда|analog|digital|pwm|relay|dht|modbus|onewire|ultrasonic|uart|i2c|servo": "Firmware-Commands-Guide.md",
+        "добави контролер|add controller|scan network|мрежово сканиране": "Controller-Wizard-Guide.md",
+        "порт|port|manage ports|offline|online|status|редактирай контролер|edit controller|delete controller|изтрий контролер|active|inactive": "Controllers-Reference.md"
+    },
+    "path_mappings": {
+        "/flows": [
+            "Test-Flows.md",
+            "flow_Overview.md"
+        ],
+        "/editor": "Test-Flows.md",
+        "/hardware": "Test-Devices.md",
+        "/settings": "System-Overview.md"
+    }
+}

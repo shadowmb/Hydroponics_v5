@@ -68,6 +68,17 @@ export interface SystemEvents {
     'advanced:window_skipped': { programId?: string; windowId: string; windowName: string; reason: string; timestamp: Date };
     'advanced:window_active': { programId?: string; windowId: string; windowName: string; timestamp: Date };
     'advanced:trigger_matched': { programId?: string; windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; flowName: string; timestamp: Date };
+    'advanced:trigger_evaluation': {
+        programId?: string;
+        windowId: string;
+        triggerId: string;
+        triggerIndex?: number;
+        logicalOp: string;
+        conditions: any[];
+        results: boolean[];
+        isTriggered: boolean;
+        timestamp?: Date;
+    };
     'advanced:trigger_skipped': { programId?: string; windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; timestamp: Date };
     'advanced:window_completed': {
         programId?: string;
@@ -81,6 +92,7 @@ export interface SystemEvents {
     'advanced:fallback_executed': { programId?: string; windowId: string; windowName: string; flowName: string; timestamp: Date };
     'advanced:program_day_complete': { programId?: string; timestamp: Date };
     'active:program_started': { programId: string; timestamp?: Date };
+    'advanced:manual_check': { programId: string; timestamp: Date; userInitiated: boolean };
 }
 
 export class EventBusService {

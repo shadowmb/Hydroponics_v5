@@ -94,7 +94,15 @@ export class SchedulerService {
                 const now = new Date();
                 const timeString = now.toTimeString().slice(0, 5);
                 logger.info({ time: timeString }, '⚡ Immediate Advanced Program Check');
-                await this.processAdvancedProgram(activeProgram, timeString);
+
+                // Log manual check event
+                events.emit('advanced:manual_check', {
+                    programId: activeProgram.sourceProgramId,
+                    timestamp: now,
+                    userInitiated: true
+                });
+
+                await this.processAdvancedProgram(activeProgram, timeString, true);
             }
         } catch (error: any) {
             logger.error({ error: error.message }, '❌ Immediate check failed');
@@ -298,7 +306,7 @@ export class SchedulerService {
     /**
      * Process an Advanced Program - evaluate time windows and triggers.
      */
-    private async processAdvancedProgram(activeProgram: any, timeString: string): Promise<void> {
+    private async processAdvancedProgram(activeProgram: any, timeString: string, force: boolean = false): Promise<void> {
         if (!activeProgram.windows || !activeProgram.windowsState) {
             logger.warn('⚠️ Advanced program has no windows or windowsState');
             return;
@@ -487,8 +495,8 @@ export class SchedulerService {
                     await activeProgram.save();
                 }
 
-                // Check if it's time to poll (based on checkInterval)
-                if (this.shouldCheck(state.lastCheck, window.checkInterval)) {
+                // Check if it's time to poll (based on checkInterval) or FORCE check
+                if (force || this.shouldCheck(state.lastCheck, window.checkInterval)) {
                     // BUGFIX: Check if a cycle is already running - skip this tick if so
                     const snapshot = automation.getSnapshot();
                     const isCycleRunning = snapshot.value === 'running' || snapshot.value === 'paused';

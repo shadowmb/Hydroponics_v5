@@ -10,6 +10,7 @@ import { Plus, ArrowRight, ArrowLeft, Check, Cpu, Wifi, Usb, RefreshCw } from 'l
 import { hardwareService, type IControllerTemplate, type IController } from '../../services/hardwareService';
 import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
+import { useUIState } from '@/context/UIStateContext'; // Import State Hook
 
 interface ControllerWizardProps {
     onControllerCreated: () => void;
@@ -22,6 +23,13 @@ interface ControllerWizardProps {
 
 type WizardStep = 'type-selection' | 'configuration' | 'review';
 
+// Map string steps to numbers for AI context
+const stepMap: Record<WizardStep, number> = {
+    'type-selection': 1,
+    'configuration': 2,
+    'review': 3
+};
+
 export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onControllerCreated, editController, initialData, open: controlledOpen, onOpenChange, hideTrigger }) => {
     const [internalOpen, setInternalOpen] = useState(false);
     const isControlled = controlledOpen !== undefined;
@@ -29,6 +37,10 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
     const setOpen = isControlled ? onOpenChange! : setInternalOpen;
 
     const [step, setStep] = useState<WizardStep>('type-selection');
+
+    // Global AI State
+    const { setWizardState, clearWizardState } = useUIState();
+
     const [templates, setTemplates] = useState<IControllerTemplate[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -47,6 +59,28 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
 
     const [serialPorts, setSerialPorts] = useState<any[]>([]);
     const [loadingPorts, setLoadingPorts] = useState(false);
+
+    // Sync State to AI Context
+    useEffect(() => {
+        if (open) {
+            setWizardState({
+                active: true,
+                name: 'ControllerWizard',
+                step: stepMap[step],
+                config: {
+                    ...formData,
+                    template: selectedTemplate?.key
+                }
+            });
+        }
+
+        // Cleanup or clear if closed
+        return () => {
+            if (!open) {
+                clearWizardState();
+            }
+        };
+    }, [open, step, formData, selectedTemplate, setWizardState, clearWizardState]);
 
     // Map discovered model names to system template keys
     const MODEL_MAP: Record<string, string> = {
@@ -473,7 +507,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
     );
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={setOpen} modal={false}>
             {!editController && !hideTrigger && (
                 <DialogTrigger asChild>
                     <Button>
@@ -482,7 +516,11 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                     </Button>
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent
+                className="sm:max-w-[600px]"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>
                         {editController

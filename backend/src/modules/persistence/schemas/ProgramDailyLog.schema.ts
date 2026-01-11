@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { softDeletePlugin, ISoftDelete } from '../plugins/softDelete.plugin';
 
-export type LogEventType = 'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING';
+export type LogEventType = 'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING' | 'TRIGGER_EVALUATION';
 
 export interface ILogEvent {
     timestamp: Date;
@@ -22,7 +22,7 @@ const LogEventSchema = new Schema({
     timestamp: { type: Date, required: true, default: Date.now },
     type: {
         type: String,
-        enum: ['WINDOW_EVENT', 'TRIGGER_MATCH', 'TRIGGER_SKIP', 'FLOW_EXECUTED', 'ERROR', 'INFO', 'WARNING'],
+        enum: ['WINDOW_EVENT', 'TRIGGER_MATCH', 'TRIGGER_SKIP', 'FLOW_EXECUTED', 'ERROR', 'INFO', 'WARNING', 'TRIGGER_EVALUATION'],
         required: true
     },
     message: { type: String, required: true },

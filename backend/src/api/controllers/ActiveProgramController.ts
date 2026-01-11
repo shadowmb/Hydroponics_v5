@@ -205,4 +205,14 @@ export class ActiveProgramController {
             reply.status(500).send({ message: error.message });
         }
     }
+
+    static async forceCheck(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const schedulerService = require('../../modules/scheduler/SchedulerService').schedulerService;
+            await schedulerService.triggerImmediateCheck();
+            reply.send({ success: true });
+        } catch (error: any) {
+            reply.status(500).send({ message: error.message });
+        }
+    }
 }

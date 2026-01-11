@@ -1,0 +1,88 @@
+import { IAIAction } from '../../persistence/schemas/AIAction.schema';
+
+export class TriggerEvaluator {
+
+    /**
+     * Checks if a sensor trigger condition is met.
+     */
+    static shouldTrigger(action: IAIAction, currentValue: number): boolean {
+        if (!action.enabled || !action.trigger || action.trigger.type !== 'sensor') return false;
+
+        const { operator, value, rangeMax, cooldownMinutes, activeWindow, frequency } = action.trigger;
+
+        // 0. Check Date Range (Duration/Validity)
+        if (frequency) {
+            const now = new Date();
+            if (frequency.startDate && now < new Date(frequency.startDate)) return false;
+            if (frequency.endDate && now > new Date(frequency.endDate)) return false;
+        }
+
+        // 1. Check Active Window (Time of Day)
+        if (activeWindow && activeWindow.enabled) {
+            if (!this.isWithinTimeWindow(activeWindow.startTime, activeWindow.endTime)) {
+                return false;
+            }
+        }
+
+        // 2. Check Cooldown
+        if (action.lastRun && cooldownMinutes) {
+            // Special case: -1 means "Run Once" (Run and never again unless manually reset)
+            if (cooldownMinutes === -1) {
+                return false;
+            }
+
+            const now = new Date();
+            const lastRunTime = new Date(action.lastRun);
+            const diffMinutes = (now.getTime() - lastRunTime.getTime()) / (1000 * 60);
+            if (diffMinutes < cooldownMinutes) {
+                return false;
+            }
+        }
+
+        // 3. Check Value Condition
+        // Ensure values are present
+        if (value === undefined) return false;
+
+        switch (operator) {
+            case '>':
+                return currentValue > value;
+            case '<':
+                return currentValue < value;
+            case '>=':
+                return currentValue >= value;
+            case '<=':
+                return currentValue <= value;
+            case '=':
+                // Fuzzy equality for floats
+                return Math.abs(currentValue - value) < 0.01;
+            case '!=':
+                return Math.abs(currentValue - value) >= 0.01;
+            case 'range':
+                if (rangeMax === undefined) return false;
+                // INCLUSIVE RANGE: value <= x <= rangeMax
+                return currentValue >= value && currentValue <= rangeMax;
+            default:
+                return false;
+        }
+    }
+
+    private static isWithinTimeWindow(start: string, end: string): boolean {
+        if (!start || !end) return true;
+
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        const [startH, startM] = start.split(':').map(Number);
+        const [endH, endM] = end.split(':').map(Number);
+
+        const startMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+
+        if (endMinutes < startMinutes) {
+            // Window crosses midnight (e.g. 23:00 to 06:00)
+            return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+        } else {
+            return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+        }
+    }
+}
