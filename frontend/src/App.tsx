@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './components/theme-provider';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
@@ -25,6 +25,41 @@ import { AIAssistantPage } from './pages/AIAssistantPage';
 import { AIProvider } from './context/AIContext';
 import { UIStateProvider } from './context/UIStateContext';
 
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<Layout />}>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/flows" element={<Flows />} />
+      <Route path="/controllers" element={<Controllers />} />
+      <Route path="/devices" element={<Devices />} />
+      <Route path="/editor" element={<FlowEditor />} />
+      <Route path="/editor/:id" element={<FlowEditor />} />
+      {/* <Route path="/cycles" element={<Cycles />} /> */}
+      {/* <Route path="/cycles/new" element={<CycleEditor />} /> */}
+      {/* <Route path="/cycles/:id" element={<CycleEditor />} /> */}
+      <Route path="/programs" element={<Programs />} />
+      <Route path="/programs/new" element={<ProgramEditor />} />
+      <Route path="/programs/:id" element={<ProgramEditor />} />
+      <Route path="/active-program" element={<ActiveProgramPage />} />
+      <Route path="/hardware" element={<Hardware />} />
+      <Route path="/analytics" element={<AnalyticsPage />} />
+      <Route path="/history" element={<History />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/assistant" element={<AIAssistantPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Route>
+  ),
+  {
+    future: {
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_skipActionErrorRevalidation: true,
+    }
+  }
+);
+
 function App() {
   const setDeviceTemplates = useStore((state) => state.setDeviceTemplates);
 
@@ -44,31 +79,7 @@ function App() {
       <Toaster richColors position="top-center" />
       <AIProvider>
         <UIStateProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/flows" element={<Flows />} />
-                <Route path="/controllers" element={<Controllers />} />
-                <Route path="/devices" element={<Devices />} />
-                <Route path="/editor" element={<FlowEditor />} />
-                <Route path="/editor/:id" element={<FlowEditor />} />
-                {/* <Route path="/cycles" element={<Cycles />} /> */}
-                {/* <Route path="/cycles/new" element={<CycleEditor />} /> */}
-                {/* <Route path="/cycles/:id" element={<CycleEditor />} /> */}
-                <Route path="/programs" element={<Programs />} />
-                <Route path="/programs/new" element={<ProgramEditor />} />
-                <Route path="/programs/:id" element={<ProgramEditor />} />
-                <Route path="/active-program" element={<ActiveProgramPage />} />
-                <Route path="/hardware" element={<Hardware />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/assistant" element={<AIAssistantPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
+          <RouterProvider router={router} />
         </UIStateProvider>
       </AIProvider>
     </ThemeProvider >

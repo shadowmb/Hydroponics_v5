@@ -1,5 +1,5 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { ReactFlow, Background, Controls, useNodesState, useEdgesState, addEdge, ReactFlowProvider } from '@xyflow/react';
 import type { Node, Connection, Edge, NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -56,6 +56,7 @@ const initialNodes: Node[] = [
 
 const FlowEditorContent: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     console.log('FlowEditor params:', { id });
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -67,16 +68,63 @@ const FlowEditorContent: React.FC = () => {
     const [flowDescription, setFlowDescription] = useState('');
     const [inputs, setInputs] = useState<any[]>([]);
     const [variables, setVariables] = useState<any[]>([]);
+    const [savedStateString, setSavedStateString] = useState('');
     // const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
     // Draft Save State
     const [showDraftDialog, setShowDraftDialog] = useState(false);
     const [pendingSaveData, setPendingSaveData] = useState<{ name: string, description: string } | null>(null);
 
+    // --- Dirty State Logic (Deep Compare) ---
+    // We store the stringified version of the "Saved" state.
+    // const [savedStateString, setSavedStateString] = useState<string>(''); // Already defined above
+
+    const standardizeState = (n: Node[], e: Edge[], nm: string, d: string, v: any[]) => {
+        return JSON.stringify({
+            nodes: n.map((node) => ({
+                id: node.id,
+                type: node.type,
+                position: { x: Math.round(node.position.x), y: Math.round(node.position.y) },
+                data: node.data
+            })),
+            edges: e.map((edge) => ({
+                id: edge.id,
+                source: edge.source,
+                target: edge.target,
+                sourceHandle: edge.sourceHandle,
+                targetHandle: edge.targetHandle
+            })),
+            name: nm,
+            description: d,
+            variables: v
+        });
+    };
+
+    // We calculate the current state string on every render
+    const currentStateString = useMemo(() => {
+        return standardizeState(nodes, edges, flowName, flowDescription, variables);
+    }, [nodes, edges, flowName, flowDescription, variables]); // We re-calc string representation on change
+
+    // Check if dirty
+    // We only consider it dirty if we have a savedState to compare against
+    const isDirty = useMemo(() => {
+        if (!savedStateString) return false; // Not loaded yet
+
+        const isDifferent = savedStateString !== currentStateString;
+
+        if (isDifferent) {
+            // Debug if needed
+        }
+        return isDifferent;
+    }, [savedStateString, currentStateString]);
 
     // Load Flow Data
     useEffect(() => {
-        if (!id) return;
+        if (!id) {
+            // New Flow - Set clean baseline
+            setSavedStateString(standardizeState(initialNodes, [], '', '', []));
+            return;
+        }
 
         const fetchFlow = async () => {
             try {
@@ -92,6 +140,8 @@ const FlowEditorContent: React.FC = () => {
                 setFlowDescription(flow.description || '');
                 setInputs(flow.inputs || []);
                 setVariables(flow.variables || []);
+
+                setSavedStateString(standardizeState(flowNodes, flowEdges, flow.name, flow.description || '', flow.variables || []));
                 toast.success('Flow loaded');
             } catch (error) {
                 console.error('Load error:', error);
@@ -137,7 +187,7 @@ const FlowEditorContent: React.FC = () => {
             return hasChanges ? newNodes : nds;
         });
 
-    }, [nodes.map(n => JSON.stringify({ ...n.data, hasError: undefined, error: undefined })).join('|'), edges, setNodes, devices, variables, deviceTemplates]);
+    }, [nodes, edges, setNodes, devices, variables, deviceTemplates]);
 
     // Load Devices for Selector
     const { setDevices } = useStore();
@@ -288,45 +338,28 @@ const FlowEditorContent: React.FC = () => {
         return flowId;
     };
 
-    const onSave = useCallback(async (name: string, description: string) => {
-        console.log('onSave called:', { name, id });
 
-        // Final Validation Check
-        const context = {
-            devices: useStore.getState().devices,
-            variables: variables,
-            deviceTemplates: useStore.getState().deviceTemplates
-        };
-        const validationResult = FlowValidator.validate(nodes, edges, context);
-
-        if (!validationResult.isValid) {
-            // Prompt for Draft Save
-            setPendingSaveData({ name, description });
-            setShowDraftDialog(true);
-            return;
-        }
-
-        try {
-            await saveFlowToBackend(name, description, true);
-            toast.success(`Flow ${id ? 'updated' : 'saved'} successfully!`);
-            setFlowName(name);
-            setFlowDescription(description);
-        } catch (error: any) {
-            console.error('Save error:', error);
-            toast.error(`Failed to save: ${error.message}`);
-            throw error;
-        }
-    }, [nodes, edges, id, inputs, variables]);
 
     const handleConfirmDraft = async () => {
         if (!pendingSaveData) return;
 
         try {
-            await saveFlowToBackend(pendingSaveData.name, pendingSaveData.description, false);
+            const newFlowId = await saveFlowToBackend(pendingSaveData.name, pendingSaveData.description, false);
             toast.success('Flow saved as Draft (Inactive)');
             setFlowName(pendingSaveData.name);
             setFlowDescription(pendingSaveData.description);
+            // Reset dirty state
+            setSavedStateString(standardizeState(nodes, edges, pendingSaveData.name, pendingSaveData.description, variables));
             setShowDraftDialog(false);
+
+            // If we were blocked (navigation attempt), proceed now
+            if (blocker.state === 'blocked') {
+                blocker.proceed?.();
+            } else if (!id && newFlowId) {
+                // If new flow and saved as draft, update URL
+                navigate(`/editor/${newFlowId}`, { replace: true });
+            }
+
         } catch (error: any) {
             toast.error(`Failed to save draft: ${error.message}`);
         }
@@ -363,6 +396,88 @@ const FlowEditorContent: React.FC = () => {
         toast.success('Block duplicated');
     }, [nodes, setNodes]);
 
+    const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+
+    // --- Navigation Guard ---
+    const blocker = useBlocker(
+        ({ currentLocation, nextLocation }) =>
+            isDirty && currentLocation.pathname !== nextLocation.pathname
+    );
+
+    const handleBlockerSave = async () => {
+        if (!flowName) {
+            // Problem 2 Fix: Open dialog if no name
+            setIsSaveDialogOpen(true);
+            // We do NOT block here, we wait for user to interact with the dialog.
+            // But we need to close the "Unsaved Changes" dialog first?
+            // Actually, if we set isSaveDialogOpen(true), the save dialog opens.
+            // But the "Unsaved changes" dialog is also open because blocker.state is 'blocked'.
+            // They might stack. This is acceptable or we should close the unsaved dialog?
+            // If we close unsaved dialog (blocker.reset), we lose the navigation intent.
+            // So we must keep blocker blocked.
+            return;
+        }
+
+        // Problem 1 Fix: Ensure we await the save process correctly
+        try {
+            await onSave(flowName, flowDescription);
+            // onSave will handle blocker.proceed() if valid.
+            // If invalid (draft prompted), we stay here until user resolves draft dialog.
+        } catch (e) {
+            console.error("Blocker save failed", e);
+            // Stay if error
+        }
+    };
+
+    const handleBlockerDiscard = () => {
+        blocker.proceed?.();
+    };
+
+    const handleBlockerCancel = () => {
+        blocker.reset?.();
+    };
+
+    // Updated onSave to handle blocker logic if called from Dialog
+    const onSave = useCallback(async (name: string, description: string) => {
+        console.log('onSave called:', { name, id });
+
+        // Final Validation Check
+        const context = {
+            devices: useStore.getState().devices,
+            variables: variables,
+            deviceTemplates: useStore.getState().deviceTemplates
+        };
+        const validationResult = FlowValidator.validate(nodes, edges, context);
+
+        if (!validationResult.isValid) {
+            // Prompt for Draft Save
+            setPendingSaveData({ name, description });
+            setShowDraftDialog(true);
+            return;
+        }
+
+        try {
+            const newFlowId = await saveFlowToBackend(name, description, true);
+            toast.success(`Flow ${id ? 'updated' : 'saved'} successfully!`);
+            setFlowName(name);
+            setFlowDescription(description);
+            // Update the baseline state to match current, so isDirty becomes false
+            setSavedStateString(standardizeState(nodes, edges, name, description, variables));
+
+            // If we were blocked (navigation attempt), proceed now
+            if (blocker.state === 'blocked') {
+                blocker.proceed?.();
+            } else if (!id && newFlowId) {
+                // Only navigate if we weren't already navigating (blocked)
+                navigate(`/editor/${newFlowId}`, { replace: true });
+            }
+        } catch (error: any) {
+            console.error('Save error:', error);
+            toast.error(`Failed to save: ${error.message}`);
+            throw error;
+        }
+    }, [nodes, edges, id, inputs, variables, navigate, blocker]); // Added blocker to deps
+
     return (
         <div className="h-full w-full flex flex-col">
             <div className="h-12 border-b bg-card flex items-center px-4 justify-between">
@@ -398,14 +513,14 @@ const FlowEditorContent: React.FC = () => {
                                     Edit Details
                                 </Button>
                             </SaveFlowDialog>
-                            <Button size="sm" className="gap-2" onClick={handleQuickSave}>
+                            <Button size="sm" className="gap-2" onClick={handleQuickSave} disabled={!isDirty}>
                                 <Save className="h-4 w-4" />
                                 Update
                             </Button>
                         </>
                     ) : (
                         <SaveFlowDialog onSave={onSave} defaultName={flowName} defaultDescription={flowDescription}>
-                            <Button size="sm" className="gap-2">
+                            <Button size="sm" className="gap-2" disabled={!isDirty && nodes.length <= 2}>
                                 <Save className="h-4 w-4" />
                                 Save Flow
                             </Button>
@@ -473,6 +588,7 @@ const FlowEditorContent: React.FC = () => {
                 />
             </div>
 
+            {/* Validation/Draft Dialog */}
             <Dialog open={showDraftDialog} onOpenChange={setShowDraftDialog}>
                 <DialogContent>
                     <DialogHeader>
@@ -491,6 +607,32 @@ const FlowEditorContent: React.FC = () => {
                         <Button variant="default" className="bg-orange-600 hover:bg-orange-700" onClick={handleConfirmDraft}>
                             Save as Draft
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Save Dialog for New Flows (triggered by Navigation Guard) */}
+            <SaveFlowDialog
+                open={isSaveDialogOpen}
+                onOpenChange={setIsSaveDialogOpen}
+                onSave={onSave}
+                defaultName={flowName}
+                defaultDescription={flowDescription}
+            />
+
+            {/* Unsaved Changes Blocker Dialog */}
+            <Dialog open={blocker.state === 'blocked'} onOpenChange={(open) => !open && blocker.reset && blocker.reset()}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Unsaved Changes</DialogTitle>
+                        <DialogDescription>
+                            You have unsaved changes in your flow. Do you want to save them before leaving?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={handleBlockerCancel}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleBlockerDiscard}>Discard</Button>
+                        <Button onClick={handleBlockerSave}>Save & Leave</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

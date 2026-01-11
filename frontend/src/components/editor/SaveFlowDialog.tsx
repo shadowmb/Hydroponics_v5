@@ -15,14 +15,29 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 
 interface SaveFlowDialogProps {
-    children: React.ReactNode;
+    children?: React.ReactNode; // Make children optional as we might not use trigger
     defaultName?: string;
     defaultDescription?: string;
     onSave: (name: string, description: string) => Promise<void>;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    trigger?: React.ReactNode;
 }
 
-export const SaveFlowDialog: React.FC<SaveFlowDialogProps> = ({ children, defaultName = '', defaultDescription = '', onSave }) => {
-    const [open, setOpen] = useState(false);
+export const SaveFlowDialog: React.FC<SaveFlowDialogProps> = ({
+    children,
+    defaultName = '',
+    defaultDescription = '',
+    onSave,
+    open: controlledOpen,
+    onOpenChange: setControlledOpen,
+    trigger
+}) => {
+    const [internalOpen, setInternalOpen] = useState(false);
+
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const setOpen = isControlled ? setControlledOpen! : setInternalOpen;
     const [name, setName] = useState(defaultName);
     const [description, setDescription] = useState(defaultDescription);
 
@@ -50,9 +65,11 @@ export const SaveFlowDialog: React.FC<SaveFlowDialogProps> = ({ children, defaul
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {children}
-            </DialogTrigger>
+            {(trigger || children) && (
+                <DialogTrigger asChild>
+                    {trigger || children}
+                </DialogTrigger>
+            )}
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>Save Flow</DialogTitle>
