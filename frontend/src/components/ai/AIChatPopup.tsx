@@ -13,6 +13,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { aiService } from '@/services/ai.service';
 import { useLocation } from 'react-router-dom';
+import { useUIState } from '@/context/UIStateContext'; // Import Hook
 
 // Wrapper handling Visibility, Animation, and Re-mounting (Keying)
 export function AIChatPopup() {
@@ -54,6 +55,9 @@ function AIChatContent({ sessionId }: { sessionId: string | null }) {
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [titleInput, setTitleInput] = useState('');
     const isCreatingSession = useRef(false);
+
+    // Context Injection
+    const { uiState } = useUIState();
 
     // Dynamic Connection
     const apiUrl = 'http://localhost:3000/api/ai/chat';
@@ -204,8 +208,19 @@ function AIChatContent({ sessionId }: { sessionId: string | null }) {
         const msg = inputValue;
         setInputValue('');
 
+        // 1. Capture UI State (Real Data)
+        const uiContext = {
+            step: uiState.wizard.active ? uiState.wizard.step : undefined,
+            wizard: uiState.wizard.active ? uiState.wizard.name : undefined,
+            config: uiState.wizard.active ? uiState.wizard.config : undefined,
+            path: window.location.pathname
+        };
+
+        // 2. Append Hidden Marker
+        const finalMsg = `${msg}\n\n:::HYDROPONICS_CTX_V5:::${JSON.stringify(uiContext)}`;
+
         try {
-            await sendMessage(msg);
+            await sendMessage(finalMsg);
         } catch (e) {
             console.error("Msg failed", e);
             setInputValue(msg);
@@ -360,11 +375,14 @@ function AIChatContent({ sessionId }: { sessionId: string | null }) {
                         ) : (
                             <div className="space-y-4">
                                 {messages.map((m) => {
-                                    const textContent = typeof (m as any).content === 'string'
+                                    let textContent = typeof (m as any).content === 'string'
                                         ? (m as any).content
                                         : Array.isArray(m.parts)
                                             ? m.parts.filter((p: any) => p.type === 'text').map((p: any) => p.content || '').join('')
                                             : '';
+
+                                    // Remove Context Marker from UI
+                                    textContent = textContent.replace(/(?:\n+:::HYDROPONICS_CTX_V5:::)([\s\S]*?)$/, '').trim();
 
                                     return (
                                         <div key={m.id} className={cn("flex w-full gap-2", m.role === 'user' ? "justify-end" : "justify-start")}>

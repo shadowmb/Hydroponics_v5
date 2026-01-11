@@ -23,6 +23,7 @@ import { socketService } from './core/SocketService';
 import { AIAssistantPage } from './pages/AIAssistantPage';
 
 import { AIProvider } from './context/AIContext';
+import { UIStateProvider } from './context/UIStateContext';
 
 function App() {
   const setDeviceTemplates = useStore((state) => state.setDeviceTemplates);
@@ -42,33 +43,35 @@ function App() {
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <Toaster richColors position="top-center" />
       <AIProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/flows" element={<Flows />} />
-              <Route path="/controllers" element={<Controllers />} />
-              <Route path="/devices" element={<Devices />} />
-              <Route path="/editor" element={<FlowEditor />} />
-              <Route path="/editor/:id" element={<FlowEditor />} />
-              {/* <Route path="/cycles" element={<Cycles />} /> */}
-              {/* <Route path="/cycles/new" element={<CycleEditor />} /> */}
-              {/* <Route path="/cycles/:id" element={<CycleEditor />} /> */}
-              <Route path="/programs" element={<Programs />} />
-              <Route path="/programs/new" element={<ProgramEditor />} />
-              <Route path="/programs/:id" element={<ProgramEditor />} />
-              <Route path="/active-program" element={<ActiveProgramPage />} />
-              <Route path="/hardware" element={<Hardware />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/assistant" element={<AIAssistantPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <UIStateProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/flows" element={<Flows />} />
+                <Route path="/controllers" element={<Controllers />} />
+                <Route path="/devices" element={<Devices />} />
+                <Route path="/editor" element={<FlowEditor />} />
+                <Route path="/editor/:id" element={<FlowEditor />} />
+                {/* <Route path="/cycles" element={<Cycles />} /> */}
+                {/* <Route path="/cycles/new" element={<CycleEditor />} /> */}
+                {/* <Route path="/cycles/:id" element={<CycleEditor />} /> */}
+                <Route path="/programs" element={<Programs />} />
+                <Route path="/programs/new" element={<ProgramEditor />} />
+                <Route path="/programs/:id" element={<ProgramEditor />} />
+                <Route path="/active-program" element={<ActiveProgramPage />} />
+                <Route path="/hardware" element={<Hardware />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/assistant" element={<AIAssistantPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </UIStateProvider>
       </AIProvider>
-    </ThemeProvider>
+    </ThemeProvider >
   );
 }
 

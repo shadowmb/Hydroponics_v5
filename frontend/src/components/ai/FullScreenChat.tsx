@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useChat } from '@tanstack/ai-react';
 import { fetchServerSentEvents } from '@tanstack/ai-client';
 import { useAI } from '@/context/AIContext';
+import { useUIState } from '@/context/UIStateContext'; // Import Hook
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -49,13 +50,11 @@ export function FullScreenChat({ sessionId }: FullScreenChatProps) {
                 // 2. Find Name
                 if (modelId) {
                     let foundName = modelId;
-                    let foundMatch = false;
                     // Iterate providers
-                    for (const [providerKey, models] of Object.entries(AI_MODELS)) {
+                    for (const [, models] of Object.entries(AI_MODELS)) {
                         const match = models.find(m => m.id === modelId);
                         if (match) {
                             foundName = match.name;
-                            foundMatch = true;
                             break;
                         }
                     }
@@ -111,6 +110,7 @@ export function FullScreenChat({ sessionId }: FullScreenChatProps) {
     // So we will key the component by sessionId in the parent.
 
     const { initialMessage, setInitialMessage } = useAI();
+    const { uiState } = useUIState(); // Use Real State
 
     // Auto-scroll
     useEffect(() => {
@@ -135,7 +135,16 @@ export function FullScreenChat({ sessionId }: FullScreenChatProps) {
         if (!inputValue.trim() || isLoading) return;
         setError(null);
         try {
-            await sendMessage(inputValue);
+            // 1. Capture UI State (Real Data)
+            const uiContext = {
+                step: uiState.wizard.active ? uiState.wizard.step : undefined,
+                wizard: uiState.wizard.active ? uiState.wizard.name : undefined,
+                config: uiState.wizard.active ? uiState.wizard.config : undefined,
+                path: window.location.pathname
+            };
+            // 2. Append Hidden Marker
+            const finalMsg = `${inputValue}\n\n:::HYDROPONICS_CTX_V5:::${JSON.stringify(uiContext)}`;
+            await sendMessage(finalMsg);
         } catch (e) { }
         setInputValue('');
     };
@@ -174,11 +183,14 @@ export function FullScreenChat({ sessionId }: FullScreenChatProps) {
                     ) : (
                         <div className="space-y-6 max-w-3xl mx-auto">
                             {messages.map((m) => {
-                                const textContent = typeof (m as any).content === 'string'
+                                let textContent = typeof (m as any).content === 'string'
                                     ? (m as any).content
                                     : Array.isArray(m.parts)
                                         ? m.parts.filter(p => p.type === 'text').map(p => (p as any).content || '').join('')
                                         : '';
+
+                                // Remove Context Marker from UI
+                                textContent = textContent.replace(/(?:\n+:::HYDROPONICS_CTX_V5:::)([\s\S]*?)$/, '').trim();
 
                                 return (
                                     <div key={m.id} className={cn("flex w-full gap-4", m.role === 'user' ? "justify-end" : "justify-start")}>

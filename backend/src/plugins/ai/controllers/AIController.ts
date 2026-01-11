@@ -15,20 +15,48 @@ export default async function AIController(fastify: FastifyInstance) {
 
         console.log(`🔍 AI Request: Role=${role}, SessionId=${sessionId}, MsgCount=${messages?.length}`);
 
-        // 1. Save User Message (if sessionId provided)
+        // --- 1. EXTRACT UI CONTEXT & CLEAN MESSAGE ---
+        const userMessages = messages.filter((m: any) => m.role === 'user');
+        let lastMessageContent = userMessages.length > 0 ? userMessages[userMessages.length - 1].content : '';
+        let uiContext: any = null;
+
+        // Regex to find and strip the Context Marker (Multiline support with [\s\S])
+        const contextRegex = /(?:\n+:::HYDROPONICS_CTX_V5:::)([\s\S]*?)$/;
+        const match = lastMessageContent.match(contextRegex);
+
+        if (match) {
+            const jsonString = match[1].trim();
+            // Remove the marker from the content used for analysis and saving
+            lastMessageContent = lastMessageContent.replace(contextRegex, '').trim();
+
+            // Update the original message object reference so it saves cleanly later
+            if (userMessages.length > 0) {
+                userMessages[userMessages.length - 1].content = lastMessageContent;
+            }
+
+            try {
+                uiContext = JSON.parse(jsonString);
+                console.log('🔍 Extracted UI Context:', uiContext);
+            } catch (e) {
+                console.warn('⚠️ Failed to parse UI Context JSON', e);
+            }
+        }
+
+        // --- 2. Save User Message (Cleaned) ---
         if (sessionId) {
             console.log(`💾 Attempting to save message to session ${sessionId}`);
-            // The last message is the new user input
-            const lastUserMsg = messages[messages.length - 1];
-            if (lastUserMsg && lastUserMsg.role === 'user') {
+            // Use the cleaned content
+            if (lastMessageContent && userMessages.length > 0) {
+                // userMessages[last] is already updated in place above, usually by reference.
+                // But let's be explicit with content: lastMessageContent
                 const saveResult = await chatSessionService.addMessage(sessionId, {
                     role: 'user',
-                    content: lastUserMsg.content,
+                    content: lastMessageContent,
                     timestamp: new Date()
                 });
                 console.log(`💾 User message saved: ${!!saveResult}`);
             } else {
-                console.warn('⚠️ Last message is not from user or missing content', lastUserMsg);
+                console.warn('⚠️ Last message is not from user or missing content');
             }
         } else {
             console.warn('⚠️ No sessionId provided, skipping save.');
@@ -43,9 +71,9 @@ export default async function AIController(fastify: FastifyInstance) {
             const mapFile = path.join(projectRoot, 'Docs/UserManual/knowledge-map.json');
             const overviewFile = path.join(projectRoot, 'Docs/UserManual/System-Overview.md');
 
-            // 1. Extract user query for analysis
-            const userMessages = messages.filter((m: any) => m.role === 'user');
-            const lastMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1].content.toLowerCase() : '';
+            // Context extracted above (Step 1)
+
+            const lastMessageLower = lastMessageContent.toLowerCase();
 
             let systemPrompt = '';
             if (fs.existsSync(overviewFile)) {
@@ -53,16 +81,42 @@ export default async function AIController(fastify: FastifyInstance) {
             }
 
             let specificContext = '';
-            // Only use specific context for 'assistant' role to avoid polluting analyzer
+
+            // --- STATE-DRIVEN RAG: Dynamic Document Injection ---
+            // 1. Wizard-Specific Docs
+            if (uiContext?.wizard === 'FirmwareBuilder') {
+                const fwDoc = path.join(projectRoot, 'Docs/UserManual/Firmware-Generator-Walkthrough.md');
+                if (fs.existsSync(fwDoc)) {
+                    specificContext += `\n=== WIZARD GUIDE: Firmware Builder ===\n` + fs.readFileSync(fwDoc, 'utf-8') + '\n';
+                }
+
+                // Supplemental for specific steps
+                if (uiContext.step === 4) {
+                    const deviceDoc = path.join(projectRoot, 'Docs/UserManual/Test-Devices.md');
+                    if (fs.existsSync(deviceDoc)) {
+                        specificContext += `\n=== SUPPLEMENTAL: Devices Configuration ===\n` + fs.readFileSync(deviceDoc, 'utf-8') + '\n';
+                    }
+                }
+            }
+
+            // 2. Path-Specific Docs
+            if (uiContext?.path === '/flows' || uiContext?.path?.startsWith('/editor')) {
+                const flowDoc = path.join(projectRoot, 'Docs/UserManual/Test-Flows.md');
+                if (fs.existsSync(flowDoc)) {
+                    specificContext += `\n=== PAGE GUIDE: Flows & Logic ===\n` + fs.readFileSync(flowDoc, 'utf-8') + '\n';
+                }
+            }
+
+            // 3. Keyword-based RAG (Fallback/Additive)
             if (role === 'assistant' && fs.existsSync(mapFile)) {
                 const map = JSON.parse(fs.readFileSync(mapFile, 'utf-8'));
-                // ... (Keep keyword scanning) ...
                 for (const [pattern, filename] of Object.entries(map.keywords)) {
                     const regex = new RegExp(pattern, 'i');
-                    if (regex.test(lastMessage)) {
+                    if (regex.test(lastMessageLower)) {
                         const filePath = path.join(projectRoot, 'Docs/UserManual', filename as string);
-                        if (fs.existsSync(filePath)) {
-                            specificContext += `\n=== SPECIFIC TOPIC: ${filename} ===\n` + fs.readFileSync(filePath, 'utf-8') + '\n';
+                        // Avoid duplicating if already loaded by state
+                        if (fs.existsSync(filePath) && !specificContext.includes(filename as string)) {
+                            specificContext += `\n=== SEARCHED TOPIC: ${filename} ===\n` + fs.readFileSync(filePath, 'utf-8') + '\n';
                         }
                     }
                 }
@@ -73,12 +127,14 @@ export default async function AIController(fastify: FastifyInstance) {
             // Actually usually backend constructs the full prompt for the stateless model)
             // But if we persist the SYSTEM message in session, it's bad.
             // Best practice: Inject system message here transiently.
+            const finalSystemPrompt = `
+${systemPrompt}
+${uiContext ? `<system_context>\nUser State: ${JSON.stringify(uiContext)}\n</system_context>` : ''}
+${specificContext ? `=== DETAILED CONTEXT START ===\n${specificContext}\n=== DETAILED CONTEXT END ===` : ''}
+`;
             messages.unshift({
                 role: 'system',
-                content: `
-${systemPrompt}
-${specificContext ? `=== DETAILED CONTEXT START ===\n${specificContext}\n=== DETAILED CONTEXT END ===` : ''}
-`
+                content: finalSystemPrompt
             });
 
         } catch (err) {

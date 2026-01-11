@@ -12,11 +12,15 @@ import { TransportConfigurationStep } from './steps/TransportConfigurationStep';
 import { PluginSelectionStep } from './steps/PluginSelectionStep';
 import { DeviceSelectionStep } from './steps/DeviceSelectionStep';
 import { ReviewAndBuildStep } from './steps/ReviewAndBuildStep';
+import { useUIState } from '@/context/UIStateContext'; // Import State Hook
 
 export const FirmwareBuilderWizard: React.FC = () => {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [buildingAction, setBuildingAction] = useState<'download' | 'copy' | null>(null);
+
+    // Global AI State
+    const { setWizardState, clearWizardState } = useUIState();
 
     // Data
     const [boards, setBoards] = useState<BoardDefinition[]>([]);
@@ -58,7 +62,26 @@ export const FirmwareBuilderWizard: React.FC = () => {
             }
         };
         loadData();
+        loadData();
     }, []);
+
+    // Sync State to AI Context
+    useEffect(() => {
+        setWizardState({
+            active: true,
+            name: 'FirmwareBuilder',
+            step: step,
+            config: {
+                ...config,
+                selectedDeviceIds // Include this as it's separate
+            }
+        });
+
+        // Cleanup on unmount
+        return () => {
+            clearWizardState();
+        };
+    }, [step, config, selectedDeviceIds, setWizardState, clearWizardState]);
 
     // Update commandIds whenever selectedDeviceIds changes
     // Update commandIds whenever selectedDeviceIds changes
