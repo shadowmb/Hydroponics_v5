@@ -81,6 +81,7 @@ export interface SystemEvents {
     'advanced:fallback_executed': { programId?: string; windowId: string; windowName: string; flowName: string; timestamp: Date };
     'advanced:program_day_complete': { programId?: string; timestamp: Date };
     'active:program_started': { programId: string; timestamp?: Date };
+    'advanced:manual_check': { programId: string; timestamp: Date; userInitiated: boolean };
 }
 
 export class EventBusService {

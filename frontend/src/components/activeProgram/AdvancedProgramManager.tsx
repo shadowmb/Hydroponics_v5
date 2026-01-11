@@ -22,6 +22,7 @@ import { TriggerModal } from '../programs/TriggerModal';
 import type { ITimeWindow, ITrigger } from '../programs/types';
 import { AdvancedExecutionLog } from './AdvancedExecutionLog';
 import { VariableConfigModal } from './VariableConfigModal';
+import { NextCheckTimer } from './NextCheckTimer';
 
 interface AdvancedProgramManagerProps {
     program: IActiveProgram;
@@ -847,6 +848,15 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
                                             <span className="font-medium">{window.name}</span>
                                         </div>
+
+                                        {/* Next Check Timer */}
+                                        <NextCheckTimer
+                                            lastCheck={state?.lastCheck}
+                                            checkInterval={window.checkInterval}
+                                            status={state?.status}
+                                            programStatus={program.status}
+                                            onRefresh={onUpdate}
+                                        />
 
                                         <div className="flex items-center gap-3">
                                             {/* Executed triggers count */}

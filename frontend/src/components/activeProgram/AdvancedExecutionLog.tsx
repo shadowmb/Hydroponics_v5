@@ -88,6 +88,9 @@ const getIcon = (type: LogEntry['type']) => {
         case 'WARNING':
             return <Activity className="h-4 w-4 text-orange-500" />;
 
+        case 'INFO':
+            return <RefreshCw className="h-3.5 w-3.5 text-slate-500" />;
+
         default: return <Clock className="h-3 w-3 text-gray-300" />;
     }
 };

@@ -128,6 +128,14 @@ export class ProgramLogService {
             });
         });
 
+        // Manual Check Initiated
+        events.on('advanced:manual_check', async (data: any) => {
+            await this.logEvent(data.programId, 'INFO', `Извънредна проверка (Force Check)`, {
+                timestamp: data.timestamp,
+                userInitiated: true
+            });
+        });
+
         // Automation Flow Start
         events.on('automation:program_start', async (data: any) => {
             const progId = data.activeProgramId;
