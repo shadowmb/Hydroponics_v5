@@ -474,8 +474,12 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     ];
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] h-[700px] flex flex-col">
+        <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+            <DialogContent
+                className="sm:max-w-[600px] h-[700px] flex flex-col"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{isEditMode ? 'Edit Device' : `Add New Device - Step ${step}`}</DialogTitle>
                     <DialogDescription className="sr-only">

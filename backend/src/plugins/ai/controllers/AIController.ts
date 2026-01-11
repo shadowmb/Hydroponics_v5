@@ -123,6 +123,19 @@ export default async function AIController(fastify: FastifyInstance) {
                     }
                 }
             }
+            else if (uiContext?.wizard === 'ControllerWizard') {
+                const cwDoc = path.join(docsBasePath, 'Controller-Wizard-Guide.md');
+                const cwContent = safeReadFile(cwDoc, 'Controller Wizard Guide');
+                if (cwContent) {
+                    specificContext += `\n=== WIZARD GUIDE: Controller Wizard ===\n` + cwContent + '\n';
+                }
+            } else if (uiContext?.wizard === 'DeviceWizard') {
+                const dwDoc = path.join(docsBasePath, 'Device-Wizard-Guide.md');
+                const dwContent = safeReadFile(dwDoc, 'Device Wizard Guide');
+                if (dwContent) {
+                    specificContext += `\n=== WIZARD GUIDE: Device Wizard ===\n` + dwContent + '\n';
+                }
+            }
 
             // 2. Path-Specific Docs (Dynamic from knowledge-map.json)
             if (role === 'assistant') {

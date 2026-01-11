@@ -473,7 +473,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
     );
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={setOpen} modal={false}>
             {!editController && !hideTrigger && (
                 <DialogTrigger asChild>
                     <Button>
@@ -482,7 +482,11 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                     </Button>
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent
+                className="sm:max-w-[600px]"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>
                         {editController

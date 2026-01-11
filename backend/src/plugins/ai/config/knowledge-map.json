@@ -1,9 +1,12 @@
 {
     "keywords": {
-        "device|sensor|probe|pin|hardware|сензор|устройство|хардуер": "Test-Devices.md",
+        "добави устройство|add device|сензор|sensor|actuator|актуатор|ph sensor|dht|ds18b20|ec sensor": "Device-Wizard-Guide.md",
         "flow|node|logic|automation|trigger|поток|логика|автоматизация": "Test-Flows.md",
         "tutorial|start|guide|help|туториал|помощ|старт": "Tutorials/Tutorial-Basics.md",
-        "firmware|generator|builder|фърмуер|генератор|build|arduino|esp32": "Firmware-Generator-Walkthrough.md"
+        "firmware|generator|builder|фърмуер|генератор|build": "Firmware-Generator-Walkthrough.md",
+        "command|команда|analog|digital|pwm|relay|dht|modbus|onewire|ultrasonic|uart|i2c|servo": "Firmware-Commands-Guide.md",
+        "добави контролер|add controller|scan network|мрежово сканиране": "Controller-Wizard-Guide.md",
+        "порт|port|manage ports|offline|online|status|редактирай контролер|edit controller|delete controller|изтрий контролер|active|inactive": "Controllers-Reference.md"
     },
     "path_mappings": {
         "/flows": "Test-Flows.md",

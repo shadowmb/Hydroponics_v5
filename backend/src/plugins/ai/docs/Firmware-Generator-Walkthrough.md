@@ -27,6 +27,9 @@ Choose the microcontroller model. The system currently supports 4 pre-defined, t
 
 *Information Displayed:* Voltage, Pin count/layout, Connectivity options (WiFi/Serial).
 
+> [!TIP]
+> Each board shows its operating voltage (3.3V or 5V). This is critical for Step 4 (Device selection), as incompatible voltage devices will be unavailable.
+
 ### Step 2: Transport Configuration
 Select how the controller communicates with the system.
 
@@ -36,40 +39,91 @@ Select how the controller communicates with the system.
     *   **Baud Rate:** The communication speed.
     *   **Recommendation:** Select **9600** for stability.
 
+> [!NOTE]
+> Serial connections are more stable than WiFi and recommended for critical sensors (pH, EC) or when the controller is near the server.
+
 #### Option B: WiFi
 *   **Description:** Wireless connection. Requires careful configuration.
-*   **Critical:** All fields are mandatory. Incorrect SSID/Password will require re-flashing the firmware.
 *   **Settings:**
     *   **WiFi SSID:** Name of the router (MUST match the network the System server is on).
     *   **WiFi Password:** Router password.
     *   **UDP Port:** Default is **8888**.
-    *   **Serial Baud Rate:** Default is **115200** (for debug output).
+    *   **Serial Baud Rate:** Default is **115200** (for debug output via USB).
+
+> [!WARNING]
+> **All WiFi fields are mandatory.** If you enter an incorrect SSID or Password, the controller will fail to connect to the network. You will need to regenerate and re-flash the firmware. Double-check your credentials before proceeding.
+
+> [!TIP]
+> Test your WiFi credentials on another device first to ensure they are correct. The controller must be on the same network as the Hydroponics server.
 
 ### Step 3: Plugins
-Add optional features to enhance controller functionality. Availability depends on the selected Board.
-*   **EEPROM State Save:** Restores relay states after a power loss.
-*   **mDNS (Bonjour):** Allows accessing the device via `hostname.local` instead of IP.
-*   **Over-The-Air (OTA) Updates:** Enables wireless firmware updates in the future.
-*   **Remote Debug (Telnet):** Sends debug logs via Telnet/UDP for troubleshooting.
-*   **Watchdog Timer:** Automatically resets the device if it freezes.
-*   **WiFi Failover (Dual SSID):** Connects to a backup WiFi network if the primary fails.
+Add optional features to enhance controller functionality.
+
+> [!NOTE]
+> Not all plugins are available for all boards. Unavailable options will be grayed out based on hardware limitations.
+
+Available plugins:
+*   **EEPROM State Save:** Restores relay states after a power loss. Useful for maintaining actuator states during outages.
+*   **mDNS (Bonjour):** Allows accessing the device via `hostname.local` instead of IP address. Simplifies network configuration.
+*   **Over-The-Air (OTA) Updates:** Enables wireless firmware updates in the future. Requires WiFi transport.
+*   **Remote Debug (Telnet):** Sends debug logs via Telnet/UDP for troubleshooting. Useful for diagnosing communication issues.
+*   **Watchdog Timer:** Automatically resets the device if it freezes. Recommended for production deployments.
+*   **WiFi Failover (Dual SSID):** Connects to a backup WiFi network if the primary fails. Requires WiFi transport.
 
 ### Step 4: Devices (Sensors & Actuators)
 Select the specific hardware components connected to the controller.
+
+> [!IMPORTANT]
+> You select **devices** (e.g., "pH Sensor", "DHT22 Temperature Sensor"), not individual commands. The generator automatically includes the correct low-level communication commands for each device. Multiple devices may share the same underlying command (e.g., multiple analog sensors all use "Analog Read").
+
 *   **Compatibility Check:** The system validates voltage requirements.
     *   *Example:* If a sensor requires 5V but the controller operates on 3.3V, the sensor will be **grayed out** and unselectable, with a message explaining the incompatibility.
-*   **Command Logic:** You do **not** select individual commands (e.g., `AnalogRead`). Instead, you select the **Device** (e.g., "pH Sensor"). The generator automatically includes the correct low-level commands required for that device. Multiple devices may share the same underlying command.
+
+> [!TIP]
+> If a device you need is grayed out, check the board's voltage in Step 1. You may need to select a different board or use a voltage level shifter (external hardware).
 
 ### Step 5: Build & Summary
 Review all configured settings:
 *   Controller Name
-*   Transport Method
+*   Transport Method (Serial or WiFi)
 *   Selected Plugins
-*   **Included Commands:** A list of the specific low-level instructions added to the firmware (e.g., `Analog Read`, `DHT Read`, `Ultrasonic Trig/Echo`, `Modbus RTU Read`).
+*   **Included Commands:** A list of the specific low-level instructions added to the firmware based on your device selections.
+
+**Example Commands:**
+- `Analog Read` (for pH, EC sensors)
+- `DHT Read` (for DHT22 temperature/humidity)
+- `Digital Read/Write` (for relays, switches)
+- `Ultrasonic Trig/Echo` (for distance sensors)
+- `Modbus RTU Read` (for industrial sensors)
+- `OneWire Read Temp` (for DS18B20 temperature sensors)
+- `PWM Write` (for dimmers, fans)
 
 #### Final Actions
-*   **Copy Code:** Copies the verified C++ code to your clipboard.
-*   **Download .ino:** Saves the firmware as an Arduino sketch file (`.ino`).
+*   **Copy Code:** Copies the verified C++ code to your clipboard. Use this to paste directly into Arduino IDE.
+*   **Download .ino:** Saves the firmware as an Arduino sketch file (`.ino`). Use this to save for later or share with others.
 
 ## Uploading
-To flash the firmware onto the controller, you must use an external tool like **Arduino IDE** or **PlatformIO**. Paste or open the generated code and upload it to your board via USB.
+To flash the firmware onto the controller, you must use an external tool:
+- **Arduino IDE** (recommended for beginners)
+- **PlatformIO** (advanced users)
+
+**Steps:**
+1. Open Arduino IDE or PlatformIO.
+2. Paste the copied code or open the downloaded `.ino` file.
+3. Select the correct board type and COM port.
+4. Click "Upload" to flash the firmware via USB.
+
+> [!CAUTION]
+> Ensure the correct board type is selected in Arduino IDE (e.g., "Arduino Uno" for Uno R3, "ESP32 Dev Module" for LilyGO). Selecting the wrong board may brick your controller.
+
+## Troubleshooting
+
+**Controller not connecting after upload:**
+- Verify WiFi credentials (SSID/Password) if using WiFi transport.
+- Check that the controller and server are on the same network.
+- For Serial: Ensure the correct Baud Rate is set in both firmware and system settings.
+
+**Device not responding:**
+- Verify physical connections (correct pins, voltage).
+- Check that the device was selected in Step 4.
+- Review the "Included Commands" list to confirm the necessary command is present.
