@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/hydroponics_v5
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      # Persist firmware and logs
+      - ./firmware:/app/firmware
+      - ./logs:/app/logs
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+  # Simulator is optional on RPi, but good for testing IO without sensors attached
+  simulator:
+    build:
+      context: .
+      dockerfile: simulator/Dockerfile
+    ports:
+      - "3001:3001"
+      - "8888:8888/udp"
+    environment:
+      - API_URL=http://backend:3000
+    profiles:
+      - sim
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+
+volumes:
+  mongo-data:
