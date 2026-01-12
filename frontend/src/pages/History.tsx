@@ -450,7 +450,7 @@ export function History() {
                                         <Tooltip
                                             labelFormatter={(label) => format(new Date(label), 'PP pp')}
                                             contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
-                                            formatter={(value: number, name: string) => {
+                                            formatter={(value: any, name: any) => {
                                                 // Find unit for this line
                                                 // We can't easily access the unit here directly without passing it in data or finding the device
                                                 // But we can try to guess or just show value

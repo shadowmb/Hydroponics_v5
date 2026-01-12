@@ -1,4 +1,4 @@
-import { IAIAction } from '../../persistence/schemas/AIAction.schema';
+import { IAIAction } from '../models/AIAction.schema';
 
 export class TriggerEvaluator {
 

@@ -12,19 +12,7 @@ export interface AIAction {
     lastRun?: string;
 }
 
-// Helper to safely handle missing plugin
-const safeRequest = async <T>(request: () => Promise<T>, fallback: any = null): Promise<T> => {
-    try {
-        return await request();
-    } catch (error: any) {
-        // If 404, it means plugin is missing (not installed)
-        if (error.response && error.response.status === 404) {
-            console.warn('⚠️ AI Plugin missing or endpoint not found.');
-            return fallback;
-        }
-        throw error;
-    }
-};
+
 
 export const aiService = {
     // Check if AI Plugin is installed/active

@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # Connect to external MongoDB or Docker container. 
+      # "host.docker.internal" works on Windows/Mac to access host ports.
+      # On Linux, use the IP of the docker0 interface or host network.
+      - MONGO_URI=mongodb://mongodb:27017/hydroponics_v5
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      # Persist firmware if needed
+      - ./firmware:/app/firmware
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  simulator:
+    build:
+      context: .
+      dockerfile: simulator/Dockerfile
+    ports:
+      - "3001:3001"
+      - "8888:8888/udp"
+    environment:
+      - API_URL=http://backend:3000
+    # Simulator profile: use 'docker-compose --profile sim up' to start it
+    # Or remove profiles to start always.
+    profiles:
+      - sim
+
+  mongodb:
+    image: mongo:6
+    ports:
+      - "27017:27017" # Expose to host for Compass/checking
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo-data:

@@ -7,7 +7,7 @@
  * - Looking up sensor by pin when command arrives
  */
 
-import { SensorRegistry, SensorTemplate } from './SensorRegistry';
+import { SensorRegistry, SensorTemplate } from './SensorRegistry.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';

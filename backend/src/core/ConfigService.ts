@@ -24,7 +24,7 @@ class ConfigService {
   public readonly env: Config;
 
   private constructor() {
-    const result = configSchema.safeParse(process.env);
+    const result = configSchema.safeParse({ ...process.env });
 
     if (!result.success) {
       console.error('❌ Invalid environment variables:', result.error.format());

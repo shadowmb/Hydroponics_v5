@@ -12,12 +12,12 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { DeviceState } from './DeviceState';
-import { UdpProtocolHandler } from './UdpProtocolHandler';
-import { ScenarioEngine } from './ScenarioEngine';
-import { ControllerRegistry } from './ControllerRegistry';
-import { SensorRegistry } from './SensorRegistry';
-import { PinAssignmentManager } from './PinAssignmentManager';
+import { DeviceState } from './DeviceState.js';
+import { UdpProtocolHandler } from './UdpProtocolHandler.js';
+import { ScenarioEngine } from './ScenarioEngine.js';
+import { ControllerRegistry } from './ControllerRegistry.js';
+import { SensorRegistry } from './SensorRegistry.js';
+import { PinAssignmentManager } from './PinAssignmentManager.js';
 
 // ES Module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -33,7 +33,7 @@ const CONTROLLER_MODEL = process.env.MODEL || 'Simulator-ESP32';
 const controllerRegistry = new ControllerRegistry();
 const sensorRegistry = new SensorRegistry();
 
-import { ProfileManager, SimulatorProfile } from './ProfileManager';
+import { ProfileManager, SimulatorProfile } from './ProfileManager.js';
 
 // ... (existing imports)
 
@@ -202,7 +202,7 @@ app.get('/api/pins', (req, res) => {
     const assignments = pinManager.getAllAssignments();
 
     // Mark which pins are assigned
-    const pinsWithStatus = pins.map(pin => {
+    const pinsWithStatus = pins.map((pin: any) => {
         const assignment = pinManager.getAssignment(`${pin.id}_${pin.pin}`);
         return {
             ...pin,
@@ -238,7 +238,7 @@ app.get('/api/assignments', (req, res) => {
     const assignments = pinManager.getAllAssignments();
 
     // Override ADC limits with controller-specific max
-    const assignmentsWithAdcLimits = assignments.map(a => ({
+    const assignmentsWithAdcLimits = assignments.map((a: any) => ({
         ...a,
         limits: a.hardwareCmd === 'ANALOG'
             ? { min: 0, max: adcMax, unit: 'adc' }
