@@ -27,7 +27,8 @@ export class SettingsService {
         // We expect keys like 'ai_provider', 'ai_model', 'ai_api_key', 'ai_enabled'
         // stored individually or as a single object 'ai_config'
         // Let's store them as a single object 'ai_config' for atomicity
-        return this.getSetting('ai_config') || {};
+        const config = await this.getSetting('ai_config');
+        return config || {};
     }
 
     async saveAIConfig(config: any) {
