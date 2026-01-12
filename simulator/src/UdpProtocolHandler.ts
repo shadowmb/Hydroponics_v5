@@ -6,9 +6,9 @@
  * - What values to return based on sensor type
  */
 
-import { DeviceState } from './DeviceState';
-import { PinAssignmentManager } from './PinAssignmentManager';
-import { SensorRegistry } from './SensorRegistry';
+import { DeviceState } from './DeviceState.js';
+import { PinAssignmentManager } from './PinAssignmentManager.js';
+import { SensorRegistry } from './SensorRegistry.js';
 
 interface ControllerInfo {
     mac: string;
@@ -288,7 +288,7 @@ export class UdpProtocolHandler {
             if (assignment) {
                 // Return the actual simulated value
                 // We take the first value from the map (e.g. 'par': 123)
-                const val = Object.values(assignment.values)[0] ?? 0;
+                const val = Number(Object.values(assignment.values)[0] ?? 0);
 
                 // Fill registers with this value (simplification for single-value sensors)
                 for (let i = 0; i < len; i++) {

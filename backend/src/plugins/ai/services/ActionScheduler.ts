@@ -1,7 +1,7 @@
 import * as cron from 'node-cron';
 import { aiActionsService } from './AIActionsService';
 import { aiService } from './AIService';
-import { IAIAction } from '../../persistence/schemas/AIAction.schema';
+import { IAIAction } from '../models/AIAction.schema';
 
 export class ActionScheduler {
     private jobs: Map<string, cron.ScheduledTask> = new Map();

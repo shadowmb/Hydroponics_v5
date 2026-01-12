@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+    environment:
+      # Use internal service name 'mongodb'
+      - MONGO_URI=mongodb://mongodb:27017/hydroponics_v5
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      # Persist firmware and logs (Windows paths relative to compose file)
+      - ./firmware:/app/firmware
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  simulator:
+    build:
+      context: .
+      dockerfile: simulator/Dockerfile
+    ports:
+      - "3001:3001"
+      - "8888:8888/udp"
+    environment:
+      - API_URL=http://backend:3000
+    # Enable simulator by default on Windows development/server setup if desired
+    # or keep profile to start optionally:
+    profiles:
+      - sim
+    restart: unless-stopped
+
+  mongodb:
+    # Use latest standard MongoDB for modern Windows machines (supports AVX)
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
