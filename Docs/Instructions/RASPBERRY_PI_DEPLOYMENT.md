@@ -87,6 +87,7 @@ docker compose -f docker-compose.rpi.yml up --build -d
 ```bash
 # Добавяме профил "sim"
 docker compose -f docker-compose.rpi.yml --profile sim up --build -d
+
 ```
 
 - **Симулатор GUI:** `http://<IP-на-Raspberry-Pi>:3001`

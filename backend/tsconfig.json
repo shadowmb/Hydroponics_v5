@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "es2022",
         "module": "commonjs",
-        "rootDir": "./src",
+        "rootDir": "..",
         "moduleResolution": "node",
         "outDir": "./dist",
         "esModuleInterop": true,
@@ -12,7 +12,8 @@
         "resolveJsonModule": true
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "../shared/**/*"
     ],
     "exclude": [
         "node_modules",

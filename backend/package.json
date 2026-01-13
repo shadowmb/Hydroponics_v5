@@ -2,11 +2,11 @@
     "name": "hydroponics-v5-backend",
     "version": "1.0.0",
     "description": "Hydroponics System v5 Backend",
-    "main": "dist/index.js",
+    "main": "dist/backend/src/index.js",
     "scripts": {
         "build": "tsc",
-        "start": "chcp 65001 && node dist/index.js",
-        "start:docker": "node dist/index.js",
+        "start": "chcp 65001 && node dist/backend/src/index.js",
+        "start:docker": "node dist/backend/src/index.js",
         "dev": "chcp 65001 && ts-node-dev --respawn --transpile-only src/index.ts",
         "verify-db": "ts-node src/verify-db.ts"
     },
