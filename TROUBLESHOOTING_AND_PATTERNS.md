@@ -131,3 +131,13 @@ The `Device` model (`backend/src/models/Device.ts`) has a strict `enum` for the 
 1.  Update the `group` enum in `backend/src/models/Device.ts` to include the new category name.
 2.  Update the `IDevice` interface to include the new literal type.
 3.  Register the new category in the frontend wizard (`DeviceWizard.tsx`).
+
+## 13. Deployment: Docker Missing Config
+### Problem
+When deploying to Raspberry Pi (or any Docker environment), the database templates for Controllers and Devices were empty.
+### Cause
+The `backend/Dockerfile` only copied the source code (`src/`) but failed to copy the configuration directory (`backend/config/`), which contains the JSON templates loaded at runtime.
+### Solution
+Explicitly `COPY backend/config ./config` in the Dockerfile.
+### Lesson
+Runtime dependencies that are not in `node_modules` (like config files, templates, or assets) must be explicitly added to the Docker image.

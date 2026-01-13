@@ -17,6 +17,7 @@ WORKDIR /app/backend
 RUN npm install
 
 # Copy source code and firmware
+COPY backend/config ./config
 COPY backend/src ./src
 COPY firmware /app/firmware
 
