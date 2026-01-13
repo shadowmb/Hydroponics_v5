@@ -19,9 +19,12 @@ export class PluginManager {
 
         for (const folder of folders) {
             const pluginPath = path.join(pluginsDir, folder);
-            const entryPoint = path.join(pluginPath, 'index.ts');
+            let entryPoint = path.join(pluginPath, 'index.js');
+            if (!fs.existsSync(entryPoint)) {
+                entryPoint = path.join(pluginPath, 'index.ts');
+            }
 
-            // Check if directory and has index.ts
+            // Check if directory and has entry point
             if (fs.statSync(pluginPath).isDirectory() && fs.existsSync(entryPoint)) {
                 try {
                     logger.info(`🔌 Loading Plugin: [${folder}]...`);
