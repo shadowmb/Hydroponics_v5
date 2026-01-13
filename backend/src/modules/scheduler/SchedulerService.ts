@@ -83,7 +83,7 @@ export class SchedulerService {
      * Trigger an immediate Advanced Program check.
      * Used when a program starts so we don't wait for the next tick (1 min).
      */
-    public async triggerImmediateCheck(): Promise<void> {
+    public async triggerImmediateCheck(options?: { silent?: boolean }): Promise<void> {
         try {
             const activeProgram = await activeProgramService.getActive();
             if (!activeProgram || activeProgram.status !== 'running') {
@@ -93,14 +93,19 @@ export class SchedulerService {
             if (activeProgram.type === 'ADVANCED') {
                 const now = new Date();
                 const timeString = now.toTimeString().slice(0, 5);
-                logger.info({ time: timeString }, '⚡ Immediate Advanced Program Check');
 
-                // Log manual check event
-                events.emit('advanced:manual_check', {
-                    programId: activeProgram.sourceProgramId,
-                    timestamp: now,
-                    userInitiated: true
-                });
+                if (!options?.silent) {
+                    logger.info({ time: timeString }, '⚡ Immediate Advanced Program Check');
+
+                    // Log manual check event
+                    events.emit('advanced:manual_check', {
+                        programId: activeProgram.sourceProgramId,
+                        timestamp: now,
+                        userInitiated: true
+                    });
+                } else {
+                    logger.debug({ time: timeString }, '⚡ Immediate Check (Silent)');
+                }
 
                 await this.processAdvancedProgram(activeProgram, timeString, true);
             }
@@ -327,6 +332,8 @@ export class SchedulerService {
                 continue;
             }
 
+            logger.info({ window: window.name, status: state.status, lastCheck: state.lastCheck }, '🔍 Scheduler: Processing Window Step');
+
             // ---------------------------------------------------------
             // 0. SKIP & DAY RESET LOGIC
             // ---------------------------------------------------------
@@ -463,11 +470,30 @@ export class SchedulerService {
                             programId: activeProgram.sourceProgramId,
                             windowId: window.id,
                             windowName: window.name,
-                            result: result as any,
+                            result: result as any, // 'triggered' | 'fallback' | 'no_trigger'
                             timestamp: new Date(),
                             flowId: this.getFlowIdFromExecution(window, state),
-                            flowName: this.getFlowIdFromExecution(window, state) // Using ID as name fallback for now
+                            flowName: this.getFlowIdFromExecution(window, state)
                         });
+
+                        // RECORD SUMMARY (Fix for /short analysis)
+                        try {
+                            const { resourceSummaryService } = require('../analysis/ResourceSummaryService');
+                            const flowId = this.getFlowIdFromExecution(window, state);
+
+                            await resourceSummaryService.recordWindowSummary({
+                                programId: activeProgram.sourceProgramId,
+                                programName: activeProgram.name || activeProgram.sourceProgramId,
+                                windowId: window.id,
+                                windowName: window.name,
+                                flowId: flowId,
+                                flowName: flowId, // Should verify if we can get real name
+                                executionType: 'WINDOW'
+                            });
+                            logger.info('📊 [ResourceSummaryService] Summary recorded for Fallback/Trigger flow');
+                        } catch (err) {
+                            logger.error({ err }, '❌ Failed to record resource summary');
+                        }
                     }
 
                     await activeProgram.save();
@@ -543,8 +569,29 @@ export class SchedulerService {
                     await activeProgram.save();
                 }
             }
+
+            // ZOMBIE CHECK: If status is 'active' but no session ID, and past time -> Force Complete
+            else if (state.status === 'active' && !state.currentFlowSessionId && this.isPastTimeWindow(timeString, window.endTime)) {
+                logger.warn({ windowId: window.id }, '🧟 Zombie Active Window detected (No Session ID). Marking completed.');
+                state.status = 'completed';
+
+                // Add log entry so user sees it finished
+                try {
+                    const { programLogService } = require('../logging/ProgramLogService');
+                    programLogService.logEvent({
+                        programId: activeProgram.sourceProgramId,
+                        type: 'WINDOW_EVENT',
+                        message: `Прозорец "${window.name}" завърши (Resume/Fallback)`,
+                        metadata: { windowId: window.id }
+                    });
+                } catch (e) { }
+
+                await activeProgram.save();
+                continue;
+            }
+
             // Check if we're past the window (fallback time)
-            else if (this.isPastTimeWindow(timeString, window.endTime) && state.status !== 'completed') {
+            else if (this.isPastTimeWindow(timeString, window.endTime) && state.status !== 'completed' && state.status !== 'active') {
                 // BUGFIX: Check if the program was active during this window's time range
                 // If program started AFTER the window ended, skip fallback (window was missed)
                 const wasActiveForWindow = this.wasProgramActiveForWindow(
@@ -588,14 +635,27 @@ export class SchedulerService {
                     t => t.behavior === 'break' && state.triggersExecuted.includes(t.id)
                 );
 
-                if (!hasBreakExecuted && (window.fallbackFlowId || (window.fallbackFlowIds && window.fallbackFlowIds.length > 0))) {
-                    const stepsCount = window.fallbackFlowIds?.length || (window.fallbackFlowId ? 1 : 0);
+                const hasLinkedFallback = !!(window as any).fallbackTriggerId;
+                const legacyFallback = !!(window.fallbackFlowId || (window.fallbackFlowIds && window.fallbackFlowIds.length > 0));
+
+                if (!hasBreakExecuted && (hasLinkedFallback || legacyFallback)) {
+                    const linkedId = (window as any).fallbackTriggerId;
+                    let flowNameLog = 'Unknown';
+
+                    if (hasLinkedFallback) {
+                        // Resolve trigger index for friendlier log?
+                        const tIdx = window.triggers.findIndex(t => t.id === linkedId);
+                        flowNameLog = `Linked Trigger #${tIdx + 1}`;
+                    } else {
+                        const stepsCount = window.fallbackFlowIds?.length || (window.fallbackFlowId ? 1 : 0);
+                        flowNameLog = stepsCount > 1 ? `${stepsCount} Flows` : (window.fallbackFlowId || window.fallbackFlowIds?.[0] || 'Legacy');
+                    }
 
                     events.emit('advanced:fallback_executed', {
                         programId: activeProgram.sourceProgramId,
                         windowId: window.id,
                         windowName: window.name,
-                        flowName: stepsCount > 1 ? `${stepsCount} Flows` : (window.fallbackFlowId || window.fallbackFlowIds?.[0] || 'Unknown'),
+                        flowName: flowNameLog,
                         timestamp: new Date()
                     });
 

@@ -84,13 +84,17 @@ export class ProgramDailyLogRepository extends BaseRepository<IProgramDailyLog> 
                     (!matchCriteria.windowId || existing.metadata?.windowId === matchCriteria.windowId)
                 ) {
                     // Found matching event - update it in place
+                    const currentCount = existing.count || 1;
+                    const newCount = currentCount + 1;
+
                     await this.model.updateOne(
                         { programId, date, [`events.${i}.type`]: matchCriteria.type },
                         {
                             $set: {
                                 [`events.${i}.timestamp`]: event.timestamp,
                                 [`events.${i}.message`]: event.message,
-                                [`events.${i}.metadata`]: event.metadata
+                                [`events.${i}.metadata`]: event.metadata,
+                                [`events.${i}.count`]: newCount
                             }
                         }
                     );

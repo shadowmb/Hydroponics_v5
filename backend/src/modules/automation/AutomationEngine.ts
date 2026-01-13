@@ -31,6 +31,7 @@ export class AutomationEngine {
     private activeProgramId: string | null = null;
     private currentWindowId: string | null = null;
     private currentWindowName: string | null = null;
+    private executionType: string | null = null;
     private executionStartTime: number = 0;
 
     private instanceId = Math.random().toString(36).substring(7);
@@ -262,6 +263,11 @@ export class AutomationEngine {
         if (overrides['windowName']) {
             this.currentWindowName = overrides['windowName'];
         }
+        if (overrides['executionType']) {
+            this.executionType = overrides['executionType'];
+        } else {
+            this.executionType = null;
+        }
 
         // 3. Create Session
         const session = await sessionRepository.create({
@@ -317,7 +323,8 @@ export class AutomationEngine {
             programId: this.activeProgramId || 'unknown',
             sessionId: this.currentSessionId!,
             programName: this.currentProgramName || 'Unknown Program',
-            activeProgramId: this.activeProgramId
+            activeProgramId: this.activeProgramId,
+            executionType: this.executionType
         });
     }
 

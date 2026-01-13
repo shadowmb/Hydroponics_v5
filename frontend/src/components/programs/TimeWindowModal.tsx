@@ -11,6 +11,7 @@ import {
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Checkbox } from '../ui/checkbox';
@@ -49,6 +50,9 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
     const [fallbackFlowIds, setFallbackFlowIds] = useState<string[]>([]);
     const [description, setDescription] = useState('');
 
+    // New state for Linked Fallback support
+    const [manualFallback, setManualFallback] = useState(false);
+
     // Reset state when opening/editing
     useEffect(() => {
         if (open) {
@@ -61,13 +65,20 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                 setDescription(editingWindow.description || '');
 
                 // Migrate legacy fallbackFlowId
+                let currentFlows: string[] = [];
                 if (editingWindow.fallbackFlowIds && editingWindow.fallbackFlowIds.length > 0) {
-                    setFallbackFlowIds(editingWindow.fallbackFlowIds);
+                    currentFlows = editingWindow.fallbackFlowIds;
                 } else if (editingWindow.fallbackFlowId) {
-                    setFallbackFlowIds([editingWindow.fallbackFlowId]);
-                } else {
-                    setFallbackFlowIds([]);
+                    currentFlows = [editingWindow.fallbackFlowId];
                 }
+                setFallbackFlowIds(currentFlows);
+
+                // Determine manual mode: if we have flows, it's manual. 
+                // If it's empty, we assume it's Linked (unless user explicitly enables manual, handled by interactions)
+                // Actually, for editing, if it's empty, it could be "No Fallback" OR "Linked". 
+                // But generally if it's empty, we can start as "Not Manual" (allow linking).
+                // If the user wants to add flows, they click the switch.
+                setManualFallback(currentFlows.length > 0);
             } else {
                 // Defaults for new window
                 const lastWindow = existingWindows[existingWindows.length - 1];
@@ -87,6 +98,7 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                 setDataSource('cached');
                 setFallbackFlowIds([]);
                 setDescription('');
+                setManualFallback(false);
             }
             setAutoAdjust(false); // Reset checkbox
         }
@@ -129,19 +141,17 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
             checkInterval,
             dataSource,
             triggers: editingWindow?.triggers || [],
-            fallbackFlowId: fallbackFlowIds[0], // Deprecated
-            fallbackFlowIds, // New
+            fallbackFlowId: undefined, // Fully deprecated/cleared
+            fallbackFlowIds: manualFallback ? fallbackFlowIds : [], // If not manual, ensure empty flow list
+            fallbackTriggerId: manualFallback ? undefined : editingWindow?.fallbackTriggerId, // Preserve link if not manual
             description
         };
         const result = await onSave(windowData, autoAdjust);
-        // Only close if onSave returns true (success) or undefined (assumed success for void)
-        // If it returns false (explicitly intercepted), keep open.
         if (result !== false) {
             onClose();
         }
     };
 
-    // Helper methods for fallback flows
     // Helper methods for fallback flows
     const addFallbackFlow = (id: string) => {
         setFallbackFlowIds([...fallbackFlowIds, id]);
@@ -263,76 +273,102 @@ export const TimeWindowModal: React.FC<TimeWindowModalProps> = ({
                     </div>
 
                     {/* Fallback Flow (Multi) */}
-                    <div className="grid grid-cols-4 items-start gap-4">
+                    <div className="grid grid-cols-4 items-start gap-4 border-t pt-4">
                         <Label className="text-right pt-2">Fallback</Label>
                         <div className="col-span-3 space-y-3">
-                            {/* Selected Fallback Flows List */}
-                            {fallbackFlowIds.length > 0 ? (
-                                <div className="space-y-2 border rounded-md p-2 bg-muted/20">
-                                    {fallbackFlowIds.map((id, index) => {
-                                        const flow = flows.find(f => f.id === id);
-                                        return (
-                                            <div key={`${id}-${index}`} className="flex items-center justify-between bg-background p-2 rounded border text-sm">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-muted-foreground font-mono text-xs">{index + 1}.</span>
-                                                    <span className="font-medium">{flow?.name || 'Unknown Flow'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    {index > 0 && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-6 w-6"
-                                                            onClick={() => moveFallbackFlowUp(index)}
-                                                            title="Мести нагоре"
-                                                        >
-                                                            ↑
-                                                        </Button>
-                                                    )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-100"
-                                                        onClick={() => removeFallbackFlow(index)}
-                                                        title="Премахни"
-                                                    >
-                                                        ×
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="text-sm text-muted-foreground py-1">
-                                    Няма избран fallback поток (по избор).
+                            <div className="flex items-center space-x-2">
+                                <Switch
+                                    id="manual-fallback"
+                                    checked={manualFallback}
+                                    onCheckedChange={(checked) => {
+                                        setManualFallback(checked);
+                                        // If turning OFF manual, clear the flow IDs
+                                        if (!checked) setFallbackFlowIds([]);
+                                    }}
+                                />
+                                <Label htmlFor="manual-fallback" className="font-normal cursor-pointer">
+                                    Ръчна конфигурация (статични потоци)
+                                </Label>
+                            </div>
+
+                            {!manualFallback && (
+                                <div className="text-sm text-blue-200 bg-blue-950/40 p-3 rounded border border-blue-900/50 flex gap-2">
+                                    <span>ℹ️</span>
+                                    <span>Когато е изключено, Fallback логиката може да се настрои от таблото за управление (Dashboard) чрез свързване (Link) към съществуващ тригър.</span>
                                 </div>
                             )}
 
-                            {/* Add Fallback Flow Dropdown */}
-                            <div className="flex gap-2">
-                                <Select
-                                    key={fallbackFlowIds.length}
-                                    onValueChange={(val) => {
-                                        addFallbackFlow(val);
-                                    }}
-                                    value=""
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="➕ Добави fallback..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {flows.map(flow => (
-                                            <SelectItem
-                                                key={flow.id}
-                                                value={flow.id}
-                                            >
-                                                {flow.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            {manualFallback && (
+                                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                    {/* Selected Fallback Flows List */}
+                                    {fallbackFlowIds.length > 0 ? (
+                                        <div className="space-y-2 border rounded-md p-2 bg-muted/20">
+                                            {fallbackFlowIds.map((id, index) => {
+                                                const flow = flows.find(f => f.id === id);
+                                                return (
+                                                    <div key={`${id}-${index}`} className="flex items-center justify-between bg-background p-2 rounded border text-sm">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-muted-foreground font-mono text-xs">{index + 1}.</span>
+                                                            <span className="font-medium">{flow?.name || 'Unknown Flow'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            {index > 0 && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-6 w-6"
+                                                                    onClick={() => moveFallbackFlowUp(index)}
+                                                                    title="Мести нагоре"
+                                                                >
+                                                                    ↑
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-100"
+                                                                onClick={() => removeFallbackFlow(index)}
+                                                                title="Премахни"
+                                                            >
+                                                                ×
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-muted-foreground py-1">
+                                            Няма избран fallback поток (по избор).
+                                        </div>
+                                    )}
+
+                                    {/* Add Fallback Flow Dropdown */}
+                                    <div className="flex gap-2">
+                                        <Select
+                                            key={fallbackFlowIds.length}
+                                            onValueChange={(val) => {
+                                                addFallbackFlow(val);
+                                            }}
+                                            value=""
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="➕ Добави fallback..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {flows.map(flow => (
+                                                    <SelectItem
+                                                        key={flow.id}
+                                                        value={flow.id}
+                                                    >
+                                                        {flow.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -33,9 +33,16 @@ export class ActiveProgramController {
 
     static async start(req: FastifyRequest, reply: FastifyReply) {
         try {
-            const { startTime } = req.body as any || {};
-            const active = await activeProgramService.start(startTime);
-            reply.send(active);
+            const { startTime, expiredStrategy } = req.body as any || {};
+            const result = await activeProgramService.start(startTime, { expiredStrategy });
+
+            // Check for confirmation requirement
+            if ('status' in result && result.status === 'confirmation_required') {
+                reply.status(200).send(result); // 200 OK because it's a valid "question" from the server logic
+                return;
+            }
+
+            reply.send(result);
         } catch (error: any) {
             reply.status(500).send({ message: error.message });
         }

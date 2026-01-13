@@ -31,6 +31,7 @@ interface LogEntry {
     data?: any; // Frontend format
     message?: string; // Backend format
     metadata?: any; // Backend format
+    count?: number; // Deduplication count
 }
 
 interface AdvancedExecutionLogProps {
@@ -105,7 +106,7 @@ const formatMessage = (entry: LogEntry): React.ReactNode => {
                 <div className="mt-0.5">
                     <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-muted-foreground">
-                            Evaluation Result {triggerIndex ? `- Trigger #${triggerIndex}` : ''}
+                            Резултат от проверка {entry.count && entry.count > 1 ? `(${entry.count}) ` : ''}{triggerIndex ? `- Тригер #${triggerIndex}` : ''}
                         </span>
                         <span className={cn(
                             "text-xs px-1.5 py-0.5 rounded font-bold uppercase",

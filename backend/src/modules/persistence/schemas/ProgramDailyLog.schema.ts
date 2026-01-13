@@ -9,6 +9,7 @@ export interface ILogEvent {
     message: string;
     metadata?: Record<string, any>; // Flexible metadata (sensor values, window names, etc)
     executionSessionId?: string; // Link to detailed execution session if applicable
+    count?: number; // For deduplicated events
 }
 
 export interface IProgramDailyLog extends Document, ISoftDelete {
@@ -27,7 +28,8 @@ const LogEventSchema = new Schema({
     },
     message: { type: String, required: true },
     metadata: { type: Schema.Types.Mixed },
-    executionSessionId: { type: String }
+    executionSessionId: { type: String },
+    count: { type: Number, default: 1 }
 }, { _id: false });
 
 const ProgramDailyLogSchema = new Schema<IProgramDailyLog>({
