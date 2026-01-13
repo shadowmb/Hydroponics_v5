@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format, differenceInMinutes, parse, isValid } from 'date-fns';
 import type { IActiveProgram, IVariable, IContext } from '../../types/ActiveProgram';
 import { activeProgramService } from '../../services/activeProgramService';
@@ -19,10 +19,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { TimePicker24 } from '../ui/time-picker-24';
 import { TimeWindowModal } from '../programs/TimeWindowModal';
 import { TriggerModal } from '../programs/TriggerModal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+
 import type { ITimeWindow, ITrigger } from '../programs/types';
 import { AdvancedExecutionLog } from './AdvancedExecutionLog';
 import { VariableConfigModal } from './VariableConfigModal';
 import { NextCheckTimer } from './NextCheckTimer';
+import { ExpiredWindowsDialog } from './ExpiredWindowsDialog';
 
 interface AdvancedProgramManagerProps {
     program: IActiveProgram;
@@ -132,6 +136,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     const [editingFullTrigger, setEditingFullTrigger] = useState<ITrigger | null>(null);
     const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false);
     const [editingTriggerWindowId, setEditingTriggerWindowId] = useState<string | null>(null);
+    const [expiredDialogData, setExpiredDialogData] = useState<{ open: boolean, windows: any[] }>({ open: false, windows: [] });
 
 
     const windows = (program as any).windows || [];
@@ -272,10 +277,34 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         }
     };
 
+    const handleConfirmExpired = useCallback(async (strategy: 'run' | 'skip') => {
+        setExpiredDialogData(prev => ({ ...prev, open: false })); // Use functional update
+        setProcessing(true);
+        try {
+            await activeProgramService.start(undefined, { expiredStrategy: strategy });
+            toast.success(`Program resumed (${strategy === 'skip' ? 'Skipped' : 'Force Run'} expired windows)`);
+            onUpdate();
+        } catch (error) {
+            toast.error('Failed to resume with strategy');
+        } finally {
+            setProcessing(false);
+        }
+    }, [onUpdate]); // Add dependency onUpdate
+
     const handleResume = async () => {
         setProcessing(true);
         try {
-            await activeProgramService.start();
+            const result = await activeProgramService.start();
+
+            // Check for confirmation requirement
+            if (result && result.status === 'confirmation_required') {
+                setExpiredDialogData({
+                    open: true,
+                    windows: result.expiredWindows || []
+                });
+                return; // Stop here, wait for user input
+            }
+
             toast.success('Програмата продължава');
             onUpdate();
         } catch (error) {
@@ -602,6 +631,36 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     const doneCount = completedCount + skippedCount;  // Both count as done
     const totalCount = localWindows.length;
     const progressPercent = totalCount > 0 ? (doneCount / totalCount) * 100 : 0;
+
+    // Handle Fallback Update (Live)
+    const handleUpdateFallback = async (windowId: string, updates: { fallbackTriggerId?: string }) => {
+        const win = localWindows.find(w => w.id === windowId);
+        if (!win) return;
+
+        // Clone and Update
+        const updatedWindow = { ...win, ...updates };
+
+        // If switching TO manual (fallbackTriggerId explicitly undefined/empty), ensure we clear it
+        if (updates.fallbackTriggerId === undefined || updates.fallbackTriggerId === '') {
+            updatedWindow.fallbackTriggerId = undefined;
+        }
+
+        // Optimistic Update
+        const newWindows = localWindows.map(w => w.id === windowId ? updatedWindow : w);
+        setLocalWindows(newWindows);
+
+        try {
+            setProcessing(true);
+            await activeProgramService.update({ windows: newWindows } as any);
+            toast.success('Fallback updated successfully');
+            onUpdate();
+        } catch (error) {
+            toast.error('Failed to update fallback');
+            setLocalWindows(localWindows); // Revert
+        } finally {
+            setProcessing(false);
+        }
+    };
 
     // Current time string
     const timeString = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}`;
@@ -1129,8 +1188,73 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                 })
                                             )}
 
-                                            {/* Fallback Info */}
-                                            {(window.fallbackFlowIds?.length || window.fallbackFlowId) && (
+                                            {/* Fallback Info & Edit */}
+                                            {(state?.status !== 'completed' && state?.status !== 'skipped') && (
+                                                <div className={cn(
+                                                    "mt-4 p-3 rounded-md flex items-center justify-center gap-4 text-sm border mx-auto w-fit min-w-[50%]",
+                                                    "bg-muted/5 border-white/10 shadow-sm"
+                                                )}>
+                                                    <TooltipProvider>
+                                                        <Tooltip delayDuration={300}>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="flex items-center gap-1 cursor-help hover:text-primary transition-colors">
+                                                                    <span>🛡️</span>
+                                                                    <span className="text-muted-foreground whitespace-nowrap font-medium">Fallback:</span>
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="max-w-[300px] text-center">
+                                                                <p>Fallback дефинира действията, които ще се изпълнят, ако <b>НИТО ЕДИН</b> от тригърите в този прозорец не е активен.</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+
+                                                    <div className="flex items-center gap-3">
+                                                        <Select
+                                                            value={window.fallbackTriggerId || ((window.fallbackFlowIds?.length || window.fallbackFlowId) ? 'manual' : 'none')}
+                                                            onValueChange={(val) => {
+                                                                // If val is 'manual' or 'none', we clear the linked trigger.
+                                                                // If manual flows exist, they will take over (Manual Mode).
+                                                                // If no manual flows exist, 'none' means no fallback.
+                                                                handleUpdateFallback(window.id, { fallbackTriggerId: val === 'manual' || val === 'none' ? '' : val });
+                                                            }}
+                                                        >
+                                                            <SelectTrigger className="h-8 w-fit min-w-[200px] max-w-[400px]">
+                                                                <SelectValue placeholder="Избери тригър..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {/* Manual Option (Visible only if manual flows exist) */}
+                                                                {(window.fallbackFlowIds?.length || window.fallbackFlowId) && (
+                                                                    <SelectItem value="manual" className="font-medium text-amber-500">
+                                                                        ⚡ Manual: {
+                                                                            window.fallbackFlowIds && window.fallbackFlowIds.length > 0
+                                                                                ? window.fallbackFlowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                                : getFlowName(window.fallbackFlowId)
+                                                                        }
+                                                                    </SelectItem>
+                                                                )}
+
+                                                                <SelectItem value="none">-- Няма (No Fallback) --</SelectItem>
+                                                                {window.triggers.map((t: any, idx: number) => {
+                                                                    const label = t.conditions?.map((c: any) => {
+                                                                        const sName = getSensorName(c.sensorId);
+                                                                        return `${sName} ${formatOperator(c.operator)} ${c.value}`;
+                                                                    }).join(' & ');
+
+                                                                    return (
+                                                                        <SelectItem key={t.id} value={t.id}>
+                                                                            <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
+                                                                            {label || `Trigger #${idx + 1}`}
+                                                                        </SelectItem>
+                                                                    );
+                                                                })}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Static Display for Completed Windows */}
+                                            {(state?.status === 'completed' || state?.status === 'skipped') && (window.fallbackFlowIds?.length || window.fallbackFlowId || window.fallbackTriggerId) && (
                                                 <div className={cn(
                                                     "mt-3 p-3 border rounded-md",
                                                     state?.status === 'completed' && !triggers.some((t: any) =>
@@ -1139,12 +1263,21 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                         ? "bg-amber-500/20 border-amber-500"
                                                         : "bg-amber-500/10 border-amber-500/20"
                                                 )}>
-                                                    <span className="text-amber-600 font-medium">
-                                                        ⚡ Fallback: {
+                                                    <span className="text-amber-600 font-medium font-mono text-sm block mb-1 uppercase tracking-xs">
+                                                        Fallback Executed
+                                                    </span>
+                                                    <span className="text-foreground/80 font-medium text-sm">
+                                                        {window.fallbackTriggerId ? (
+                                                            // Resolve Trigger Name
+                                                            (() => {
+                                                                const t = window.triggers.find((tr: any) => tr.id === window.fallbackTriggerId);
+                                                                return t ? `Linked: Trigger #${window.triggers.indexOf(t) + 1}` : 'Linked Trigger (Deleted)';
+                                                            })()
+                                                        ) : (
                                                             window.fallbackFlowIds && window.fallbackFlowIds.length > 0
                                                                 ? window.fallbackFlowIds.map((fid: string) => getFlowName(fid)).join(' + ')
                                                                 : getFlowName(window.fallbackFlowId)
-                                                        }
+                                                        )}
                                                     </span>
                                                 </div>
                                             )}
@@ -1212,6 +1345,13 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                 }}
             />
 
+            {/* Expired Windows Dialog */}
+            <ExpiredWindowsDialog
+                open={expiredDialogData.open}
+                expiredWindows={expiredDialogData.windows}
+                onConfirm={handleConfirmExpired}
+                onCancel={() => setExpiredDialogData({ ...expiredDialogData, open: false })}
+            />
         </>
     );
 };

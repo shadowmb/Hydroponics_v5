@@ -176,7 +176,8 @@ export class TriggerEvaluator {
                         ...globalOverrides,
                         activeProgramId: programId,
                         windowId: window.id,
-                        windowName: window.name
+                        windowName: window.name,
+                        executionType: 'trigger',
                     };
 
                     steps = steps.map(s => ({
@@ -216,40 +217,70 @@ export class TriggerEvaluator {
         contextOverrides: Record<string, any> = {},
         activeProgramId?: string
     ): Promise<string | undefined> {
-        // Migration support: check both new plural array and old single ID
+        // Linked Trigger Support
+        const linkedTriggerId = (window as any).fallbackTriggerId; // Cast as any if interface not picked up yet
+        let steps: { flowId: string, overrides: any }[] = [];
+        let sourceDescription = '';
+
+        if (linkedTriggerId) {
+            const linkedTrigger = window.triggers.find(t => t.id === linkedTriggerId);
+            if (linkedTrigger) {
+                logger.info({ windowId: window.id, linkedTriggerId }, '🔗 Using Linked Trigger for Fallback');
+
+                // Find the index of the linked trigger to resolve correct variable context
+                const linkedTriggerIndex = window.triggers.findIndex(t => t.id === linkedTriggerId);
+
+                // Determine flows from trigger
+                if (linkedTrigger.flowIds && linkedTrigger.flowIds.length > 0) {
+                    steps = linkedTrigger.flowIds.map((fid, fIdx) => {
+                        // REUSE the context key from the trigger definition (e.g. t_0_f_0)
+                        // This requires that linkedTriggerIndex is valid (>= 0). It should be if found.
+                        const contextKey = `t_${linkedTriggerIndex}_f_${fIdx}`;
+                        return {
+                            flowId: fid,
+                            overrides: { ...globalOverrides, ...contextOverrides[contextKey] || {} }
+                        };
+                    });
+                    sourceDescription = `Linked Trigger: ${linkedTrigger.id}`;
+                } else if (linkedTrigger.flowId) {
+                    const contextKey = `t_${linkedTriggerIndex}_f_0`;
+                    steps = [{
+                        flowId: linkedTrigger.flowId,
+                        overrides: { ...globalOverrides, ...contextOverrides[contextKey] || {} }
+                    }];
+                    sourceDescription = `Linked Trigger: ${linkedTrigger.id}`;
+                } else {
+                    logger.warn({ linkedTriggerId }, '⚠️ Linked Trigger has no flows');
+                }
+            } else {
+                logger.warn({ linkedTriggerId }, '⚠️ Linked Trigger not found in window');
+            }
+        }
+
+        // Migration support: check both new plural array and old single ID if no linked trigger used
         const useMultiFlow = window.fallbackFlowIds && window.fallbackFlowIds.length > 0;
         const useSingleFlow = !!window.fallbackFlowId;
 
-        if (!useMultiFlow && !useSingleFlow) {
-            logger.info({ windowId: window.id }, '⚠️ No fallback flow(s) configured');
-            return undefined;
-        }
+        if (steps.length === 0) {
+            if (!useMultiFlow && !useSingleFlow) {
+                logger.info({ windowId: window.id }, '⚠️ No fallback flow(s) configured');
+                return undefined;
+            }
 
-        logger.info({
-            windowId: window.id,
-            fallbackFlowId: window.fallbackFlowId,
-            fallbackFlowIds: window.fallbackFlowIds
-        }, '🛡️ Executing fallback flow(s)');
-
-        try {
-            // Include activeProgramId in overrides for logging
-            const baseContext = {
-                ...globalOverrides,
-                activeProgramId,
+            logger.info({
                 windowId: window.id,
-                windowName: window.name
-            };
+                fallbackFlowId: window.fallbackFlowId,
+                fallbackFlowIds: window.fallbackFlowIds
+            }, '🛡️ Executing fallback flow(s)');
 
             // Construct steps (Multiple flows logic)
-            let steps: { flowId: string, overrides: any }[] = [];
-
             if (useMultiFlow) {
                 steps = window.fallbackFlowIds!.map((fid, fIdx) => {
                     const contextId = `fb_${fIdx}`;
                     const specificOverrides = contextOverrides[contextId] || {};
                     return {
                         flowId: fid,
-                        overrides: { ...baseContext, ...specificOverrides }
+                        overrides: { ...globalOverrides, ...contextOverrides[contextId] || {} }
                     };
                 });
             } else if (useSingleFlow) {
@@ -258,9 +289,26 @@ export class TriggerEvaluator {
                 const specificOverrides = contextOverrides[contextId] || {};
                 steps = [{
                     flowId: window.fallbackFlowId!,
-                    overrides: { ...baseContext, ...specificOverrides }
+                    overrides: { ...globalOverrides, ...contextOverrides[contextId] || {} }
                 }];
             }
+        }
+
+        try {
+            // Include activeProgramId in overrides for logging
+            const baseContext = {
+                ...globalOverrides,
+                activeProgramId,
+                windowId: window.id,
+                windowName: window.name,
+                executionType: 'fallback', // <--- Track as Fallback Execution
+            };
+
+            // Apply base context to all steps
+            steps = steps.map(s => ({
+                flowId: s.flowId,
+                overrides: { ...baseContext, ...s.overrides }
+            }));
 
             // Execute via CycleManager
             const flowSessionId = await cycleManager.startCycle(

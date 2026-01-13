@@ -43,6 +43,7 @@ export interface ITimeWindow {
     triggers: ITrigger[];
     fallbackFlowId?: string;    // Deprecated
     fallbackFlowIds?: string[]; // New
+    fallbackTriggerId?: string; // New
 }
 
 export interface IProgram extends Document, ISoftDelete {
@@ -109,7 +110,8 @@ const TimeWindowSchema = new Schema({
     dataSource: { type: String, enum: ['cached', 'live'], default: 'cached' },
     triggers: [TriggerSchema],
     fallbackFlowId: { type: String },    // Deprecated
-    fallbackFlowIds: { type: [String], default: [] } // New
+    fallbackFlowIds: { type: [String], default: [] }, // New
+    fallbackTriggerId: { type: String } // New
 }, { _id: false });
 
 // --- Main Program Schema ---

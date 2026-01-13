@@ -174,6 +174,7 @@ export const AdvancedProgramEditor: React.FC<AdvancedProgramEditorProps> = ({
                                 onAddTrigger={() => handleAddTrigger(window.id)}
                                 onEditTrigger={(triggerId) => handleEditTrigger(window.id, triggerId)}
                                 onDeleteTrigger={(triggerId) => handleDeleteTrigger(window.id, triggerId)}
+                                onUpdateWindow={handleSaveWindow}
                                 flowsMap={flowsMap}
                                 sensorsMap={sensorsMap}
                             />

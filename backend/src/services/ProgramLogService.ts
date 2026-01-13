@@ -170,9 +170,15 @@ export class ProgramLogService {
         events.on('automation:program_start', async (data: any) => {
             const progId = data.activeProgramId;
             if (progId) {
-                await this.logEvent(progId, 'FLOW_EXECUTED', `Стартиран поток: ${data.programName}`, {
+                let message = `Стартиран поток: ${data.programName}`;
+                if (data.executionType === 'fallback') {
+                    message = `Стартиран поток (Fallback): ${data.programName}`;
+                }
+
+                await this.logEvent(progId, 'FLOW_EXECUTED', message, {
                     sessionId: data.sessionId,
-                    flowId: data.programId // Template ID
+                    flowId: data.programId, // Template ID
+                    executionType: data.executionType
                 }, data.sessionId);
             }
         });

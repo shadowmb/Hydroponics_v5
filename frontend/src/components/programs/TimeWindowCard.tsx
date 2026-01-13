@@ -2,6 +2,8 @@ import React from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { ChevronDown, ChevronRight, Pencil, Trash2, Sunrise, Sun, Moon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import type { ITimeWindow } from './types';
 import { cn } from '../../lib/utils';
 
@@ -14,6 +16,7 @@ interface TimeWindowCardProps {
     onAddTrigger: () => void;
     onEditTrigger: (triggerId: string) => void;
     onDeleteTrigger: (triggerId: string) => void;
+    onUpdateWindow: (window: ITimeWindow) => void; // New callback
     flowsMap: Record<string, string>;  // flowId -> flowName
     sensorsMap: Record<string, string>;  // sensorId -> sensorName
 }
@@ -49,9 +52,17 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
     onAddTrigger,
     onEditTrigger,
     onDeleteTrigger,
+    onUpdateWindow,
     flowsMap,
     sensorsMap
 }) => {
+    const isManualFallback = (window.fallbackFlowIds && window.fallbackFlowIds.length > 0) || !!window.fallbackFlowId;
+
+    const handleLinkTrigger = (triggerId: string) => {
+        const updatedWindow = { ...window, fallbackTriggerId: triggerId === 'none' ? undefined : triggerId };
+        onUpdateWindow(updatedWindow);
+    };
+
     return (
         <Card className="overflow-hidden">
             {/* Header - Always visible */}
@@ -68,7 +79,18 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
                     <span className="text-sm font-mono text-muted-foreground">
                         {window.startTime} - {window.endTime}
                     </span>
-                    {getTimeIcon(window.startTime)}
+                    <TooltipProvider>
+                        <Tooltip delayDuration={300}>
+                            <TooltipTrigger asChild>
+                                <div className="cursor-help">
+                                    {getTimeIcon(window.startTime)}
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[300px] text-center">
+                                <p>Този прозорец дефинира период от денонощието, в който се следят специфични условия и се изпълняват определени действия.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <span className="font-medium">{window.name}</span>
                     {!isExpanded && (
                         <span className="text-xs text-muted-foreground">
@@ -205,21 +227,73 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
                         </Button>
 
                         {/* Fallback Info */}
-                        {(window.fallbackFlowIds?.length || window.fallbackFlowId) && (
-                            <div className="mt-4 p-3 bg-muted/50 rounded-md flex items-center gap-2 text-sm">
-                                <span className="text-muted-foreground">🛡️ Fallback:</span>
-                                <span className="font-medium">
-                                    {window.fallbackFlowIds && window.fallbackFlowIds.length > 0 ? (
-                                        window.fallbackFlowIds.map(fid => flowsMap[fid] || fid).join(' + ')
-                                    ) : (
-                                        flowsMap[window.fallbackFlowId!] || window.fallbackFlowId
+                        <div className={cn(
+                            "mt-4 p-3 rounded-md flex items-center justify-center gap-4 text-sm border mx-auto w-fit min-w-[50%]", // Centered, fit content but min width
+                            "bg-muted/5 border-white/10 shadow-sm"
+                        )}>
+                            <TooltipProvider>
+                                <Tooltip delayDuration={300}>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-1 cursor-help hover:text-primary transition-colors">
+                                            <span>🛡️</span>
+                                            <span className="text-muted-foreground whitespace-nowrap font-medium">Fallback:</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-[300px] text-center">
+                                        <p>Fallback дефинира действията, които ще се изпълнят, ако <b>НИТО ЕДИН</b> от тригърите в този прозорец не е активен.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+
+                            {isManualFallback ? (
+                                <>
+                                    <span className="font-medium">
+                                        {window.fallbackFlowIds && window.fallbackFlowIds.length > 0 ? (
+                                            window.fallbackFlowIds.map(fid => flowsMap[fid] || fid).join(' + ')
+                                        ) : (
+                                            flowsMap[window.fallbackFlowId!] || window.fallbackFlowId
+                                        )}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground ml-auto pl-4">
+                                        (в {window.endTime} ако няма Break)
+                                    </span>
+                                </>
+                            ) : (
+                                <div className="flex items-center gap-3">
+                                    <Select
+                                        value={window.fallbackTriggerId || 'none'}
+                                        onValueChange={handleLinkTrigger}
+                                    >
+                                        <SelectTrigger className="h-8 w-[300px]">
+                                            <SelectValue placeholder="Избери тригър..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">-- Няма (No Fallback) --</SelectItem>
+                                            {window.triggers.map((t, idx) => {
+                                                // Generate readable label: "NO3 < 50 & PH > 6"
+                                                const label = t.conditions?.map(c => {
+                                                    const sName = sensorsMap[c.sensorId || ''] || c.sensorId || 'Sensor';
+                                                    return `${sName} ${c.operator} ${c.value}`;
+                                                }).join(' & ');
+
+                                                return (
+                                                    <SelectItem key={t.id} value={t.id}>
+                                                        <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
+                                                        {label || `Trigger #${idx + 1}`}
+                                                    </SelectItem>
+                                                );
+                                            })}
+                                        </SelectContent>
+                                    </Select>
+
+                                    {window.fallbackTriggerId && (
+                                        <span className="text-xs text-muted-foreground hidden sm:inline-block">
+                                            (Linked Trigger)
+                                        </span>
                                     )}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                    (в {window.endTime} ако няма Break)
-                                </span>
-                            </div>
-                        )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </CardContent>
             )}

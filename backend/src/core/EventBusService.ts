@@ -59,7 +59,7 @@ export interface SystemEvents {
     'log': { timestamp: Date | string; level: string; message: string; blockId?: string; data?: any; sessionId?: string | null };
 
     // System Lifecycle Events
-    'automation:program_start': { programId: string; sessionId: string; programName?: string; activeProgramId?: string | null };
+    'automation:program_start': { programId: string; sessionId: string; programName?: string; activeProgramId?: string | null; executionType?: string | null };
     'automation:program_stop': { sessionId: string; reason?: string };
     'scheduler:cycle_start': { cycleId: string; programId?: string; timestamp: Date; cycleName?: string };
     'scheduler:cycle_complete': { cycleId: string; programId?: string; duration?: number; timestamp: Date; cycleName?: string };

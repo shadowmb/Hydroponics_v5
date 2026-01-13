@@ -43,6 +43,7 @@ export interface ITimeWindow {
     triggers: ITrigger[];
     fallbackFlowId?: string;    // Deprecated
     fallbackFlowIds?: string[]; // New
+    fallbackTriggerId?: string; // Linked fallack // New
 }
 
 export interface IAdvancedProgram {

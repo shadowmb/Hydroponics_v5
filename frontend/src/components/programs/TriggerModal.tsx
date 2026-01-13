@@ -201,6 +201,14 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
         setFlowIds(newFlows);
     };
 
+    // Move flow down
+    const moveFlowDown = (index: number) => {
+        if (index === flowIds.length - 1) return;
+        const newFlows = [...flowIds];
+        [newFlows[index], newFlows[index + 1]] = [newFlows[index + 1], newFlows[index]];
+        setFlowIds(newFlows);
+    };
+
     // Group sensors by category
     const groupedSensors = sensors.reduce((acc, sensor) => {
         const group = sensor.categoryGroup || 'Други';
@@ -214,285 +222,317 @@ export const TriggerModal: React.FC<TriggerModalProps> = ({
             if (!val && !saving) onClose();
         }}>
             <DialogContent
-                className="sm:max-w-[700px]" // Wider for multi-conditions
+                className="sm:max-w-[750px] max-h-[85vh] flex flex-col p-0 gap-0" // Fixed height, flex, no padding
                 onInteractOutside={(e) => e.preventDefault()}
             >
-                <DialogHeader>
-                    <div className="grid grid-cols-6 gap-4">
-                        <div className="col-span-5 col-start-2 space-y-1">
-                            <DialogTitle>
-                                {isEditing ? '✏️ Редакция на тригер' : '⚡ Нов тригер'}
-                            </DialogTitle>
-                            <DialogDescription>
-                                Тригерът определя условието за активиране на поток.
-                            </DialogDescription>
-                        </div>
-                    </div>
-                </DialogHeader>
+                <div className="px-6 py-4 border-b">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {isEditing ? '✏️ Редакция на тригер' : '⚡ Нов тригер'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Тригерът определя условието за активиране на поток.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
 
-                <div className="grid gap-4 py-4">
+                <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-slate-700/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-slate-600">
+                    <div className="flex flex-col gap-6">
 
-                    {/* LOGICAL OPERATOR (Visible only if > 1 condition) */}
-                    {/* LOGICAL OPERATOR (Visible only if > 1 condition) */}
-                    {conditions.length > 1 && (
-                        <div className="grid grid-cols-6 items-center gap-4">
-                            <Label className="text-right text-xs uppercase text-muted-foreground pt-1">Логика</Label>
-                            <div className="col-span-5 flex items-center gap-1">
-                                <div className="flex items-center gap-1 bg-muted/20 rounded-md border p-0.5">
-                                    <Button
-                                        size="sm"
-                                        variant={logicalOperator === 'AND' ? "default" : "ghost"}
-                                        onClick={() => setLogicalOperator('AND')}
-                                        className="h-6 text-[10px] px-3 font-semibold"
-                                    >
-                                        ВСИЧКИ (AND)
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant={logicalOperator === 'OR' ? "default" : "ghost"}
-                                        onClick={() => setLogicalOperator('OR')}
-                                        className="h-6 text-[10px] px-3 font-semibold"
-                                    >
-                                        ПОНЕ ЕДНО (OR)
-                                    </Button>
+                        {/* LOGICAL OPERATOR (Visible only if > 1 condition) */}
+                        {conditions.length > 1 && (
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-xs uppercase text-muted-foreground">Логически Оператор</Label>
+                                <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1 bg-muted/20 rounded-md border p-0.5 w-fit">
+                                        <Button
+                                            size="sm"
+                                            variant={logicalOperator === 'AND' ? "default" : "ghost"}
+                                            onClick={() => setLogicalOperator('AND')}
+                                            className="h-7 text-xs px-3 font-semibold"
+                                        >
+                                            ВСИЧКИ (AND)
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant={logicalOperator === 'OR' ? "default" : "ghost"}
+                                            onClick={() => setLogicalOperator('OR')}
+                                            className="h-7 text-xs px-3 font-semibold"
+                                        >
+                                            ПОНЕ ЕДНО (OR)
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* CONDITIONS LIST */}
-                    <div className="grid grid-cols-6 items-start gap-4">
-                        <Label className="text-right pt-2">Условия</Label>
+                        {/* CONDITIONS SECTION */}
+                        <div className="flex flex-col gap-2">
+                            <Label>Условия</Label>
 
-                        <div className="col-span-5 space-y-2">
-                            {conditions.map((cond, index) => {
-                                const selectedSensor = sensors.find(s => s.id === cond.sensorId);
+                            <div className="space-y-3">
+                                {conditions.map((cond, index) => {
+                                    const selectedSensor = sensors.find(s => s.id === cond.sensorId);
+                                    const isBetween = cond.operator === 'between';
 
-                                return (
-                                    <div key={cond.id} className="grid grid-cols-12 gap-2 items-center bg-slate-500/5 p-1 rounded border border-slate-500/10 relative group">
-                                        {/* Line connector decoration if > 1 */}
-                                        {conditions.length > 1 && (
-                                            <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${logicalOperator === 'AND' ? 'bg-blue-400' : 'bg-orange-400'} rounded-l-md opacity-80`} />
-                                        )}
+                                    return (
+                                        <div key={cond.id} className="grid grid-cols-12 gap-3 items-center bg-slate-500/5 p-2 rounded border border-slate-500/10 relative group">
+                                            {/* Line connector decoration if > 1 */}
+                                            {conditions.length > 1 && (
+                                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${logicalOperator === 'AND' ? 'bg-blue-500' : 'bg-orange-500'} rounded-l-md opacity-80`} />
+                                            )}
 
-                                        {/* 1. Sensor Info (6 cols) */}
-                                        <div className="col-span-6 pl-2">
-                                            <Select value={cond.sensorId} onValueChange={(v) => updateCondition(index, 'sensorId', v)}>
-                                                <SelectTrigger className="h-8 text-sm bg-background/50 border-slate-500/20 hover:bg-background">
-                                                    <SelectValue placeholder="Сензор" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {Object.entries(groupedSensors).map(([group, groupSensors]) => (
-                                                        <React.Fragment key={group}>
-                                                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted">
-                                                                {group}
-                                                            </div>
-                                                            {groupSensors.map(sensor => (
-                                                                <SelectItem key={sensor.id} value={sensor.id}>
-                                                                    {sensor.name}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </React.Fragment>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                            {/* 1. Sensor Info (Grow to fill) */}
+                                            <div className="col-span-5 pl-2">
+                                                <Select value={cond.sensorId} onValueChange={(v) => updateCondition(index, 'sensorId', v)}>
+                                                    <SelectTrigger className="h-9 text-sm bg-background/50 border-slate-500/20 hover:bg-background">
+                                                        <SelectValue placeholder="Избери Сензор..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {Object.entries(groupedSensors).map(([group, groupSensors]) => (
+                                                            <React.Fragment key={group}>
+                                                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted">
+                                                                    {group}
+                                                                </div>
+                                                                {groupSensors.map(sensor => (
+                                                                    <SelectItem key={sensor.id} value={sensor.id}>
+                                                                        {sensor.name}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </React.Fragment>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
 
-                                        {/* 2. Operator (2 cols) */}
-                                        <div className="col-span-2">
-                                            <Select
-                                                value={cond.operator}
-                                                onValueChange={(v) => updateCondition(index, 'operator', v as TriggerOperator)}
-                                            >
-                                                <SelectTrigger className="h-8 text-center font-mono font-bold justify-center px-1 bg-background/50 border-slate-500/20 hover:bg-background">
-                                                    <span>{cond.operator}</span>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {OPERATORS.map(op => (
-                                                        <SelectItem key={op.value} value={op.value}>
-                                                            <span className="font-mono font-bold w-6 inline-block text-center">{op.value}</span>
-                                                            <span className="text-xs text-muted-foreground ml-2">{op.label.replace(op.value, '').trim()}</span>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                            {/* 2. Operator (Fixed width) */}
+                                            <div className="col-span-3">
+                                                <Select
+                                                    value={cond.operator}
+                                                    onValueChange={(v) => updateCondition(index, 'operator', v as TriggerOperator)}
+                                                >
+                                                    <SelectTrigger className="h-9 justify-between px-2 bg-background/50 border-slate-500/20 hover:bg-background">
+                                                        <span className="font-mono font-bold w-full text-center">{cond.operator}</span>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {OPERATORS.map(op => (
+                                                            <SelectItem key={op.value} value={op.value}>
+                                                                <span className="font-mono font-bold w-6 inline-block text-center">{op.value}</span>
+                                                                <span className="text-xs text-muted-foreground ml-2">{op.label.replace(op.value, '').trim()}</span>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
 
-                                        {/* 3. Value (3 cols) */}
-                                        <div className="col-span-3 flex items-center gap-1">
-                                            <Input
-                                                type="number"
-                                                value={cond.value}
-                                                onChange={(e) => updateCondition(index, 'value', Number(e.target.value))}
-                                                className="h-8 w-full px-2 text-right font-mono bg-background/50 border-slate-500/20 focus:bg-background"
-                                            />
-                                            {cond.operator === 'between' && (
-                                                <>
-                                                    <span className="text-muted-foreground text-xs mx-0.5">-</span>
+                                            {/* 3. Value (Dynamic based on operator) */}
+                                            <div className={`${isBetween ? 'col-span-4' : 'col-span-3'} flex items-center gap-2`}>
+                                                <div className="relative w-full">
                                                     <Input
                                                         type="number"
-                                                        value={cond.valueMax || 0}
-                                                        onChange={(e) => updateCondition(index, 'valueMax', Number(e.target.value))}
-                                                        className="h-8 w-full px-2 text-right font-mono bg-background/50 border-slate-500/20 focus:bg-background"
+                                                        value={cond.value}
+                                                        onChange={(e) => updateCondition(index, 'value', Number(e.target.value))}
+                                                        className="h-9 w-full pr-6 text-right font-mono bg-background/50 border-slate-500/20 focus:bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                     />
-                                                </>
-                                            )}
-                                            {selectedSensor?.unit && (
-                                                <span className="text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-[20px]">
-                                                    {sensors.find(s => s.id === cond.sensorId)?.unit}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* 4. Remove Button (1 col) */}
-                                        <div className="col-span-1 flex justify-center">
-                                            {conditions.length > 1 && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-transparent"
-                                                    onClick={() => removeCondition(index)}
-                                                >
-                                                    <span className="text-lg leading-none">×</span>
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            <Button variant="outline" size="sm" onClick={addCondition} className="w-full border-dashed text-muted-foreground hover:text-primary h-8 border-slate-500/20">
-                                + Добави условие
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="border-t my-2" />
-
-                    {/* Flows Selection (Multi) */}
-                    <div className="grid grid-cols-6 items-start gap-4">
-                        <Label className="text-right pt-2">Потоци</Label>
-                        <div className="col-span-5 space-y-3">
-                            {/* Selected Flows List */}
-                            {flowIds.length > 0 && (
-                                <div className="space-y-2 border rounded-md p-2 bg-muted/20">
-                                    {flowIds.map((id, index) => {
-                                        const flow = flows.find(f => f.id === id);
-                                        return (
-                                            <div key={`${id}-${index}`} className="flex items-center justify-between bg-background p-2 rounded border text-sm">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-muted-foreground font-mono text-xs">{index + 1}.</span>
-                                                    <span className="font-medium">{flow?.name || 'Unknown Flow'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    {index > 0 && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-6 w-6"
-                                                            onClick={() => moveFlowUp(index)}
-                                                            title="Мести нагоре"
-                                                        >
-                                                            ↑
-                                                        </Button>
+                                                    {selectedSensor?.unit && (
+                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">
+                                                            {selectedSensor.unit}
+                                                        </span>
                                                     )}
+                                                </div>
+
+                                                {isBetween && (
+                                                    <>
+                                                        <span className="text-muted-foreground text-xs font-bold">➜</span>
+                                                        <div className="relative w-full">
+                                                            <Input
+                                                                type="number"
+                                                                value={cond.valueMax || 0}
+                                                                onChange={(e) => updateCondition(index, 'valueMax', Number(e.target.value))}
+                                                                className="h-9 w-full pr-6 text-right font-mono bg-background/50 border-slate-500/20 focus:bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            />
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            {/* 4. Remove Button (1 col, only if not between or squeeze it) */}
+                                            {!isBetween && conditions.length > 1 && (
+                                                <div className="col-span-1 flex justify-end">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-100"
-                                                        onClick={() => removeFlow(index)}
-                                                        title="Премахни"
+                                                        className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-transparent"
+                                                        onClick={() => removeCondition(index)}
                                                     >
-                                                        ×
+                                                        <span className="text-lg leading-none">×</span>
                                                     </Button>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                            )}
+                                            {/* If between, user can remove by switching operator or we need more space. 
+                                            Actually 12 cols: 5 (sensor) + 3 (op) + 4 (values) = 12. No space for X.
+                                            Let's put X absolutely positioned or make values take less space?
+                                            Let's make Sensor 4, Operator 2, Values 5, X 1.
+                                        */}
+                                        </div>
+                                    );
+                                })}
 
-                            {/* Add Flow Dropdown */}
-                            <div className="flex gap-2">
-                                <Select
-                                    key={flowIds.length}
-                                    onValueChange={(val) => {
-                                        addFlow(val);
-                                    }}
-                                    value=""
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={addCondition}
+                                    className="w-fit border-dashed text-muted-foreground hover:text-primary h-8 border-slate-500/20"
                                 >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="➕ Добави поток..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {flows.map(flow => (
-                                            <SelectItem
-                                                key={flow.id}
-                                                value={flow.id}
-                                            >
-                                                {flow.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    + Добави условие
+                                </Button>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                                Потоците се изпълняват последователно в реда, в който са добавени.
-                            </p>
+                        </div>
+
+                        <div className="border-t border-border/40" />
+
+                        {/* FLOWS SECTION */}
+                        <div className="flex flex-col gap-2">
+                            <Label>Потоци (Действия)</Label>
+                            <div className="space-y-3">
+                                {/* Selected Flows List */}
+                                {flowIds.length > 0 && (
+                                    <div className="grid grid-cols-2 gap-2 border rounded-md p-2 bg-muted/20">
+                                        {flowIds.map((id, index) => {
+                                            const flow = flows.find(f => f.id === id);
+                                            return (
+                                                <div key={`${id}-${index}`} className="flex items-center justify-between bg-background p-2 rounded border text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-muted-foreground font-mono text-xs w-5 text-center">{index + 1}.</span>
+                                                        <span className="font-medium">{flow?.name || 'Unknown Flow'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            {index > 0 && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-4 w-5 hover:bg-slate-700/50"
+                                                                    onClick={() => moveFlowUp(index)}
+                                                                    title="Мести нагоре"
+                                                                >
+                                                                    <span className="text-[10px] leading-none">▲</span>
+                                                                </Button>
+                                                            )}
+                                                            {index < flowIds.length - 1 && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-4 w-5 hover:bg-slate-700/50"
+                                                                    onClick={() => moveFlowDown(index)}
+                                                                    title="Мести надолу"
+                                                                >
+                                                                    <span className="text-[10px] leading-none">▼</span>
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-100"
+                                                            onClick={() => removeFlow(index)}
+                                                            title="Премахни"
+                                                        >
+                                                            ×
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Add Flow Dropdown */}
+                                <div className="flex gap-2">
+                                    <Select
+                                        key={flowIds.length}
+                                        onValueChange={(val) => {
+                                            addFlow(val);
+                                        }}
+                                        value=""
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="➕ Добави поток..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {flows.map(flow => (
+                                                <SelectItem
+                                                    key={flow.id}
+                                                    value={flow.id}
+                                                >
+                                                    {flow.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Потоците се изпълняват последователно в реда, в който са добавени.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="border-t border-border/40" />
+
+                        {/* BEHAVIOR SECTION */}
+                        <div className="flex flex-col gap-3">
+                            <Label>Поведение</Label>
+                            <RadioGroup
+                                value={behavior}
+                                onValueChange={(v) => setBehavior(v as TriggerBehavior)}
+                                className="grid grid-cols-2 gap-4"
+                            >
+                                <div className="flex items-start space-x-3 bg-muted/10 p-3 rounded border border-transparent hover:border-border cursor-pointer transition-colors">
+                                    <RadioGroupItem value="break" id="break" className="mt-1" />
+                                    <div>
+                                        <Label htmlFor="break" className="font-semibold text-red-500 cursor-pointer">
+                                            🛑 Break & Stop
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground mt-1 leading-tight">
+                                            Изпълни потоците и <strong>спри</strong> проверката на следващи тригъри.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start space-x-3 bg-muted/10 p-3 rounded border border-transparent hover:border-border cursor-pointer transition-colors">
+                                    <RadioGroupItem value="continue" id="continue" className="mt-1" />
+                                    <div>
+                                        <Label htmlFor="continue" className="font-semibold text-green-500 cursor-pointer">
+                                            ⏭ Continue
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground mt-1 leading-tight">
+                                            Изпълни потоците и <strong>продължи</strong> към следващите тригъри.
+                                        </p>
+                                    </div>
+                                </div>
+                            </RadioGroup>
+                        </div>
+
+                        {/* NOTE SECTION */}
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="desc">Бележка (Опционално)</Label>
+                            <Textarea
+                                id="desc"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="min-h-[60px]"
+                                placeholder="Опиши защо е нужен този тригер..."
+                            />
                         </div>
                     </div>
-
-                    {/* Behavior */}
-                    <div className="grid grid-cols-6 items-start gap-4">
-                        <Label className="text-right pt-2">Поведение</Label>
-                        <RadioGroup
-                            value={behavior}
-                            onValueChange={(v) => setBehavior(v as TriggerBehavior)}
-                            className="col-span-5 space-y-2"
-                        >
-                            <div className="flex items-start space-x-2">
-                                <RadioGroupItem value="break" id="break" className="mt-1" />
-                                <div>
-                                    <Label htmlFor="break" className="font-medium text-red-600">
-                                        🛑 Break (Спри прозореца)
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Изпълни потоците и затвори прозореца.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-start space-x-2">
-                                <RadioGroupItem value="continue" id="continue" />
-                                <Label htmlFor="continue" className="flex flex-col cursor-pointer">
-                                    <span className="font-semibold text-green-500 flex items-center gap-1">
-                                        ⏭ Continue (Продължи)
-                                    </span>
-                                    <span className="text-muted-foreground text-xs">
-                                        Изпълни потоците и продължи да проверяваш.
-                                    </span>
-                                </Label>
-                            </div>
-                        </RadioGroup>
-                    </div>
-
-                    {/* Description */}
-                    <div className="grid grid-cols-6 items-start gap-4">
-                        <Label htmlFor="desc" className="text-right pt-2">Бележка</Label>
-                        <Textarea
-                            id="desc"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="col-span-5 min-h-[60px]"
-                            placeholder="Опиши защо е нужен този тригер..."
-                        />
-                    </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Отказ</Button>
-                    <Button onClick={handleSave} disabled={conditions.length === 0 || flowIds.length === 0}>
-                        {isEditing ? 'Запази' : 'Добави'}
-                    </Button>
-                </DialogFooter>
+                <div className="p-6 pt-4 border-t bg-muted/5 mt-auto">
+                    <DialogFooter>
+                        <Button variant="outline" onClick={onClose}>Отказ</Button>
+                        <Button onClick={handleSave} disabled={conditions.length === 0 || flowIds.length === 0}>
+                            {isEditing ? 'Запази' : 'Добави'}
+                        </Button>
+                    </DialogFooter>
+                </div>
             </DialogContent>
         </Dialog>
     );
