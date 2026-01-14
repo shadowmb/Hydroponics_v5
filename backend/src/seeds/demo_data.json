@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "timestamp": "2026-01-14T12:00:00.000Z",
+    "systemVersion": "5.0.0",
+    "comment": "Safe Demo Data Template"
+  },
+  "data": {
+    "systemsettings": [],
+    "users": [],
+    "controllers": [],
+    "devices": [],
+    "flows": []
+  }
+}
