@@ -7,6 +7,8 @@ import { ProgramController } from './controllers/ProgramController';
 import { NotificationController } from './controllers/NotificationController';
 import { NotificationRuleController } from './controllers/NotificationRuleController';
 import { AnalyticsController } from './controllers/AnalyticsController';
+import { BackupController } from './controllers/BackupController';
+import { SystemController } from './controllers/SystemController';
 
 export async function apiRoutes(app: FastifyInstance) {
 
@@ -170,14 +172,12 @@ export async function apiRoutes(app: FastifyInstance) {
     app.get('/api/notifications/rules', NotificationRuleController.list);
     app.put('/api/notifications/rules/:event', NotificationRuleController.update);
     // Backup & Restore Routes
-    const { BackupController } = require('./controllers/BackupController');
     app.get('/api/backup/download', BackupController.download);
     app.post('/api/backup/inspect', BackupController.inspect);
     app.post('/api/backup/restore', BackupController.restore);
     app.post('/api/backup/load-demo', BackupController.loadDemo);
 
     // System Recovery Routes
-    const { SystemController } = require('./controllers/SystemController');
     app.post('/api/system/state/check', SystemController.checkState);
     app.post('/api/system/state/fix', SystemController.fixState);
 }
