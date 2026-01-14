@@ -126,7 +126,7 @@ export const BackupTab: React.FC = () => {
                 try {
                     const json = JSON.parse(ev.target?.result as string);
                     // Send to backend for inspection
-                    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/backup/inspect`, {
+                    const response = await fetch(`${getApiUrl()}/api/backup/inspect`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(json)
@@ -184,7 +184,7 @@ export const BackupTab: React.FC = () => {
         setShowDemoConfirm(false);
         setIsRestoring(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/backup/load-demo`, { method: 'POST' });
+            const res = await fetch(`${getApiUrl()}/api/backup/load-demo`, { method: 'POST' });
             const data = await res.json();
             if (!data.success && !data.message?.includes('loaded')) throw new Error(data.message || 'Failed');
             toast.success('Simulation Environment Ready!');
