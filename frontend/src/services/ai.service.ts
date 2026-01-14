@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_BASE_URL } from '../core/config';
+
+const API_URL = `${API_BASE_URL}/api`;
 
 export interface AIAction {
     id?: string;

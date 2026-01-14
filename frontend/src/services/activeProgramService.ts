@@ -1,7 +1,9 @@
 import axios from 'axios';
 import type { IActiveProgram } from '../types/ActiveProgram';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_BASE_URL } from '../core/config';
+
+const API_URL = `${API_BASE_URL}/api`;
 const BASE_URL = `${API_URL}/active-program`;
 
 export const activeProgramService = {

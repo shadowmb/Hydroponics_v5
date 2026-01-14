@@ -59,8 +59,10 @@ export interface IController {
     isActive: boolean;
 }
 
+import { API_BASE_URL } from '../core/config';
+
 // Use environment variable for API URL if available, otherwise default to localhost
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = `${API_BASE_URL}/api`;
 
 export const hardwareService = {
     getTemplates: async (): Promise<IControllerTemplate[]> => {
