@@ -4,7 +4,8 @@ import path from 'path';
 import { glob } from 'glob';
 import ResourceRole, { IResourceRole, AnalyticsType } from '../models/ResourceRole';
 
-const CONFIG_DIR = path.join(__dirname, '../../config/devices');
+// Use process.cwd() which points to the app root (e.g. /app/backend) rather than __dirname which can be nested in dist
+const CONFIG_DIR = path.resolve(process.cwd(), 'config/devices');
 
 export class ResourceRoleManager {
 
