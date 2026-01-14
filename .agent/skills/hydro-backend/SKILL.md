@@ -17,8 +17,9 @@ This skill defines the architecture, patterns, and coding standards for the Node
 ## 🏗 Architecture Patterns
 
 ### 1. Controller-Service Pattern
-- **Controllers:** Static classes (e.g., `HardwareController.ts`) handling HTTP req/res logic.
-- **Services:** Singleton classes (e.g., `HardwareService.ts`) containing business logic.
+- **Standard:** Use the provided templates for consistency.
+- **Service Template:** [Service.ts.hbs](./templates/Service.ts.hbs) (Singleton Pattern, Typed Config).
+- **Controller Template:** [Controller.ts.hbs](./templates/Controller.ts.hbs) (Implements Try-Catch, Standard Response).
 - **Access:** Services export a singleton instance (e.g., `export const hardware = HardwareService.getInstance();`).
 
 ### 2. Dependency Injection & Circular Deps
@@ -57,6 +58,25 @@ This skill defines the architecture, patterns, and coding standards for the Node
 - **Anti-Pattern:** Do not rely on manual "Sync" buttons or lazy-loading for core system data.
 
 ## 📜 Coding Standards
+
+### 6. Configuration & Environment
+- **Env Vars:** NEVER use `process.env` directly in application logic. Always use `ConfigService`.
+- **System Paths:** Use `process.cwd()` for all file operations to ensure compatibility across different startup contexts.
+
+### 7. Data Robustness & Recovery
+- **ID Handling:** Be prepared for mixed `_id` types (String vs ObjectId) in legacy or migrated data.
+  - When writing recovery tools (e.g., Force Stop), implement **Fallbacks**:
+    1. Try `Model.findById(id)` first.
+    2. If not found, fall back to direct driver access: `mongoose.connection.db.collection(...).updateOne({ _id: id })`.
+- **Debugging:** When data seems "invisible", create a temporary script in the `backend/` root using `mongoose` natively to inspect the raw types:
+    ```javascript
+    // debug.js
+    const mongoose = require('mongoose');
+    // ... connect and inspect types ...
+    ```
+- **Rule:** Do NOT use `process.env` directly in business logic.
+- **Solution:** Use the typed `ConfigService` (`core/ConfigService.ts`).
+- **Example:** `import { config } from '@/core/ConfigService'; ... config.MONGO_URI`.
 
 ### API Responses
 Always return a consistent JSON envelope:

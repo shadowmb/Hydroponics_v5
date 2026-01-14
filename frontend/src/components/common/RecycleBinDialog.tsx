@@ -13,6 +13,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { API_BASE_URL } from "@/core/config";
 
 interface RecycleBinDialogProps {
     type: 'devices' | 'controllers' | 'relays';
@@ -34,7 +36,7 @@ export const RecycleBinDialog: React.FC<RecycleBinDialogProps> = ({ type, onRest
     const fetchDeletedItems = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:3000/api/hardware/${type}?deleted=true`);
+            const response = await fetch(`${API_BASE_URL}/api/hardware/${type}?deleted=true`);
             const data = await response.json();
             if (data.success) {
                 setItems(data.data);
@@ -72,7 +74,7 @@ export const RecycleBinDialog: React.FC<RecycleBinDialogProps> = ({ type, onRest
         if (!itemToRestore) return;
 
         try {
-            const response = await fetch(`http://localhost:3000/api/hardware/${type}/${itemToRestore._id}/restore`, {
+            const response = await fetch(`${API_BASE_URL}/api/hardware/${type}/${itemToRestore._id}/restore`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -107,7 +109,7 @@ export const RecycleBinDialog: React.FC<RecycleBinDialogProps> = ({ type, onRest
         if (!itemToDelete) return;
 
         try {
-            const response = await fetch(`http://localhost:3000/api/hardware/${type}/${itemToDelete}/hard`, {
+            const response = await fetch(`${API_BASE_URL}/api/hardware/${type}/${itemToDelete}/hard`, {
                 method: 'DELETE'
             });
             const data = await response.json();
@@ -205,9 +207,8 @@ export const RecycleBinDialog: React.FC<RecycleBinDialogProps> = ({ type, onRest
                     </DialogHeader>
                     <div className="py-4">
                         <label className="text-sm font-medium mb-2 block">Name</label>
-                        <input
+                        <Input
                             type="text"
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={restoreName}
                             onChange={(e) => setRestoreName(e.target.value)}
                         />

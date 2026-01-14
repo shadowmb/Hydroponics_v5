@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import mongoose from 'mongoose';
 import { ActiveProgramModel } from '../../modules/persistence/schemas/ActiveProgram.schema';
 import { CycleSessionModel } from '../../modules/persistence/schemas/CycleSession.schema';
 import { ExecutionSessionModel } from '../../modules/persistence/schemas/ExecutionSession.schema';
@@ -83,6 +84,9 @@ export class SystemController {
     static async fixState(request: FastifyRequest<{ Body: { id: string, type: 'PROGRAM' | 'CYCLE_SESSION' | 'FLOW_SESSION' } }>, reply: FastifyReply) {
         try {
             const { id, type } = request.body;
+            request.log.info({ id, type }, '🔧 Attempting to fix system state...');
+
+            let found = false;
 
             if (type === 'PROGRAM') {
                 const program = await ActiveProgramModel.findById(id);
@@ -91,6 +95,7 @@ export class SystemController {
                     program.endTime = new Date();
                     await program.save();
                     logger.info({ id }, '🛠️ System Recovery: Force Stopped Program');
+                    found = true;
                 }
             } else if (type === 'CYCLE_SESSION') {
                 const session = await CycleSessionModel.findById(id);
@@ -99,6 +104,7 @@ export class SystemController {
                     session.endTime = new Date();
                     await session.save();
                     logger.info({ id }, '🛠️ System Recovery: Force Stopped Cycle Session');
+                    found = true;
                 }
             } else if (type === 'FLOW_SESSION') {
                 const session = await ExecutionSessionModel.findById(id);
@@ -106,8 +112,42 @@ export class SystemController {
                     session.status = 'stopped';
                     session.endTime = new Date();
                     await session.save();
-                    logger.info({ id }, '🛠️ System Recovery: Force Stopped Flow Session');
+                    logger.info({ id }, '🛠️ System Recovery: Force Stopped Flow Session (Mongoose)');
+                    found = true;
+                } else {
+                    // Fallback: It might be a String ID in DB (legacy/corrupt), so Mongoose misses it.
+                    // Try direct DB update to ensure we kill the zombie.
+                    if (mongoose.connection.db) {
+                        const result = await mongoose.connection.db.collection('executionsessions').updateOne(
+                            { _id: id as any }, // Force Any to allow String ID lookup
+                            { $set: { status: 'stopped', endTime: new Date() } }
+                        );
+
+                        if (result.matchedCount > 0) {
+                            logger.info({ id }, '🛠️ System Recovery: Force Stopped Flow Session (Direct DB Fallback - String ID)');
+                            found = true;
+                        }
+                    }
                 }
+            } else {
+                return reply.status(400).send({ success: false, error: `Unknown type: ${type}` });
+            }
+
+            if (!found && mongoose.connection.db) {
+                // Last ditch effort: Try as ObjectId if strict string failed, or vice versa
+                const result = await mongoose.connection.db.collection('executionsessions').updateOne(
+                    { _id: new mongoose.Types.ObjectId(id) },
+                    { $set: { status: 'stopped', endTime: new Date() } }
+                );
+                if (result.matchedCount > 0) {
+                    logger.info({ id }, '🛠️ System Recovery: Force Stopped Flow Session (Direct DB Fallback - ObjectId)');
+                    found = true;
+                }
+            }
+
+            if (!found) {
+                logger.warn({ id, type }, '⚠️ System Recovery: Item not found in DB');
+                return reply.status(404).send({ success: false, error: 'Item not found in database. It might have been deleted already.' });
             }
 
             return reply.send({ success: true });

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, RefreshCw } from "lucide-react";
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/core/config';
 
 // Define Interface locally or import from shared types
 interface Provider {
@@ -31,7 +32,7 @@ export function ProviderList() {
     const fetchProviders = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('http://localhost:3000/api/notifications/providers');
+            const res = await fetch(`${API_BASE_URL}/api/notifications/providers`);
             const data = await res.json();
             setProviders(data);
         } catch (err) {
@@ -73,8 +74,8 @@ export function ProviderList() {
             };
 
             const url = editingId
-                ? `http://localhost:3000/api/notifications/providers/${editingId}`
-                : 'http://localhost:3000/api/notifications/providers';
+                ? `${API_BASE_URL}/api/notifications/providers/${editingId}`
+                : `${API_BASE_URL}/api/notifications/providers`;
 
             const method = editingId ? 'PUT' : 'POST';
 
@@ -100,7 +101,7 @@ export function ProviderList() {
 
     const handleDelete = async (id: string) => {
         try {
-            await fetch(`http://localhost:3000/api/notifications/providers/${id}`, { method: 'DELETE' });
+            await fetch(`${API_BASE_URL}/api/notifications/providers/${id}`, { method: 'DELETE' });
             toast.success("Provider deleted");
             fetchProviders();
         } catch (err) {
@@ -110,7 +111,7 @@ export function ProviderList() {
 
     const handleTest = async (id: string) => {
         try {
-            const res = await fetch('http://localhost:3000/api/notifications/providers/test', {
+            const res = await fetch(`${API_BASE_URL}/api/notifications/providers/test`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ providerId: id })

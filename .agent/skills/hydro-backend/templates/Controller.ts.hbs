@@ -1,0 +1,71 @@
+
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod'; // Validation
+
+// Import Service (Singleton)
+import { {{ serviceInstanceName }} } from '@/services/{{ServiceName}}';
+
+export class {{ ControllerName }} {
+
+  /**
+   * GET /api/resource
+   */
+  public static async getAll(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            // Logic calls Service
+            const data = await {{ serviceInstanceName }
+        }.getAll();
+
+        // Standard Success Response
+        return reply.send({
+            success: true,
+            data
+        });
+    } catch (error: any) {
+        // Standard Error Response
+        req.log.error(error); // Contextual Log
+        return reply.status(500).send({
+            success: false,
+            error: error.message || 'Internal Server Error'
+        });
+    }
+}
+
+  /**
+   * POST /api/resource
+   */
+  public static async create(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        // Validate Input
+        const schema = z.object({
+            name: z.string().min(3),
+            // ...
+        });
+        const payload = schema.parse(req.body);
+
+        const result = await {{ serviceInstanceName }
+    }.create(payload);
+
+    return reply.send({
+        success: true,
+        data: result
+    });
+} catch (error: any) {
+    req.log.error(error);
+
+    // Zod Error Handling
+    if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+            success: false,
+            error: 'Validation Error',
+            details: error.format()
+        });
+    }
+
+    return reply.status(500).send({
+        success: false,
+        error: error.message
+    });
+}
+  }
+}

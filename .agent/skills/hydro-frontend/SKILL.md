@@ -35,6 +35,14 @@ This skill defines the coding standards, libraries, and patterns used in the Hyd
 - **Dependencies:** Do NOT use `react-hook-form` or `zod` inside the component (unless creating a new standard).
 - **Validation:** Perform manual validation in `handleSave()`.
 
+### 6. File Structure & Imports
+- **Component Existence:** Before importing from `@/components/ui/`, **ALWAYS check if the file exists**.
+  - Shadcn components are not installed by default. Do not assume `AlertDialog`, `Tabs`, or `Select` exist unless you see them in the file list.
+  - If missing, use a generic alternative (e.g., `Dialog` instead of `AlertDialog`) or ask the USER to install it.
+- **Service Pattern:** API calls must be in `frontend/src/services/`. Components should only call these services.
+- **Dependencies:** Do NOT use `react-hook-form` or `zod` inside the component (unless creating a new standard).
+- **Validation:** Perform manual validation in `handleSave()`.
+
 ### 2. Data Tables (Analytics/Lists)
 - **Standard:** Use `@tanstack/react-table` for logic + Shadcn `<Table>` for UI.
 - **Deprecated:** Do NOT use raw HTML `<table>` tags. Refactor legacy tables to Shadcn components.
@@ -48,15 +56,42 @@ This skill defines the coding standards, libraries, and patterns used in the Hyd
 - **Library:** `@xyflow/react`.
 - **Usage:** Used for Automation Flows and logic builders.
 
-### 5. Modals & Dialogs
-- **Rule:** NEVER use `window.alert` or `window.confirm`.
-- **Solution:** Use `<Dialog>` for complex forms or `<AlertDialog>` for confirmations.
+### 5. UI/UX Standards
+- **Confirmations:**
+  - **NEVER** use `window.confirm()`.
+  - **NEVER** use `window.alert()`.
+  - Use the standardized Shadcn `Dialog` pattern for critical actions (Delete, Reset):
+    ```tsx
+    import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+    
+    // State
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
+    // Render
+    <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Сигурни ли сте?</DialogTitle>
+          <DialogDescription>Това действие е необратимо.</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeleteId(null)}>Отказ</Button>
+          <Button variant="destructive" onClick={confirmDelete}>Изтрий</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    ```
+- **Feedback:** Use `sonner` (`toast.success`, `toast.error`) for all operations.
 - **Dismissal:** Ensure Dialogs have `onInteractOutside={(e) => e.preventDefault()}` if they contain critical unsaved data.
 
 ## 🌐 API & Config
 - **Central Config:** NEVER hardcode URLs (e.g. `localhost:3000`).
-- **Rule:** Always import `API_BASE_URL` or helper functions from `@/core/config` (or dedicated service).
-- **Reason:** Ensures environment switching (Dev/Docker/Prod) works seamlessly.
+- **Rule:** Always import `API_BASE_URL` from `@/core/config`.
+
+### Data Fetching (Service Pattern)
+- **Strict Rule:** Components should **NOT** contain direct `fetch` or `axios` calls.
+- **Pattern:** Create/Use a service file in `src/services/` (e.g., `ai.service.ts`).
+- **Reason:** Centralizes error handling, types, and API URLs. Components just call `await myService.getData()`.
 
 ## 📂 File Structure
 - **Components:** `src/components/<category>/<Name>.tsx`

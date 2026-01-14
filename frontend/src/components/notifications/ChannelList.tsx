@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Plus, RefreshCw, Bell } from "lucide-react";
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/core/config';
 
 interface Channel {
     _id: string;
@@ -35,8 +36,8 @@ export function ChannelList() {
         setIsLoading(true);
         try {
             const [cRes, pRes] = await Promise.all([
-                fetch('http://localhost:3000/api/notifications/channels'),
-                fetch('http://localhost:3000/api/notifications/providers')
+                fetch(`${API_BASE_URL}/api/notifications/channels`),
+                fetch(`${API_BASE_URL}/api/notifications/providers`)
             ]);
 
             const channelsData = await cRes.json();
@@ -70,8 +71,8 @@ export function ChannelList() {
 
         try {
             const url = editingId
-                ? `http://localhost:3000/api/notifications/channels/${editingId}`
-                : 'http://localhost:3000/api/notifications/channels';
+                ? `${API_BASE_URL}/api/notifications/channels/${editingId}`
+                : `${API_BASE_URL}/api/notifications/channels`;
 
             const method = editingId ? 'PUT' : 'POST';
 
@@ -99,7 +100,7 @@ export function ChannelList() {
 
     const handleDelete = async (id: string) => {
         try {
-            await fetch(`http://localhost:3000/api/notifications/channels/${id}`, { method: 'DELETE' });
+            await fetch(`${API_BASE_URL}/api/notifications/channels/${id}`, { method: 'DELETE' });
             toast.success("Channel deleted");
             fetchData();
         } catch (err) {

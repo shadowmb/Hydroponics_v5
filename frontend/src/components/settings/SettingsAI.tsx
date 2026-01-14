@@ -12,6 +12,7 @@ import { AI_PROVIDERS, AI_MODELS } from '@/config/aiModels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIActionsSection } from './AIActionsSection';
 import { ChatShortcutsSection } from './ChatShortcutsSection';
+import { API_BASE_URL } from '@/core/config';
 
 import { useAI } from '@/context/AIContext';
 
@@ -40,7 +41,7 @@ export function SettingsAI() {
         const fetchSettings = async () => {
             setIsLoading(true);
             try {
-                const response = await axios.get('http://localhost:3000/api/settings/ai');
+                const response = await axios.get(`${API_BASE_URL}/api/settings/ai`);
                 if (response.data.success && response.data.data) {
                     const config = response.data.data;
 
@@ -73,7 +74,7 @@ export function SettingsAI() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            await axios.post('http://localhost:3000/api/settings/ai', {
+            await axios.post(`${API_BASE_URL}/api/settings/ai`, {
                 mode,
                 // Global settings (used for Basic mode AND as fallback)
                 provider,

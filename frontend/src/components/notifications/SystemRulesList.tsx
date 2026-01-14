@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Bell, Activity, PlayCircle, StopCircle, AlertTriangle, Power } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/core/config';
 
 interface Rule {
     _id: string;
@@ -38,8 +39,8 @@ export function SystemRulesList() {
     const fetchData = async () => {
         try {
             const [rulesRes, channelsRes] = await Promise.all([
-                fetch('http://localhost:3000/api/notifications/rules'),
-                fetch('http://localhost:3000/api/notifications/channels')
+                fetch(`${API_BASE_URL}/api/notifications/rules`),
+                fetch(`${API_BASE_URL}/api/notifications/channels`)
             ]);
 
             const rulesData = await rulesRes.json();
@@ -82,7 +83,7 @@ export function SystemRulesList() {
             const currentRule = rules.find(r => r.event === event);
             const payload = { ...currentRule, ...updates };
 
-            const res = await fetch(`http://localhost:3000/api/notifications/rules/${event}`, {
+            const res = await fetch(`${API_BASE_URL}/api/notifications/rules/${event}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

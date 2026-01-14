@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { resourceRoleService, type ResourceRole } from '../../../services/resourceRoleService';
 import { analyticsService } from '../../../services/analyticsService';
 import { SimilarCasesResultsTable } from './SimilarCasesResultsTable';
+import { API_BASE_URL } from '@/core/config';
 
 const FIELD_OPTIONS = [
     { value: 'value', label: 'Стойност' },
@@ -79,8 +80,7 @@ export function SimilarCasesSearch() {
 
     const loadPrograms = async () => {
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            const response = await fetch(`${API_URL}/api/analytics/programs`);
+            const response = await fetch(`${API_BASE_URL}/api/analytics/programs`);
             const json = await response.json();
 
             if (!json.success) {

@@ -9,7 +9,20 @@ export class FirmwareBuilderController {
 
     constructor() {
         this.builder = new FirmwareBuilder();
-        this.definitionsPath = path.join(__dirname, '../../../../firmware/definitions');
+
+        // Robust path resolution: Handle running from 'root' or 'backend' folder
+        const rootPath = path.resolve(process.cwd(), 'firmware/definitions');
+        const parentPath = path.resolve(process.cwd(), '../firmware/definitions');
+
+        if (fs.existsSync(rootPath)) {
+            this.definitionsPath = rootPath;
+        } else if (fs.existsSync(parentPath)) {
+            this.definitionsPath = parentPath;
+        } else {
+            // Fallback (logging will help debug if this fails)
+            console.warn('⚠️ Could not find firmware/definitions. Defaulting to root path.');
+            this.definitionsPath = rootPath;
+        }
     }
 
     // Helper to read all JSONs from a directory
@@ -35,10 +48,6 @@ export class FirmwareBuilderController {
         const { controllerTemplates } = await import('../../modules/hardware/ControllerTemplateManager');
 
         // We need to map the internal template structure to what the frontend expects for the builder
-        // Ideally, the frontend should just use the full template, but for now we map it to keep compatibility
-        // or just return the full template if the frontend is updated (which we did earlier)
-
-        // Actually, let's return the full templates as "boards" since we updated the frontend type
         const templates = Array.from((controllerTemplates as any).templates.values());
 
         const boards = templates.map((t: any) => ({
@@ -107,6 +116,7 @@ export class FirmwareBuilderController {
                 }
             });
         } catch (error: any) {
+            req.log.error(error);
             return reply.status(500).send({ success: false, error: error.message });
         }
     }

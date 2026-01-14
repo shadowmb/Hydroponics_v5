@@ -1,1 +1,1 @@
-docker compose -f docker-compose.rpi.yml exec backend ls -R /app
+Ти си най добрия АИ

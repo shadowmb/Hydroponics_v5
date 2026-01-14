@@ -56,8 +56,23 @@ export class FirmwareBuilder {
     private templatesPath: string;
 
     constructor() {
-        this.definitionsPath = path.join(__dirname, '../../../firmware/definitions');
-        this.templatesPath = path.join(__dirname, '../../../firmware/templates');
+        // Robust path resolution: Handle running from 'root' or 'backend' folder
+        const rootPath = path.resolve(process.cwd(), 'firmware');
+        const parentPath = path.resolve(process.cwd(), '../firmware');
+
+        // Determine base path
+        let basePath = rootPath;
+        if (fs.existsSync(rootPath)) {
+            basePath = rootPath;
+        } else if (fs.existsSync(parentPath)) {
+            basePath = parentPath;
+        } else {
+            // Fallback
+            console.warn('⚠️ Could not find "firmware" folder. Defaulting to root path.');
+        }
+
+        this.definitionsPath = path.join(basePath, 'definitions');
+        this.templatesPath = path.join(basePath, 'templates');
     }
 
     public build(config: BuildConfiguration, boardTemplate: any): string {

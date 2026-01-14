@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -13,13 +14,16 @@ import { AIActionDialog } from './AIActionDialog';
 // I'll define an empty list or try to fetch.
 // Actually, I should probably import useDevices hook if it exists, or fetch from /api/devices.
 import axios from 'axios';
+import { API_BASE_URL } from '@/core/config';
 
 export function AIActionsSection() {
     const [actions, setActions] = useState<AIAction[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingAction, setEditingAction] = useState<AIAction | undefined>(undefined);
+
     const [devices, setDevices] = useState<any[]>([]);
+    const [actionToDelete, setActionToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         fetchActions();
@@ -40,7 +44,7 @@ export function AIActionsSection() {
 
     const fetchDevices = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/hardware/devices`);
+            const res = await axios.get(`${API_BASE_URL}/api/hardware/devices`);
             if (res.data.success) {
                 // Filter only sensors
                 const sensors = res.data.data.filter((d: any) => d.type === 'SENSOR');
@@ -61,14 +65,20 @@ export function AIActionsSection() {
         setDialogOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Сигурни ли сте, че искате да изтриете това действие?')) return;
+    const handleDeleteClick = (id: string) => {
+        setActionToDelete(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!actionToDelete) return;
         try {
-            await aiService.deleteAction(id);
+            await aiService.deleteAction(actionToDelete);
             toast.success('Действието е изтрито успешно');
             fetchActions();
         } catch (error) {
             toast.error('Грешка при изтриване');
+        } finally {
+            setActionToDelete(null);
         }
     };
 
@@ -180,7 +190,7 @@ export function AIActionsSection() {
                                         <Button size="icon" variant="ghost" onClick={() => handleEdit(action)}>
                                             <Edit className="w-4 h-4" />
                                         </Button>
-                                        <Button size="icon" variant="ghost" onClick={() => action.id && handleDelete(action.id)}>
+                                        <Button size="icon" variant="ghost" onClick={() => action.id && handleDeleteClick(action.id)}>
                                             <Trash2 className="w-4 h-4 text-red-500" />
                                         </Button>
                                     </TableCell>
@@ -197,6 +207,21 @@ export function AIActionsSection() {
                     onSave={handleSave}
                     devices={devices}
                 />
+
+                <Dialog open={!!actionToDelete} onOpenChange={(open: boolean) => !open && setActionToDelete(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Сигурни ли сте?</DialogTitle>
+                            <DialogDescription>
+                                Това действие ще бъде изтрито безвъзвратно.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setActionToDelete(null)}>Отказ</Button>
+                            <Button variant="destructive" onClick={confirmDelete}>Изтрий</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </CardContent>
         </Card>
     );
