@@ -51,7 +51,7 @@ export const ServerClock: React.FC = () => {
         <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-mono font-bold">
-                {time ? time.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                {time ? time.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
             </span>
         </div>
     );
