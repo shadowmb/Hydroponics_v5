@@ -115,6 +115,7 @@ playwright-report/
 _legacy_v4/
 # temp.md
 # tasks/
+# .agent/
 
 
 simulator\data

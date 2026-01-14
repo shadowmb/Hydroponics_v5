@@ -1,0 +1,53 @@
+
+import { Logger } from 'pino';
+import { EventEmitter2 } from 'eventemitter2';
+import { Service } from 'typedi'; // Only if we used typedi, but we used manual singleton. Let's stick to MANUAL.
+
+// Standard Imports
+import { config } from '@/core/ConfigService';
+import { logger } from '@/core/LoggerService';
+// Dynamic imports for Models to avoid circular deps
+// import { SomeModel } from '@/models/SomeModel'; <--- AVOID THIS
+
+export class {{ ServiceName }} {
+  private static instance: { { ServiceName } };
+  private logger: Logger;
+  private events: EventEmitter2;
+
+  // Private constructor ensures Singleton
+  private constructor() {
+        this.logger = logger.child({ service: '{{ServiceName}}' });
+        this.events = new EventEmitter2(); // Or import shared EventBus
+        this.logger.info('{{ServiceName}} initialized');
+    }
+
+  public static getInstance(): { { ServiceName } } {
+        if (!{{ ServiceName }
+    }.instance) {
+        { { ServiceName } }.instance = new {{ ServiceName }
+    } ();
+}
+return {{ ServiceName }}.instance;
+  }
+
+  /**
+   * Example method with Safe Query Pattern
+   */
+  public async getData(id: string) {
+    try {
+        // DYNAMIC IMPORT for Mongoose Models
+        const { MyModel } = await import('@/models/MyModel');
+
+        const item = await MyModel.findById(id);
+        if (!item) throw new Error('Item not found');
+
+        return item;
+    } catch (error) {
+        this.logger.error(error, `Failed to get data for ${id}`);
+        throw error; // Let Controller handle 500
+    }
+}
+}
+
+// Export Singleton Instance
+export const {{ serviceInstanceName }} = { { ServiceName } }.getInstance();

@@ -6,10 +6,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Activity, CheckCircle, AlertTriangle, RefreshCw, Power } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/core/config';
 
 interface Mismatch {
     id: string;
-    type: 'PROGRAM' | 'SESSION';
+    type: 'PROGRAM' | 'CYCLE_SESSION' | 'FLOW_SESSION';
     name: string;
     status: string;
     engineStatus: string;
@@ -26,7 +27,7 @@ export function SystemRecoveryPanel() {
         setLoading(true);
         try {
             // Fetch directly from API
-            const res = await fetch('http://localhost:3000/api/system/state/check', {
+            const res = await fetch(`${API_BASE_URL}/api/system/state/check`, {
                 method: 'POST'
             });
             const json = await res.json();
@@ -51,9 +52,9 @@ export function SystemRecoveryPanel() {
         }
     };
 
-    const fixState = async (id: string, type: 'PROGRAM' | 'SESSION') => {
+    const fixState = async (id: string, type: 'PROGRAM' | 'CYCLE_SESSION' | 'FLOW_SESSION') => {
         try {
-            const res = await fetch('http://localhost:3000/api/system/state/fix', {
+            const res = await fetch(`${API_BASE_URL}/api/system/state/fix`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, type })

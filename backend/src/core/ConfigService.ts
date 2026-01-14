@@ -14,7 +14,7 @@ const configSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
-  // OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
+  OLLAMA_BASE_URL: z.string().default('http://127.0.0.1:11434'),
 });
 
 export type Config = z.infer<typeof configSchema>;

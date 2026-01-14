@@ -141,3 +141,46 @@ The `backend/Dockerfile` only copied the source code (`src/`) but failed to copy
 Explicitly `COPY backend/config ./config` in the Dockerfile.
 ### Lesson
 Runtime dependencies that are not in `node_modules` (like config files, templates, or assets) must be explicitly added to the Docker image.
+
+## 14. Backend: System Recovery "Item not found" (Zombie Processes)
+### Symptom
+The System Recovery panel shows a "Zombie Process" with status `RUNNING`, but clicking "Force Stop" returns "Item not found", even though the ID matches.
+
+### Cause
+Mismatch in `_id` types. The document in MongoDB had `_id` stored as a **String** (e.g., `"696659c..."`), but Mongoose's `findById(id)` automatically casts the input to a BSON `ObjectId`. Since `String !== ObjectId`, the query failed. This often happens with legacy data or after migrations.
+
+### Solution
+Implemented a Fallback mechanism in the Controller.
+1. Try `Model.findById(id)` (Standard Mongoose).
+2. If failed, access the raw driver `mongoose.connection.db.collection(...).updateOne({ _id: id })` to try matching the ID as a raw String.
+
+### Lesson
+Never assume all IDs in a legacy/migrated database are ObjectIds. Recovery tools must be robust enough to handle data inconsistency.
+
+## 15. Debugging: Direct Database Verification
+### Context
+When API logic fails inexplicably (e.g., "Item not found" when it clearly exists), UI logs are insufficient. You need to see the *actual* data types in the database.
+
+### Action
+Create a temporary verification script in the `backend/` root (where `node_modules` are available):
+
+```javascript
+// backend/debug_script.js
+const mongoose = require('mongoose');
+require('dotenv').config(); // Load ENV for MONGO_URI
+
+async function run() {
+    await mongoose.connect(process.env.MONGO_URI);
+    const db = mongoose.connection.db;
+    const items = await db.collection('executionsessions').find({ status: 'running' }).toArray();
+    items.forEach(i => {
+        console.log(`ID: ${i._id} (Type: ${typeof i._id})`); // CRITICAL: Check the TYPE
+    });
+    await mongoose.disconnect();
+}
+run();
+```
+Run it with `node debug_script.js`.
+
+### Rule
+Always verify the **Type** of the data fields (`typeof`) when standard queries fail.

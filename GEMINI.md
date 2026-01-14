@@ -153,6 +153,7 @@ We have compiled a detailed log of specific issues encountered (e.g., Relay Vali
 1.  **NO PowerShell for File Writing:** NEVER use PowerShell commands (like `Set-Content` or `Out-File`) to write or edit files. They often insert invisible Byte Order Marks (BOM) that break JSON parsers and Node.js. Use `write_to_file` tool or Node.js scripts (`fs.writeFileSync`) instead.
 2.  **Avoid Large Block Replacements:** When editing repetitive files (like large JSON arrays), DO NOT use "search and replace" on massive blocks. This leads to corruption and duplication. Make small, surgical edits targeting specific lines or unique keys.
 3.  **Verify JSON Immediately:** After editing any JSON file, immediately verify its validity to catch syntax errors early.
+4.  **Avoid Multi-Replace Tool:** Do NOT use `multi_replace_file_content` for complex code files. It often causes data loss due to partial matching. Use `write_to_file` (rewrite) or `replace_file_content` (single block) instead.
 
 ## Future Development Guidelines
 1.  **Verify Inputs:** Always validate enum values on both frontend and backend.

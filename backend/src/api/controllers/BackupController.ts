@@ -1,6 +1,8 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { backupService } from '../../services/BackupService';
+import path from 'path';
+import fs from 'fs';
 
 export class BackupController {
 
@@ -21,7 +23,8 @@ export class BackupController {
                 .header('Content-Type', 'application/json')
                 .send(backup);
         } catch (error: any) {
-            reply.status(500).send({ message: error.message });
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to download backup' });
         }
     }
 
@@ -32,13 +35,14 @@ export class BackupController {
             const payload = req.body as any;
 
             if (!payload) {
-                return reply.status(400).send({ message: 'No backup content provided' });
+                return reply.status(400).send({ success: false, error: 'No backup content provided' });
             }
 
             const meta = backupService.getBackupPreview(payload);
-            reply.send(meta);
+            return reply.send({ success: true, data: meta });
         } catch (error: any) {
-            reply.status(500).send({ message: error.message });
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to inspect backup' });
         }
     }
 
@@ -46,35 +50,45 @@ export class BackupController {
         try {
             const payload = req.body as any;
             if (!payload || !payload.meta || !payload.data) {
-                return reply.status(400).send({ message: 'Invalid backup payload' });
+                return reply.status(400).send({ success: false, error: 'Invalid backup payload' });
             }
 
             const result = await backupService.restoreBackup(payload);
-            reply.send(result);
+            return reply.send({ success: true, data: result });
         } catch (error: any) {
-            reply.status(500).send({ message: error.message });
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to restore backup' });
         }
     }
 
     static async loadDemo(req: FastifyRequest, reply: FastifyReply) {
         try {
-            const path = require('path');
-            const fs = require('fs');
-            // Resolve path to demo data
-            // In dev: src/api/controllers/../../seeds/demo_data.json -> src/seeds/demo_data.json
-            const seedPath = path.join(__dirname, '../../seeds/demo_data.json');
+            // Rule 4: Use process.cwd() for file paths to be build-safe
+            // Assume 'src/seeds' exists in root or is copied to dist
+            // Safe bet for TS-Node (Development) is src/seeds. 
+            // For Prod, we might need to adjust, but avoiding __dirname is step 1.
+
+            // Try explicit path assuming we run from Project Root
+            let seedPath = path.resolve(process.cwd(), 'backend/src/seeds/demo_data.json');
+
+            // Fallback for different CWD (e.g. inside backend folder)
+            if (!fs.existsSync(seedPath)) {
+                seedPath = path.resolve(process.cwd(), 'src/seeds/demo_data.json');
+            }
 
             if (!fs.existsSync(seedPath)) {
-                return reply.status(404).send({ message: 'Demo data not found on server.' });
+                req.log.warn({ cwd: process.cwd(), seedPath }, 'Demo data file not found');
+                return reply.status(404).send({ success: false, error: 'Demo data file not found on server.' });
             }
 
             const fileContent = fs.readFileSync(seedPath, 'utf-8');
             const payload = JSON.parse(fileContent);
 
             const result = await backupService.restoreBackup(payload);
-            reply.send({ ...result, message: 'Demo data loaded successfully' });
+            return reply.send({ success: true, data: result, message: 'Demo data loaded successfully' });
         } catch (error: any) {
-            reply.status(500).send({ message: error.message });
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: error.message || 'Failed to load demo data' });
         }
     }
 }

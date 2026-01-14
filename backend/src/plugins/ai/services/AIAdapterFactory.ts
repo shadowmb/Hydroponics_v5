@@ -38,7 +38,7 @@ export class AIAdapterFactory {
                 // @ts-ignore
                 const { createOllamaChat } = await new Function('return import("@tanstack/ai-ollama")')();
                 // Ensure 127.0.0.1 is used to avoid node 17+ localhost ipv6 issues
-                return createOllamaChat((modelOverride || 'llama3') as any, 'http://127.0.0.1:11434');
+                return createOllamaChat((modelOverride || 'llama3') as any, config.OLLAMA_BASE_URL);
 
             case 'ollama-cloud':
                 console.log('☁️ Ollama Cloud: Connecting...', { model: modelOverride });

@@ -14,6 +14,7 @@ import { Plus, Edit, Trash2 } from 'lucide-react';
 import { aiService } from '@/services/ai.service';
 import { ShortcutDialog } from './ShortcutDialog';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface ChatShortcut {
     id: string;
@@ -29,6 +30,7 @@ export function ChatShortcutsSection() {
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingShortcut, setEditingShortcut] = useState<ChatShortcut | null>(null);
+    const [shortcutToDelete, setShortcutToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         fetchShortcuts();
@@ -56,14 +58,20 @@ export function ChatShortcutsSection() {
         setDialogOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Сигурни ли сте, че искате да изтриете този въпрос?')) return;
+    const handleDeleteClick = (id: string) => {
+        setShortcutToDelete(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!shortcutToDelete) return;
         try {
-            await aiService.deleteShortcut(id);
+            await aiService.deleteShortcut(shortcutToDelete);
             toast.success('Въпросът е изтрит');
             fetchShortcuts();
         } catch (error) {
             toast.error('Грешка при изтриване');
+        } finally {
+            setShortcutToDelete(null);
         }
     };
 
@@ -146,7 +154,7 @@ export function ChatShortcutsSection() {
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}>
                                                 <Edit size={16} />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="hover:text-destructive" onClick={() => handleDelete(s.id)}>
+                                            <Button variant="ghost" size="icon" className="hover:text-destructive" onClick={() => handleDeleteClick(s.id)}>
                                                 <Trash2 size={16} />
                                             </Button>
                                         </div>
@@ -164,6 +172,21 @@ export function ChatShortcutsSection() {
                 shortcut={editingShortcut}
                 onSave={handleSave}
             />
+
+            <Dialog open={!!shortcutToDelete} onOpenChange={(open: boolean) => !open && setShortcutToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Сигурни ли сте?</DialogTitle>
+                        <DialogDescription>
+                            Въпросът ще бъде изтрит завинаги.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShortcutToDelete(null)}>Отказ</Button>
+                        <Button variant="destructive" onClick={confirmDelete}>Изтрий</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
