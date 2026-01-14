@@ -14,6 +14,7 @@ import { hardware } from './modules/hardware/HardwareService';
 import { historyService } from './services/HistoryService';
 import { notifications } from './services/NotificationService';
 import { programLogService } from './services/ProgramLogService'; // Ensure listeners are registered
+import ResourceRoleManager from './services/ResourceRoleManager';
 
 const app = Fastify({
     logger: false // We use our own Pino instance
@@ -52,6 +53,8 @@ async function bootstrap() {
         // 3.1 Seed Templates
         await seedControllerTemplates();
         // await seedDeviceTemplates(); // Removed: Templates are now JSON-only
+        await ResourceRoleManager.scanAndSyncRoles(); // Auto-sync resource roles from templates
+
 
         // 4. Register Routes
         console.log('Registering Routes...');
