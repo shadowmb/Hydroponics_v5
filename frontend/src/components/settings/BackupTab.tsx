@@ -83,6 +83,12 @@ export const BackupTab: React.FC = () => {
         return advancedSelection;
     };
 
+    // Helper for API URL
+    const getApiUrl = () => {
+        if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+        return `${window.location.protocol}//${window.location.hostname}:3000`;
+    };
+
     const handleExport = async () => {
         const targets = getExportTargets();
         if (targets.length === 0) {
@@ -95,7 +101,7 @@ export const BackupTab: React.FC = () => {
             // Use browser download
             const query = `targets=${targets.join(',')}`;
             const link = document.createElement('a');
-            link.href = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/backup/download?${query}`;
+            link.href = `${getApiUrl()}/api/backup/download?${query}`;
             link.download = `backup.json`;
             document.body.appendChild(link);
             link.click();
@@ -145,7 +151,7 @@ export const BackupTab: React.FC = () => {
         reader.onload = async (ev) => {
             try {
                 const json = JSON.parse(ev.target?.result as string);
-                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/backup/restore`, {
+                const response = await fetch(`${getApiUrl()}/api/backup/restore`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(json)
