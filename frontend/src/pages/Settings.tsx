@@ -1,9 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NotificationCenter } from "../components/notifications/NotificationCenter";
 import { SystemRecoveryPanel } from "../components/settings/SystemRecoveryPanel";
 import { ResourceRolesPanel } from "../components/settings/ResourceRolesPanel";
 import { SettingsAI } from "../components/settings/SettingsAI";
+import { BackupTab } from "../components/settings/BackupTab";
 
 export function Settings() {
     return (
@@ -39,15 +39,7 @@ export function Settings() {
                 </TabsContent>
 
                 <TabsContent value="backup">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Backup & Restore</CardTitle>
-                            <CardDescription>Export your configuration or restore from a file.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-sm text-muted-foreground">Coming in v5.1</div>
-                        </CardContent>
-                    </Card>
+                    <BackupTab />
                 </TabsContent>
             </Tabs>
         </div>

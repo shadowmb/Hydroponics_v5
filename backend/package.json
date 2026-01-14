@@ -8,7 +8,8 @@
         "start": "chcp 65001 && node dist/backend/src/index.js",
         "start:docker": "node dist/backend/src/index.js",
         "dev": "chcp 65001 && ts-node-dev --respawn --transpile-only src/index.ts",
-        "verify-db": "ts-node src/verify-db.ts"
+        "verify-db": "ts-node src/verify-db.ts",
+        "generate-demo": "ts-node scripts/generate-demo.ts"
     },
     "keywords": [],
     "author": "",
