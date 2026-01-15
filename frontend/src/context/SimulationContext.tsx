@@ -1,5 +1,6 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 
 // --- Types ---
@@ -82,7 +83,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ enable: true })
-        }).catch(err => toast.error("Failed to enable simulation on server"));
+        }).catch(() => toast.error("Failed to enable simulation on server"));
     };
 
     const disableSimulation = () => {
@@ -102,7 +103,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ minutes: 0 })
             })
-        ]).catch(err => toast.error("Failed to reset server time"));
+        ]).catch(() => toast.error("Failed to reset server time"));
     };
 
     const setVirtualTimeAction = (date: Date) => {
@@ -144,7 +145,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ minutes: offsetMinutes })
-        }).catch(err => toast.error("Failed to set offset on server"));
+        }).catch(() => toast.error("Failed to set offset on server"));
     };
 
     const value = {
