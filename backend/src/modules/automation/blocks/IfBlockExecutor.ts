@@ -1,4 +1,5 @@
 import { IBlockExecutor, ExecutionContext, BlockResult } from '../interfaces';
+import { slugify } from '../../../utils/StringUtils';
 
 export class IfBlockExecutor implements IBlockExecutor {
     type = 'IF';
@@ -49,7 +50,7 @@ export class IfBlockExecutor implements IBlockExecutor {
             // [HEAVY DEBUG] Case-insensitive / Fuzzy fallback
             if (tol === undefined) {
                 // Normalizer function: lowercase + remove all non-alphanumeric (spaces, underscores, etc)
-                const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const normalize = (s: string) => slugify(s).replace(/_/g, '');
 
                 const targetSlug = normalize(tolVar); // e.g. "global_2_tolerance" -> "global2tolerance"
 

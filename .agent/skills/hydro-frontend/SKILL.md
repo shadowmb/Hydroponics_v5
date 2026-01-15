@@ -16,6 +16,15 @@ This skill defines the coding standards, libraries, and patterns used in the Hyd
 - **Icons:** Lucide React.
 - **Utilities:** `date-fns`, `clsx`, `tailwind-merge`.
 
+## 🛡️ Production Build Standards
+- **Strict TypeScript:** The codebase runs in Strict Mode. Use `type` imports where appropriate (`import type { ... }`).
+- **Unused Code:** Do NOT leave unused variables (`err`, `React`, imported components).
+  - **Rule:** If an error variable in catch is unused, remove it: `.catch(() => ...)` instead of `.catch(err => ...)`.
+  - **Reason:** These cause build failures in CI/Docker environments (TS6133).
+- **Global State Sync:**
+  - **Pattern:** Use `useEffect` buffers to sync Backend State -> Client State.
+  - **Example:** `SimulationContext` syncing server time. Don't rely on local inference alone.
+
 ## 🎨 UI & Styling Rules
 1.  **Shadcn Components:** Always prefer existing components in `@/components/ui/` (Button, Input, Select, Dialog) over standard HTML tags.
 2.  **Tailwind CSS:**
@@ -83,6 +92,27 @@ This skill defines the coding standards, libraries, and patterns used in the Hyd
     ```
 - **Feedback:** Use `sonner` (`toast.success`, `toast.error`) for all operations.
 - **Dismissal:** Ensure Dialogs have `onInteractOutside={(e) => e.preventDefault()}` if they contain critical unsaved data.
+- **Tooltips:**
+  - **Pattern:** Avoid using the main element/icon as a trigger for description tooltips. Use a dedicated `Info` icon.
+  - **Icon:** Use `Lucide React` -> `Info` (`h-4 w-4 text-muted-foreground hover:text-foreground cursor-help`).
+  - **Structure:**
+    ```tsx
+    import { Info } from 'lucide-react';
+    import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+    {description && (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-[300px] text-sm">{description}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )}
+    ```
 
 ## 🌐 API & Config
 - **Central Config:** NEVER hardcode URLs (e.g. `localhost:3000`).

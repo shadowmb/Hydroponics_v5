@@ -1,6 +1,7 @@
 {
     "id": "dfrobot_soil_mois",
     "name": "DFRobot Soil Moisture",
+    "description": "Analog capacitive soil moisture sensor. Corrosion-resistant.",
     "category": "SENSOR",
     "measurements": {
         "soil_moisture": {
@@ -11,12 +12,47 @@
     "resourceRoles": [
         "soil_moisture"
     ],
+    "roles": {
+        "soil_moisture": {
+            "label": "Soil Moisture",
+            "description": "Monitor soil moisture levels for irrigation.",
+            "defaultStrategy": "linear",
+            "strategies": [
+                "linear",
+                "offset_only"
+            ],
+            "units": [
+                "%",
+                "adc"
+            ]
+        }
+    },
     "supportedStrategies": [
-        "linear"
+        "linear",
+        "offset_only"
     ],
     "capabilities": [
         "READ"
     ],
+    "requirements": {
+        "interface": "analog",
+        "voltage": [
+            3.3,
+            5.0
+        ],
+        "pin_count": {
+            "analog": 1
+        }
+    },
+    "hardwareLimits": {
+        "min": 0,
+        "max": 100,
+        "unit": "%"
+    },
+    "sampling": {
+        "count": 5,
+        "delayMs": 50
+    },
     "commands": {
         "READ": {
             "hardwareCmd": "ANALOG",
@@ -37,14 +73,26 @@
             "type": "ANALOG_IN"
         }
     ],
+    "initialState": {
+        "value": 0
+    },
     "uiConfig": {
         "icon": "sprout",
+        "category": "Soil",
         "units": [
             "%",
             "adc"
-        ]
-    },
-    "initialState": {
-        "value": 0
+        ],
+        "tags": [
+            "Soil",
+            "Moisture"
+        ],
+        "capabilities": {
+            "READ": {
+                "label": "Moisture",
+                "icon": "droplet",
+                "tooltip": "Measures volumetric water content in soil."
+            }
+        }
     }
 }

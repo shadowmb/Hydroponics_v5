@@ -47,86 +47,9 @@ import { ControllerWizard } from '../components/hardware/ControllerWizard';
 import { PortManager } from '../components/hardware/PortManager';
 import { hardwareService, type IController } from '../services/hardwareService';
 import { NetworkScanPrompt } from '../components/hardware/NetworkScanPrompt';
-
-// Component to show connected devices/relays when row is expanded
-const ExpandedControllerRow: React.FC<{ controllerId: string }> = ({ controllerId }) => {
-    const [devices, setDevices] = useState<any[]>([]);
-    const [relays, setRelays] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [allDevices, allRelays] = await Promise.all([
-                    hardwareService.getDevices(),
-                    hardwareService.getRelays()
-                ]);
-
-                // Filter for this controller
-                setDevices(allDevices.filter((d: any) => d.hardware?.parentId === controllerId));
-                // Handle both populated object and string ID for controllerId
-                setRelays(allRelays.filter((r: any) => (r.controllerId?._id || r.controllerId) === controllerId));
-            } catch (err) {
-                console.error("Failed to fetch details for expanded row", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [controllerId]);
-
-    if (loading) return <div className="p-4 text-center text-sm text-muted-foreground">Loading details...</div>;
-    if (devices.length === 0 && relays.length === 0) return <div className="p-4 text-center text-sm text-muted-foreground">No connected devices or relays.</div>;
-
-    return (
-        <div className="p-4 bg-muted/30 space-y-4">
-            {relays.length > 0 && (
-                <div>
-                    <h4 className="text-sm font-semibold mb-2">Connected Relays</h4>
-                    <div className="grid gap-2">
-                        {relays.map(relay => (
-                            <div key={relay._id} className="flex items-center gap-2 text-sm border p-2 rounded bg-background">
-                                <Badge variant="outline">Relay</Badge>
-                                <span className="font-medium">{relay.name}</span>
-                                <span className="text-muted-foreground text-xs">({relay.type})</span>
-                                <span className="text-xs text-muted-foreground ml-2">
-                                    Ports: {relay.channels
-                                        .map((c: any) => c.controllerPortId)
-                                        .filter((p: any) => p) // Filter out null/undefined
-                                        .join(', ')}
-                                </span>
-                                <span className="ml-auto text-xs text-muted-foreground">{relay.channels.length} Channels</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {devices.length > 0 && (
-                <div>
-                    <h4 className="text-sm font-semibold mb-2">Connected Devices</h4>
-                    <div className="grid gap-2">
-                        {devices.map(device => (
-                            <div key={device._id} className="flex items-center gap-2 text-sm border p-2 rounded bg-background">
-                                <Badge variant="outline">Device</Badge>
-                                <span className="font-medium">{device.name}</span>
-                                <span className="text-muted-foreground text-xs">
-                                    {device.hardware?.port ? (
-                                        `Port: ${device.hardware.port}`
-                                    ) : device.hardware?.pins && Object.keys(device.hardware.pins).length > 0 ? (
-                                        `Pins: ${Object.entries(device.hardware.pins).map(([k, v]) => `${k}:${v}`).join(', ')}`
-                                    ) : (
-                                        'No Port'
-                                    )}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
+import { ExpandedControllerView } from './controllers/ExpandedControllerView';
+import { DeviceTestDialog } from '../components/devices/test/DeviceTestDialog';
+import { DeviceWizard } from '../components/hardware/DeviceWizard';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
     constructor(props: { children: React.ReactNode }) {
@@ -173,16 +96,28 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
 
     const [controllers, setControllers] = useState<IController[]>([]);
 
-    const [selectedController, setSelectedController] = useState<IController | null>(null);
+    const [selectedController, setSelectedController] = useState<IController | null>(null); // For PortManager
     const [portManagerOpen, setPortManagerOpen] = useState(false);
+
+    // Controller Wizard
     const [editWizardOpen, setEditWizardOpen] = useState(false);
     const [controllerToEdit, setControllerToEdit] = useState<IController | undefined>(undefined);
+
+    // Delete Dialog
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [controllerToDelete, setControllerToDelete] = useState<string | null>(null);
+
+    // UI State
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [isScanPromptOpen, setIsScanPromptOpen] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
+
+    // --- Device Management Integration ---
+    const [deviceTestOpen, setDeviceTestOpen] = useState(false);
+    const [testDevice, setTestDevice] = useState<any | null>(null); // Changed to object
+    const [deviceWizardOpen, setDeviceWizardOpen] = useState(false);
+    const [deviceToEdit, setDeviceToEdit] = useState<any | null>(null);
 
     const toggleRow = (id: string) => {
         setExpandedRows(prev => {
@@ -346,6 +281,23 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
         if (onWizardClose) onWizardClose();
         setIsScanPromptOpen(true);
     };
+
+    // --- Device Handler ---
+
+    const handleEditDevice = (device: any) => {
+        setDeviceToEdit(device);
+        setDeviceWizardOpen(true);
+    };
+
+    const handleTestDevice = (device: any) => {
+        setTestDevice(device);
+        setDeviceTestOpen(true);
+    };
+
+    const handleDeviceSaved = () => {
+        fetchControllers();
+    };
+
 
     if (!Array.isArray(controllers)) {
         console.error('CRITICAL: controllers is not an array!', controllers);
@@ -539,8 +491,12 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                                                 </TableRow>
                                                 {expandedRows.has(controller._id) && (
                                                     <TableRow>
-                                                        <TableCell colSpan={7} className="p-0">
-                                                            <ExpandedControllerRow controllerId={controller._id} />
+                                                        <TableCell colSpan={7} className="p-0 border-b">
+                                                            <ExpandedControllerView
+                                                                controllerId={controller._id}
+                                                                onEditDevice={handleEditDevice}
+                                                                onTestDevice={handleTestDevice}
+                                                            />
                                                         </TableCell>
                                                     </TableRow>
                                                 )}
@@ -595,6 +551,24 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                     onConfirm={handleRefresh}
                 />
             </div>
+
+            {/* Device Dialogs */}
+
+            {testDevice && (
+                <DeviceTestDialog
+                    device={testDevice}
+                    open={deviceTestOpen}
+                    onOpenChange={setDeviceTestOpen}
+                />
+            )}
+
+            <DeviceWizard
+                open={deviceWizardOpen}
+                onOpenChange={setDeviceWizardOpen}
+                onSuccess={handleDeviceSaved}
+                initialData={deviceToEdit}
+            />
+
             {isSyncing && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center">
                     <div className="flex flex-col items-center gap-4">

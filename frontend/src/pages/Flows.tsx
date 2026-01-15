@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Edit, Trash2, Plus, Loader2, AlertTriangle, Copy } from 'lucide-react';
+import { Play, Edit, Trash2, Plus, Loader2, AlertTriangle, Copy, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import {
     Dialog,
@@ -158,260 +159,276 @@ export const Flows: React.FC = () => {
 
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Flows</h2>
-                    <p className="text-muted-foreground">Manage your automation flows.</p>
-                </div>
-                <div className="flex gap-2">
-                    <Button
-                        variant={viewDeleted ? "secondary" : "ghost"}
-                        onClick={() => setViewDeleted(!viewDeleted)}
-                        className={viewDeleted ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : ""}
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {viewDeleted ? 'View Active' : 'Recycle Bin'}
-                    </Button>
-                    {!viewDeleted && (
-                        <Button onClick={() => navigate('/editor')}>
-                            <Plus className="mr-2 h-4 w-4" /> Create Flow
+        <TooltipProvider>
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold tracking-tight">Flows</h2>
+                        <p className="text-muted-foreground">Manage your automation flows.</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            variant={viewDeleted ? "secondary" : "ghost"}
+                            onClick={() => setViewDeleted(!viewDeleted)}
+                            className={viewDeleted ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : ""}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {viewDeleted ? 'View Active' : 'Recycle Bin'}
                         </Button>
-                    )}
+                        {!viewDeleted && (
+                            <Button onClick={() => navigate('/editor')}>
+                                <Plus className="mr-2 h-4 w-4" /> Create Flow
+                            </Button>
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            {/* System Status Alert if Busy */}
-            {isSystemBusy && !viewDeleted && (
-                <div className="bg-orange-500/10 border border-orange-500/20 rounded-md p-3 flex items-center gap-3 text-orange-500 text-sm">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span>
-                        System is currently running a program or test. Flow execution is disabled until stopped.
-                        {systemStatus?.runningSessionsCount > 0 && ` (${systemStatus.runningSessionsCount} active sessions)`}
-                    </span>
-                </div>
-            )}
+                {/* System Status Alert if Busy */}
+                {isSystemBusy && !viewDeleted && (
+                    <div className="bg-orange-500/10 border border-orange-500/20 rounded-md p-3 flex items-center gap-3 text-orange-500 text-sm">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span>
+                            System is currently running a program or test. Flow execution is disabled until stopped.
+                            {systemStatus?.runningSessionsCount > 0 && ` (${systemStatus.runningSessionsCount} active sessions)`}
+                        </span>
+                    </div>
+                )}
 
-            <Card className={viewDeleted ? "border-orange-200 bg-orange-50/30" : ""}>
-                <CardHeader>
-                    <CardTitle>{viewDeleted ? 'Recycle Bin' : 'All Flows'}</CardTitle>
-                    <CardDescription>{viewDeleted ? 'Recover or permanently delete flows.' : 'A list of all automation flows in the system.'}</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {loading ? (
-                        <div className="flex justify-center py-12">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
-                    ) : flows.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            {viewDeleted ? 'Recycle bin is empty.' : 'No flows found. Create one to get started.'}
-                        </div>
-                    ) : (
-                        <div className="relative w-full overflow-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-muted/50 text-muted-foreground [&_th]:px-4 [&_th]:py-3 [&_th]:font-medium">
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>ID</th>
-                                        <th>Created At</th>
-                                        <th>State</th>
-                                        <th>Programs</th>
-                                        <th className="text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {flows.map((flow) => (
-                                        <tr key={flow.id} className="hover:bg-muted/50 transition-colors">
-                                            <td className="px-4 py-3 font-medium">{flow.name}</td>
-                                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{flow.id}</td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                {flow.createdAt ? new Date(flow.createdAt).toLocaleDateString() : '-'}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {viewDeleted ? (
-                                                    <span className="text-xs text-orange-600 font-medium">Deleted</span>
-                                                ) : (
-                                                    <div className="flex flex-col gap-1">
-                                                        {flow.validationStatus === 'INVALID' ? (
-                                                            <div className="flex items-center text-xs text-orange-600 font-medium" title="This flow has errors and cannot be run.">
-                                                                <AlertTriangle className="h-3 w-3 mr-1" />
-                                                                Draft / Invalid
-                                                            </div>
-                                                        ) : (
-                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-green-500/10 text-green-600">
-                                                                Ready
-                                                            </span>
+                <Card className={viewDeleted ? "border-orange-200 bg-orange-50/30" : ""}>
+                    <CardHeader>
+                        <CardTitle>{viewDeleted ? 'Recycle Bin' : 'All Flows'}</CardTitle>
+                        <CardDescription>{viewDeleted ? 'Recover or permanently delete flows.' : 'A list of all automation flows in the system.'}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex justify-center py-12">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : flows.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground">
+                                {viewDeleted ? 'Recycle bin is empty.' : 'No flows found. Create one to get started.'}
+                            </div>
+                        ) : (
+                            <div className="relative w-full overflow-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-muted/50 text-muted-foreground [&_th]:px-4 [&_th]:py-3 [&_th]:font-medium">
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>ID</th>
+                                            <th>Created At</th>
+                                            <th>State</th>
+                                            <th>Programs</th>
+                                            <th className="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {flows.map((flow) => (
+                                            <tr key={flow.id} className="hover:bg-muted/50 transition-colors">
+                                                <td className="px-4 py-3 font-medium">
+                                                    <div className="flex items-center gap-2">
+                                                        {flow.name}
+                                                        {flow.description && (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="max-w-xs">{flow.description}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
                                                         )}
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {!viewDeleted && flow.usedIn && flow.usedIn.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {flow.usedIn.map(p => (
-                                                            <span key={p.id} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${p.isActive
-                                                                ? 'bg-green-50 border-green-200 text-green-700'
-                                                                : 'bg-gray-50 border-gray-200 text-gray-600'
-                                                                }`} title={p.isActive ? 'Active Program' : 'Inactive Program'}>
-                                                                {p.name}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground italic">Unused</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <div className="flex justify-end gap-2">
+                                                </td>
+                                                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{flow.id}</td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {flow.createdAt ? new Date(flow.createdAt).toLocaleDateString() : '-'}
+                                                </td>
+                                                <td className="px-4 py-3">
                                                     {viewDeleted ? (
-                                                        <>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleRestore(flow)}
-                                                                disabled={!!processingId}
-                                                            >
-                                                                {processingId === flow.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Restore'}
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                onClick={() => setHardDeleteId(flow.id)}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
+                                                        <span className="text-xs text-orange-600 font-medium">Deleted</span>
                                                     ) : (
-                                                        <>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleTest(flow.id)}
-                                                                disabled={!!processingId || flow.validationStatus === 'INVALID' || isSystemBusy}
-                                                                title={isSystemBusy ? "System is busy" : "Run Flow (Visual Log)"}
-                                                                className="text-cyan-500 hover:text-cyan-400 hover:bg-cyan-950/30"
-                                                            >
-                                                                {processingId === flow.id ? (
-                                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                                ) : (
-                                                                    <Play className="h-4 w-4" />
-                                                                )}
-                                                            </Button>
-
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => navigate(`/editor/${flow.id}`)}
-                                                                disabled={!!(flow.usedIn && flow.usedIn.some((p: any) => p.isActive))}
-                                                                title={flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? "Cannot edit flow used in active programs" : "Edit Flow"}
-                                                            >
-                                                                <Edit className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-blue-600'}`} />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => setDeleteId(flow.id)}
-                                                                disabled={!!(flow.usedIn && flow.usedIn.some((p: any) => p.isActive))}
-                                                                title={flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? "Cannot delete flow used in active programs" : "Delete Flow"}
-                                                            >
-                                                                <Trash2 className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-red-600'}`} />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => setDuplicateFlowId(flow.id)}
-                                                                title="Duplicate Flow"
-                                                                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                                                            >
-                                                                <Copy className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
+                                                        <div className="flex flex-col gap-1">
+                                                            {flow.validationStatus === 'INVALID' ? (
+                                                                <div className="flex items-center text-xs text-orange-600 font-medium" title="This flow has errors and cannot be run.">
+                                                                    <AlertTriangle className="h-3 w-3 mr-1" />
+                                                                    Draft / Invalid
+                                                                </div>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-green-500/10 text-green-600">
+                                                                    Ready
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {!viewDeleted && flow.usedIn && flow.usedIn.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {flow.usedIn.map(p => (
+                                                                <span key={p.id} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${p.isActive
+                                                                    ? 'bg-green-50 border-green-200 text-green-700'
+                                                                    : 'bg-gray-50 border-gray-200 text-gray-600'
+                                                                    }`} title={p.isActive ? 'Active Program' : 'Inactive Program'}>
+                                                                    {p.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground italic">Unused</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        {viewDeleted ? (
+                                                            <>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleRestore(flow)}
+                                                                    disabled={!!processingId}
+                                                                >
+                                                                    {processingId === flow.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Restore'}
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    onClick={() => setHardDeleteId(flow.id)}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleTest(flow.id)}
+                                                                    disabled={!!processingId || flow.validationStatus === 'INVALID' || isSystemBusy}
+                                                                    title={isSystemBusy ? "System is busy" : "Run Flow (Visual Log)"}
+                                                                    className="text-cyan-500 hover:text-cyan-400 hover:bg-cyan-950/30"
+                                                                >
+                                                                    {processingId === flow.id ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <Play className="h-4 w-4" />
+                                                                    )}
+                                                                </Button>
 
-            {/* Test Dialog */}
-            <FlowTestDialog
-                open={!!testFlowId}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setTestFlowId(null);
-                        // Refresh status when closing to check if it really stopped
-                        fetchSystemStatus();
-                    }
-                }}
-                flowId={testFlowId}
-                flowName={flows.find(f => f.id === testFlowId)?.name || 'Flow'}
-                isActive={isSystemBusy}
-            />
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => navigate(`/editor/${flow.id}`)}
+                                                                    disabled={!!(flow.usedIn && flow.usedIn.some((p: any) => p.isActive))}
+                                                                    title={flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? "Cannot edit flow used in active programs" : "Edit Flow"}
+                                                                >
+                                                                    <Edit className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-blue-600'}`} />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => setDeleteId(flow.id)}
+                                                                    disabled={!!(flow.usedIn && flow.usedIn.some((p: any) => p.isActive))}
+                                                                    title={flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? "Cannot delete flow used in active programs" : "Delete Flow"}
+                                                                >
+                                                                    <Trash2 className={`h-4 w-4 ${flow.usedIn && flow.usedIn.some((p: any) => p.isActive) ? 'text-gray-300' : 'text-red-600'}`} />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => setDuplicateFlowId(flow.id)}
+                                                                    title="Duplicate Flow"
+                                                                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                                                >
+                                                                    <Copy className="h-4 w-4" />
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
-            {/* Duplicate Dialog */}
-            <DuplicateFlowDialog
-                open={!!duplicateFlowId}
-                onOpenChange={(open) => !open && setDuplicateFlowId(null)}
-                flowId={duplicateFlowId}
-                flowName={flows.find(f => f.id === duplicateFlowId)?.name || ''}
-                onSuccess={fetchFlows}
-            />
+                {/* Test Dialog */}
+                <FlowTestDialog
+                    open={!!testFlowId}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setTestFlowId(null);
+                            // Refresh status when closing to check if it really stopped
+                            fetchSystemStatus();
+                        }
+                    }}
+                    flowId={testFlowId}
+                    flowName={flows.find(f => f.id === testFlowId)?.name || 'Flow'}
+                    isActive={isSystemBusy}
+                />
 
-            {/* Soft Delete Confirmation Dialog */}
-            <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete Flow?</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to move this flow to the Recycle Bin? You can restore it later.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDelete}
-                            disabled={!!processingId}
-                        >
-                            {processingId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Move to Trash
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                {/* Duplicate Dialog */}
+                <DuplicateFlowDialog
+                    open={!!duplicateFlowId}
+                    onOpenChange={(open) => !open && setDuplicateFlowId(null)}
+                    flowId={duplicateFlowId}
+                    flowName={flows.find(f => f.id === duplicateFlowId)?.name || ''}
+                    onSuccess={fetchFlows}
+                />
 
-            {/* Hard Delete Confirmation Dialog */}
-            <Dialog open={!!hardDeleteId} onOpenChange={(open) => !open && setHardDeleteId(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle className="text-red-600">Permanently Delete Flow?</DialogTitle>
-                        <DialogDescription>
-                            This action cannot be undone. This flow will be permanently removed from the database.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={handleHardDelete}
-                            disabled={!!processingId}
-                        >
-                            {processingId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Delete Permanently
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
+                {/* Soft Delete Confirmation Dialog */}
+                <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Flow?</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to move this flow to the Recycle Bin? You can restore it later.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDelete}
+                                disabled={!!processingId}
+                            >
+                                {processingId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Move to Trash
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Hard Delete Confirmation Dialog */}
+                <Dialog open={!!hardDeleteId} onOpenChange={(open) => !open && setHardDeleteId(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className="text-red-600">Permanently Delete Flow?</DialogTitle>
+                            <DialogDescription>
+                                This action cannot be undone. This flow will be permanently removed from the database.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button
+                                variant="destructive"
+                                onClick={handleHardDelete}
+                                disabled={!!processingId}
+                            >
+                                {processingId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Delete Permanently
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </TooltipProvider>
     );
 };
