@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { flowRepository } from '../../modules/persistence/repositories/FlowRepository';
 import { programRepository } from '../../modules/persistence/repositories/ProgramRepository';
 import { logger } from '../../core/LoggerService';
+import { slugify } from '../../utils/StringUtils';
 
 export class FlowController {
 
@@ -158,15 +159,13 @@ export class FlowController {
                 return reply.status(404).send({ success: false, message: 'Flow not found' });
             }
 
-            // 2. Generate new ID (slug)
-            const slugify = (text: string) => text.toString().toLowerCase()
-                .replace(/\s+/g, '_')           // Replace spaces with -
-                .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-                .replace(/\-\-+/g, '_')         // Replace multiple - with single -
-                .replace(/^-+/, '')             // Trim - from start of text
-                .replace(/-+$/, '');            // Trim - from end of text
-
+            // 2. Generate new ID (slug) using robust utility
             let newId = slugify(name);
+
+            // Fallback if slugify results in empty string (e.g. only symbols)
+            if (!newId) {
+                newId = `flow_${Date.now()}`;
+            }
 
             // 3. Check for existing ID/Name
             const existing = await FlowModel.findOne({

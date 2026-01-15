@@ -112,9 +112,6 @@ const FlowEditorContent: React.FC = () => {
 
         const isDifferent = savedStateString !== currentStateString;
 
-        if (isDifferent) {
-            // Debug if needed
-        }
         return isDifferent;
     }, [savedStateString, currentStateString]);
 
@@ -152,42 +149,12 @@ const FlowEditorContent: React.FC = () => {
         fetchFlow();
     }, [id, setNodes, setEdges]);
 
+    // ... (rest of the code)
+
+
+
     // Validation Effect
-    const { devices, deviceTemplates } = useStore();
-    useEffect(() => {
-        const context = {
-            devices,
-            variables,
-            deviceTemplates
-        };
-        const result = FlowValidator.validate(nodes, edges, context);
-        // setValidationErrors(result.errors);
 
-        // Update nodes with error state
-        setNodes((nds) => {
-            let hasChanges = false;
-            const newNodes = nds.map((node) => {
-                const nodeErrors = result.blockErrors[node.id];
-                const hasError = !!nodeErrors;
-                const errorMsg = hasError ? nodeErrors[0].message : undefined;
-
-                if (node.data.error !== errorMsg || node.data.hasError !== hasError) {
-                    hasChanges = true;
-                    return {
-                        ...node,
-                        data: {
-                            ...node.data,
-                            hasError: hasError,
-                            error: errorMsg,
-                        },
-                    };
-                }
-                return node;
-            });
-            return hasChanges ? newNodes : nds;
-        });
-
-    }, [nodes, edges, setNodes, devices, variables, deviceTemplates]);
 
     // Load Devices for Selector
     const { setDevices } = useStore();
@@ -398,23 +365,23 @@ const FlowEditorContent: React.FC = () => {
 
     const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
 
+    // Ref to bypass blocker when we just saved successfully and are navigating to the new ID
+    const isJustSavedRef = useRef(false);
+
     // --- Navigation Guard ---
     const blocker = useBlocker(
-        ({ currentLocation, nextLocation }) =>
-            isDirty && currentLocation.pathname !== nextLocation.pathname
+        ({ currentLocation, nextLocation }) => {
+            // If we just saved successfully, allow navigation (it's the redirect to the new flow ID)
+            if (isJustSavedRef.current) return false;
+
+            return isDirty && currentLocation.pathname !== nextLocation.pathname;
+        }
     );
 
     const handleBlockerSave = async () => {
         if (!flowName) {
             // Problem 2 Fix: Open dialog if no name
             setIsSaveDialogOpen(true);
-            // We do NOT block here, we wait for user to interact with the dialog.
-            // But we need to close the "Unsaved Changes" dialog first?
-            // Actually, if we set isSaveDialogOpen(true), the save dialog opens.
-            // But the "Unsaved changes" dialog is also open because blocker.state is 'blocked'.
-            // They might stack. This is acceptable or we should close the unsaved dialog?
-            // If we close unsaved dialog (blocker.reset), we lose the navigation intent.
-            // So we must keep blocker blocked.
             return;
         }
 
@@ -422,10 +389,8 @@ const FlowEditorContent: React.FC = () => {
         try {
             await onSave(flowName, flowDescription);
             // onSave will handle blocker.proceed() if valid.
-            // If invalid (draft prompted), we stay here until user resolves draft dialog.
         } catch (e) {
             console.error("Blocker save failed", e);
-            // Stay if error
         }
     };
 
@@ -437,10 +402,45 @@ const FlowEditorContent: React.FC = () => {
         blocker.reset?.();
     };
 
+    // Validation Effect
+    const { devices, deviceTemplates } = useStore();
+    useEffect(() => {
+        const context = {
+            devices,
+            variables,
+            deviceTemplates
+        };
+        const result = FlowValidator.validate(nodes, edges, context);
+        // setValidationErrors(result.errors);
+
+        // Update nodes with error state
+        setNodes((nds) => {
+            let hasChanges = false;
+            const newNodes = nds.map((node) => {
+                const nodeErrors = result.blockErrors[node.id];
+                const hasError = !!nodeErrors;
+                const errorMsg = hasError ? nodeErrors[0].message : undefined;
+
+                if (node.data.error !== errorMsg || node.data.hasError !== hasError) {
+                    hasChanges = true;
+                    return {
+                        ...node,
+                        data: {
+                            ...node.data,
+                            hasError: hasError,
+                            error: errorMsg,
+                        },
+                    };
+                }
+                return node;
+            });
+            return hasChanges ? newNodes : nds;
+        });
+
+    }, [nodes, edges, setNodes, devices, variables, deviceTemplates]);
+
     // Updated onSave to handle blocker logic if called from Dialog
     const onSave = useCallback(async (name: string, description: string) => {
-        console.log('onSave called:', { name, id });
-
         // Final Validation Check
         const context = {
             devices: useStore.getState().devices,
@@ -458,25 +458,44 @@ const FlowEditorContent: React.FC = () => {
 
         try {
             const newFlowId = await saveFlowToBackend(name, description, true);
+
             toast.success(`Flow ${id ? 'updated' : 'saved'} successfully!`);
             setFlowName(name);
             setFlowDescription(description);
-            // Update the baseline state to match current, so isDirty becomes false
-            setSavedStateString(standardizeState(nodes, edges, name, description, variables));
 
-            // If we were blocked (navigation attempt), proceed now
-            if (blocker.state === 'blocked') {
-                blocker.proceed?.();
-            } else if (!id && newFlowId) {
-                // Only navigate if we weren't already navigating (blocked)
+            // Update the baseline state to match current, so isDirty becomes false immediately
+            const newStateString = standardizeState(nodes, edges, name, description, variables);
+
+            setSavedStateString(newStateString);
+
+            // If this was a new flow (POST), we MUST navigate to the edit URL immediately
+            // This prevents "Save & Leave" from trying to POST again (Duplicate Key)
+            if (!id && newFlowId) {
+                // Set flag to bypass blocker
+                isJustSavedRef.current = true;
+
+                // Using { replace: true } swaps the history entry, so the back button won't go to 'new'
                 navigate(`/editor/${newFlowId}`, { replace: true });
+
+                // Reset flag after a timeout (just in case)
+                setTimeout(() => { isJustSavedRef.current = false; }, 1000);
+
+                // If we were blocked, proceed logic handles the exit.
+                if (blocker.state === 'blocked') {
+                    blocker.proceed?.();
+                }
+            } else if (blocker.state === 'blocked') {
+                // Normal update (PUT) + Leave
+                blocker.proceed?.();
             }
         } catch (error: any) {
             console.error('Save error:', error);
             toast.error(`Failed to save: ${error.message}`);
+            // If duplicate key error happens (race condition), we might want to recover?
+            // For now, let user manage it.
             throw error;
         }
-    }, [nodes, edges, id, inputs, variables, navigate, blocker]); // Added blocker to deps
+    }, [nodes, edges, id, inputs, variables, navigate, blocker, standardizeState]); // Added blocker to deps
 
     return (
         <div className="h-full w-full flex flex-col">

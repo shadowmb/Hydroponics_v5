@@ -1,4 +1,5 @@
 import { IBlockExecutor, ExecutionContext, BlockResult } from '../interfaces';
+import { slugify } from '../../../utils/StringUtils';
 
 export class LoopBlockExecutor implements IBlockExecutor {
     type = 'LOOP';
@@ -115,7 +116,7 @@ export class LoopBlockExecutor implements IBlockExecutor {
 
                     // Case-insensitive / Fuzzy fallback
                     if (tol === undefined) {
-                        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const normalize = (s: string) => slugify(s).replace(/_/g, '');
                         const targetSlug = normalize(tolVar);
 
                         const foundKey = Object.keys(ctx.variables).find(k => normalize(k) === targetSlug);

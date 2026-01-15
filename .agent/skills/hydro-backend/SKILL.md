@@ -83,6 +83,9 @@ This skill defines the architecture, patterns, and coding standards for the Node
     const mongoose = require('mongoose');
     // ... connect and inspect types ...
     ```
+- **API**: Follow RESTful conventions. Use standard HTTP status codes.
+- **Utils**: ALWAYS use `src/utils/StringUtils.ts` for slug generation and string normalization. NEVER implement ad-hoc regex replacements for IDs. The `slugify` utility correctly handles Cyrillic transliteration.
+- **Validation**: Validate inputs at the controller level before passing to services.
 - **Rule:** Do NOT use `process.env` directly in business logic.
 - **Solution:** Use the typed `ConfigService` (`core/ConfigService.ts`).
 - **Example:** `import { config } from '@/core/ConfigService'; ... config.MONGO_URI`.
