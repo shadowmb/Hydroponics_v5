@@ -1,7 +1,15 @@
 import { events } from '../core/EventBusService';
 import { programDailyLogRepository } from '../modules/persistence/repositories/ProgramDailyLogRepository';
 import { logger } from '../core/LoggerService';
+import { timeService } from '../core/TimeService';
 
+interface LogEntry {
+    programId: string | undefined;
+    type: 'TRIGGER' | 'FLOW_STATE' | 'WINDOW_EVENT' | 'ERROR' | 'SYSTEM' | 'INFO' | 'WARNING' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED';
+    message: string;
+    metadata?: any;
+    level?: 'info' | 'warn' | 'error';
+}
 
 export class ProgramLogService {
     constructor() {
@@ -15,11 +23,16 @@ export class ProgramLogService {
 
         // Window Active
         events.on('advanced:window_active', async (data: any) => {
-            await this.logEvent(data.programId, 'WINDOW_EVENT', `Прозорец "${data.windowName}" стартира`, {
-                windowId: data.windowId,
-                windowName: data.windowName,
-                startTime: data.startTime,
-                endTime: data.endTime
+            await this.logEvent({
+                programId: data.programId,
+                type: 'WINDOW_EVENT',
+                message: `Прозорец "${data.windowName}" стартира`,
+                metadata: {
+                    windowId: data.windowId,
+                    windowName: data.windowName,
+                    startTime: data.startTime,
+                    endTime: data.endTime
+                }
             });
         });
 
@@ -28,10 +41,15 @@ export class ProgramLogService {
             const reason = data.data?.result === 'triggered' ? 'Тригер' :
                 data.data?.result === 'fallback' ? 'Fallback' : 'Изтекло време';
 
-            await this.logEvent(data.programId, 'WINDOW_EVENT', `Прозорец "${data.windowName}" завърши (${reason})`, {
-                windowId: data.windowId,
-                windowName: data.windowName,
-                result: data.data?.result
+            await this.logEvent({
+                programId: data.programId,
+                type: 'WINDOW_EVENT',
+                message: `Прозорец "${data.windowName}" завърши (${reason})`,
+                metadata: {
+                    windowId: data.windowId,
+                    windowName: data.windowName,
+                    result: data.data?.result
+                }
             });
 
             // Record aggregated resource summary
@@ -56,21 +74,30 @@ export class ProgramLogService {
 
         // Window Skipped
         events.on('advanced:window_skipped', async (data: any) => {
-            await this.logEvent(data.programId, 'WINDOW_EVENT', `Прозорец "${data.windowName}" пропуснат: ${data.data?.reason}`, {
-                windowId: data.windowId,
-                reason: data.data?.reason
+            await this.logEvent({
+                programId: data.programId,
+                type: 'WINDOW_EVENT',
+                message: `Прозорец "${data.windowName}" пропуснат: ${data.data?.reason}`,
+                metadata: {
+                    windowId: data.windowId,
+                    reason: data.data?.reason
+                }
             });
         });
 
         // Trigger Matched
         events.on('advanced:trigger_matched', async (data: any) => {
-            // data usually has { programId, windowId, sensorName, sensorValue, condition, flowId ... }
-            await this.logEvent(data.programId, 'TRIGGER_MATCH', `Тригер: ${data.sensorName} (${data.sensorValue}) ${data.condition}`, {
-                windowId: data.windowId,
-                windowName: data.windowName,
-                sensorId: data.sensorId,
-                value: data.sensorValue,
-                flowIds: data.flowIds
+            await this.logEvent({
+                programId: data.programId,
+                type: 'TRIGGER_MATCH',
+                message: `Тригер: ${data.sensorName} (${data.sensorValue}) ${data.condition}`,
+                metadata: {
+                    windowId: data.windowId,
+                    windowName: data.windowName,
+                    sensorId: data.sensorId,
+                    value: data.sensorValue,
+                    flowIds: data.flowIds
+                }
             });
         });
 
@@ -79,11 +106,10 @@ export class ProgramLogService {
             if (!data.programId) return;
 
             // Use deduplication to update the last log entry if it's the same trigger evaluation
-            // This prevents spamming the log every second
             await programDailyLogRepository.addOrUpdateEvent(
                 data.programId,
                 {
-                    timestamp: new Date(),
+                    timestamp: timeService.now(),
                     type: 'TRIGGER_EVALUATION',
                     message: '🎯 [TriggerEvaluator] Evaluation Result',
                     metadata: {
@@ -127,7 +153,7 @@ export class ProgramLogService {
                 await programDailyLogRepository.addOrUpdateEvent(
                     data.programId,
                     {
-                        timestamp: new Date(),
+                        timestamp: timeService.now(),
                         type: type as any,
                         message,
                         metadata
@@ -139,30 +165,33 @@ export class ProgramLogService {
                     }
                 );
                 logger.debug({ programId: data.programId, type }, '✅ [ProgramLogService] Trigger skip logged (deduplicated)');
-            } catch (err) {
+            } catch (err: any) {
                 logger.error({ err, programId: data.programId }, '❌ [ProgramLogService] Failed to log trigger skip');
             }
         });
 
-        // Automation Block Execution (High Level Only)
-        // We probably don't want EVERY block step in the Daily Log, maybe just Flows?
-        // User said: "information about ... what programs and blocks are executed"
-        // But also "We have 20 lines...".
-        // If we log every 'execution_step', it will be spammed.
-        // Let's log 'program_start' (Flow Start) and 'program_stop' (Flow End) which correspond to Flows running.
-
         // Active Program Started (Day/Schedule Start)
         events.on('active:program_started', async (data: any) => {
-            await this.logEvent(data.programId, 'INFO', `Програмата стартира`, {
-                timestamp: new Date()
+            await this.logEvent({
+                programId: data.programId,
+                type: 'INFO',
+                message: `Програмата стартира`,
+                metadata: {
+                    timestamp: timeService.now()
+                }
             });
         });
 
         // Manual Check Initiated
         events.on('advanced:manual_check', async (data: any) => {
-            await this.logEvent(data.programId, 'INFO', `Извънредна проверка (Force Check)`, {
-                timestamp: data.timestamp,
-                userInitiated: true
+            await this.logEvent({
+                programId: data.programId,
+                type: 'INFO',
+                message: `Извънредна проверка (Force Check)`,
+                metadata: {
+                    timestamp: data.timestamp,
+                    userInitiated: true
+                }
             });
         });
 
@@ -175,22 +204,27 @@ export class ProgramLogService {
                     message = `Стартиран поток (Fallback): ${data.programName}`;
                 }
 
-                await this.logEvent(progId, 'FLOW_EXECUTED', message, {
-                    sessionId: data.sessionId,
-                    flowId: data.programId, // Template ID
-                    executionType: data.executionType
-                }, data.sessionId);
+                await this.logEvent({
+                    programId: progId,
+                    type: 'FLOW_EXECUTED',
+                    message,
+                    metadata: {
+                        sessionId: data.sessionId,
+                        flowId: data.programId, // Template ID
+                        executionType: data.executionType
+                    }
+                });
             }
         });
 
-        // Block Execution (only important blocks to avoid spam)
+        // Block Execution
         events.on('automation:block_end', async (data: any) => {
-            logger.info({ activeProgramId: data.activeProgramId, blockType: data.blockType, blockId: data.blockId }, '📋 [ProgramLogService] Received block_end event');
+            // logger.info({ activeProgramId: data.activeProgramId, blockType: data.blockType, blockId: data.blockId }, '📋 [ProgramLogService] Received block_end event');
 
             const progId = data.activeProgramId;
             if (!progId) {
-                logger.warn({ blockId: data.blockId }, '⚠️ [ProgramLogService] Skipping - no activeProgramId');
-                return; // Skip if no program context
+                // logger.warn({ blockId: data.blockId }, '⚠️ [ProgramLogService] Skipping - no activeProgramId');
+                return;
             }
 
             const { blockId, blockType, blockLabel, success, summary, error, output, logData } = data;
@@ -225,44 +259,48 @@ export class ProgramLogService {
                 message = `❌ ${name}: ${error}`;
             }
 
-            await this.logEvent(progId, type, message, {
-                blockId,
-                blockType,
-                blockLabel,
-                success,
-                output: output?.displayValue || output?.result,
-                logData, // <--- Persist Structured Data
-                sessionId: data.sessionId,
-                windowId: data.windowId,
-                windowName: data.windowName,
-                flowName: data.programName // In automation engine 'programName' is the flow name
-            }, data.sessionId);
+            await this.logEvent({
+                programId: progId,
+                type: type,
+                message: message,
+                metadata: {
+                    blockId,
+                    blockType,
+                    blockLabel,
+                    success,
+                    output: output?.displayValue || output?.result,
+                    logData,
+                    sessionId: data.sessionId,
+                    windowId: data.windowId,
+                    windowName: data.windowName,
+                    flowName: data.programName
+                }
+            });
         });
-
     }
 
     /**
      * Helper to log safely
      */
-    private async logEvent(programId: string | undefined, type: any, message: string, metadata: any = {}, executionSessionId?: string) {
-        logger.info({ programId, type, message }, '📝 [ProgramLogService] logEvent called');
+    public async logEvent(entry: LogEntry) {
+        logger.info({ programId: entry.programId, type: entry.type, message: entry.message }, '📝 [ProgramLogService] logEvent called');
 
-        if (!programId) {
-            logger.warn({ type, message }, '⚠️ [ProgramLogService] Skipping log - no programId');
+        if (!entry.programId) {
+            logger.warn({ type: entry.type, message: entry.message }, '⚠️ [ProgramLogService] Skipping log - no programId');
             return;
         }
 
         try {
-            await programDailyLogRepository.addEvent(programId, {
-                timestamp: new Date(),
-                type,
-                message,
-                metadata,
-                executionSessionId
+            await programDailyLogRepository.addEvent(entry.programId, {
+                timestamp: timeService.now(), // Uses Virtual Time if Simulating
+                type: entry.type,
+                message: entry.message,
+                metadata: entry.metadata,
+                level: entry.level || 'info'
             });
-            logger.info({ programId, type }, '✅ [ProgramLogService] Event saved to DB');
+            logger.info({ programId: entry.programId, type: entry.type }, '✅ [ProgramLogService] Event saved to DB');
         } catch (err) {
-            logger.error({ err, programId, type }, '❌ [ProgramLogService] Failed to write to DailyLog');
+            logger.error({ err, programId: entry.programId, type: entry.type }, '❌ [ProgramLogService] Failed to write to DailyLog');
         }
     }
 }

@@ -5,6 +5,8 @@ import { ResourceRolesPanel } from "../components/settings/ResourceRolesPanel";
 import { SettingsAI } from "../components/settings/SettingsAI";
 import { BackupTab } from "../components/settings/BackupTab";
 
+import { TimeSettingsSection } from "../components/settings/TimeSettingsSection";
+
 export function Settings() {
     return (
         <div className="container mx-auto p-6 space-y-8">
@@ -30,7 +32,8 @@ export function Settings() {
                     <NotificationCenter />
                 </TabsContent>
 
-                <TabsContent value="general">
+                <TabsContent value="general" className="space-y-4">
+                    <TimeSettingsSection />
                     <SystemRecoveryPanel />
                 </TabsContent>
 

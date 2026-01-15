@@ -180,4 +180,11 @@ export async function apiRoutes(app: FastifyInstance) {
     // System Recovery Routes
     app.post('/api/system/state/check', SystemController.checkState);
     app.post('/api/system/state/fix', SystemController.fixState);
+
+    // Time & Simulation Routes (System)
+    const TimeController = require('./controllers/TimeController').TimeController;
+    app.get('/api/time', TimeController.getStatus);
+    app.post('/api/time/simulate', TimeController.simulate);
+    app.post('/api/time/offset', TimeController.setOffset);
+    app.post('/api/time/timezone', TimeController.setTimezone);
 }

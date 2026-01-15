@@ -7,6 +7,7 @@ import { activeProgramService } from './ActiveProgramService';
 import { triggerEvaluator } from './TriggerEvaluator';
 import { logger } from '../../core/LoggerService';
 import { events } from '../../core/EventBusService';
+import { timeService } from '../../core/TimeService';
 import { ITimeWindow } from '../persistence/schemas/Program.schema';
 import { IWindowState } from '../persistence/schemas/ActiveProgram.schema';
 
@@ -25,7 +26,7 @@ export class SchedulerService {
     private _state: 'STOPPED' | 'RUNNING' | 'WAITING_START' = 'STOPPED';
     private _startTime: number | null = null;
     private _lastTick: Date | null = null;
-    private _lastCheckedDay: number = new Date().getDate();
+    private _lastCheckedDay: number = timeService.now().getDate();
 
     constructor() {
         // Run every 10 seconds to capture intervals accurately
@@ -91,7 +92,7 @@ export class SchedulerService {
             }
 
             if (activeProgram.type === 'ADVANCED') {
-                const now = new Date();
+                const now = timeService.now();
                 const timeString = now.toTimeString().slice(0, 5);
 
                 if (!options?.silent) {
@@ -115,13 +116,13 @@ export class SchedulerService {
     }
 
     private async tick() {
-        this._lastTick = new Date();
+        this._lastTick = timeService.now();
         if (this._state === 'STOPPED') {
             return;
         }
 
         if (this._state === 'WAITING_START') {
-            if (this._startTime && Date.now() >= this._startTime) {
+            if (this._startTime && timeService.now().getTime() >= this._startTime) {
                 this._state = 'RUNNING';
                 this._startTime = null;
                 logger.info('▶️ Delayed Start Triggered - Scheduler Running');
@@ -131,10 +132,10 @@ export class SchedulerService {
         }
 
         try {
-            const now = new Date();
+            const now = timeService.now();
             this._lastTick = now;
             const timeString = now.toTimeString().slice(0, 5); // HH:mm
-            logger.info({ time: timeString }, '🕒 Scheduler Tick');
+            logger.info({ time: timeString, isSim: timeService.getStatus().isSimulating }, '🕒 Scheduler Tick');
 
             // 1. Check Active Program & Schedule
             const activeProgram = await activeProgramService.getActive();
@@ -202,7 +203,7 @@ export class SchedulerService {
             const monitoringTasks = await monitoringRepository.findActive();
             for (const task of monitoringTasks) {
                 const last = this.lastRun.get(task.id) || 0;
-                const elapsedMinutes = (Date.now() - last) / 1000 / 60;
+                const elapsedMinutes = (timeService.now().getTime() - last) / 1000 / 60;
 
                 if (elapsedMinutes >= task.intervalMinutes) {
                     this.addToQueue({
@@ -210,7 +211,7 @@ export class SchedulerService {
                         id: task.id,
                         flowId: task.flowId,
                         priority: task.priority,
-                        timestamp: Date.now()
+                        timestamp: timeService.now().getTime()
                     });
                 }
             }
@@ -297,7 +298,7 @@ export class SchedulerService {
             if (item.type === 'monitoring') {
                 await automation.loadProgram(item.flowId);
                 await automation.startProgram();
-                this.lastRun.set(item.id, Date.now());
+                this.lastRun.set(item.id, timeService.now().getTime());
             }
         } catch (error) {
             logger.error({ error, item }, '❌ Failed to process queue item');
@@ -337,7 +338,7 @@ export class SchedulerService {
             // ---------------------------------------------------------
             // 0. SKIP & DAY RESET LOGIC
             // ---------------------------------------------------------
-            const now = new Date();
+            const now = timeService.now();
             let dirty = false;
 
             // A. Check for New Day (Reset Logic)
@@ -471,17 +472,17 @@ export class SchedulerService {
                             windowId: window.id,
                             windowName: window.name,
                             result: result as any, // 'triggered' | 'fallback' | 'no_trigger'
-                            timestamp: new Date(),
+                            timestamp: timeService.now(),
                             flowId: this.getFlowIdFromExecution(window, state),
                             flowName: this.getFlowIdFromExecution(window, state)
                         });
 
                         // RECORD SUMMARY (Fix for /short analysis)
                         try {
-                            const { resourceSummaryService } = require('../analysis/ResourceSummaryService');
+                            const { resourceSummaryService } = require('../../services/ResourceSummaryService');
                             const flowId = this.getFlowIdFromExecution(window, state);
 
-                            await resourceSummaryService.recordWindowSummary({
+                            await resourceSummaryService.recordExecution({
                                 programId: activeProgram.sourceProgramId,
                                 programName: activeProgram.name || activeProgram.sourceProgramId,
                                 windowId: window.id,
@@ -512,7 +513,7 @@ export class SchedulerService {
                         programId: activeProgram.sourceProgramId,
                         windowId: window.id,
                         windowName: window.name,
-                        timestamp: new Date()
+                        timestamp: timeService.now()
                     });
 
                     state.status = 'active';
@@ -543,7 +544,7 @@ export class SchedulerService {
                         windowOverrides,   // Context specific
                         activeProgram.sourceProgramId
                     );
-                    state.lastCheck = new Date();
+                    state.lastCheck = timeService.now();
 
                     if (result === 'executing') {
                         // Flow started, we will track completion in next ticks
@@ -559,7 +560,7 @@ export class SchedulerService {
                             windowId: window.id,
                             windowName: window.name,
                             result: result === 'triggered' ? 'triggered' : 'no_trigger',
-                            timestamp: new Date(),
+                            timestamp: timeService.now(),
                             flowId: this.getFlowIdFromExecution(window, state),
                             flowName: this.getFlowIdFromExecution(window, state)
                         });
@@ -570,28 +571,8 @@ export class SchedulerService {
                 }
             }
 
-            // ZOMBIE CHECK: If status is 'active' but no session ID, and past time -> Force Complete
-            else if (state.status === 'active' && !state.currentFlowSessionId && this.isPastTimeWindow(timeString, window.endTime)) {
-                logger.warn({ windowId: window.id }, '🧟 Zombie Active Window detected (No Session ID). Marking completed.');
-                state.status = 'completed';
-
-                // Add log entry so user sees it finished
-                try {
-                    const { programLogService } = require('../logging/ProgramLogService');
-                    programLogService.logEvent({
-                        programId: activeProgram.sourceProgramId,
-                        type: 'WINDOW_EVENT',
-                        message: `Прозорец "${window.name}" завърши (Resume/Fallback)`,
-                        metadata: { windowId: window.id }
-                    });
-                } catch (e) { }
-
-                await activeProgram.save();
-                continue;
-            }
-
             // Check if we're past the window (fallback time)
-            else if (this.isPastTimeWindow(timeString, window.endTime) && state.status !== 'completed' && state.status !== 'active') {
+            else if (this.isPastTimeWindow(timeString, window.endTime) && state.status !== 'completed' && state.status !== 'skipped') {
                 // BUGFIX: Check if the program was active during this window's time range
                 // If program started AFTER the window ended, skip fallback (window was missed)
                 const wasActiveForWindow = this.wasProgramActiveForWindow(
@@ -613,7 +594,7 @@ export class SchedulerService {
                         windowId: window.id,
                         windowName: window.name,
                         reason: 'Program started after window ended',
-                        timestamp: new Date()
+                        timestamp: timeService.now()
                     });
                     await activeProgram.save();
                     continue;
@@ -656,7 +637,7 @@ export class SchedulerService {
                         windowId: window.id,
                         windowName: window.name,
                         flowName: flowNameLog,
-                        timestamp: new Date()
+                        timestamp: timeService.now()
                     });
 
 
@@ -699,7 +680,7 @@ export class SchedulerService {
                     windowId: window.id,
                     windowName: window.name,
                     result: hasBreakExecuted ? 'triggered' : 'no_trigger',
-                    timestamp: new Date(),
+                    timestamp: timeService.now(),
                     flowId: this.getFlowIdFromExecution(window, state),
                     flowName: this.getFlowIdFromExecution(window, state)
                 });
@@ -715,7 +696,7 @@ export class SchedulerService {
             logger.info('🏁 All windows completed - Advanced Program finished for today');
             events.emit('advanced:program_day_complete', {
                 programId: activeProgram.sourceProgramId,
-                timestamp: new Date()
+                timestamp: timeService.now()
             });
             activeProgram.dayCompleteEmitted = true;
             await activeProgram.save();

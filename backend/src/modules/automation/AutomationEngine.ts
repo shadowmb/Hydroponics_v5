@@ -99,16 +99,17 @@ export class AutomationEngine {
             if (this.currentSessionId) {
                 try {
                     const updates: any = { status: stateValue };
-                    if (stateValue === 'stopped' || stateValue === 'error') {
+                    // Fix: Set endTime for completed as well
+                    if (['stopped', 'error', 'completed'].includes(stateValue)) {
                         updates.endTime = new Date();
                     }
 
-                    // We could also append logs here if we were buffering them, 
-                    // but for now we'll rely on the event bus or direct updates for logs.
-                    // Let's just update status for now.
+                    // Log the sync attempt
+                    logger.info({ sessionId: this.currentSessionId, updates }, '💾 Syncing Session Status to DB');
+
                     await sessionRepository.update(this.currentSessionId, updates);
-                } catch (err) {
-                    logger.error({ err, sessionId: this.currentSessionId }, '❌ Failed to update session status');
+                } catch (err: any) {
+                    logger.error({ err: err.message, sessionId: this.currentSessionId }, '❌ Failed to update session status');
                 }
             }
 
