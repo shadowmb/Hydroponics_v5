@@ -3,7 +3,7 @@ import { hardwareService } from '../../services/hardwareService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu, RefreshCw, AlertTriangle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -185,7 +185,21 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
                                     <TableRow key={device._id}>
                                         <TableCell className="font-medium flex items-center gap-2">
                                             {getIcon(device.config?.driverId?.physicalType)}
-                                            {device.name}
+                                            <span>{device.name}</span>
+                                            {device.metadata?.description && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p className="max-w-[300px] text-sm">
+                                                                {device.metadata.description}
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{device.config?.driverId?.name || 'Unknown'}</Badge>

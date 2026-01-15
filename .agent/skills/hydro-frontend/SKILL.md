@@ -92,6 +92,27 @@ This skill defines the coding standards, libraries, and patterns used in the Hyd
     ```
 - **Feedback:** Use `sonner` (`toast.success`, `toast.error`) for all operations.
 - **Dismissal:** Ensure Dialogs have `onInteractOutside={(e) => e.preventDefault()}` if they contain critical unsaved data.
+- **Tooltips:**
+  - **Pattern:** Avoid using the main element/icon as a trigger for description tooltips. Use a dedicated `Info` icon.
+  - **Icon:** Use `Lucide React` -> `Info` (`h-4 w-4 text-muted-foreground hover:text-foreground cursor-help`).
+  - **Structure:**
+    ```tsx
+    import { Info } from 'lucide-react';
+    import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+    {description && (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-[300px] text-sm">{description}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )}
+    ```
 
 ## 🌐 API & Config
 - **Central Config:** NEVER hardcode URLs (e.g. `localhost:3000`).
