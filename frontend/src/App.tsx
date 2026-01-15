@@ -24,6 +24,7 @@ import { AIAssistantPage } from './pages/AIAssistantPage';
 
 import { AIProvider } from './context/AIContext';
 import { UIStateProvider } from './context/UIStateContext';
+import { SimulationProvider } from './context/SimulationContext';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -79,7 +80,9 @@ function App() {
       <Toaster richColors position="top-center" />
       <AIProvider>
         <UIStateProvider>
-          <RouterProvider router={router} />
+          <SimulationProvider>
+            <RouterProvider router={router} />
+          </SimulationProvider>
         </UIStateProvider>
       </AIProvider>
     </ThemeProvider >

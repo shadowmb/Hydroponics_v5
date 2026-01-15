@@ -133,7 +133,7 @@ export const BackupTab: React.FC = () => {
                     });
                     const data = await response.json();
                     if (data.message) throw new Error(data.message);
-                    setPreviewData(data);
+                    setPreviewData(data.data);
                 } catch (err: any) {
                     toast.error('Invalid backup file: ' + err.message);
                     setRestoreFile(null);
@@ -436,6 +436,18 @@ export const BackupTab: React.FC = () => {
                                     <span className="text-slate-200">{previewData.comment || 'N/A'}</span>
                                 </div>
                             </div>
+
+                            {/* Stats Section */}
+                            {previewData.stats && (
+                                <div className="grid grid-cols-2 gap-2">
+                                    {Object.entries(previewData.stats).map(([key, count]) => (
+                                        <div key={key} className="bg-slate-900/30 border border-slate-800 p-2 rounded flex justify-between items-center">
+                                            <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">{key}</span>
+                                            <span className="text-xs font-mono text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">{String(count)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <Alert variant="destructive" className="bg-red-950/20 border-red-900/40">
                                 <AlertTriangle className="h-4 w-4 stroke-red-500" />

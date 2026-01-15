@@ -227,17 +227,33 @@ export class HardwareService {
         details?: any
     }> {
         const { DeviceModel } = await import('../../models/Device');
-        const device = await DeviceModel.findById(deviceId);
+        // @ts-ignore
+        const device = await DeviceModel.findOne({ _id: deviceId }).setOptions({ withDeleted: true });
         if (!device) throw new Error('Device not found');
+
+        // Check if device is deleted but still accessible technically
+        if (device.deletedAt) {
+            // Optional: throw new Error('Device is deleted'); 
+            // Or proceed if we want to allow testing deleted devices (useful for debugging)
+            // For now, let's warn but proceed if possible, OR fail if critical dependencies are missing.
+            logger.warn({ deviceId }, '⚠️ Reading sensor value from SOFT DELETED device');
+        }
 
         const { contextResolver } = await import('./HardwareContextResolver');
         const context = await contextResolver.resolveContext(device, this.readSensorValue.bind(this));
 
+        // Ensure driverId is a string (handle Mongoose population edge case)
+        let drvId = device.config.driverId;
+        if (typeof drvId === 'object' && drvId !== null) {
+            // @ts-ignore
+            drvId = drvId._id?.toString() || drvId.id?.toString();
+        }
+
         // Use 15s timeout for sensor reads to avoid premature timeouts
         const readContext = { ...context, timeout: 15000 };
-        const rawResponse = await this.sendCommand(deviceId, device.config.driverId, 'READ', {}, readContext);
+        const rawResponse = await this.sendCommand(deviceId, drvId as string, 'READ', {}, readContext);
 
-        const driverDoc = templates.getDriver(device.config.driverId);
+        const driverDoc = templates.getDriver(drvId as string);
         const valuePath = driverDoc.commands?.READ?.valuePath;
         const { sensorProcessor } = await import('./SensorProcessor');
 
@@ -247,12 +263,12 @@ export class HardwareService {
         if (samplingConfig && typeof samplingConfig.count === 'number' && samplingConfig.count > 1) {
             raw = await sensorProcessor.performSampling(
                 deviceId,
-                device.config.driverId,
+                drvId as string,
                 {
                     count: samplingConfig.count,
                     delayMs: samplingConfig.delayMs || 0
                 },
-                async () => this.sendCommand(deviceId, device.config.driverId, 'READ', {}, { pins: device.hardware?.pins }),
+                async () => this.sendCommand(deviceId, drvId as string, 'READ', {}, { pins: device.hardware?.pins }),
                 valuePath
             );
         } else {
@@ -277,7 +293,7 @@ export class HardwareService {
         if (outputs && outputs.length === 1 && outputs[0].key) readings[outputs[0].key] = isNaN(displayVal) ? null : displayVal;
 
         events.emit('device:data', {
-            deviceId: device.id, deviceName: device.name, driverId: device.config.driverId,
+            deviceId: device.id, deviceName: device.name, driverId: drvId as string,
             value: isNaN(displayVal) ? null : displayVal, raw, unit: displayUnitFinal,
             baseValue: isNaN(baseLogValue) ? null : baseLogValue, baseUnit: baseLogUnit,
             hwValue: baseHwValue, hwUnit: baseHwUnit, readings,

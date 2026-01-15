@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { softDeletePlugin, ISoftDelete } from '../plugins/softDelete.plugin';
 
-export type LogEventType = 'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING' | 'TRIGGER_EVALUATION';
+export type LogEventType = 'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING' | 'TRIGGER_EVALUATION' | 'TRIGGER' | 'FLOW_STATE' | 'SYSTEM';
 
 export interface ILogEvent {
     timestamp: Date;
@@ -10,6 +10,7 @@ export interface ILogEvent {
     metadata?: Record<string, any>; // Flexible metadata (sensor values, window names, etc)
     executionSessionId?: string; // Link to detailed execution session if applicable
     count?: number; // For deduplicated events
+    level?: 'info' | 'warn' | 'error';
 }
 
 export interface IProgramDailyLog extends Document, ISoftDelete {
@@ -23,13 +24,14 @@ const LogEventSchema = new Schema({
     timestamp: { type: Date, required: true, default: Date.now },
     type: {
         type: String,
-        enum: ['WINDOW_EVENT', 'TRIGGER_MATCH', 'TRIGGER_SKIP', 'FLOW_EXECUTED', 'ERROR', 'INFO', 'WARNING', 'TRIGGER_EVALUATION'],
+        enum: ['WINDOW_EVENT', 'TRIGGER_MATCH', 'TRIGGER_SKIP', 'FLOW_EXECUTED', 'ERROR', 'INFO', 'WARNING', 'TRIGGER_EVALUATION', 'TRIGGER', 'FLOW_STATE', 'SYSTEM'],
         required: true
     },
     message: { type: String, required: true },
     metadata: { type: Schema.Types.Mixed },
     executionSessionId: { type: String },
-    count: { type: Number, default: 1 }
+    count: { type: Number, default: 1 },
+    level: { type: String, enum: ['info', 'warn', 'error'], default: 'info' }
 }, { _id: false });
 
 const ProgramDailyLogSchema = new Schema<IProgramDailyLog>({

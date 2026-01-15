@@ -32,7 +32,7 @@ export class SystemController {
                     name: program.name,
                     status: program.status,
                     engineStatus: engineStatus.status,
-                    isZombie: !isEngineRunning
+                    isZombie: false // Programs are schedulers, they run 24/7 independently of the engine
                 });
             }
 
@@ -44,7 +44,7 @@ export class SystemController {
                     name: (session.context as any)?.cycleName || 'Unknown Session',
                     status: session.status,
                     engineStatus: engineStatus.status,
-                    isZombie: !isEngineRunning
+                    isZombie: false // Cycle sessions wait for windows/triggers, so they are validly running while engine is idle
                 });
             }
 

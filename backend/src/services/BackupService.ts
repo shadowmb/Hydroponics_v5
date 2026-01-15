@@ -70,11 +70,10 @@ export class BackupService {
                 // Fetch all documents as raw JSON
                 const docs = await collection.find({}).toArray();
 
-                // Filter out legacy or unnecessary fields if needed?
-                // For 'Restore' purposes, we usually want EXACT copies, including _id and dates.
-                // So we keep them as is.
+                // Convert to Extended JSON to preserve ObjectId/Date types
+                const ejsonDocs = this.toExtendedJSON(docs);
 
-                data[collectionName] = docs;
+                data[collectionName] = ejsonDocs;
                 stats[collectionName] = docs.length;
 
                 logger.debug(`Exported ${docs.length} records from ${collectionName}`);
@@ -163,7 +162,39 @@ export class BackupService {
     }
 
     /**
-     * Recursively traverses objects and converts ISO date strings to Date objects.
+     * Recursively converts raw BSON types to Extended JSON format.
+     * Used during Export.
+     */
+    private toExtendedJSON(obj: any): any {
+        if (obj === null || obj === undefined) return obj;
+
+        // ObjectId handling (Check for Mongoose type or BSON type duck-typing)
+        if (obj instanceof mongoose.Types.ObjectId || (obj._bsontype === 'ObjectId')) {
+            return { $oid: obj.toString() };
+        }
+
+        // Date handling
+        if (obj instanceof Date) {
+            return { $date: obj.toISOString() };
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.toExtendedJSON(item));
+        }
+
+        if (typeof obj === 'object') {
+            const newObj: any = {};
+            for (const key of Object.keys(obj)) {
+                newObj[key] = this.toExtendedJSON(obj[key]);
+            }
+            return newObj;
+        }
+
+        return obj;
+    }
+
+    /**
+     * Recursively traverses objects and converts Extended JSON to JS Objects/Types.
      * Essential for raw driver inserts.
      */
     private reviveDates(obj: any): any {
@@ -179,10 +210,23 @@ export class BackupService {
                 return new Date(obj.$date);
             }
 
+            // MongoDB Extended JSON format handling: { "$oid": "..." }
+            if (obj.$oid && typeof obj.$oid === 'string') {
+                return new mongoose.Types.ObjectId(obj.$oid);
+            }
+
             // Standard recursion
             const newObj: any = {};
             for (const key of Object.keys(obj)) {
                 const value = obj[key];
+
+                // Legacy Fix: If _id is a plain string hex, force convert to ObjectId.
+                // This handles backups that were exported without Extended JSON.
+                if (key === '_id' && typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value)) {
+                    newObj[key] = new mongoose.Types.ObjectId(value);
+                    continue;
+                }
+
                 // Heuristic: keys ending in 'At' (createdAt, updatedAt) or just checking value string format
                 // Checking value format is safer.
                 if (typeof value === 'string' && this.isIsoDate(value)) {

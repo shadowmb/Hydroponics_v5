@@ -152,7 +152,9 @@ export class HardwareController {
             const { id } = req.params as { id: string };
             const body = req.body as any;
 
-            const controller = await Controller.findById(id);
+            // @ts-ignore
+            const controller = await Controller.findOne({ _id: id }).setOptions({ withDeleted: true });
+
             if (!controller) {
                 return reply.status(404).send({ success: false, error: 'Controller not found' });
             }
@@ -762,7 +764,8 @@ export class HardwareController {
             let controller: any = null;
             if (body.hardware?.parentId) {
                 // --- Controller Connection ---
-                controller = await Controller.findById(body.hardware.parentId);
+                // @ts-ignore
+                controller = await Controller.findOne({ _id: body.hardware.parentId }).setOptions({ withDeleted: true });
                 if (!controller) {
                     return reply.status(404).send({ success: false, error: 'Controller not found' });
                 }
@@ -805,7 +808,8 @@ export class HardwareController {
             } else if (body.hardware?.relayId) {
                 // --- Relay Connection ---
                 const { Relay } = await import('../../models/Relay');
-                const relay = await Relay.findById(body.hardware.relayId);
+                // @ts-ignore
+                const relay = await Relay.findOne({ _id: body.hardware.relayId }).setOptions({ withDeleted: true });
                 if (!relay) {
                     return reply.status(404).send({ success: false, error: 'Relay not found' });
                 }
@@ -992,9 +996,16 @@ export class HardwareController {
             const body = req.body as any;
             const { DeviceModel } = await import('../../models/Device');
 
-            const device = await DeviceModel.findById(id);
+            // Find device, including deleted ones to distinguish 404 from "is deleted"
+            // @ts-ignore
+            const device = await DeviceModel.findOne({ _id: id }).setOptions({ withDeleted: true });
+
             if (!device) {
-                return reply.status(404).send({ success: false, error: 'Device not found' });
+                return reply.status(404).send({ success: false, error: 'Device not found (Invalid ID)' });
+            }
+
+            if (device.deletedAt) {
+                return reply.status(400).send({ success: false, error: 'Device is deleted. Please restore it from Recycle Bin before editing.' });
             }
 
             // Transform Multi-Pins Map to Array (if present)

@@ -21,7 +21,8 @@ export class BackupController {
             reply
                 .header('Content-Disposition', `attachment; filename="${filename}"`)
                 .header('Content-Type', 'application/json')
-                .send(backup);
+                // Send formatted JSON (2 spaces indentation)
+                .send(JSON.stringify(backup, null, 2));
         } catch (error: any) {
             req.log.error(error);
             return reply.status(500).send({ success: false, error: error.message || 'Failed to download backup' });

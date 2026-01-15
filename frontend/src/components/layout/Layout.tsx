@@ -150,8 +150,11 @@ function Sidebar({ className }: SidebarProps) {
     )
 }
 
+import { useSimulation } from "@/context/SimulationContext"; // Add import
+
 export function Layout() {
     const { setSystemStatus, devices, updateDevice } = useStore();
+    const { isSimulating, virtualTime } = useSimulation(); // Destructure Context
 
     useEffect(() => {
         // Initialize Socket
@@ -189,7 +192,18 @@ export function Layout() {
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header className="flex h-14 items-center gap-4 border-b bg-card px-6 justify-between">
-                    <h1 className="text-lg font-semibold">Control Panel</h1>
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-lg font-semibold">Control Panel</h1>
+                        {isSimulating && (
+                            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/50 rounded-full animate-pulse-slow">
+                                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                <span className="text-xs font-bold text-amber-500 uppercase tracking-widest">Simulation Active</span>
+                                <span className="text-xs font-mono text-amber-500/80 ml-2 border-l border-amber-500/30 pl-2">
+                                    {virtualTime.toLocaleDateString('en-GB')} {virtualTime.toLocaleTimeString('en-GB', { hour12: false })}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <div className="flex items-center gap-4">
                         <AIInsightsButton />
                         <AIChatButton />

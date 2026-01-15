@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { activeProgramService } from '../../services/activeProgramService';
 import { toast } from 'sonner';
+import { useSimulation } from '@/context/SimulationContext';
 
 interface NextCheckTimerProps {
     lastCheck?: Date | string;
@@ -17,6 +18,9 @@ export const NextCheckTimer = ({ lastCheck, checkInterval = 1, status, programSt
     const [timeString, setTimeString] = useState<string>('');
     const [isOverdue, setIsOverdue] = useState(false);
     const [checking, setChecking] = useState(false);
+
+    // Check virtual time
+    const { virtualTime } = useSimulation();
 
     // Filter visibility driven by props
     const isVisible =
@@ -34,7 +38,9 @@ export const NextCheckTimer = ({ lastCheck, checkInterval = 1, status, programSt
             const last = new Date(lastCheck).getTime();
             const intervalMs = (checkInterval || 1) * 60 * 1000;
             const nextCheck = last + intervalMs;
-            const now = Date.now();
+
+            // Use virtual time if available, otherwise real time fallback
+            const now = virtualTime ? virtualTime.getTime() : Date.now();
             const diff = nextCheck - now;
 
             if (diff <= 0) {
@@ -53,7 +59,7 @@ export const NextCheckTimer = ({ lastCheck, checkInterval = 1, status, programSt
         tick();
         const timer = setInterval(tick, 1000);
         return () => clearInterval(timer);
-    }, [lastCheck, checkInterval, isVisible]);
+    }, [lastCheck, checkInterval, isVisible, virtualTime]);
 
     const handleForceCheck = async (e: React.MouseEvent) => {
         e.stopPropagation();
