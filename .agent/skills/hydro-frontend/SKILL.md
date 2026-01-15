@@ -16,6 +16,15 @@ This skill defines the coding standards, libraries, and patterns used in the Hyd
 - **Icons:** Lucide React.
 - **Utilities:** `date-fns`, `clsx`, `tailwind-merge`.
 
+## 🛡️ Production Build Standards
+- **Strict TypeScript:** The codebase runs in Strict Mode. Use `type` imports where appropriate (`import type { ... }`).
+- **Unused Code:** Do NOT leave unused variables (`err`, `React`, imported components).
+  - **Rule:** If an error variable in catch is unused, remove it: `.catch(() => ...)` instead of `.catch(err => ...)`.
+  - **Reason:** These cause build failures in CI/Docker environments (TS6133).
+- **Global State Sync:**
+  - **Pattern:** Use `useEffect` buffers to sync Backend State -> Client State.
+  - **Example:** `SimulationContext` syncing server time. Don't rely on local inference alone.
+
 ## 🎨 UI & Styling Rules
 1.  **Shadcn Components:** Always prefer existing components in `@/components/ui/` (Button, Input, Select, Dialog) over standard HTML tags.
 2.  **Tailwind CSS:**

@@ -23,15 +23,18 @@ This skill defines the architecture, patterns, and coding standards for the Node
 - **Access:** Services export a singleton instance (e.g., `export const hardware = HardwareService.getInstance();`).
 
 ### 2. Dependency Injection & Circular Deps
-- **Critical Rule:** To avoid circular dependency issues between Services and Models, use **Dynamic Imports** inside methods.
+- **Critical Rule:** To avoid circular dependency issues between Services and Models, use **Dynamic Imports** or `require` inside methods.
 - **Example:**
   ```typescript
-  // BAD
+  // BAD: Top-level import causing cycle
   import { DeviceModel } from '../../models/Device';
   
-  // GOOD
+  // GOOD: Lazy load inside method
   public async getDevice() {
+      // Option A: Dynamic Import
       const { DeviceModel } = await import('../../models/Device');
+      // Option B: Legacy Require (if needed for obscure corner cases)
+      const { someService } = require('./SomeService'); 
       return DeviceModel.findById(...);
   }
   ```
@@ -62,6 +65,12 @@ This skill defines the architecture, patterns, and coding standards for the Node
 ### 6. Configuration & Environment
 - **Env Vars:** NEVER use `process.env` directly in application logic. Always use `ConfigService`.
 - **System Paths:** Use `process.cwd()` for all file operations to ensure compatibility across different startup contexts.
+- **State Integrity:** "Memory is Volatile, DB is Truth".
+  - On Startup: Always reconcile in-memory state with DB state (e.g. `syncStatus`).
+  - Never assume the Engine status matches DB status blindly.
+- **Safe Shutdown:**
+  - **Rule:** Critical long-running operations (Windows, Cycles) MUST be wrapped in `try/finally` blocks.
+  - **Reason:** To ensure status is updated to `completed/stopped/error` even if the code crashes, preventing "Zombie" sessions.
 
 ### 7. Data Robustness & Recovery
 - **ID Handling:** Be prepared for mixed `_id` types (String vs ObjectId) in legacy or migrated data.
