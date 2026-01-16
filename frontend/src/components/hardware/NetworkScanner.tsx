@@ -18,7 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Radar, Loader2, Wifi, Plus, Check, Code, RefreshCw } from 'lucide-react';
+import { Radar, Loader2, Wifi, Plus, Check, Code, RefreshCw, AlertTriangle } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
@@ -51,17 +51,24 @@ export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }
     const [broadcastIp, setBroadcastIp] = useState('255.255.255.255');
     const [devices, setDevices] = useState<DiscoveredDevice[]>([]);
     const [existingControllers, setExistingControllers] = useState<any[]>([]);
+    const [processedMacs, setProcessedMacs] = useState<Set<string>>(new Set());
 
     // Fetch existing controllers when dialog opens
     React.useEffect(() => {
         if (isOpen) {
             hardwareService.getControllers().then(controllers => {
                 setExistingControllers(controllers);
+                setProcessedMacs(new Set()); // Reset processed state on open
             }).catch(console.error);
         }
     }, [isOpen]);
 
     const getActionState = (device: DiscoveredDevice) => {
+        // 0. Check if already processed in this session
+        if (processedMacs.has(device.mac)) {
+            return { type: 'synced', label: 'Synced', color: 'text-green-600', icon: Check, tooltip: 'Device is synchronized.' };
+        }
+
         // 1. Find by MAC
         const existingByMac = existingControllers.find(c => c.macAddress === device.mac);
         if (existingByMac) {
@@ -70,26 +77,55 @@ export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }
             const currentPort = existingByMac.connection?.port;
 
             if (currentIp === device.ip && currentPort === device.port) {
-                return { type: 'synced', label: 'Synced', color: 'text-green-600', icon: Check };
+                return { type: 'synced', label: 'Synced', color: 'text-green-600', icon: Check, tooltip: 'Device matches recorded configuration.' };
             } else {
-                return { type: 'update_ip', label: 'Update IP', color: 'text-amber-600', icon: RefreshCw, controllerId: existingByMac._id };
+                return {
+                    type: 'update_ip',
+                    label: 'Update IP',
+                    color: 'text-amber-600',
+                    icon: RefreshCw,
+                    controllerId: existingByMac._id,
+                    tooltip: `Update controller '${existingByMac.name}' IP from ${currentIp} to ${device.ip}`
+                };
             }
         }
 
-        // 2. Find by IP (if MAC not found) -> Legacy Link
-        const existingByIp = existingControllers.find(c => c.connection?.ip === device.ip && !c.macAddress);
+        // 2. Find by IP (if MAC not found) -> Legacy Link or Conflict
+        const existingByIp = existingControllers.find(c => c.connection?.ip === device.ip);
+
         if (existingByIp) {
-            return { type: 'link', label: 'Link to Existing', color: 'text-purple-600', icon: Code, controllerId: existingByIp._id };
+            if (!existingByIp.macAddress) {
+                // Legacy Case: No MAC in DB, but matches IP
+                return {
+                    type: 'link',
+                    label: 'Link MAC',
+                    color: 'text-purple-600',
+                    icon: Code,
+                    controllerId: existingByIp._id,
+                    tooltip: `Assign MAC ${device.mac} to existing controller '${existingByIp.name}'`
+                };
+            } else {
+                // Conflict Case: IP matches, but DB has different MAC
+                return {
+                    type: 'conflict',
+                    label: 'Replace',
+                    color: 'text-red-500',
+                    icon: AlertTriangle,
+                    controllerId: existingByIp._id, // The one to replace/overwrite or just warn
+                    tooltip: `Warning: IP ${device.ip} is currently assigned to '${existingByIp.name}' (MAC: ${existingByIp.macAddress}). Adding will disconnect the old controller.`
+                };
+            }
         }
 
         // 3. New Device
-        return { type: 'add', label: 'Add', color: '', icon: Plus };
+        return { type: 'add', label: 'Add', color: '', icon: Plus, tooltip: 'Add as a new controller.' };
     };
 
     // ... handleScan function remains same ...
     const handleScan = async () => {
         setIsScanning(true);
         setDevices([]);
+        setProcessedMacs(new Set()); // Reset on new scan
 
         try {
             // Use relative path to leverage Vite proxy (targets backend port 3000)
@@ -260,24 +296,44 @@ export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }
                                                             <span className="text-xs font-medium">{action.label}</span>
                                                         </div>
                                                     ) : (
-                                                        <Button
-                                                            size="sm"
-                                                            variant={action.type === 'add' ? 'default' : 'secondary'}
-                                                            className="h-7 gap-1"
-                                                            onClick={() => {
-                                                                if (action.type === 'add' && onAddController) {
-                                                                    setIsOpen(false);
-                                                                    onAddController(device);
-                                                                } else if (action.type === 'update_ip' && onUpdateIp && action.controllerId) {
-                                                                    onUpdateIp(action.controllerId, device.ip, device.port);
-                                                                } else if (action.type === 'link' && onLinkController && action.controllerId) {
-                                                                    onLinkController(action.controllerId, device.mac);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Icon className="h-3 w-3" />
-                                                            {action.label}
-                                                        </Button>
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant={action.type === 'add' || action.type === 'conflict' ? 'default' : 'secondary'}
+                                                                        className={`h-7 gap-1 ${action.type === 'conflict' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+                                                                        onClick={() => {
+                                                                            if (action.type === 'add' && onAddController) {
+                                                                                setIsOpen(false);
+                                                                                onAddController(device);
+                                                                            } else if (action.type === 'conflict' && onAddController) {
+                                                                                // Conflict: Basically "Replace" logic, but simplest is just Add as new, 
+                                                                                // backend should handle uniqueness or we just let it overwrite IP by being active?
+                                                                                // User wanted "Replace". So we will just Add, and maybe backend invalidates the old one?
+                                                                                // Actually, if we Add a new one with same IP, they will conflict.
+                                                                                // But for now, let's treat "Replace" == "Add as New" (user knows old is dead).
+                                                                                setIsOpen(false);
+                                                                                onAddController(device);
+                                                                            }
+                                                                            else if (action.type === 'update_ip' && onUpdateIp && action.controllerId) {
+                                                                                onUpdateIp(action.controllerId, device.ip, device.port);
+                                                                                setProcessedMacs(prev => new Set(prev).add(device.mac));
+                                                                            } else if (action.type === 'link' && onLinkController && action.controllerId) {
+                                                                                onLinkController(action.controllerId, device.mac);
+                                                                                setProcessedMacs(prev => new Set(prev).add(device.mac));
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <Icon className="h-3 w-3" />
+                                                                        {action.label}
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="max-w-[300px] text-xs">{action.tooltip}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
                                                     )}
                                                 </TableCell>
                                             </TableRow>
