@@ -446,62 +446,117 @@ export class SchedulerService {
                 if (isFinished && currentSessionId) {
                     logger.info({ windowId: window.id, sessionId: currentSessionId }, '✅ Trigger/Fallback flow finished');
 
-                    // Move executing triggers to executed
-                    // If it was 'fallback', we still push it to track that fallback ran
-                    state.triggersExecuted.push(...state.triggersExecuting);
+                    // 1. Identify what finished
+                    // triggersExecuting usually has 1 ID (or 'fallback')
+                    const finishedTriggerIds = [...state.triggersExecuting];
                     state.triggersExecuting = []; // Clear executing
                     state.currentFlowSessionId = undefined;
 
-                    // Check if any executed trigger was a BREAK trigger
-                    const breakTrigger = window.triggers.find(t =>
-                        state.triggersExecuted.includes(t.id) && t.behavior === 'break'
-                    );
+                    let shouldCloseWindow = false;
+                    let resultReason: 'triggered' | 'fallback' | 'no_trigger' = 'no_trigger';
+                    let flowIdForLog: string | undefined = undefined;
 
-                    // Check if fallback was executed (pseudo-ID)
-                    const fallbackExecuted = state.triggersExecuted.includes('fallback');
+                    // 2. Process each finished trigger
+                    for (const tId of finishedTriggerIds) {
+                        if (tId === 'fallback') {
+                            // Fallback finished -> Mark as executed
+                            state.triggersExecuted.push('fallback');
+                            // Fallback ALWAYS closes window? 
+                            // Usually yes, if fallback ran, we are done.
+                            shouldCloseWindow = true; // Fallback implies we are done
+                            resultReason = 'fallback';
+                            // flowId resolving logic...
+                            flowIdForLog = this.getFlowIdFromExecution(window, state); // Fallback logic handles this
+                        } else {
+                            // Regular Trigger Finished
+                            const trigger = window.triggers.find(t => t.id === tId);
+                            if (trigger) {
+                                // A. Increment Count
+                                let currentCount = 0;
+                                if (state.triggerCounts instanceof Map) {
+                                    currentCount = state.triggerCounts.get(tId) || 0;
+                                    state.triggerCounts.set(tId, currentCount + 1);
+                                } else {
+                                    // Init if missing
+                                    if (!state.triggerCounts) state.triggerCounts = new Map();
+                                    // @ts-ignore
+                                    if (typeof state.triggerCounts === 'object') {
+                                        // @ts-ignore
+                                        currentCount = state.triggerCounts[tId] || 0;
+                                        // @ts-ignore
+                                        state.triggerCounts[tId] = currentCount + 1;
+                                    }
+                                }
 
-                    // If it was a BREAK trigger OR Fallback finished, close the window NOW
-                    if (breakTrigger || fallbackExecuted) {
+                                // B. Check Repeat Mode to see if we should mark as "Executed" (Completed)
+                                const mode = (trigger as any).repeatMode || 'once';
+                                const limit = (trigger as any).repeatCount || 0;
+
+                                let markAsDone = false;
+                                if (mode === 'once') {
+                                    markAsDone = true;
+                                } else if (mode === 'count') {
+                                    // We just incremented, so check new count
+                                    // If Map usage was correct above, allow for reading back
+                                    // Simplify: assume currentCount + 1
+                                    if ((currentCount + 1) >= limit) markAsDone = true;
+                                } else if (mode === 'always') {
+                                    markAsDone = false;
+                                }
+
+                                if (markAsDone) {
+                                    state.triggersExecuted.push(tId);
+                                }
+
+                                // C. Check Break Behavior
+                                if (trigger.behavior === 'break') {
+                                    shouldCloseWindow = true;
+                                    resultReason = 'triggered';
+                                    flowIdForLog = trigger.flowId || (trigger.flowIds && trigger.flowIds[0]);
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Close Window if needed
+                    if (shouldCloseWindow) {
                         state.status = 'completed';
 
-                        const result = breakTrigger ? 'triggered' : (fallbackExecuted ? 'fallback' : 'no_trigger');
-                        logger.info({ windowId: window.id, result }, '🛑 Flow finished (Break/Fallback) - closing window');
+                        logger.info({ windowId: window.id, result: resultReason }, '🛑 Flow finished (Break/Fallback) - closing window');
 
                         events.emit('advanced:window_completed', {
                             programId: activeProgram.sourceProgramId,
                             windowId: window.id,
                             windowName: window.name,
-                            result: result as any, // 'triggered' | 'fallback' | 'no_trigger'
+                            result: resultReason,
                             timestamp: timeService.now(),
-                            flowId: this.getFlowIdFromExecution(window, state),
-                            flowName: this.getFlowIdFromExecution(window, state)
+                            flowId: flowIdForLog,
+                            flowName: flowIdForLog
                         });
 
-                        // RECORD SUMMARY (Fix for /short analysis)
+                        // RECORD SUMMARY
                         try {
                             const { resourceSummaryService } = require('../../services/ResourceSummaryService');
-                            const flowId = this.getFlowIdFromExecution(window, state);
-
-                            await resourceSummaryService.recordExecution({
-                                programId: activeProgram.sourceProgramId,
-                                programName: activeProgram.name || activeProgram.sourceProgramId,
-                                windowId: window.id,
-                                windowName: window.name,
-                                flowId: flowId,
-                                flowName: flowId, // Should verify if we can get real name
-                                executionType: 'WINDOW'
-                            });
-                            logger.info('📊 [ResourceSummaryService] Summary recorded for Fallback/Trigger flow');
-                        } catch (err) {
-                            logger.error({ err }, '❌ Failed to record resource summary');
-                        }
+                            if (flowIdForLog) {
+                                await resourceSummaryService.recordExecution({
+                                    programId: activeProgram.sourceProgramId,
+                                    programName: activeProgram.name || activeProgram.sourceProgramId,
+                                    windowId: window.id,
+                                    windowName: window.name,
+                                    flowId: flowIdForLog,
+                                    flowName: flowIdForLog,
+                                    executionType: 'WINDOW'
+                                });
+                            }
+                        } catch (err) { /* ignore */ }
                     }
 
+                    // Force Mark Modified for Mixed Types
+                    activeProgram.markModified('windowsState');
                     await activeProgram.save();
                 }
 
                 // If still executing, SKIP further evaluation for this window
-                // We wait for the current flow to finish before checking other triggers
                 continue;
             }
 

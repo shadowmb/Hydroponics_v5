@@ -135,35 +135,42 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
 
                                             {/* Conditions Stack */}
                                             <div className="flex flex-col">
-                                                {conditions.map((cond, cIndex) => (
-                                                    <React.Fragment key={cIndex}>
-                                                        {cIndex > 0 && (
-                                                            <div className="flex items-center gap-2 my-0.5">
-                                                                <div className="h-4 w-0.5 bg-muted-foreground/30 mx-2"></div>
-                                                                <span className={cn(
-                                                                    "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded",
-                                                                    trigger.logicalOperator === 'OR'
-                                                                        ? "bg-orange-500/20 text-orange-600"
-                                                                        : "bg-blue-500/20 text-blue-600"
-                                                                )}>
-                                                                    {trigger.logicalOperator || 'AND'}
+                                                {trigger.conditionEnabled === false ? (
+                                                    <div className="flex items-center gap-2 text-orange-500 font-bold">
+                                                        <span>⚠️</span>
+                                                        <span>БЕЗ УСЛОВИЕ</span>
+                                                    </div>
+                                                ) : (
+                                                    conditions.map((cond, cIndex) => (
+                                                        <React.Fragment key={cIndex}>
+                                                            {cIndex > 0 && (
+                                                                <div className="flex items-center gap-2 my-0.5">
+                                                                    <div className="h-4 w-0.5 bg-muted-foreground/30 mx-2"></div>
+                                                                    <span className={cn(
+                                                                        "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded",
+                                                                        trigger.logicalOperator === 'OR'
+                                                                            ? "bg-orange-500/20 text-orange-600"
+                                                                            : "bg-blue-500/20 text-blue-600"
+                                                                    )}>
+                                                                        {trigger.logicalOperator || 'AND'}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium">
+                                                                    {sensorsMap[cond.sensorId || ''] || cond.sensorId}
+                                                                </span>
+                                                                <span className="text-muted-foreground">
+                                                                    {formatOperator(cond.operator!)}
+                                                                </span>
+                                                                <span className="font-mono">
+                                                                    {cond.value}
+                                                                    {cond.operator === 'between' && cond.valueMax && ` - ${cond.valueMax}`}
                                                                 </span>
                                                             </div>
-                                                        )}
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium">
-                                                                {sensorsMap[cond.sensorId || ''] || cond.sensorId}
-                                                            </span>
-                                                            <span className="text-muted-foreground">
-                                                                {formatOperator(cond.operator!)}
-                                                            </span>
-                                                            <span className="font-mono">
-                                                                {cond.value}
-                                                                {cond.operator === 'between' && cond.valueMax && ` - ${cond.valueMax}`}
-                                                            </span>
-                                                        </div>
-                                                    </React.Fragment>
-                                                ))}
+                                                        </React.Fragment>
+                                                    ))
+                                                )}
                                             </div>
 
                                             <span className="text-muted-foreground px-2">→</span>

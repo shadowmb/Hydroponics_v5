@@ -31,9 +31,43 @@ export class TriggerEvaluator {
         programId?: string
     ): Promise<EvaluationResult> {
 
-        const pendingTriggers = window.triggers.filter(
-            t => !windowState.triggersExecuted.includes(t.id)
-        );
+        const pendingTriggers = window.triggers.filter(t => {
+            // Check if currently executing
+            if (windowState.triggersExecuting.includes(t.id)) return false;
+
+            // Get execution count safely (handle Map or Object structure from Mongoose)
+            let count = 0;
+            if (windowState.triggerCounts instanceof Map) {
+                count = windowState.triggerCounts.get(t.id) || 0;
+            } else if (windowState.triggerCounts && typeof windowState.triggerCounts === 'object') {
+                // @ts-ignore
+                count = windowState.triggerCounts[t.id] || 0;
+            }
+
+            // Determine if pending based on Repeat Mode
+            const mode = (t as any).repeatMode || 'once'; // Default to once
+            const limit = (t as any).repeatCount || 0;
+
+            let isPending = false;
+            if (mode === 'always') {
+                isPending = true; // Always pending if not executing
+            } else if (mode === 'count') {
+                isPending = count < limit; // Pending if under limit
+            } else {
+                // Default 'once'
+                isPending = !windowState.triggersExecuted.includes(t.id);
+            }
+
+            // DEBUG LOGGING
+            if (mode === 'count') {
+                // Only log count mode to reduce noise, or log all if debugging specifically
+                // (Using console.log or logger if available. Logger is likely imported.)
+                // Assuming logger is available or console
+                console.log(`[TriggerEvaluator] ID: ${t.id} | Mode: ${mode} | Count: ${count} | Limit: ${limit} | Executed: ${windowState.triggersExecuted.includes(t.id)} | PENDING: ${isPending}`);
+            }
+
+            return isPending;
+        });
 
         if (pendingTriggers.length === 0) {
             logger.info({ windowId: window.id }, '✅ All triggers executed in window');
@@ -48,64 +82,69 @@ export class TriggerEvaluator {
                 // --- Condition Evaluation Logic ---
                 let isTriggered = false;
                 let logDetails: any = { matchingConditions: [] };
+                let detailedConditions: any[] = [];
+                let results: boolean[] = [];
+                let logicalOp = trigger.logicalOperator || 'AND';
+                let conditionsToCheck: any[] = [];
 
-                // 1. Determine conditions list (New vs Legacy)
-                let conditionsToCheck = trigger.conditions || [];
+                // 0. Check for Unconditional Execution
+                if (trigger.conditionEnabled === false) {
+                    isTriggered = true;
+                    logDetails.unconditional = true;
+                    logger.info({ triggerId: trigger.id }, '🚀 Unconditional Trigger - Skipping Conditions');
+                } else {
+                    // Normal Evaluation
+                    conditionsToCheck = trigger.conditions || [];
 
-                // Fallback: If no conditions array, build one from legacy fields
-                if (conditionsToCheck.length === 0 && trigger.sensorId) {
-                    conditionsToCheck = [{
-                        sensorId: trigger.sensorId,
-                        operator: trigger.operator!,
-                        value: trigger.value!,
-                        valueMax: trigger.valueMax
-                    }];
-                }
+                    // Fallback: If no conditions array, build one from legacy fields
+                    if (conditionsToCheck.length === 0 && trigger.sensorId) {
+                        conditionsToCheck = [{
+                            sensorId: trigger.sensorId,
+                            operator: trigger.operator!,
+                            value: trigger.value!,
+                            valueMax: trigger.valueMax
+                        }];
+                    }
 
-                // 2. Evaluate based on Logical Operator (AND vs OR)
-                const logicalOp = trigger.logicalOperator || 'AND';
-
-                if (conditionsToCheck.length === 0) {
-                    logger.warn({ triggerId: trigger.id }, '⚠️ Trigger has no conditions defined');
-                    continue;
-                }
-
-                // We need to check ALL conditions for AND, or ANY for OR
-                const results: boolean[] = [];
-                const detailedConditions: any[] = [];
-
-                for (const condition of conditionsToCheck) {
-                    // Resolve sensor name
-                    let sensorName = condition.sensorId;
-                    try {
-                        const device = await DeviceModel.findById(condition.sensorId).select('name').lean();
-                        if (device && device.name) sensorName = device.name;
-                    } catch (e) { /* ignore */ }
-
-                    const sensorValue = await this.readSensor(condition.sensorId, window.dataSource);
-
-                    if (sensorValue === null) {
-                        // If a sensor fails, AND logic fails immediately. OR logic ignores it (treats as false).
-                        logger.warn({ triggerId: trigger.id, sensorId: condition.sensorId }, '⚠️ Sensor read null');
-                        results.push(false);
-                        detailedConditions.push({ ...condition, sensorName, sensorValue: 'ERR', error: true });
+                    if (conditionsToCheck.length === 0) {
+                        logger.warn({ triggerId: trigger.id }, '⚠️ Trigger has no conditions defined');
                         continue;
                     }
 
-                    const match = this.matchesCondition(sensorValue, condition);
-                    results.push(match);
-                    detailedConditions.push({ ...condition, sensorName, sensorValue });
+                    // We need to check ALL conditions for AND, or ANY for OR
+                    for (const condition of conditionsToCheck) {
+                        // Resolve sensor name
+                        let sensorName = condition.sensorId;
+                        try {
+                            const device = await DeviceModel.findById(condition.sensorId).select('name').lean();
+                            if (device && device.name) sensorName = device.name;
+                        } catch (e) { /* ignore */ }
 
-                    if (match) {
-                        logDetails.matchingConditions.push(`${sensorName} ${condition.operator} ${condition.value}`);
+                        const sensorValue = await this.readSensor(condition.sensorId, window.dataSource);
+
+                        if (sensorValue === null) {
+                            // If a sensor fails, AND logic fails immediately. OR logic ignores it (treats as false).
+                            logger.warn({ triggerId: trigger.id, sensorId: condition.sensorId }, '⚠️ Sensor read null');
+                            results.push(false);
+                            detailedConditions.push({ ...condition, sensorName, sensorValue: 'ERR', error: true });
+                            continue;
+                        }
+
+                        const match = this.matchesCondition(sensorValue, condition);
+                        results.push(match);
+                        detailedConditions.push({ ...condition, sensorName, sensorValue });
+
+                        if (match) {
+                            logDetails.matchingConditions.push(`${sensorName} ${condition.operator} ${condition.value}`);
+                        }
                     }
-                }
 
-                if (logicalOp === 'AND') {
-                    isTriggered = results.every(r => r === true);
-                } else {
-                    // OR
-                    isTriggered = results.some(r => r === true);
+                    if (logicalOp === 'AND') {
+                        isTriggered = results.every(r => r === true);
+                    } else {
+                        // OR
+                        isTriggered = results.some(r => r === true);
+                    }
                 }
 
                 logger.info({
@@ -114,7 +153,8 @@ export class TriggerEvaluator {
                     logicalOp,
                     conditions: detailedConditions,
                     results,
-                    isTriggered
+                    isTriggered,
+                    unconditional: !!logDetails.unconditional
                 }, '🎯 [TriggerEvaluator] Evaluation Result');
 
                 // Emit detailed evaluation for UI logging
@@ -126,7 +166,8 @@ export class TriggerEvaluator {
                     logicalOp,
                     conditions: detailedConditions,
                     results,
-                    isTriggered
+                    isTriggered,
+                    unconditional: !!logDetails.unconditional
                 });
 
                 // --- Action Execution ---

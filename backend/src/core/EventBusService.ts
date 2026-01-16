@@ -78,6 +78,7 @@ export interface SystemEvents {
         results: boolean[];
         isTriggered: boolean;
         timestamp?: Date;
+        unconditional?: boolean;
     };
     'advanced:trigger_skipped': { programId?: string; windowId: string; triggerId: string; sensorName: string; sensorValue: number; condition: string; timestamp: Date };
     'advanced:window_completed': {

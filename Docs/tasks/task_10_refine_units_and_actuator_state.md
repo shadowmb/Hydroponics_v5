@@ -11,18 +11,20 @@
 ## 🏗️ Фаза 1: Сензори - Динамични Единици
 **Задача:** Уверяване, че стратегията диктува единицата.
 
-- [ ] **Преглед на `ConversionService.ts`:**
+- [x] **Преглед на `ConversionService.ts`:**
     - Проверка дали всички стратегии връщат правилния `unit` в резултата.
-- [ ] **Преглед на `SensorProcessor.ts`:**
+- [x] **Преглед на `SensorProcessor.ts`:**
     - Уверяване, че при `processRawToBasic` и `processBasicToDisplay`, динамичната единица от стратегията (`smartResult.unit`) презаписва `baseUnit` или `template unit`.
     - **Важно:** `lastReading.unit` в базата трябва да отразява това.
+- [x] **UI Priority Fix (`ExpandedControllerView`, `PinnedSensorsGrid`, `DeviceTestDialog`):**
+    - Обърнахме приоритета: `lastReading.unit` > `displayUnit`. Така UI-ът показва реалната единица от измерването (напр. Liters), ако има такава, вместо да насилва `displayUnit` (mm).
 
 ---
 
 ## 🔌 Фаза 2: Актуатори - Binary State Enforcer
 **Задача:** "Actuator Value is Sacred" (Винаги 0 или 1).
 
-- [ ] **Модификация на `SensorProcessor.ts`:**
+- [x] **Модификация на `SensorProcessor.ts`:**
     - В метод `processRawToBasic`:
         - Добавяне на проверка: `if (device.type === 'ACTUATOR')`.
         - Ако е Актуатор:
