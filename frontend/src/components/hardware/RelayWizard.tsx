@@ -250,16 +250,17 @@ export const RelayWizard: React.FC<RelayWizardProps> = ({ open, onOpenChange, on
                                     <div key={channelIndex} className="flex items-center gap-4">
                                         <Label className="w-24">Channel {channelIndex}</Label>
                                         <Select
-                                            value={formData.channelMapping[channelIndex] || ''}
+                                            value={formData.channelMapping[channelIndex] || 'none'}
                                             onValueChange={v => setFormData({
                                                 ...formData,
-                                                channelMapping: { ...formData.channelMapping, [channelIndex]: v }
+                                                channelMapping: { ...formData.channelMapping, [channelIndex]: v === 'none' ? '' : v }
                                             })}
                                         >
                                             <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Select Port" />
                                             </SelectTrigger>
                                             <SelectContent>
+                                                <SelectItem value="none" className="text-muted-foreground italic">None</SelectItem>
                                                 {ports.map(p => (
                                                     <SelectItem key={p.id} value={p.id} disabled={p.disabled} className={p.disabled ? "text-muted-foreground opacity-50" : ""}>
                                                         {p.text}
