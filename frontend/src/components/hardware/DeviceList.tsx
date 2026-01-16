@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { hardwareService } from '../../services/hardwareService';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Play, Activity, Droplet, Thermometer, Zap, Cpu, RefreshCw, AlertTriangle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { DeviceTestDialog } from '../devices/test/DeviceTestDialog';
+import { DeviceListTable } from './DeviceListTable';
 
 interface DeviceListProps {
     onEdit?: (device: any) => void;
@@ -56,9 +53,8 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
             setDeviceToDelete(null);
             loadData();
         } catch (error: any) {
-            // Show specific error from backend if available (e.g. "Used in active program")
             const msg = error.response?.data?.error || error.message || 'Failed to delete device';
-            toast.error(msg, { duration: 5000 }); // Longer duration for reading long messages
+            toast.error(msg, { duration: 5000 });
         }
     };
 
@@ -66,277 +62,17 @@ export const DeviceList: React.FC<DeviceListProps> = ({ onEdit, onRefreshDevice 
         setTestDialogOpen(device._id);
     };
 
-    const getIcon = (type: string) => {
-        switch (type) {
-            case 'ph': return <Droplet className="h-4 w-4 text-blue-500" />;
-            case 'temp': return <Thermometer className="h-4 w-4 text-red-500" />;
-            case 'ec': return <Activity className="h-4 w-4 text-green-500" />;
-            case 'relay': return <Zap className="h-4 w-4 text-yellow-500" />;
-            default: return <Cpu className="h-4 w-4 text-gray-500" />;
-        }
-    };
-
-    const renderControllerInfo = (device: any) => {
-        if (device.hardware?.parentId) {
-            const ctrl = controllers.find(c => c._id === device.hardware.parentId);
-            return ctrl ? (
-                <span className="font-medium">{ctrl.name}</span>
-            ) : <span className="text-muted-foreground">Unknown</span>;
-        }
-        if (device.hardware?.relayId) {
-            const relay = relays.find(r => r._id === device.hardware.relayId);
-            if (relay) {
-                const ctrlName = relay.controllerId?.name;
-                return (
-                    <div className="flex flex-col">
-                        <span className="font-medium">{ctrlName || 'Unassigned Relay'}</span>
-                        <span className="text-xs text-muted-foreground">via {relay.name}</span>
-                    </div>
-                );
-            }
-            return <span className="text-muted-foreground">Unknown Relay</span>;
-        }
-        return (
-            <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600 text-white border-0">
-                Unassigned
-            </Badge>
-        );
-    };
-
-    const getDeviceHealth = (device: any) => {
-        // User requested UI to strictly follow DB status
-        // Backend now handles the logic of updating device status based on controller
-        return device.status || 'offline';
-    };
-    const formatLastCheck = (dateString?: string) => {
-        if (!dateString) return '-';
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-
-        if (diffMins < 1) return '< 1 min';
-        if (diffMins < 60) return `${diffMins} min`;
-        const diffHours = Math.floor(diffMins / 60);
-        if (diffHours < 24) return `${diffHours} h`;
-        return `${Math.floor(diffHours / 24)} d`;
-    };
-
-    // Check if device's required command exists in controller's capabilities
-    const getConfigStatus = (device: any): { type: 'enabled' | 'disabled' | 'warning', label: string, tooltip?: string } => {
-        if (!device.isEnabled) return { type: 'disabled', label: 'Disabled' };
-
-        // Get controller ID - either directly or via relay
-        let controllerId = device.hardware?.parentId;
-
-        // If connected via relay, get controller from relay
-        if (!controllerId && device.hardware?.relayId) {
-            const relay = relays.find(r => r._id === device.hardware.relayId);
-            controllerId = relay?.controllerId?._id || relay?.controllerId;
-        }
-
-        if (!controllerId) return { type: 'enabled', label: 'Enabled' };
-
-        const ctrl = controllers.find(c => c._id === controllerId);
-        if (!ctrl || !ctrl.capabilities || ctrl.capabilities.length === 0) {
-            // Controller has no capabilities info - can't validate
-            return { type: 'enabled', label: 'Enabled' };
-        }
-
-        // Get required command from device template
-        const requiredCmd = device.config?.driverId?.commands?.READ?.hardwareCmd?.toLowerCase();
-        if (!requiredCmd) return { type: 'enabled', label: 'Enabled' };
-
-        const hasCapability = ctrl.capabilities.includes(requiredCmd);
-        if (!hasCapability) {
-            return { type: 'warning', label: 'Missing Cmd', tooltip: requiredCmd.toUpperCase() };
-        }
-
-        return { type: 'enabled', label: 'Enabled' };
-    };
-
     return (
         <div className="space-y-4">
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Controller</TableHead>
-                            <TableHead>Connection</TableHead>
-                            <TableHead>Health</TableHead>
-                            <TableHead>Last Check</TableHead>
-                            <TableHead>Config</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {devices.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
-                                    No devices found. Add one to get started.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            devices.map((device) => {
-                                const health = getDeviceHealth(device);
-                                return (
-                                    <TableRow key={device._id}>
-                                        <TableCell className="font-medium flex items-center gap-2">
-                                            {getIcon(device.config?.driverId?.physicalType)}
-                                            <span>{device.name}</span>
-                                            {device.metadata?.description && (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p className="max-w-[300px] text-sm">
-                                                                {device.metadata.description}
-                                                            </p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">{device.config?.driverId?.name || 'Unknown'}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {renderControllerInfo(device)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="text-sm">
-                                                {device.hardware?.parentId ? (
-                                                    <>
-                                                        {device.hardware.port ? (
-                                                            <>
-                                                                <span className="text-muted-foreground">Port: </span>
-                                                                <Badge variant="secondary" className="font-mono">{device.hardware.port}</Badge>
-                                                            </>
-                                                        ) : (Array.isArray(device.hardware.pins) && device.hardware.pins.length > 0) ? (
-                                                            <div className="flex flex-col gap-1">
-                                                                {device.hardware.pins.map((pin: any, index: number) => (
-                                                                    <div key={index} className="flex items-center gap-1">
-                                                                        <span className="text-muted-foreground text-xs">{pin.role}:</span>
-                                                                        <Badge variant="secondary" className="font-mono text-xs">{pin.portId}</Badge>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (device.hardware.pins && !Array.isArray(device.hardware.pins) && Object.keys(device.hardware.pins).length > 0) ? (
-                                                            <div className="flex flex-col gap-1">
-                                                                {Object.entries(device.hardware.pins).map(([key, value]) => (
-                                                                    <div key={key} className="flex items-center gap-1">
-                                                                        <span className="text-muted-foreground text-xs">{key}:</span>
-                                                                        <Badge variant="secondary" className="font-mono text-xs">{value as string}</Badge>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-muted-foreground italic">
-                                                                -
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                ) : device.hardware?.relayId ? (
-                                                    <>
-                                                        <span className="text-muted-foreground">Relay Ch: </span>
-                                                        <Badge variant="secondary" className="font-mono">{device.hardware.channel}</Badge>
-                                                    </>
-                                                ) : (
-                                                    <span className="text-muted-foreground italic">
-                                                        -
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant={health === 'online' ? 'default' : health === 'error' ? 'destructive' : 'secondary'}
-                                                className={health === 'error' ? 'bg-orange-500 hover:bg-orange-600' : ''}
-                                            >
-                                                {health === 'online' ? 'Online' : health === 'error' ? 'Error' : 'Offline'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-muted-foreground min-w-[60px]">
-                                                    {formatLastCheck(device.lastConnectionCheck)}
-                                                </span>
-                                                <Button
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="h-6 w-6"
-                                                    onClick={() => onRefreshDevice && onRefreshDevice(device)}
-                                                    title="Refresh Status"
-                                                >
-                                                    <RefreshCw className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            {(() => {
-                                                const status = getConfigStatus(device);
-                                                if (status.type === 'warning') {
-                                                    return (
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Badge variant="outline" className="border-yellow-500 text-yellow-600 cursor-help">
-                                                                        <AlertTriangle className="h-3 w-3 mr-1" />
-                                                                        {status.label}
-                                                                    </Badge>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p className="text-xs">Controller missing: <code className="font-mono">{status.tooltip}</code></p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    );
-                                                }
-                                                return (
-                                                    <Badge
-                                                        variant={status.type === 'enabled' ? 'outline' : 'secondary'}
-                                                        className={status.type === 'enabled' ? "border-green-500 text-green-600" : ""}
-                                                    >
-                                                        {status.label}
-                                                    </Badge>
-                                                );
-                                            })()}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button size="icon" variant="ghost" onClick={() => handleTest(device)} title="Test Device">
-                                                    <Play className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    title="Edit"
-                                                    onClick={() => onEdit && onEdit(device)}
-                                                    disabled={!onEdit}
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="text-destructive hover:text-destructive"
-                                                    onClick={(e) => handleDeleteClick(device._id, e)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+            <DeviceListTable
+                devices={devices}
+                controllers={controllers}
+                relays={relays}
+                onEdit={onEdit}
+                onRefreshDevice={onRefreshDevice}
+                onTest={handleTest}
+                onDelete={handleDeleteClick}
+            />
 
             <DeviceTestDialog
                 open={!!testDialogOpen}
