@@ -25,7 +25,8 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { hardwareService } from '../../services/hardwareService';
-import { cn } from "@/lib/utils";
+
+// ... (removed cn import)
 
 interface ExpandedControllerViewProps {
     controllerId: string;
