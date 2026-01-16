@@ -57,7 +57,9 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         tags?: string[];
         recommendedPins?: string[];
         capabilities?: Record<string, { label: string; icon?: string; tooltip?: string }>;
+        units?: string[]; // New: Default units
     };
+    measurements?: Record<string, { rawUnit: string; baseUnit: string }>; // New: Native units
     hardwareLimits?: {
         min?: number;
         max?: number;
@@ -125,8 +127,10 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
         icon: { type: String },
         tags: [{ type: String }], // System tags (e.g. ['EC', 'Conductivity'])
         recommendedPins: [{ type: String }],
-        capabilities: { type: Map, of: { label: String, icon: String, tooltip: String } }
+        capabilities: { type: Map, of: { label: String, icon: String, tooltip: String } },
+        units: [{ type: String }] // New: Default units
     },
+    measurements: { type: Map, of: { rawUnit: String, baseUnit: String } }, // New: Native units
     hardwareLimits: {
         min: { type: Number },
         max: { type: Number },

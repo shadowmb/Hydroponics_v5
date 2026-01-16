@@ -63,6 +63,10 @@ export interface IDeviceDriver {
         count?: number;
         delayMs?: number;
     };
+    uiConfig?: {
+        units?: string[];
+        [key: string]: any;
+    };
     measurements?: Record<string, { rawUnit: string, baseUnit: string }>;
     roles?: Record<string, { label: string, description?: string, source?: string, defaultStrategy?: string, strategies: string[], units?: string[] }>;
 

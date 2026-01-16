@@ -93,6 +93,7 @@ export class SensorProcessor {
         // Apply Smart Conversion (Stage 3)
         const smartResult = conversionService.convertSmart(device, val, device.displayUnit, context, strategyOverride);
         let bVal = smartResult.value;
+        // Priority: Strategy Unit > Base Unit (Hardware)
         let bUnit = smartResult.unit && smartResult.unit !== 'any' ? smartResult.unit : unit;
 
         // Stage 3.5: Calibration Chaining (e.g., mm → L)
@@ -111,6 +112,25 @@ export class SensorProcessor {
                 }
             }
         }
+
+        // --- NEW LOGIC (Task 10): Actuator Value is Sacred ---
+        // For actuators, the 'value' must strictly be 0 (OFF) or 1 (ON).
+        // Any calculated values (flow rates, etc.) move to 'details'.
+        if (device.type === 'ACTUATOR') {
+            // Keep the calculated "bVal" (e.g. 0.005 L/s) in details for analytics
+            if (!smartResult.details) smartResult.details = {};
+            smartResult.details.calculatedValue = bVal;
+            smartResult.details.calculatedUnit = bUnit;
+
+            // Force Binary State
+            // If raw > 0, it's ON (1). If raw == 0, it's OFF (0).
+            // (Assuming non-inverted logic for now; HW Service handles inversion before sending commands, 
+            // but reading back usually reflects physical pin state)
+            const isRunning = Math.abs(raw) > 0; // Simple threshold
+            bVal = isRunning ? 1 : 0;
+            bUnit = 'boolean';
+        }
+        // -----------------------------------------------------
 
         return {
             value: bVal,
