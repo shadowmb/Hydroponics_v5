@@ -36,9 +36,7 @@ const getDeviceIcon = (device: any) => {
 export const ExpandedRelayView: React.FC<ExpandedRelayViewProps> = ({
     relay,
     onEditDevice,
-    onTestDevice,
-    onAddDevice, // Kept in props but unused for now
-    onRefresh
+    onTestDevice
 }) => {
     const [devices, setDevices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
