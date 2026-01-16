@@ -82,7 +82,8 @@ export class HardwareTransportManager {
         });
 
         if (controller.connection?.type === 'network') {
-            await transport.connect(controller.connection.ip || 'localhost', { port: controller.connection.port || 8888 });
+            if (!controller.connection.ip) throw new Error(`Controller ${controller.name} has no IP address configured`);
+            await transport.connect(controller.connection.ip, { port: controller.connection.port || 8888 });
         } else {
             await transport.connect(controller.connection?.serialPort || 'COM3', { baudRate: controller.connection?.baudRate || 9600 });
         }

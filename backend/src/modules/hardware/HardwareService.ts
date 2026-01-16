@@ -347,7 +347,10 @@ export class HardwareService {
         const { DeviceModel } = await import('../../models/Device');
         const { Relay } = await import('../../models/Relay');
 
-        const isOnline = controller.isActive !== false && await this.checkHealth(controllerId);
+        // Pre-check: If network controller has no IP, it is offline by definition
+        const hasValidConnection = controller.connection?.type !== 'network' || !!controller.connection?.ip;
+
+        const isOnline = controller.isActive !== false && hasValidConnection && await this.checkHealth(controllerId);
         const newStatus = isOnline ? 'online' : 'offline';
         const statusChanged = controller.status !== newStatus;
 
