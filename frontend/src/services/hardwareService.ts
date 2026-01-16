@@ -59,6 +59,14 @@ export interface IController {
     isActive: boolean;
 }
 
+export interface INetworkInterface {
+    name: string;
+    address: string;
+    netmask: string;
+    mac: string;
+    broadcast: string;
+}
+
 import { API_BASE_URL } from '../core/config';
 
 // Use environment variable for API URL if available, otherwise default to localhost
@@ -76,6 +84,16 @@ export const hardwareService = {
             return response.data.data;
         } catch (error) {
             console.error('Failed to fetch serial ports', error);
+            return [];
+        }
+    },
+
+    getNetworkInterfaces: async (): Promise<INetworkInterface[]> => {
+        try {
+            const response = await axios.get(`${API_URL}/system/network-interfaces`);
+            return response.data.data;
+        } catch (error) {
+            console.error('Failed to fetch network interfaces', error);
             return [];
         }
     },

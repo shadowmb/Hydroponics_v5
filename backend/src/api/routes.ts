@@ -41,6 +41,7 @@ export async function apiRoutes(app: FastifyInstance) {
 
     // Hardware Routes
     app.get('/api/hardware/serial-ports', HardwareController.getSerialPorts);
+    app.get('/api/system/network-interfaces', HardwareController.getNetworkInterfaces);
     app.post('/api/hardware/command', HardwareController.sendCommand);
     // Device Management
     app.get('/api/hardware/device-templates', HardwareController.getDeviceTemplates);

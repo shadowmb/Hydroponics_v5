@@ -64,6 +64,19 @@ docker compose -f docker-compose.win.yml --profile sim up --build -d
 
 - **Симулатор GUI:** `http://localhost:3001`
 
+- **Симулатор GUI:** `http://localhost:3001`
+
+---
+
+## 4а. Troubleshooting: Откриване на Устройства (Discovery) 🔍
+
+Ако Network Scanner не открива вашите устройства:
+
+1. **Windows Firewall:** Уверете се, че входящият трафик на **UDP порт 8888** е разрешен.
+2. **Docker Isolation:** На Windows Docker използва виртуалзиация (WSL2/Hyper-V). Broadcast пакетите от контейнера често не могат да достигнат до физическата мрежа.
+   - За реална работа с хардуерни контролери, препоръчваме да деплойнете системата на Linux/Raspberry Pi (с `--network host`) или да стартирате Backend-а директно извън Docker (чрез `npm run dev`).
+   - Ако използвате Симулатора в същия Docker Stack, той ще бъде открит без проблем.
+
 ---
 
 ## 5. Управление и Поддръжка

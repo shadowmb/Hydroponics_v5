@@ -5,12 +5,12 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    ports:
-      - "3000:3000"
+    network_mode: "host"
     depends_on:
       - mongodb
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/hydroponics_v5
+      # In host mode, services on the same host communicate via localhost
+      - MONGO_URI=mongodb://localhost:27017/hydroponics_v5
       - PORT=3000
       - NODE_ENV=production
     volumes:
@@ -23,8 +23,7 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    ports:
-      - "80:80"
+    network_mode: "host"
     depends_on:
       - backend
     restart: always
@@ -34,19 +33,16 @@ services:
     build:
       context: .
       dockerfile: simulator/Dockerfile
-    ports:
-      - "3001:3001"
-      - "8888:8888/udp"
+    network_mode: "host"
     environment:
-      - API_URL=http://backend:3000
+      - API_URL=http://localhost:3000
     profiles:
       - sim
     restart: unless-stopped
 
   mongodb:
     image: mongo:7.0
-    ports:
-      - "27017:27017"
+    network_mode: "host"
     volumes:
       - mongo-data:/data/db
     restart: always
