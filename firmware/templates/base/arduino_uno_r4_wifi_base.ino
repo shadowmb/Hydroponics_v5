@@ -222,6 +222,10 @@ String processCommand(String input) {
     response += millis();
     response += ",\"ver\":\"";
     response += FIRMWARE_VERSION;
+    response += "\",\"mac\":\"";
+    response += getMacAddress();
+    response += "\",\"ip\":\"";
+    response += WiFi.localIP().toString();
     response += "\",\"capabilities\":[";
     for (int i = 0; i < CAPABILITIES_COUNT; i++) {
       response += "\"";

@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 
 export interface DiscoveredDevice {
     ip: string;
+    port: number;
     mac: string;
     model?: string;
     firmware?: string;
@@ -20,12 +21,14 @@ export class DiscoveryService extends EventEmitter {
 
     /**
      * Scans the network for controllers via UDP broadcast.
-     * @param port The UDP port to send/receive on (default: 8888)
+     * @param startPort The starting UDP port (default: 8888)
+     * @param endPort The ending UDP port (default: 8888) - set wider range to find controllers on non-standard ports
      * @param broadcastAddress The broadcast IP (default: 255.255.255.255)
      * @param timeoutMs Duration to listen for responses (default: 3000ms)
      */
     public async scan(
-        port: number = 8888,
+        startPort: number = 8888,
+        endPort: number = 8888,
         broadcastAddress: string = '255.255.255.255',
         timeoutMs: number = 3000
     ): Promise<DiscoveredDevice[]> {
@@ -50,6 +53,7 @@ export class DiscoveryService extends EventEmitter {
                     if (data.type === 'ANNOUNCE' && data.mac) {
                         const device: DiscoveredDevice = {
                             ip: rinfo.address, // Use the actual IP from the packet header
+                            port: rinfo.port,  // Use the actual Port from the packet header
                             mac: data.mac,
                             model: data.model || 'Unknown',
                             firmware: data.firmware || 'Unknown',
@@ -70,16 +74,21 @@ export class DiscoveryService extends EventEmitter {
 
                 const message = Buffer.from('HYDROPONICS_DISCOVERY');
 
-                console.log(`[DiscoveryService] Broadcasting to ${broadcastAddress}:${port}...`);
+                // Validate range
+                if (endPort < startPort) endPort = startPort;
+                const portCount = endPort - startPort + 1;
 
-                this.socket.send(message, 0, message.length, port, broadcastAddress, (err) => {
-                    if (err) {
-                        console.error('[DiscoveryService] Send error:', err);
-                        this.cleanup();
-                        reject(err);
-                        return;
-                    }
-                });
+                console.log(`[DiscoveryService] Broadcasting to ${broadcastAddress} on ports ${startPort}-${endPort} (${portCount} ports)...`);
+
+                // Send broadcast to ALL ports in range
+                for (let port = startPort; port <= endPort; port++) {
+                    this.socket.send(message, 0, message.length, port, broadcastAddress, (err) => {
+                        if (err) {
+                            console.error(`[DiscoveryService] Failed to send to port ${port}:`, err);
+                            // Don't reject immediately, allow other ports to succeed
+                        }
+                    });
+                }
 
                 // Wait for responses
                 setTimeout(() => {

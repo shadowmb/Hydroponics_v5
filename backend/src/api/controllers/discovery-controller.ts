@@ -2,16 +2,22 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { discoveryService } from '../../services/discovery-service';
 
 interface ScanQuery {
-    port?: number;
+    startPort?: number;
+    endPort?: number; // Optional end of range
     broadcastAddress?: string;
     timeout?: number;
+    port?: number; // Legacy support
 }
 
 export const scanNetwork = async (req: FastifyRequest<{ Body: ScanQuery }>, reply: FastifyReply) => {
     try {
-        const { port, broadcastAddress, timeout } = req.body || {};
+        const { port, startPort, endPort, broadcastAddress, timeout } = req.body || {};
 
-        const results = await discoveryService.scan(port, broadcastAddress, timeout);
+        // Handle legacy 'port' parameter if startPort is missing
+        const finalStartPort = startPort || port || 8888;
+        const finalEndPort = endPort || finalStartPort; // Default to single port if range not specified
+
+        const results = await discoveryService.scan(finalStartPort, finalEndPort, broadcastAddress, timeout);
 
         return reply.send({
             success: true,

@@ -159,6 +159,10 @@ export class HardwareController {
                 return reply.status(404).send({ success: false, error: 'Controller not found' });
             }
 
+            // Capture old state for change detection
+            const oldConnectionJson = JSON.stringify(controller.connection);
+            const oldType = controller.type;
+
             // DEEP MERGE for nested objects to preserve existing fields
             Object.keys(body).forEach(key => {
                 if (key === 'connection') {
@@ -182,6 +186,16 @@ export class HardwareController {
             if (body.isActive === false) {
                 await hardware.disconnectController(id);
                 await hardware.refreshControllerStatus(id); // This will cascade 'offline' status
+            } else {
+                // Check if critical connection details changed (Soft Restart)
+                const newConnectionJson = JSON.stringify(controller.connection);
+                if (oldConnectionJson !== newConnectionJson || oldType !== controller.type) {
+                    req.log.info({ controllerId: id, oldType, newType: controller.type }, '🔄 Connection detected change - Triggering Soft Restart');
+                    await hardware.disconnectController(id);
+                    // Allow a brief moment for socket cleanup if needed, though disconnect is usually synchronous in cleaning map
+                    // Then try to reconnect/refresh
+                    await hardware.refreshControllerStatus(id);
+                }
             }
 
             return reply.send({ success: true, data: controller });

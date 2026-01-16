@@ -95,6 +95,8 @@ export class UdpProtocolHandler {
                     up: this.deviceState.getUptime(),
                     mem: 32768,
                     ver: this.info.firmwareVersion,
+                    mac: this.info.mac,
+                    ip: '127.0.0.1',
                     capabilities: this.capabilities
                 };
 

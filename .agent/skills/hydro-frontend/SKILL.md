@@ -61,11 +61,39 @@ This skill defines the coding standards, libraries, and patterns used in the Hyd
 - **Library:** `recharts`.
 - **Responsive:** Always wrap charts in `<ResponsiveContainer width="100%" height={300}>`.
 
-### 4. Diagrams / Flows
+### 4. Date & Time Picking
+- **Standard:** Use strict 24-hour format for all time inputs.
+- **Components:**
+  - **Date:** Use `@/components/ui/calendar` wrapped in `@/components/ui/popover`.
+  - **Time:** Use `@/components/ui/time-picker-24`. **DO NOT** use default browser `<input type="time">` or 12-hour pickers.
+- **Pattern:**
+  ```tsx
+  import { Calendar } from "@/components/ui/calendar";
+  import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+  import { TimePicker24 } from "@/components/ui/time-picker-24";
+  import { format } from "date-fns";
+  
+  // Example for Date + Time selection
+  <div className="flex gap-2">
+    <Popover>
+       <PopoverTrigger asChild>
+          <Button variant="outline">
+            {date ? format(date, "PPP") : "Pick a date"}
+          </Button>
+       </PopoverTrigger>
+       <PopoverContent className="w-auto p-0">
+          <Calendar mode="single" selected={date} onSelect={setDate} />
+       </PopoverContent>
+    </Popover>
+    <TimePicker24 value={time} onChange={setTime} />
+  </div>
+  ```
+
+### 5. Diagrams / Flows
 - **Library:** `@xyflow/react`.
 - **Usage:** Used for Automation Flows and logic builders.
 
-### 5. UI/UX Standards
+### 6. UI/UX Standards
 - **Confirmations:**
   - **NEVER** use `window.confirm()`.
   - **NEVER** use `window.alert()`.

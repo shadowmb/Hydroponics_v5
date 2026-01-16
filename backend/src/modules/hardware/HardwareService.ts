@@ -386,9 +386,47 @@ export class HardwareService {
         if (newStatus === 'online') {
             try {
                 const info = await this.sendSystemCommand(controllerId, 'INFO');
-                if (info && Array.isArray(info.capabilities)) {
-                    controller.capabilities = info.capabilities.map((c: string) => c.toLowerCase());
-                    await controller.save();
+                if (info) {
+                    let needsSave = false;
+
+                    // Sync Capabilities
+                    if (Array.isArray(info.capabilities)) {
+                        controller.capabilities = info.capabilities.map((c: string) => c.toLowerCase());
+                        needsSave = true;
+                    }
+
+                    // Sync MAC Address (Collision Handling)
+                    if (info.mac && typeof info.mac === 'string' && info.mac.length > 0) {
+                        const newMac = info.mac.toUpperCase();
+                        if (controller.macAddress !== newMac) {
+                            // Check for conflict
+                            const collision = await Controller.findOne({ macAddress: newMac, _id: { $ne: controller._id } });
+                            if (collision) {
+                                logger.warn({ stolenFrom: collision.name, newOwner: controller.name, mac: newMac }, '⚠️ MAC Address Conflict Resolved (Stealing MAC)');
+                                collision.macAddress = undefined;
+                                await collision.save();
+                            }
+                            controller.macAddress = newMac;
+                            needsSave = true;
+                        }
+                    }
+
+                    // Sync IP Address (Self-Healing)
+                    // Only update IP if MAC exists and matches (to verify identity) and IP is valid
+                    if (info.ip && typeof info.ip === 'string' && info.ip.length >= 7) {
+                        if (controller.connection.ip !== info.ip) {
+                            // If we have a MAC, we can be sure this is the right device moving to a new IP
+                            // If we don't have a MAC yet, we just learned it above, so we can trust this info
+                            logger.info({ oldIp: controller.connection.ip, newIp: info.ip, controller: controller.name }, '🔄 Controller IP Updated (Self-Healing)');
+                            controller.connection.ip = info.ip;
+                            controller.markModified('connection');
+                            needsSave = true;
+                        }
+                    }
+
+                    if (needsSave) {
+                        await controller.save();
+                    }
                 }
             } catch (err) { }
         }

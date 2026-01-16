@@ -18,7 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Radar, Loader2, Wifi, Plus, Check, Code } from 'lucide-react';
+import { Radar, Loader2, Wifi, Plus, Check, Code, RefreshCw } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
@@ -30,6 +30,7 @@ import { hardwareService } from '../../services/hardwareService';
 
 interface DiscoveredDevice {
     ip: string;
+    port: number;
     mac: string;
     model: string;
     firmware: string;
@@ -38,26 +39,54 @@ interface DiscoveredDevice {
 
 interface NetworkScannerProps {
     onAddController?: (device: DiscoveredDevice) => void;
+    onUpdateIp?: (controllerId: string, newIp: string, newPort: number) => void;
+    onLinkController?: (controllerId: string, mac: string) => void;
 }
 
-export function NetworkScanner({ onAddController }: NetworkScannerProps) {
+export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }: NetworkScannerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
-    const [port, setPort] = useState('8888');
+    const [startPort, setStartPort] = useState('8888');
+    const [endPort, setEndPort] = useState('8890');
     const [broadcastIp, setBroadcastIp] = useState('255.255.255.255');
     const [devices, setDevices] = useState<DiscoveredDevice[]>([]);
-    const [existingMacs, setExistingMacs] = useState<Set<string>>(new Set());
+    const [existingControllers, setExistingControllers] = useState<any[]>([]);
 
     // Fetch existing controllers when dialog opens
     React.useEffect(() => {
         if (isOpen) {
             hardwareService.getControllers().then(controllers => {
-                const macs = new Set(controllers.map(c => c.macAddress).filter(Boolean) as string[]);
-                setExistingMacs(macs);
+                setExistingControllers(controllers);
             }).catch(console.error);
         }
     }, [isOpen]);
 
+    const getActionState = (device: DiscoveredDevice) => {
+        // 1. Find by MAC
+        const existingByMac = existingControllers.find(c => c.macAddress === device.mac);
+        if (existingByMac) {
+            // Check Network Info
+            const currentIp = existingByMac.connection?.ip;
+            const currentPort = existingByMac.connection?.port;
+
+            if (currentIp === device.ip && currentPort === device.port) {
+                return { type: 'synced', label: 'Synced', color: 'text-green-600', icon: Check };
+            } else {
+                return { type: 'update_ip', label: 'Update IP', color: 'text-amber-600', icon: RefreshCw, controllerId: existingByMac._id };
+            }
+        }
+
+        // 2. Find by IP (if MAC not found) -> Legacy Link
+        const existingByIp = existingControllers.find(c => c.connection?.ip === device.ip && !c.macAddress);
+        if (existingByIp) {
+            return { type: 'link', label: 'Link to Existing', color: 'text-purple-600', icon: Code, controllerId: existingByIp._id };
+        }
+
+        // 3. New Device
+        return { type: 'add', label: 'Add', color: '', icon: Plus };
+    };
+
+    // ... handleScan function remains same ...
     const handleScan = async () => {
         setIsScanning(true);
         setDevices([]);
@@ -68,7 +97,8 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    port: parseInt(port),
+                    startPort: parseInt(startPort),
+                    endPort: parseInt(endPort),
                     broadcastAddress: broadcastIp,
                     timeout: 3000
                 })
@@ -94,32 +124,47 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
         }
     };
 
+
+    // ... render return ...
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            {/* ... trigger and header same ... */}
             <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                     <Radar className="h-4 w-4" />
                     Scan Network
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px]">
+            <DialogContent className="sm:max-w-[1000px]">
                 <DialogHeader>
                     <DialogTitle>Network Scanner</DialogTitle>
                     <DialogDescription>
-                        Broadcasts a UDP discovery packet to find Hydroponics controllers on the local network.
+                        Broadcasts a UDP discovery packet to find Hydroponics controllers within the specified port range.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="port">UDP Port</Label>
-                            <Input
-                                id="port"
-                                value={port}
-                                onChange={(e) => setPort(e.target.value)}
-                                placeholder="8888"
-                            />
+                        <div className="flex gap-2">
+                            <div className="grid gap-2 flex-1">
+                                <Label htmlFor="startPort">Start Port</Label>
+                                <Input
+                                    id="startPort"
+                                    value={startPort}
+                                    onChange={(e) => setStartPort(e.target.value)}
+                                    placeholder="8888"
+                                />
+                            </div>
+                            <div className="grid gap-2 flex-1">
+                                <Label htmlFor="endPort">End Port</Label>
+                                <Input
+                                    id="endPort"
+                                    value={endPort}
+                                    onChange={(e) => setEndPort(e.target.value)}
+                                    placeholder="8890"
+                                />
+                            </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="ip">Broadcast IP</Label>
@@ -146,11 +191,12 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                         )}
                     </Button>
 
-                    <div className="rounded-md border mt-4">
+                    <div className="rounded-md border mt-4 overflow-auto max-h-[400px]">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>IP Address</TableHead>
+                                    <TableHead>Port</TableHead>
                                     <TableHead>MAC Address</TableHead>
                                     <TableHead>Model</TableHead>
                                     <TableHead>Firmware</TableHead>
@@ -161,16 +207,19 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                             <TableBody>
                                 {devices.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                             {isScanning ? 'Listening for responses...' : 'No devices found. Check your settings.'}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     devices.map((device) => {
-                                        const isAdded = existingMacs.has(device.mac);
+                                        const action = getActionState(device);
+                                        const Icon = action.icon;
+
                                         return (
                                             <TableRow key={device.mac}>
                                                 <TableCell className="font-medium">{device.ip}</TableCell>
+                                                <TableCell>{device.port}</TableCell>
                                                 <TableCell>{device.mac}</TableCell>
                                                 <TableCell>{device.model}</TableCell>
                                                 <TableCell>{device.firmware}</TableCell>
@@ -205,23 +254,29 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    {isAdded ? (
-                                                        <div className="flex items-center justify-end gap-1 text-green-600">
-                                                            <Check className="h-4 w-4" />
-                                                            <span className="text-xs font-medium">Added</span>
+                                                    {action.type === 'synced' ? (
+                                                        <div className={`flex items-center justify-end gap-1 ${action.color}`}>
+                                                            <Icon className="h-4 w-4" />
+                                                            <span className="text-xs font-medium">{action.label}</span>
                                                         </div>
                                                     ) : (
                                                         <Button
                                                             size="sm"
-                                                            variant="outline"
+                                                            variant={action.type === 'add' ? 'default' : 'secondary'}
                                                             className="h-7 gap-1"
                                                             onClick={() => {
-                                                                setIsOpen(false);
-                                                                if (onAddController) onAddController(device);
+                                                                if (action.type === 'add' && onAddController) {
+                                                                    setIsOpen(false);
+                                                                    onAddController(device);
+                                                                } else if (action.type === 'update_ip' && onUpdateIp && action.controllerId) {
+                                                                    onUpdateIp(action.controllerId, device.ip, device.port);
+                                                                } else if (action.type === 'link' && onLinkController && action.controllerId) {
+                                                                    onLinkController(action.controllerId, device.mac);
+                                                                }
                                                             }}
                                                         >
-                                                            <Plus className="h-3 w-3" />
-                                                            Add
+                                                            <Icon className="h-3 w-3" />
+                                                            {action.label}
                                                         </Button>
                                                     )}
                                                 </TableCell>

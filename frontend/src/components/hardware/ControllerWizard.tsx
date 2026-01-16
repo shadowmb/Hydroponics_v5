@@ -84,6 +84,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
 
     // Map discovered model names to system template keys
     const MODEL_MAP: Record<string, string> = {
+        'Arduino_Uno_R4_WiFi': 'Arduino_Uno', // Exact match from firmware
         'ArduinoUnoR4WiFi': 'Arduino_Uno',
         'ArduinoUnoR3': 'Arduino_Uno',
         'Arduino Uno': 'Arduino_Uno',
@@ -121,7 +122,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                 });
             } else if (initialData) {
                 // Pre-fill Mode (e.g. from Scanner)
-                setStep('type-selection'); // Default to selection, but might skip below
+                setStep('type-selection'); // Default, but might autoselect below
 
                 setFormData({
                     name: initialData.name || '',
@@ -129,15 +130,10 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                     macAddress: initialData.macAddress || '',
                     connectionType: initialData.connection?.type || 'network',
                     ip: initialData.connection?.ip || '',
-                    port: initialData.connection?.port || 8888,
+                    port: initialData.connection?.port || 8888, // Uses passed port or default
                     serialPort: initialData.connection?.serialPort || '',
                     baudRate: initialData.connection?.baudRate || 9600
                 });
-
-                // Try to auto-select template
-                // We need to wait for templates to load, but we can't easily do that in this effect 
-                // without complex dependency management. 
-                // Instead, we'll store the target template key and try to match it when templates arrive.
             } else {
                 // Create Mode Initialization
                 setStep('type-selection');
@@ -149,27 +145,26 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
     // Effect to handle auto-selection once templates are loaded
     useEffect(() => {
         if (open && !editController && initialData && templates.length > 0) {
-            // Extract model name from initialData (it might be in the name or a separate field if we added one)
-            // The scanner passes: name: `New Controller (${device.model})`
-            // But wait, we don't have the raw model string in initialData as defined in IController.
-            // However, we can parse it from the name or pass it separately.
-            // BETTER APPROACH: Let's assume the name contains the model or we look at the raw device if we could.
-            // But we only get Partial<IController>.
-
-            // Let's parse the model from the name string we constructed in Hardware.tsx:
-            // "New Controller (ArduinoUnoR4WiFi)"
+            // Attempt to find model from name (format: "Name (Model)")
+            // or directly from initialData if we start passing 'type' or custom field
             const name = initialData.name || '';
             const match = name.match(/\((.*?)\)/);
-            const modelName = match ? match[1] : '';
+            const modelName = match ? match[1] : name; // Fallback to whole name if no parens
 
-            const templateKey = MODEL_MAP[modelName];
+            // 1. Try direct match in map
+            let templateKey = MODEL_MAP[modelName];
+
+            // 2. If no match, try to find if modelName IS a template key
+            if (!templateKey) {
+                const isKey = templates.some(t => t.key === modelName);
+                if (isKey) templateKey = modelName;
+            }
+
             if (templateKey) {
                 const template = templates.find(t => t.key === templateKey);
                 if (template) {
                     setSelectedTemplate(template);
                     setStep('configuration');
-                    // Update name to be cleaner if we want, or keep the descriptive one
-                    // Let's keep the one passed in which is "New Controller (Model)"
                 }
             }
         }

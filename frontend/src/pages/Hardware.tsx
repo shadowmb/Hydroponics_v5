@@ -98,7 +98,7 @@ const Hardware: React.FC = () => {
             connection: {
                 type: 'network',
                 ip: device.ip,
-                port: 80 // Default port, user can change
+                port: device.port || 8888 // Use discovered port or default
             }
         });
         setActiveTab("controllers");
@@ -117,6 +117,42 @@ const Hardware: React.FC = () => {
         // But RelayManager is simple. Let's just close wizard.
         // Actually, RelayManager needs to know to refetch.
         // Let's add a key to RelayManager like we did for DeviceList.
+    };
+
+    const handleUpdateIp = async (controllerId: string, newIp: string, newPort: number) => {
+        try {
+            setIsSyncing(true);
+            await hardwareService.updateController(controllerId, {
+                connection: {
+                    type: 'network', // Assuming network since scanned
+                    ip: newIp,
+                    port: newPort
+                }
+            });
+            toast.success('Controller IP updated');
+            setControllerRefreshTrigger(prev => prev + 1);
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update controller IP');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleLinkController = async (controllerId: string, mac: string) => {
+        try {
+            setIsSyncing(true);
+            await hardwareService.updateController(controllerId, {
+                macAddress: mac
+            });
+            toast.success('Controller linked successfully');
+            setControllerRefreshTrigger(prev => prev + 1);
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to link controller');
+        } finally {
+            setIsSyncing(false);
+        }
     };
 
     const handleControllerCreated = () => {
@@ -178,7 +214,11 @@ const Hardware: React.FC = () => {
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Refresh Status
                     </Button>
-                    <NetworkScanner onAddController={handleScannerAdd} />
+                    <NetworkScanner
+                        onAddController={handleScannerAdd}
+                        onUpdateIp={handleUpdateIp}
+                        onLinkController={handleLinkController}
+                    />
 
                     <Button onClick={() => setIsBuilderOpen(true)} size="sm" variant="outline">
                         <Code className="mr-2 h-4 w-4" />
