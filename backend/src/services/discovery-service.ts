@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 
 export interface DiscoveredDevice {
     ip: string;
+    port: number;
     mac: string;
     model?: string;
     firmware?: string;
@@ -52,6 +53,7 @@ export class DiscoveryService extends EventEmitter {
                     if (data.type === 'ANNOUNCE' && data.mac) {
                         const device: DiscoveredDevice = {
                             ip: rinfo.address, // Use the actual IP from the packet header
+                            port: rinfo.port,  // Use the actual Port from the packet header
                             mac: data.mac,
                             model: data.model || 'Unknown',
                             firmware: data.firmware || 'Unknown',
