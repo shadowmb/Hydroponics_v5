@@ -1,46 +1,85 @@
-# Task: Controller Protocol Upgrade & Enhanced Discovery
+# Task: Controller Discovery Protocol Upgrade & Connection Management
 
-**Goal:** Unify controller identification by adding MAC/IP to the standard `INFO` command and enhance the Network Scanner to support UDP port range scanning for discovering controllers on non-standard ports.
+## Status
+- **Progress:** 95%
+- **Current Phase:** 8. IP Conflict Resolution & Offline Mode
+- **Last Updated:** 2026-01-16
 
-## 1. Documentation Update
-- [x] Edit `Docs/Reference/firmware-commands.md`:
-    - Add new section `## System Commands`.
-    -  Define `INFO` response structure to include `mac` and `ip`.
-    -  Define `PING` and `REBOOT` for completeness.
+## Objectives
+1. Implement a robust discovery mechanism using UDP broadcast.
+2. Standardize request/response messages for discovery.
+3. Automatically detect and handle connection parameters (IP, Port, MAC).
+4. Implement "Soft Restart" logic to handle connection changes smoothly.
+5. Provide intelligent feedback in Network Scanner (Synced, Update IP, Link, Replace).
+6. **(NEW)** Enforce unique IP addresses and implement "Offline Mode" for pre-configuration.
 
-## 2. Backend Implementation (Discovery)
-- [x] Modify `backend/src/services/discovery-service.ts`:
-    - Update `scan` method to accept `startPort` and `endPort` (or handle logic internally).
-    - Implement loop to broadcast discovery packet to all ports in range.
-    - Ensure socket resource management (one socket per scan or reused).
+## Implementation Plan
 
-## 3. Frontend Implementation (Scanner UI)
-- [x] Modify `frontend/src/components/hardware/NetworkScanner.tsx`:
-    - Add Input/Range controls for "Port Range" (e.g., "8880-8890").
-    - Pass these parameters to the backend API.
+### 1. Documentation & Standards (✅ Completed)
+- [x] Create `firmware-commands.md` defining the new JSON protocol.
+- [x] Define `DISCOVERY` and `IDENTIFY` command structures.
 
-## 4. Hardware Service Logic
-- [x] Verify `HardwareService.ts` handles the new `ip` and `mac` fields from `refreshControllerStatus`. (MAC logic was added, IP update strategy to be decided - if IP changes during refresh, should we update it? Yes, if MAC matches).
+### 2. Backend Discovery Service (✅ Completed)
+- [x] Create `DiscoveryService` class in backend.
+- [x] Implement UDP socket listener (default port 8888).
+- [x] Handle broadcast messages and parse JSON responses.
+- [x] Store discovered devices in memory cache (TTL based).
+- [x] Create API endpoint `GET /api/discovery/scan` to trigger scan and return results.
+- [x] **Add `port` to discovered device data.**
 
-## 5. Simulator Update
-- [x] Find and update the Simulator logic (mock firmware) to return `mac` and `ip` in the `INFO` JSON response.
+### 3. Frontend Network Scanner (✅ Completed)
+- [x] Create `NetworkScanner` component (Dialog).
+- [x] Add "Scan" button to Hardware page.
+- [x] Display results in a table (IP, MAC, Model, Version).
+- [x] Add "Add to System" action for discovered devices.
+- [x] **Show 'Port' column in results.**
+- [x] **Pass discovered port to `onAddController`.**
 
-## 6. Connection Management (Soft Restart)
-- [x] Modify `backend/src/api/controllers/HardwareController.ts` (or Service):
-    - Implement logic to detect changes in critical connection fields (`ip`, `port`, `type`) during an update.
-    - If changed: Trigger `hardwareService.disconnect(id)` followed by `hardwareService.connect(id)` (or `initializeController`).
-    - This ensures the meaningful connection state matches the DB state immediately.
+### 4. Hardware Service Self-Healing (✅ Completed)
+- [x] Update `HardwareService` to handle dynamic IP changes.
+- [x] Implement logic to match devices by MAC address if IP fails.
+- [x] Auto-update IP in DB if MAC matches but IP differs.
 
+### 5. Simulator Upgrade (✅ Completed)
+- [x] Update `HydroponicsSimulator` to listen on UDP.
+- [x] Implement response to discovery broadcasts.
+- [x] Ensure simulator responds with correct JSON format.
 
-## 7. UX Improvements (Network Scan & Wizard)
-- [ ] Modify `backend/src/services/discovery-service.ts`:
-    - Ensure `scan` returns the `port` (from `rinfo.port`) in the `DiscoveredDevice` object.
-- [ ] Modify `frontend/src/components/hardware/NetworkScanner.tsx`:
-    - Add "Port" column to the results table.
-    - Pass `port` and `model` in the `onAddController` callback.
-- [ ] Modify `frontend/src/components/hardware/ControllerWizard.tsx`:
-    - If `initialData` contains a `model`: Check if it matches a valid template ID. If yes, auto-select it and skip Step 1 (Template Selection).
-    - If `initialData` contains a `port`: Pre-fill the UDP Port field in Step 2 (instead of default 80/8888).
+### 6. Verification (✅ Completed)
+- [x] Verify scanner finds local simulator.
+- [x] Verify "Add" flow creates valid controller record.
+- [x] Test IP change scenario (simulate IP change in simulator, verify backend updates).
 
-## Future Considerations
-- [ ] **Active Program Protection:** Prevent controller edits if it is currently used by a running program (Safety Lock).
+### 7. UX Improvements (Network Scan & Wizard) (✅ Completed)
+- [x] **Scanner UI:** Add "Port" column to results.
+- [x] **Wizard Integration:**
+    - [x] Auto-fill "Port" from scan results (fix hardcoded 80).
+    - [x] Auto-select "Controller Type" based on discovered model name (e.g. `Arduino_Uno_R4_WiFi` -> Template).
+    - [x] Skip Step 1 (Type Selection) if model is recognized.
+- [x] **Intelligent Scanner Actions:**
+    - [x] `Update IP`: If MAC matches but IP differs.
+    - [x] `Link`: If IP matches legacy controller (no MAC).
+    - [x] `Synced`: If everything matches.
+    - [x] `Replace` (Conflict): If IP matches but MAC differs (visual warning).
+
+### 8. IP Conflict Resolution & Offline Mode (✅ Completed)
+**Rationale:** IP addresses must be unique for active controllers. Users often need to pre-configure controllers before they are connected (Offline Mode).
+
+- [x] **Frontend (ControllerWizard.tsx):**
+    - [x] Make `IP Address` and `Port` **mandatory** fields by default.
+    - [x] Add "Offline / Manual Setup" checkbox (toggle).
+        - [x] If Checked: IP/Port fields become optional (or disabled/cleared).
+        - [x] If Unchecked: IP/Port are required.
+    - [x] Add visual validation or warning if user enters an IP that is already taken (optional, but good UX).
+
+- [x] **Backend (HardwareController.ts / Service):**
+    - [x] **Enforce IP Uniqueness:** When saving a controller with an IP:
+        - [x] Check if another controller already has this IP.
+        - [x] If conflict found: **Evict the old controller**.
+            - [x] Set old controller's `connection.ip` to `""` (empty) or `null`.
+            - [x] Set old controller's `status` to `'offline'` (or `disabled`).
+            - [x] (Optional) Add a log entry or notification about the displacement.
+    - [x] Validates that `macAddress` is handled correctly (not used as primary key for connection, but for identity).
+
+- [x] **Refinement of "Replace" Action (NetworkScanner):**
+    - [x] Ensure clicking "Replace" (or Add on conflict) triggers the standard "Add Controller" flow, which will automatically trigger the backend eviction logic defined above.

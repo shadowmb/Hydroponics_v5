@@ -96,6 +96,18 @@ export class HardwareController {
                 });
             });
 
+            // Verify and Evict IP Conflict
+            const newIp = body.connection?.ip;
+            if (newIp && typeof newIp === 'string' && newIp.length > 0) {
+                const conflict = await Controller.findOne({ 'connection.ip': newIp });
+                if (conflict) {
+                    req.log.warn({ conflictId: conflict._id, ip: newIp }, '⚠️ Connection conflict detected on Create - Evicting old controller');
+                    conflict.set('connection.ip', ''); // Clear IP
+                    conflict.status = 'offline';
+                    await conflict.save();
+                }
+            }
+
             const controller = new Controller({
                 ...body,
                 ports,
@@ -162,6 +174,18 @@ export class HardwareController {
             // Capture old state for change detection
             const oldConnectionJson = JSON.stringify(controller.connection);
             const oldType = controller.type;
+
+            // Verify and Evict IP Conflict (if IP is changing)
+            const newIp = body.connection?.ip;
+            if (newIp && typeof newIp === 'string' && newIp.length > 0 && newIp !== controller.connection?.ip) {
+                const conflict = await Controller.findOne({ 'connection.ip': newIp, _id: { $ne: id } });
+                if (conflict) {
+                    req.log.warn({ conflictId: conflict._id, ip: newIp, stealerId: id }, '⚠️ Connection conflict detected on Update - Evicting old controller');
+                    conflict.set('connection.ip', '');
+                    conflict.status = 'offline';
+                    await conflict.save();
+                }
+            }
 
             // DEEP MERGE for nested objects to preserve existing fields
             Object.keys(body).forEach(key => {

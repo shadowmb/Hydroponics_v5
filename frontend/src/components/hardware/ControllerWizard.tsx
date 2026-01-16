@@ -10,20 +10,20 @@ import { Plus, ArrowRight, ArrowLeft, Check, Cpu, Wifi, Usb, RefreshCw } from 'l
 import { hardwareService, type IControllerTemplate, type IController } from '../../services/hardwareService';
 import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
-import { useUIState } from '@/context/UIStateContext'; // Import State Hook
+import { Checkbox } from "@/components/ui/checkbox";
+import { useUIState } from '@/context/UIStateContext';
 
 interface ControllerWizardProps {
     onControllerCreated: () => void;
-    editController?: IController; // If provided, we are in edit mode
-    initialData?: Partial<IController>; // For pre-filling data (e.g. from scanner)
-    open?: boolean; // Controlled open state for edit mode
-    onOpenChange?: (open: boolean) => void; // Controlled open handler
+    editController?: IController;
+    initialData?: Partial<IController>;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
     hideTrigger?: boolean;
 }
 
 type WizardStep = 'type-selection' | 'configuration' | 'review';
 
-// Map string steps to numbers for AI context
 const stepMap: Record<WizardStep, number> = {
     'type-selection': 1,
     'configuration': 2,
@@ -37,15 +37,12 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
     const setOpen = isControlled ? onOpenChange! : setInternalOpen;
 
     const [step, setStep] = useState<WizardStep>('type-selection');
-
-    // Global AI State
     const { setWizardState, clearWizardState } = useUIState();
 
     const [templates, setTemplates] = useState<IControllerTemplate[]>([]);
     const [loading, setLoading] = useState(false);
-
-    // Form State
     const [selectedTemplate, setSelectedTemplate] = useState<IControllerTemplate | null>(null);
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -54,13 +51,13 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
         ip: '',
         port: 8888,
         serialPort: '',
-        baudRate: 9600
+        baudRate: 9600,
+        offlineMode: false
     });
 
     const [serialPorts, setSerialPorts] = useState<any[]>([]);
     const [loadingPorts, setLoadingPorts] = useState(false);
 
-    // Sync State to AI Context
     useEffect(() => {
         if (open) {
             setWizardState({
@@ -73,8 +70,6 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                 }
             });
         }
-
-        // Cleanup or clear if closed
         return () => {
             if (!open) {
                 clearWizardState();
@@ -82,9 +77,8 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
         };
     }, [open, step, formData, selectedTemplate, setWizardState, clearWizardState]);
 
-    // Map discovered model names to system template keys
     const MODEL_MAP: Record<string, string> = {
-        'Arduino_Uno_R4_WiFi': 'Arduino_Uno', // Exact match from firmware
+        'Arduino_Uno_R4_WiFi': 'Arduino_Uno',
         'ArduinoUnoR4WiFi': 'Arduino_Uno',
         'ArduinoUnoR3': 'Arduino_Uno',
         'Arduino Uno': 'Arduino_Uno',
@@ -99,7 +93,6 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
             loadTemplates();
             loadSerialPorts();
             if (editController) {
-                // Edit Mode Initialization
                 setStep('configuration');
                 setFormData({
                     name: editController.name,
@@ -109,52 +102,43 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                     ip: editController.connection.ip || '',
                     port: editController.connection.port || 8888,
                     serialPort: editController.connection.serialPort || '',
-                    baudRate: editController.connection.baudRate || 9600
+                    baudRate: editController.connection.baudRate || 9600,
+                    offlineMode: editController.connection.type === 'network' && !editController.connection.ip
                 });
-                // We need the template to display the type label correctly
-                // Fetching templates will handle this, but we can set a placeholder
                 setSelectedTemplate({
                     key: editController.type,
-                    label: editController.type, // Will be updated when templates load
+                    label: editController.type,
                     ports: [],
                     communication_by: [],
                     communication_type: []
                 });
             } else if (initialData) {
-                // Pre-fill Mode (e.g. from Scanner)
-                setStep('type-selection'); // Default, but might autoselect below
-
+                setStep('type-selection');
                 setFormData({
                     name: initialData.name || '',
                     description: initialData.description || '',
                     macAddress: initialData.macAddress || '',
                     connectionType: initialData.connection?.type || 'network',
                     ip: initialData.connection?.ip || '',
-                    port: initialData.connection?.port || 8888, // Uses passed port or default
+                    port: initialData.connection?.port || 8888,
                     serialPort: initialData.connection?.serialPort || '',
-                    baudRate: initialData.connection?.baudRate || 9600
+                    baudRate: initialData.connection?.baudRate || 9600,
+                    offlineMode: false
                 });
             } else {
-                // Create Mode Initialization
                 setStep('type-selection');
                 resetForm();
             }
         }
     }, [open, editController, initialData]);
 
-    // Effect to handle auto-selection once templates are loaded
     useEffect(() => {
         if (open && !editController && initialData && templates.length > 0) {
-            // Attempt to find model from name (format: "Name (Model)")
-            // or directly from initialData if we start passing 'type' or custom field
             const name = initialData.name || '';
             const match = name.match(/\((.*?)\)/);
-            const modelName = match ? match[1] : name; // Fallback to whole name if no parens
+            const modelName = match ? match[1] : name;
 
-            // 1. Try direct match in map
             let templateKey = MODEL_MAP[modelName];
-
-            // 2. If no match, try to find if modelName IS a template key
             if (!templateKey) {
                 const isKey = templates.some(t => t.key === modelName);
                 if (isKey) templateKey = modelName;
@@ -170,7 +154,6 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
         }
     }, [templates, open, editController, initialData]);
 
-    // Update selected template label once templates are loaded
     useEffect(() => {
         if (editController && templates.length > 0) {
             const tmpl = templates.find(t => t.key === editController.type);
@@ -199,7 +182,6 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
         }
     };
 
-    // Common ports for quick selection
     const commonPorts = [
         { path: 'COM1', label: 'COM1 (Windows)' },
         { path: 'COM3', label: 'COM3 (Windows)' },
@@ -218,7 +200,8 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
             ip: '',
             port: 8888,
             serialPort: '',
-            baudRate: 9600
+            baudRate: 9600,
+            offlineMode: false
         });
     };
 
@@ -231,37 +214,51 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
     const handleSubmit = async () => {
         if (!selectedTemplate) return;
 
+        // Validation: If network and NOT offline, IP/Port mandatory
+        if (formData.connectionType === 'network' && !formData.offlineMode) {
+            if (!formData.ip || formData.ip.length < 7) {
+                toast.error('IP Address is required for network controllers');
+                return;
+            }
+            if (!formData.port) {
+                toast.error('Port is required');
+                return;
+            }
+        }
+
         try {
             setLoading(true);
             const connection = {
                 type: formData.connectionType,
                 ...(formData.connectionType === 'network' ? {
-                    ip: formData.ip,
-                    port: Number(formData.port)
+                    ip: formData.offlineMode ? '' : formData.ip,
+                    port: formData.offlineMode ? 0 : Number(formData.port)
                 } : {
                     serialPort: formData.serialPort,
                     baudRate: Number(formData.baudRate)
                 })
             };
 
+            const status = formData.offlineMode ? 'offline' : 'offline'; // Initially offline, service will connect
+
             if (editController) {
-                // Update Logic
                 await hardwareService.updateController(editController._id, {
                     name: formData.name,
                     description: formData.description,
                     macAddress: formData.macAddress || undefined,
-                    connection
+                    connection,
+                    // If offline mode is toggled on, status should probably be forced/reset, 
+                    // but backend handles connection logic.
                 });
                 toast.success('Controller updated successfully');
             } else {
-                // Create Logic
                 const payload = {
                     name: formData.name,
                     type: selectedTemplate.key,
                     description: formData.description,
                     macAddress: formData.macAddress || undefined,
                     connection,
-                    status: 'offline' as const,
+                    status: status as 'offline' | 'online' | 'error',
                     isActive: true,
                     ports: {}
                 };
@@ -338,23 +335,46 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
 
             {formData.connectionType === 'network' ? (
                 <div className="space-y-4 border-l-2 border-primary/20 pl-4">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="offlineMode"
+                            checked={formData.offlineMode}
+                            onCheckedChange={(checked) => {
+                                const isOffline = checked === true;
+                                setFormData({
+                                    ...formData,
+                                    offlineMode: isOffline,
+                                    ip: isOffline ? '' : formData.ip
+                                });
+                            }}
+                        />
+                        <Label htmlFor="offlineMode" className="cursor-pointer">
+                            Offline Mode (Pre-configure without IP)
+                        </Label>
+                    </div>
+
                     <div className="grid gap-2">
-                        <Label>IP Address</Label>
+                        <Label className={formData.offlineMode ? "text-muted-foreground" : ""}>
+                            IP Address {formData.offlineMode ? '(Optional)' : '(Required)'}
+                        </Label>
                         <Input
                             value={formData.ip}
                             onChange={e => setFormData({ ...formData, ip: e.target.value })}
                             placeholder="192.168.1.100"
+                            disabled={formData.offlineMode}
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label>Port (UDP)</Label>
+                        <Label className={formData.offlineMode ? "text-muted-foreground" : ""}>
+                            Port (UDP) {formData.offlineMode ? '(Optional)' : '(Required)'}
+                        </Label>
                         <Input
                             type="number"
                             value={formData.port}
                             onChange={e => setFormData({ ...formData, port: Number(e.target.value) })}
                             placeholder="8888"
+                            disabled={formData.offlineMode}
                         />
-
                     </div>
                     <div className="grid gap-2">
                         <Label>MAC Address (Optional)</Label>
@@ -373,23 +393,12 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                             <div className="flex-1 space-y-2">
                                 <Select
                                     value={
-                                        // If current port is in detected or common list, use it.
-                                        // Otherwise, if it's not empty, it's custom.
-                                        // If empty, it's empty.
                                         serialPorts.find(p => p.path === formData.serialPort) || commonPorts.find(p => p.path === formData.serialPort)
                                             ? formData.serialPort
                                             : (formData.serialPort ? "custom" : "")
                                     }
                                     onValueChange={(val) => {
                                         if (val === "custom") {
-                                            // Keep existing value if switching to custom, or clear if it was a standard port
-                                            // Actually, better to just set a flag or let them type.
-                                            // For now, if they select custom, we just enable the input below.
-                                            // We don't change the actual serialPort value yet until they type.
-                                            // But we need to force the Select to show "custom".
-                                            // Let's just set serialPort to empty string to clear it for typing?
-                                            // No, that clears the input.
-                                            // Let's assume if they pick "custom", we clear the selection to let them type.
                                             setFormData({ ...formData, serialPort: "" });
                                         } else {
                                             setFormData({ ...formData, serialPort: val });
@@ -425,7 +434,6 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                                     </SelectContent>
                                 </Select>
 
-                                {/* Show input if "custom" is selected OR if the current value is not in the lists (and not empty) */}
                                 {(formData.serialPort === "" || (!serialPorts.find(p => p.path === formData.serialPort) && !commonPorts.find(p => p.path === formData.serialPort))) && (
                                     <Input
                                         value={formData.serialPort}
@@ -483,7 +491,9 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
                     <span className="text-muted-foreground">Connection</span>
                     <span className="font-medium flex items-center gap-2">
                         {formData.connectionType === 'network' ? <Wifi className="h-4 w-4" /> : <Usb className="h-4 w-4" />}
-                        {formData.connectionType === 'network' ? formData.ip : formData.serialPort}
+                        {formData.connectionType === 'network'
+                            ? (formData.offlineMode ? "Offline Mode (No IP)" : `${formData.ip}:${formData.port}`)
+                            : formData.serialPort}
                     </span>
                 </div>
                 {formData.macAddress && (
@@ -496,7 +506,7 @@ export const ControllerWizard: React.FC<ControllerWizardProps> = ({ onController
             <p className="text-sm text-muted-foreground text-center">
                 {editController
                     ? "Click Update to save changes."
-                    : "Click Create to register this controller. It will start in 'Offline' state until it connects."}
+                    : "Click Create to register this controller."}
             </p>
         </div>
     );
