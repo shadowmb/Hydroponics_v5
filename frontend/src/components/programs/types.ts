@@ -29,6 +29,9 @@ export interface ITrigger {
     flowId?: string;    // Deprecated
     flowIds?: string[]; // New
     behavior: TriggerBehavior;
+    repeatMode?: 'once' | 'count' | 'always';
+    repeatCount?: number;
+    conditionEnabled?: boolean;
     description?: string;
 }
 

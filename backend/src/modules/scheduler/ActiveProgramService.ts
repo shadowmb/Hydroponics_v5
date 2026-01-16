@@ -917,6 +917,16 @@ export class ActiveProgramService {
 
         // 5. Update Trigger
         // We replace the entire text of the trigger object
+
+        // DEBUG LOGGING
+        logger.info({
+            windowId,
+            triggerId: trigger.id,
+            repeatMode: trigger.repeatMode,
+            repeatCount: trigger.repeatCount,
+            fullTrigger: trigger
+        }, '🔍 DEBUG: Updating Trigger - Payload Inspection');
+
         windowDef.triggers[triggerIndex] = trigger;
 
         // Mark as modified

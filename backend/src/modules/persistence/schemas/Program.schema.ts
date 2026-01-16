@@ -29,6 +29,14 @@ export interface ITrigger {
     flowId?: string;    // Deprecated: verify migration
     flowIds?: string[]; // New: Multiple flows support
     behavior: TriggerBehavior;
+
+    // Repeating Logic
+    repeatMode?: 'once' | 'count' | 'always';
+    repeatCount?: number;
+
+    // Unconditional Execution
+    conditionEnabled?: boolean;
+
     description?: string;
 }
 
@@ -96,6 +104,14 @@ const TriggerSchema = new Schema({
     flowId: { type: String },    // Deprecated, optional
     flowIds: { type: [String], default: [] }, // New
     behavior: { type: String, enum: ['continue', 'break'], default: 'break' },
+
+    // Repeating Logic
+    repeatMode: { type: String, enum: ['once', 'count', 'always'], default: 'once' },
+    repeatCount: { type: Number, default: 0 },
+
+    // Unconditional Execution
+    conditionEnabled: { type: Boolean, default: true },
+
     description: { type: String }
 }, { _id: false });
 

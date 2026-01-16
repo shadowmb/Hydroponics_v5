@@ -37,6 +37,7 @@ export class HardwareService {
         logger.info('🚀 [HardwareService] Initializing...');
         try {
             await templates.loadTemplates();
+            await this.performUnitMigration(); // Self-healing migration for missing units
             const { DeviceModel } = await import('../../models/Device');
             const devices = await DeviceModel.find({ isEnabled: true });
 
@@ -134,6 +135,15 @@ export class HardwareService {
                     { _id: relay._id, "channels.channelIndex": channelIndex },
                     { $set: { "channels.$.state": modelState } }
                 );
+
+                // Update Device Status immediately
+                deviceDoc.lastReading = {
+                    value: finalStateValue,
+                    raw: finalStateValue,
+                    unit: 'boolean',
+                    timestamp: new Date()
+                };
+                await deviceDoc.save();
             }
         } else if (deviceDoc.hardware?.parentId) {
             controllerId = deviceDoc.hardware.parentId.toString();
@@ -160,6 +170,15 @@ export class HardwareService {
                 }
 
                 params.state = finalStateValue;
+
+                // Update Device Status immediately
+                deviceDoc.lastReading = {
+                    value: finalStateValue,
+                    raw: finalStateValue,
+                    unit: 'boolean',
+                    timestamp: new Date()
+                };
+                await deviceDoc.save();
             }
         } else {
             throw new Error(`Device ${deviceId} not linked to a controller or relay`);
@@ -281,7 +300,13 @@ export class HardwareService {
         const { value: baseLogValue, unit: baseLogUnit, hwValue: baseHwValue, hwUnit: baseHwUnit, activeStrategy, details: conversionDetails } = basicResult;
 
         try {
-            device.lastReading = { value: isNaN(baseLogValue) ? null : baseLogValue, raw, timestamp: new Date() };
+            // Save value AND unit to DB for data integrity
+            device.lastReading = {
+                value: isNaN(baseLogValue) ? null : baseLogValue,
+                raw,
+                unit: baseLogUnit, // Persistent Unit
+                timestamp: new Date()
+            };
             await device.save();
         } catch (err) { logger.warn({ deviceId, err }, '⚠️ DB Save Failed'); }
 
@@ -509,6 +534,70 @@ export class HardwareService {
         } else {
             logger.warn({ relayId }, '⚠️ Cannot refresh relay status: No parent controller found');
         }
+    }
+
+    private async performUnitMigration(): Promise<void> {
+        const { DeviceModel } = await import('../../models/Device');
+        // Find devices with missing unit info
+        // @ts-ignore
+        const devices = await DeviceModel.find({
+            $or: [
+                { baseUnit: { $exists: false } },
+                { baseUnit: null },
+                { displayUnit: { $exists: false } },
+                { displayUnit: null }
+            ]
+        });
+
+        if (devices.length === 0) return;
+
+        logger.info({ count: devices.length }, '🛠️ [HardwareService] Starting Self-Healing Unit Migration...');
+
+        for (const device of devices) {
+            try {
+                const driverId = device.config.driverId;
+                // @ts-ignore
+                const templateId = typeof driverId === 'string' ? driverId : driverId?._id?.toString();
+
+                const template = templates.getDriver(templateId);
+                if (!template) continue;
+
+                let baseUnit = template.uiConfig?.units?.[0]; // Default
+                const activeRole = device.config?.activeRole;
+
+                if (template.measurements) {
+                    // @ts-ignore
+                    const measureKey = activeRole && template.measurements[activeRole] ? activeRole : Object.keys(template.measurements)[0];
+                    // @ts-ignore
+                    if (measureKey && template.measurements[measureKey]) {
+                        // @ts-ignore
+                        baseUnit = template.measurements[measureKey].baseUnit;
+                    }
+                }
+
+                if (device.type === 'ACTUATOR' && !baseUnit) {
+                    baseUnit = 'boolean';
+                }
+
+                let modified = false;
+                if (!device.baseUnit && baseUnit) {
+                    device.baseUnit = baseUnit;
+                    modified = true;
+                }
+                if (!device.displayUnit && baseUnit) {
+                    device.displayUnit = baseUnit;
+                    modified = true;
+                }
+
+                if (modified) {
+                    await device.save();
+                    logger.debug({ deviceId: device._id, baseUnit }, '✅ [Migration] Fixed Device Units');
+                }
+            } catch (err) {
+                logger.warn({ deviceId: device._id, err }, '⚠️ [Migration] Failed to fix device');
+            }
+        }
+        logger.info('✅ [HardwareService] Unit Migration Complete');
     }
 
     private getValueByPath(obj: any, path: string): any {

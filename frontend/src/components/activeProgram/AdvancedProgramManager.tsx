@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, differenceInMinutes, parse, isValid } from 'date-fns';
-import type { IActiveProgram, IVariable, IContext } from '../../types/ActiveProgram';
+import type { IActiveProgram, IVariable, IContext, IWindowState } from '../../types/ActiveProgram';
 import { activeProgramService } from '../../services/activeProgramService';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -34,13 +34,8 @@ interface AdvancedProgramManagerProps {
 }
 
 // Window state from backend
-interface IWindowState {
-    windowId: string;
-    status: 'pending' | 'active' | 'completed' | 'skipped';
-    triggersExecuted: string[];
-    lastCheck?: Date;
-    skipUntil?: Date;
-}
+// Window state from backend - IMPORTED from types
+
 
 // Helper to get time-of-day icon
 const getTimeIcon = (time: string) => {
@@ -421,11 +416,19 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
     // Save Trigger Update
     const handleSaveTrigger = async (updatedTrigger: ITrigger) => {
-        if (!editingTriggerWindowId) return;
+        console.log('Clicking Save Trigger. WindowID:', editingTriggerWindowId, 'Data:', updatedTrigger);
+
+        if (!editingTriggerWindowId) {
+            console.error('Missing editingTriggerWindowId!');
+            return;
+        }
 
         // 1. Get current window
         const currentWindow = localWindows.find(w => w.id === editingTriggerWindowId);
-        if (!currentWindow) return;
+        if (!currentWindow) {
+            console.error('Window not found in localWindows:', editingTriggerWindowId);
+            return;
+        }
 
         // 2. Project the window state with the updated trigger
         // Clone window and triggers array
@@ -1106,41 +1109,48 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
                                                                 {/* Conditions Stack */}
                                                                 <div className="flex flex-col">
-                                                                    {conditions.map((cond: any, cIndex: number) => (
-                                                                        <React.Fragment key={cIndex}>
-                                                                            {cIndex > 0 && (
-                                                                                <div className="flex items-center gap-2 my-0.5">
-                                                                                    <div className="h-4 w-0.5 bg-muted-foreground/30 mx-2"></div>
-                                                                                    <span className={cn(
-                                                                                        "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded",
-                                                                                        trigger.logicalOperator === 'OR'
-                                                                                            ? "bg-orange-500/20 text-orange-600"
-                                                                                            : "bg-blue-500/20 text-blue-600"
-                                                                                    )}>
-                                                                                        {trigger.logicalOperator || 'AND'}
+                                                                    {trigger.conditionEnabled === false ? (
+                                                                        <div className="flex items-center gap-2 text-orange-500 font-bold">
+                                                                            <span>⚠️</span>
+                                                                            <span>БЕЗ УСЛОВИЕ</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        conditions.map((cond: any, cIndex: number) => (
+                                                                            <React.Fragment key={cIndex}>
+                                                                                {cIndex > 0 && (
+                                                                                    <div className="flex items-center gap-2 my-0.5">
+                                                                                        <div className="h-4 w-0.5 bg-muted-foreground/30 mx-2"></div>
+                                                                                        <span className={cn(
+                                                                                            "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded",
+                                                                                            trigger.logicalOperator === 'OR'
+                                                                                                ? "bg-orange-500/20 text-orange-600"
+                                                                                                : "bg-blue-500/20 text-blue-600"
+                                                                                        )}>
+                                                                                            {trigger.logicalOperator || 'AND'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <Activity className="h-3.5 w-3.5 text-cyan-500" />
+                                                                                    <span className={cn("font-medium", isExecuted && "line-through")}>
+                                                                                        {getSensorName(cond.sensorId)}
+                                                                                    </span>
+
+                                                                                    <span
+                                                                                        className={cn(
+                                                                                            "font-mono text-sm",
+                                                                                            canEdit && "cursor-pointer hover:bg-muted/50 px-1 rounded"
+                                                                                        )}
+                                                                                        onClick={(e) => canEdit && handleEditTrigger(window.id, trigger, e)}
+                                                                                        title={canEdit ? "Кликнете за пълна редакция" : undefined}
+                                                                                    >
+                                                                                        {formatOperator(cond.operator)} {cond.value}
+                                                                                        {cond.operator === 'between' && ` - ${cond.valueMax}`}
                                                                                     </span>
                                                                                 </div>
-                                                                            )}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <Activity className="h-3.5 w-3.5 text-cyan-500" />
-                                                                                <span className={cn("font-medium", isExecuted && "line-through")}>
-                                                                                    {getSensorName(cond.sensorId)}
-                                                                                </span>
-
-                                                                                <span
-                                                                                    className={cn(
-                                                                                        "font-mono text-sm",
-                                                                                        canEdit && "cursor-pointer hover:bg-muted/50 px-1 rounded"
-                                                                                    )}
-                                                                                    onClick={(e) => canEdit && handleEditTrigger(window.id, trigger, e)}
-                                                                                    title={canEdit ? "Кликнете за пълна редакция" : undefined}
-                                                                                >
-                                                                                    {formatOperator(cond.operator)} {cond.value}
-                                                                                    {cond.operator === 'between' && ` - ${cond.valueMax}`}
-                                                                                </span>
-                                                                            </div>
-                                                                        </React.Fragment>
-                                                                    ))}
+                                                                            </React.Fragment>
+                                                                        ))
+                                                                    )}
                                                                 </div>
 
                                                                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -1182,6 +1192,16 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                 )}>
                                                                     {trigger.behavior === 'break' ? '🛑 Break' : '⏭️ Continue'}
                                                                 </span>
+
+                                                                {/* REPEAT BADGE */}
+                                                                {trigger.repeatMode && trigger.repeatMode !== 'once' && (
+                                                                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
+                                                                        {trigger.repeatMode === 'always'
+                                                                            ? <span>🔄 Always</span>
+                                                                            : <span>🔢 {(state?.triggerCounts as any)?.[trigger.id] || 0} / {trigger.repeatCount}</span>
+                                                                        }
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );

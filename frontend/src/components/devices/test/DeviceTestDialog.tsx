@@ -450,7 +450,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                                 // 2. Default (output.unit)
                                                 const userUnit = isMulti
                                                     ? (device.displayUnits?.[key] || device.displayUnit)
-                                                    : (device.displayUnit || liveUnit);
+                                                    : (liveUnit || device.displayUnit);
 
                                                 const finalUnit = userUnit || output.unit;
                                                 const baseUnit = output.unit; // The physical/driver unit

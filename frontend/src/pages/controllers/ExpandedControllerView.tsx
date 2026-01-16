@@ -133,7 +133,9 @@ export const ExpandedControllerView: React.FC<ExpandedControllerViewProps> = ({
 
     // Render Actuator Card
     const renderActuatorCard = (device: any, isDirect: boolean, relayName?: string) => {
-        let isOn = false;
+        // Default Source: Logical State (lastReading)
+        // Especially critical for Direct Actuators where no Relay object exists to report state
+        let isOn = (device.lastReading?.value > 0);
         let connectionInfo = null;
 
         if (!isDirect && relayName && device.hardware?.channel) {
@@ -142,6 +144,7 @@ export const ExpandedControllerView: React.FC<ExpandedControllerViewProps> = ({
             if (parentRelay) {
                 const channel = parentRelay.channels?.find((c: any) => Number(c.channelIndex) === Number(device.hardware.channel));
                 if (channel) {
+                    // Override with Relay State (Physical Truth)
                     isOn = channel.state === true;
                     controllerPin = channel.controllerPortId;
                 }
@@ -366,7 +369,8 @@ export const ExpandedControllerView: React.FC<ExpandedControllerViewProps> = ({
                         <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-200">
                             {sensors.map(device => {
                                 const lastValue = formatValue(device.lastReading?.value);
-                                let unit = device.displayUnit;
+                                // Priority: Reading Unit (Snapshot) -> Display Unit (Settings)
+                                let unit = device.lastReading?.unit || device.displayUnit;
                                 if (!unit && typeof device.config?.driverId === 'object') {
                                     unit = device.config.driverId.uiConfig?.units?.[0] || '';
                                 }

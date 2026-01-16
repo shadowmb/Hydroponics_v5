@@ -155,8 +155,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
     useEffect(() => {
         if (open) {
             fetchData();
-            if (initialData) {
-                // Pre-fill for Edit Mode
+            if (initialData && initialData._id) {
+                // Edit Mode: Full pre-fill
                 setStep(3); // Go directly to Config
                 setFormData({
                     name: initialData.name,
@@ -185,12 +185,16 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     setConnectionType('direct');
                 }
             } else {
-                // Reset for New Device
+                // New Device (Clean Slate OR Contextual Add)
                 setStep(1);
+
+                // If we have contextual data (e.g. from Controller View "Add Device"), use it
+                const contextControllerId = initialData?.hardware?.parentId || '';
+
                 setFormData({
-                    name: '',
+                    name: initialData?.name || '', // Allow passing name if needed
                     description: '',
-                    controllerId: '',
+                    controllerId: contextControllerId, // Pre-fill controller
                     port: '',
                     pins: {},
                     relayId: '',
@@ -198,8 +202,8 @@ export const DeviceWizard: React.FC<DeviceWizardProps> = ({ open, onOpenChange, 
                     isEnabled: true,
                     tags: [],
                     invertedLogic: false,
-                    settings: {}, // Dynamic settings container
-                    resourceRole: '', // Reset resource role
+                    settings: {},
+                    resourceRole: '',
                     analyticsLabel: ''
                 });
                 setSelectedCategory('');

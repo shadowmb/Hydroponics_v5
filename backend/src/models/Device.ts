@@ -65,12 +65,14 @@ export interface IDevice extends SoftDeleteDocument {
     // Dashboard Settings
     dashboardPinned?: boolean; // Whether device is pinned to dashboard
     dashboardOrder?: number;   // Display order on dashboard (0-5)
+    baseUnit?: string;         // New: Native unit from driver template
     displayUnit?: string;      // User preferred display unit (Primary)
     displayUnits?: Map<string, string>; // Multi-value overrides (key -> unit)
 
     lastReading?: {
         value: number | null;
         raw: number;
+        unit?: string; // New: Unit of the current reading
         timestamp: Date;
     };
 
@@ -158,12 +160,14 @@ const DeviceSchema = new Schema<IDevice>(
         // Dashboard Settings
         dashboardPinned: { type: Boolean, default: false },
         dashboardOrder: { type: Number, default: 0 },
+        baseUnit: { type: String }, // New: Native unit from driver template
         displayUnit: { type: String },
         displayUnits: { type: Map, of: String },
 
         lastReading: {
             value: Number,
             raw: Number,
+            unit: String, // New: Unit of the current reading
             timestamp: Date
         },
 
