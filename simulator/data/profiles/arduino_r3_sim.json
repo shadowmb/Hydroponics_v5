@@ -1,0 +1,9 @@
+{
+  "id": "arduino_r3_sim",
+  "name": "Arduino R3 SIM",
+  "controllerType": "Arduino_Uno",
+  "udpPort": 8889,
+  "mac": "SIM:F3:77:5D:78:A9",
+  "created": "2026-01-16T09:13:18.567Z",
+  "lastUsed": "2026-01-16T10:04:23.522Z"
+}

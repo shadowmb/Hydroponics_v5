@@ -179,3 +179,35 @@ Reads distance from an HC-SR04 ultrasonic sensor.
 ### `MEASURE_PULSE_RATE` (Planned)
 *   **Status:** Not yet implemented in v5 templates.
 *   **Usage:** Water Flow Meters
+
+---
+
+## System Commands (Built-in)
+
+These commands are handled directly by the firmware core and do not require template definitions.
+
+### `PING`
+Checks network latency and connection health.
+*   **Protocol:** `PING`
+*   **Response:** `PONG` (raw string)
+
+### `REBOOT`
+Forces a software restart of the controller.
+*   **Protocol:** `REBOOT`
+*   **Response:** `OK` (followed by connection reset)
+
+### `INFO`
+Retrieves system status, identity, and capabilities.
+*   **Protocol:** `INFO`
+*   **Response (JSON):**
+    ```json
+    {
+      "ok": 1,
+      "up": 123456,             // Uptime in milliseconds
+      "mem": 32768,             // Free heap memory
+      "ver": "1.0-v5",          // Firmware version
+      "mac": "DE:AD:BE:EF:FE:ED", // MAC Address (Required for Identity Sync)
+      "ip": "192.168.1.50",     // Current local IP
+      "capabilities": ["ANALOG", "DIGITAL_WRITE"] // List of supported commands
+    }
+    ```

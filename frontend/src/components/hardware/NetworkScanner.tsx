@@ -43,7 +43,8 @@ interface NetworkScannerProps {
 export function NetworkScanner({ onAddController }: NetworkScannerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
-    const [port, setPort] = useState('8888');
+    const [startPort, setStartPort] = useState('8888');
+    const [endPort, setEndPort] = useState('8890');
     const [broadcastIp, setBroadcastIp] = useState('255.255.255.255');
     const [devices, setDevices] = useState<DiscoveredDevice[]>([]);
     const [existingMacs, setExistingMacs] = useState<Set<string>>(new Set());
@@ -68,7 +69,8 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    port: parseInt(port),
+                    startPort: parseInt(startPort),
+                    endPort: parseInt(endPort),
                     broadcastAddress: broadcastIp,
                     timeout: 3000
                 })
@@ -106,20 +108,31 @@ export function NetworkScanner({ onAddController }: NetworkScannerProps) {
                 <DialogHeader>
                     <DialogTitle>Network Scanner</DialogTitle>
                     <DialogDescription>
-                        Broadcasts a UDP discovery packet to find Hydroponics controllers on the local network.
+                        Broadcasts a UDP discovery packet to find Hydroponics controllers within the specified port range.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="port">UDP Port</Label>
-                            <Input
-                                id="port"
-                                value={port}
-                                onChange={(e) => setPort(e.target.value)}
-                                placeholder="8888"
-                            />
+                        <div className="flex gap-2">
+                            <div className="grid gap-2 flex-1">
+                                <Label htmlFor="startPort">Start Port</Label>
+                                <Input
+                                    id="startPort"
+                                    value={startPort}
+                                    onChange={(e) => setStartPort(e.target.value)}
+                                    placeholder="8888"
+                                />
+                            </div>
+                            <div className="grid gap-2 flex-1">
+                                <Label htmlFor="endPort">End Port</Label>
+                                <Input
+                                    id="endPort"
+                                    value={endPort}
+                                    onChange={(e) => setEndPort(e.target.value)}
+                                    placeholder="8890"
+                                />
+                            </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="ip">Broadcast IP</Label>
