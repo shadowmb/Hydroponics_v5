@@ -41,8 +41,8 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy built assets from the build stage
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 
-# Copy custom nginx config
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config template (for envsubst)
+COPY frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Expose port 80
 EXPOSE 80
