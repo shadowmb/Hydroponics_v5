@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -18,15 +18,22 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Radar, Loader2, Wifi, Plus, Check, Code, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Radar, Loader2, Wifi, Plus, Check, Code, RefreshCw, AlertTriangle, Network } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { toast } from 'sonner';
-import { hardwareService } from '../../services/hardwareService';
+import { hardwareService, type INetworkInterface } from '../../services/hardwareService';
 
 interface DiscoveredDevice {
     ip: string;
@@ -53,15 +60,40 @@ export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }
     const [existingControllers, setExistingControllers] = useState<any[]>([]);
     const [processedMacs, setProcessedMacs] = useState<Set<string>>(new Set());
 
-    // Fetch existing controllers when dialog opens
-    React.useEffect(() => {
+    // Network Diagnostics
+    const [interfaces, setInterfaces] = useState<INetworkInterface[]>([]);
+    const [selectedInterface, setSelectedInterface] = useState<string>('');
+
+    // Fetch existing controllers & network info when dialog opens
+    useEffect(() => {
         if (isOpen) {
             hardwareService.getControllers().then(controllers => {
                 setExistingControllers(controllers);
                 setProcessedMacs(new Set()); // Reset processed state on open
             }).catch(console.error);
+
+            hardwareService.getNetworkInterfaces().then(ifaces => {
+                setInterfaces(ifaces);
+                // Auto-select broadcast IP if only one valid interface found, or keep default
+                if (ifaces.length === 1 && !broadcastIp.endsWith('.255')) {
+                    // Logic to prioritize non-docker if possible, but for UX simple is better
+                }
+            }).catch(console.error);
         }
     }, [isOpen]);
+
+    const handleInterfaceSelect = (address: string) => {
+        const iface = interfaces.find(i => i.address === address);
+        if (iface) {
+            setSelectedInterface(address);
+            setBroadcastIp(iface.broadcast);
+            toast.info(`Set Broadcast IP to ${iface.broadcast} based on ${iface.name}`);
+        }
+    };
+
+    const isDockerBridge = (ip: string) => {
+        return ip.startsWith('172.17.') || ip.startsWith('172.18.') || ip.startsWith('172.19.');
+    };
 
     const getActionState = (device: DiscoveredDevice) => {
         // 0. Check if already processed in this session
@@ -121,7 +153,6 @@ export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }
         return { type: 'add', label: 'Add', color: '', icon: Plus, tooltip: 'Add as a new controller.' };
     };
 
-    // ... handleScan function remains same ...
     const handleScan = async () => {
         setIsScanning(true);
         setDevices([]);
@@ -160,12 +191,8 @@ export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }
         }
     };
 
-
-    // ... render return ...
-
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            {/* ... trigger and header same ... */}
             <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                     <Radar className="h-4 w-4" />
@@ -179,6 +206,45 @@ export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }
                         Broadcasts a UDP discovery packet to find Hydroponics controllers within the specified port range.
                     </DialogDescription>
                 </DialogHeader>
+
+                {/* Server Network Context */}
+                {interfaces.length > 0 && (
+                    <div className="bg-muted/30 p-3 rounded-md border text-sm space-y-2 mb-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Network className="h-4 w-4 text-primary" />
+                            <span className="font-semibold">Server Network Context</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-xs text-muted-foreground mb-1 block">Select Server Interface</Label>
+                                <Select value={selectedInterface} onValueChange={handleInterfaceSelect}>
+                                    <SelectTrigger className="h-8">
+                                        <SelectValue placeholder="Select Interface..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {interfaces.map(iface => (
+                                            <SelectItem key={iface.address} value={iface.address}>
+                                                <span className="font-mono">{iface.address}</span> ({iface.name})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {selectedInterface && (
+                                <div className="text-xs text-muted-foreground flex flex-col justify-center">
+                                    {isDockerBridge(selectedInterface) && (
+                                        <span className="text-amber-600 font-medium flex items-center gap-1">
+                                            <AlertTriangle className="h-3 w-3" />
+                                            Docker Bridge Detected! (Isolation)
+                                        </span>
+                                    )}
+                                    <span>If devices are not found, try using Host Network mode on the server.</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -308,11 +374,6 @@ export function NetworkScanner({ onAddController, onUpdateIp, onLinkController }
                                                                                 setIsOpen(false);
                                                                                 onAddController(device);
                                                                             } else if (action.type === 'conflict' && onAddController) {
-                                                                                // Conflict: Basically "Replace" logic, but simplest is just Add as new, 
-                                                                                // backend should handle uniqueness or we just let it overwrite IP by being active?
-                                                                                // User wanted "Replace". So we will just Add, and maybe backend invalidates the old one?
-                                                                                // Actually, if we Add a new one with same IP, they will conflict.
-                                                                                // But for now, let's treat "Replace" == "Add as New" (user knows old is dead).
                                                                                 setIsOpen(false);
                                                                                 onAddController(device);
                                                                             }

@@ -24,6 +24,43 @@ export class HardwareController {
         }
     }
 
+    static async getNetworkInterfaces(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const os = await import('os');
+            const interfaces = os.networkInterfaces();
+            const results: any[] = [];
+
+            Object.keys(interfaces).forEach((name) => {
+                interfaces[name]?.forEach((net) => {
+                    // Filter out internal (localhost) and non-IPv4 addresses for clarity
+                    if (net.family === 'IPv4' && !net.internal) {
+                        // Calculate Broadcast Address
+                        // IP & Netmask -> Binary bitwise ops
+                        // Simplified: Broadcast = IP | (~SubnetMask)
+
+                        const ipParts = net.address.split('.').map(Number);
+                        const maskParts = net.netmask.split('.').map(Number);
+                        const broadcastParts = ipParts.map((part, i) => (part | (~maskParts[i] & 255)));
+                        const broadcast = broadcastParts.join('.');
+
+                        results.push({
+                            name,
+                            address: net.address,
+                            netmask: net.netmask,
+                            mac: net.mac,
+                            broadcast
+                        });
+                    }
+                });
+            });
+
+            return reply.send({ success: true, data: results });
+        } catch (error: any) {
+            req.log.error(error);
+            return reply.status(500).send({ success: false, error: 'Failed to retrieve network interfaces' });
+        }
+    }
+
     static async refreshDevice(req: FastifyRequest, reply: FastifyReply) {
         try {
             const { id } = req.params as { id: string };
