@@ -994,6 +994,27 @@ export class HardwareController {
             const userTags = body.tags || [];
             const mergedTags = Array.from(new Set([...userTags, ...templateTags]));
 
+            // --- UNIT RESOLUTION LOGIC ---
+            let baseUnit = template.uiConfig?.units?.[0]; // Default from UI Config
+            const activeRole = body.config?.activeRole;
+
+            // Try to find stricter baseUnit from Measurements schema
+            if (template.measurements) {
+                // Priority: ActiveRole -> First Measurement Key
+                // @ts-ignore
+                const measureKey = activeRole && template.measurements[activeRole] ? activeRole : Object.keys(template.measurements)[0];
+                // @ts-ignore
+                if (measureKey && template.measurements[measureKey]) {
+                    // @ts-ignore
+                    baseUnit = template.measurements[measureKey].baseUnit;
+                }
+            }
+
+            // Special Case: Actuators default to 'boolean' if no unit found/defined
+            if (body.type === 'ACTUATOR' && !baseUnit) {
+                baseUnit = 'boolean';
+            }
+
             const device = new DeviceModel({
                 name: body.name,
                 type: body.type,
@@ -1004,7 +1025,9 @@ export class HardwareController {
                 tags: mergedTags, // Add tags support
                 group: template.uiConfig?.category || 'Other', // Auto-populate group from template
                 resourceRole: body.resourceRole, // Resource role for analytics
-                analyticsLabel: body.analyticsLabel // Assigned from body
+                analyticsLabel: body.analyticsLabel, // Assigned from body
+                baseUnit: baseUnit,
+                displayUnit: body.displayUnit || baseUnit // Auto-populate displayUnit
             });
 
             await device.save();
