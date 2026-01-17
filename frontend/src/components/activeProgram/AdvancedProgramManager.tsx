@@ -1255,6 +1255,16 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
                                                                 <SelectItem value="none">-- Няма (No Fallback) --</SelectItem>
                                                                 {window.triggers.map((t: any, idx: number) => {
+                                                                    // Check for unconditional trigger
+                                                                    if (t.conditionEnabled === false) {
+                                                                        return (
+                                                                            <SelectItem key={t.id} value={t.id}>
+                                                                                <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
+                                                                                <span className="text-orange-500 font-bold">⚠️ БЕЗ УСЛОВИЕ</span>
+                                                                            </SelectItem>
+                                                                        );
+                                                                    }
+
                                                                     const label = t.conditions?.map((c: any) => {
                                                                         const sName = getSensorName(c.sensorId);
                                                                         return `${sName} ${formatOperator(c.operator)} ${c.value}`;
