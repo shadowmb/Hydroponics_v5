@@ -324,7 +324,8 @@ export class ActiveProgramService {
 
         // --- STALE STATE DETECTION (Resume Logic) ---
         if (active.type === 'ADVANCED' && active.windowsState) {
-            const now = new Date();
+            const { timeService } = require('../../core/TimeService');
+            const now = timeService.now(); // Use Simulated Time
             const currentHours = now.getHours().toString().padStart(2, '0');
             const currentMinutes = now.getMinutes().toString().padStart(2, '0');
             const currentTimeStr = `${currentHours}:${currentMinutes}`;
