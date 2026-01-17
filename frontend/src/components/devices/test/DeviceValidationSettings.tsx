@@ -24,8 +24,17 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
         fallbackAction: device.config?.validation?.fallbackAction ?? 'error',
         staleLimit: device.config?.validation?.staleLimit ?? 1,
         staleTimeoutMs: device.config?.validation?.staleTimeoutMs ?? 30000,
-        defaultValue: device.config?.validation?.defaultValue ?? ''
+        defaultValue: device.config?.validation?.defaultValue ?? '',
+        _timeUnit: 'sec' // Default unit
     });
+
+    // Determine unit on mount
+    useEffect(() => {
+        const ms = config.staleTimeoutMs || 30000;
+        if (ms % 3600000 === 0) setConfig((prev: any) => ({ ...prev, _timeUnit: 'hour' }));
+        else if (ms % 60000 === 0) setConfig((prev: any) => ({ ...prev, _timeUnit: 'min' }));
+        else setConfig((prev: any) => ({ ...prev, _timeUnit: 'sec' }));
+    }, []); // Run once on mount (or when config loaded if we depend on props)
 
     const [sampling, setSampling] = useState<any>({
         count: device.config?.sampling?.count ?? samplingDefaults?.count ?? '',
@@ -340,40 +349,102 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="error">check Report Error (Safest)</SelectItem>
-                                    <SelectItem value="useLastValid">⚠️ Use Last Valid Value</SelectItem>
-                                    <SelectItem value="useDefault">⚠️ Use Default Value</SelectItem>
-                                    <SelectItem value="skip">⚠️ Skip (Loop Only)</SelectItem>
+                                    <SelectItem value="error">🔴 Stop / Error (Default)</SelectItem>
+                                    <SelectItem value="useLastValid">🟡 Use Last Valid Value</SelectItem>
+                                    <SelectItem value="useDefault">🔵 Use Default Value</SelectItem>
                                 </SelectContent>
                             </Select>
 
                             {/* Conditional Fields based on Fallback */}
-                            {['useLastValid', 'useDefault', 'skip'].includes(config.fallbackAction) && (
+                            {['useLastValid', 'useDefault'].includes(config.fallbackAction) && (
                                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md space-y-3">
                                     <p className="text-xs text-yellow-500 font-medium flex items-center gap-2">
                                         <AlertTriangle className="h-3 w-3" />
                                         Warning: This strategy can mask invalid sensor data.
                                     </p>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium">Stale Limit (Consecutive)</label>
-                                            <input type="number" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                                value={config.staleLimit}
-                                                min={1}
-                                                onChange={(e) => updateField('staleLimit', Number(e.target.value))}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium">Stale Timeout (ms)</label>
-                                            <input type="number" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                                value={config.staleTimeoutMs}
-                                                step={1000}
-                                                onChange={(e) => updateField('staleTimeoutMs', Number(e.target.value))}
-                                            />
-                                        </div>
-                                    </div>
+                                    {/* --- USE LAST VALID CONFIG --- */}
+                                    {config.fallbackAction === 'useLastValid' && (
+                                        <div className="space-y-4">
+                                            {/* Time Config Row */}
+                                            <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium">Max Data Age</label>
+                                                    <input
+                                                        type="number"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                        value={
+                                                            (config.staleTimeoutMs || 30000) / (
+                                                                (config._timeUnit === 'min' ? 60000 : (config._timeUnit === 'hour' ? 3600000 : 1000))
+                                                            )
+                                                        }
+                                                        min={1} step={0.5}
+                                                        onChange={(e) => {
+                                                            const val = Number(e.target.value);
+                                                            const multiplier = config._timeUnit === 'min' ? 60000 : (config._timeUnit === 'hour' ? 3600000 : 1000);
+                                                            updateField('staleTimeoutMs', val * multiplier);
+                                                        }}
+                                                    />
+                                                </div>
+                                                <Select
+                                                    value={config._timeUnit || 'sec'}
+                                                    onValueChange={(unit) => {
+                                                        // Convert current value when switching unit to preserve duration?
+                                                        // Or just switch unit metadata? Let's just switch unit state and recalc value above
+                                                        // Actually simpler to just store unit in local state
+                                                        setConfig((prev: any) => ({ ...prev, _timeUnit: unit }));
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-[100px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="sec">Seconds</SelectItem>
+                                                        <SelectItem value="min">Minutes</SelectItem>
+                                                        <SelectItem value="hour">Hours</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
 
+                                            {/* Default Fallback Checkbox */}
+                                            <div className="flex items-center space-x-2 pt-1 border-t border-border/10">
+                                                <input
+                                                    type="checkbox"
+                                                    id="useDefaultOnExpiry"
+                                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    checked={config.defaultValue !== undefined && config.defaultValue !== ''}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            updateField('defaultValue', 0); // Init with 0
+                                                        } else {
+                                                            updateField('defaultValue', ''); // Clear to disable
+                                                        }
+                                                    }}
+                                                />
+                                                <label
+                                                    htmlFor="useDefaultOnExpiry"
+                                                    className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                >
+                                                    Use "Default Value" if data is too old?
+                                                </label>
+                                            </div>
+
+                                            {/* Default Value Input (Conditional) */}
+                                            {(config.defaultValue !== undefined && config.defaultValue !== '') && (
+                                                <div className="space-y-2 pl-6 animate-in fade-in slide-in-from-top-1">
+                                                    <label className="text-xs font-medium">Default Value (Safe Fallback)</label>
+                                                    <input
+                                                        type="number"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                        value={config.defaultValue}
+                                                        onChange={(e) => updateField('defaultValue', e.target.value)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* --- USE DEFAULT CONFIG --- */}
                                     {config.fallbackAction === 'useDefault' && (
                                         <div className="space-y-2">
                                             <label className="text-xs font-medium">Default Value</label>
