@@ -1254,29 +1254,28 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                 )}
 
                                                                 <SelectItem value="none">-- Няма (No Fallback) --</SelectItem>
-                                                                {window.triggers.map((t: any, idx: number) => {
-                                                                    // Check for unconditional trigger
-                                                                    if (t.conditionEnabled === false) {
+                                                                {window.triggers
+                                                                    .filter((t: any) => t.conditionEnabled !== false)
+                                                                    .map((t: any, idx: number) => {
+                                                                        const label = t.conditions?.map((c: any) => {
+                                                                            const sName = getSensorName(c.sensorId);
+                                                                            return `${sName} ${formatOperator(c.operator)} ${c.value}`;
+                                                                        }).join(' & ');
+
                                                                         return (
                                                                             <SelectItem key={t.id} value={t.id}>
                                                                                 <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
-                                                                                <span className="text-orange-500 font-bold">⚠️ БЕЗ УСЛОВИЕ</span>
+                                                                                {label || `Trigger #${idx + 1}`}
                                                                             </SelectItem>
                                                                         );
-                                                                    }
+                                                                    })}
 
-                                                                    const label = t.conditions?.map((c: any) => {
-                                                                        const sName = getSensorName(c.sensorId);
-                                                                        return `${sName} ${formatOperator(c.operator)} ${c.value}`;
-                                                                    }).join(' & ');
-
-                                                                    return (
-                                                                        <SelectItem key={t.id} value={t.id}>
-                                                                            <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
-                                                                            {label || `Trigger #${idx + 1}`}
-                                                                        </SelectItem>
-                                                                    );
-                                                                })}
+                                                                {/* Edge Case: If currently selected fallback is disabled (hidden), show it as invalid */}
+                                                                {window.fallbackTriggerId && window.triggers.find((t: any) => t.id === window.fallbackTriggerId && t.conditionEnabled === false) && (
+                                                                    <SelectItem value={window.fallbackTriggerId} disabled>
+                                                                        <span className="text-orange-500 font-bold">⚠️ БЕЗ УСЛОВИЕ (Current - Invalid)</span>
+                                                                    </SelectItem>
+                                                                )}
                                                             </SelectContent>
                                                         </Select>
                                                     </div>

@@ -276,30 +276,29 @@ export const TimeWindowCard: React.FC<TimeWindowCardProps> = ({
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="none">-- Няма (No Fallback) --</SelectItem>
-                                            {window.triggers.map((t, idx) => {
-                                                // Check for unconditional trigger
-                                                if (t.conditionEnabled === false) {
+                                            {window.triggers
+                                                .filter(t => t.conditionEnabled !== false) // Hide unconditional triggers
+                                                .map((t, idx) => {
+                                                    // Generate readable label for standard triggers
+                                                    const label = t.conditions?.map(c => {
+                                                        const sName = sensorsMap[c.sensorId || ''] || c.sensorId || 'Sensor';
+                                                        return `${sName} ${formatOperator(c.operator!)} ${c.value}`;
+                                                    }).join(' & ');
+
                                                     return (
                                                         <SelectItem key={t.id} value={t.id}>
                                                             <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
-                                                            <span className="text-orange-500 font-bold">⚠️ БЕЗ УСЛОВИЕ</span>
+                                                            {label || `Trigger #${idx + 1}`}
                                                         </SelectItem>
                                                     );
-                                                }
+                                                })}
 
-                                                // Generatae readable label for standard triggers
-                                                const label = t.conditions?.map(c => {
-                                                    const sName = sensorsMap[c.sensorId || ''] || c.sensorId || 'Sensor';
-                                                    return `${sName} ${formatOperator(c.operator!)} ${c.value}`;
-                                                }).join(' & ');
-
-                                                return (
-                                                    <SelectItem key={t.id} value={t.id}>
-                                                        <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
-                                                        {label || `Trigger #${idx + 1}`}
-                                                    </SelectItem>
-                                                );
-                                            })}
+                                            {/* Edge Case: If currently selected fallback is an unconditional trigger (hidden), show it as disabled/invalid option to prevent UI glitch */}
+                                            {window.fallbackTriggerId && window.triggers.find(t => t.id === window.fallbackTriggerId && t.conditionEnabled === false) && (
+                                                <SelectItem value={window.fallbackTriggerId} disabled>
+                                                    <span className="text-orange-500 font-bold">⚠️ БЕЗ УСЛОВИЕ (Current - Invalid)</span>
+                                                </SelectItem>
+                                            )}
                                         </SelectContent>
                                     </Select>
 
