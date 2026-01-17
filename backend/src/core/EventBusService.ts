@@ -94,6 +94,7 @@ export interface SystemEvents {
     'advanced:program_day_complete': { programId?: string; timestamp: Date };
     'active:program_started': { programId: string; timestamp?: Date };
     'advanced:manual_check': { programId: string; timestamp: Date; userInitiated: boolean };
+    'time:sync': { isSimulating: boolean; time: Date; offsetMs: number };
 }
 
 export class EventBusService {

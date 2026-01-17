@@ -32,8 +32,9 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     const [serverTimezone, setServerTimezone] = useState('Europe/Sofia');
     const [manualOffsetMinutes, setManualOffsetMinutes] = useState(0);
 
-    // Initial Fetch from Backend
+    // Initial Fetch from Backend & Socket Listener
     useEffect(() => {
+        // 1. Fetch initial state
         fetch('/api/time')
             .then(res => res.json())
             .then(data => {
@@ -46,6 +47,27 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
                 }
             })
             .catch(err => console.error("Failed to fetch time status:", err));
+
+        // 2. Listen for Socket Sync (Real-time updates from Backend)
+        const onTimeSync = (data: { isSimulating: boolean, time: string, offsetMs: number }) => {
+            console.log('🔄 Socket Time Sync:', data);
+            setIsSimulating(data.isSimulating);
+            setVirtualTime(new Date(data.time));
+            if (data.offsetMs !== undefined) {
+                setManualOffsetMinutes(Math.round(data.offsetMs / 60000));
+            }
+        };
+
+        import('../core/SocketService').then(({ socketService }) => {
+            socketService.on('time:sync', onTimeSync);
+        });
+
+        // Cleanup
+        return () => {
+            import('../core/SocketService').then(({ socketService }) => {
+                socketService.off('time:sync', onTimeSync);
+            });
+        };
     }, []);
 
     // --- Clock Logic (The Heartbeat) ---

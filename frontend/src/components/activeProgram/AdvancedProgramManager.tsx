@@ -27,6 +27,7 @@ import { AdvancedExecutionLog } from './AdvancedExecutionLog';
 import { VariableConfigModal } from './VariableConfigModal';
 import { NextCheckTimer } from './NextCheckTimer';
 import { ExpiredWindowsDialog } from './ExpiredWindowsDialog';
+import { useSimulation } from '@/context/SimulationContext';
 
 interface AdvancedProgramManagerProps {
     program: IActiveProgram;
@@ -95,7 +96,9 @@ const getStatusIcon = (status: string) => {
 export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramManagerProps) => {
     const [expandedWindows, setExpandedWindows] = useState<Set<string>>(new Set());
     const [processing, setProcessing] = useState(false);
-    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Use Synchronized Time (Backend Simulation aware)
+    const { virtualTime: currentTime } = useSimulation();
 
     // Delayed Start state
     const [isDelayedStartOpen, setIsDelayedStartOpen] = useState(false);
@@ -171,12 +174,6 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         loadData();
     }, []);
 
-    // Update current time every second
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
     // Initialize delayed start inputs
     useEffect(() => {
         if (program?.status === 'scheduled' && program.startTime) {
@@ -184,7 +181,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             setDateInput(format(start, 'dd.MM.yyyy'));
             setTimeInput(format(start, 'HH:mm'));
         } else {
-            const tomorrow = new Date();
+            const tomorrow = new Date(currentTime);
             tomorrow.setDate(tomorrow.getDate() + 1);
             setDateInput(format(tomorrow, 'dd.MM.yyyy'));
             setTimeInput(format(tomorrow, 'HH:mm'));
@@ -200,7 +197,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
         const updateTimer = () => {
             const start = new Date(program.startTime!);
-            const now = new Date();
+            const now = currentTime; // Sync Time
             const diffMins = differenceInMinutes(start, now);
 
             if (diffMins <= 0) {
@@ -371,7 +368,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         // If program is scheduled/running, we must check if "Now" is potentially inside this window
         // to prevent editing 1 second before start.
         if (program.status === 'running' || program.status === 'scheduled') {
-            const now = new Date();
+            const now = currentTime; // Use synchronized time
             const [startH, startM] = window.startTime.split(':').map(Number);
             const [endH, endM] = window.endTime.split(':').map(Number);
 
@@ -384,11 +381,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             // Handle overnight windows
             if (end < start) end.setDate(end.getDate() + 1);
 
-            // If we are IN the window (or very close, e.g. < 1 min?), disable edit
-            // Simple check: start <= now <= end
-            // Actually, if we are in the window, status *should* be active, but might be pending if
-            // scheduler hasn't ticked yet or just finished a cycle.
-            // Safer to disable if we are strictly inside the time range.
+            // If we are strictly inside, disable edit
             if (now >= start && now <= end) return false;
         }
 
