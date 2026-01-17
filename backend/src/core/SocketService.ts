@@ -1,5 +1,6 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import mongoose from 'mongoose';
 import { logger } from './LoggerService';
 import { events, SystemEvents } from './EventBusService';
 
@@ -37,7 +38,21 @@ export class SocketService {
         });
 
         this.setupEventBridge();
+        this.startSystemHealthCheck();
         logger.info('🚀 Socket.io Initialized');
+    }
+
+    private startSystemHealthCheck() {
+        // Emit system status every 5 seconds
+        setInterval(() => {
+            if (!this.io) return;
+            const dbConnected = mongoose.connection.readyState === 1;
+
+            this.io.emit('system:health', {
+                status: dbConnected ? 'online' : 'degraded',
+                dbConnected
+            });
+        }, 5000);
     }
 
     private setupEventBridge() {

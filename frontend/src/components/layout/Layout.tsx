@@ -1,6 +1,6 @@
-import { useEffect } from "react"
+import React, { useEffect } from "react"
 import { Outlet, NavLink } from "react-router-dom"
-import { LayoutDashboard, Workflow, Settings, Sprout, Cpu, LineChart, Calendar, Play, Bot } from "lucide-react"
+import { LayoutDashboard, Settings, Sprout, Cpu, LineChart, Play, Bot, Workflow, Calendar, Plug } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { useStore } from "../../core/useStore"
@@ -13,7 +13,71 @@ import { AIInsightsButton } from "../ai/AIInsightsButton"
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
 
+// Sidebar Group Component (Simple Accordion)
+// Defined locally for now or could be extracted
+const NavGroup = ({ label, icon: Icon, items }: { label: string, icon: any, items: any[] }) => {
+    const [isOpen, setIsOpen] = React.useState(true); // Default open
+
+    return (
+        <div className="space-y-1">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground text-foreground/80 my-1"
+            >
+                <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    <span className="">{label}</span>
+                </div>
+                <span className={cn("transition-transform text-xs opacity-50", isOpen ? "rotate-90" : "")}>›</span>
+            </button>
+
+            {isOpen && (
+                <div className="pl-4 space-y-1 border-l ml-4 border-border/40">
+                    {items.map(subItem => (
+                        <NavLink
+                            key={subItem.to}
+                            to={subItem.to}
+                            className={({ isActive }) =>
+                                cn(
+                                    "flex items-center rounded-md px-3 py-2 text-xs font-medium hover:bg-accent hover:text-accent-foreground",
+                                    isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                                )
+                            }
+                        >
+                            {subItem.icon && <subItem.icon className="mr-2 h-4 w-4 opacity-70" />}
+                            <span>{subItem.label}</span>
+                        </NavLink>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 function Sidebar({ className }: SidebarProps) {
+    const navItems = [
+        { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+        {
+            group: 'Automation',
+            icon: Play,
+            items: [
+                { to: '/active-program', label: 'Active Program', icon: Play },
+                { to: '/programs', label: 'Programs', icon: Calendar },
+                { to: '/flows', label: 'Flows', icon: Workflow },
+            ]
+        },
+        { to: '/hardware', icon: Cpu, label: 'Hardware' },
+        { to: '/analytics', icon: LineChart, label: 'Data & Analytics' },
+        {
+            group: 'Plugins',
+            icon: Plug,
+            items: [
+                { to: '/assistant', label: 'AI Assistant', icon: Bot },
+            ]
+        },
+        { to: '/settings', icon: Settings, label: 'Settings' },
+    ];
+
     return (
         <div className={cn("pb-12 w-64 border-r bg-card", className)}>
             <div className="space-y-4 py-4">
@@ -23,126 +87,25 @@ function Sidebar({ className }: SidebarProps) {
                         Hydroponics v5
                     </h2>
                     <div className="space-y-1">
-                        <NavLink
-                            to="/"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <LayoutDashboard className="mr-2 h-4 w-4" />
-                            Dashboard
-                        </NavLink>
-                        <NavLink
-                            to="/programs"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Programs
-                        </NavLink>
-                        <NavLink
-                            to="/active-program"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <Play className="mr-2 h-4 w-4" />
-                            Active Program
-                        </NavLink>
-                        <NavLink
-                            to="/editor"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <Workflow className="mr-2 h-4 w-4" />
-                            Flow Editor
-                        </NavLink>
-                        <NavLink
-                            to="/flows"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <Workflow className="mr-2 h-4 w-4" />
-                            Flows
-                        </NavLink>
-                        {/* <NavLink
-                            to="/cycles"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <Repeat className="mr-2 h-4 w-4" />
-                            Cycles
-                        </NavLink> */}
-                        <NavLink
-                            to="/hardware"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <Cpu className="mr-2 h-4 w-4" />
-                            Hardware
-                        </NavLink>
-                        <NavLink
-                            to="/analytics"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <LineChart className="mr-2 h-4 w-4" />
-                            Data & Analytics
-                        </NavLink>
-                        <NavLink
-                            to="/settings"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <Settings className="mr-2 h-4 w-4" />
-                            Settings
-                        </NavLink>
-                        <NavLink
-                            to="/assistant"
-                            className={({ isActive }) =>
-                                cn(
-                                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                                    isActive ? "bg-accent text-accent-foreground" : "transparent"
-                                )
-                            }
-                        >
-                            <Bot className="mr-2 h-4 w-4" />
-                            AI Assistant
-                        </NavLink>
+                        {navItems.map((item: any) => (
+                            item.group ? (
+                                <NavGroup key={item.group} label={item.group} icon={item.icon} items={item.items} />
+                            ) : (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    className={({ isActive }) =>
+                                        cn(
+                                            "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                                            isActive ? "bg-accent text-accent-foreground" : "transparent"
+                                        )
+                                    }
+                                >
+                                    <item.icon className="mr-2 h-4 w-4" />
+                                    {item.label}
+                                </NavLink>
+                            )
+                        ))}
                     </div>
                 </div>
             </div>
@@ -180,6 +143,11 @@ export function Layout() {
             if (device) {
                 updateDevice({ ...device, ...changes } as any);
             }
+        });
+
+        // Listen for System Health (DB Connection)
+        socketService.on('system:health', (payload: any) => {
+            setSystemStatus(payload.status, payload.dbConnected);
         });
 
         return () => {

@@ -98,8 +98,13 @@ export class AutomationController {
             currentBlockId: snapshot.context.currentBlockId
         };
 
+        // Check Database Connection
+        const mongoose = await import('mongoose');
+        const dbConnected = mongoose.connection.readyState === 1;
+
         return reply.send({
-            status: 'online', // Backend is reachable
+            status: dbConnected ? 'online' : 'degraded',
+            dbConnected,
             serverTime: new Date().toISOString(),
             schedulerLastTick: require('../../modules/scheduler/SchedulerService').schedulerService.getLastTick(),
             schedulerState: require('../../modules/scheduler/SchedulerService').schedulerService.getState(),

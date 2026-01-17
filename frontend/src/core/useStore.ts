@@ -2,11 +2,12 @@ import { create } from 'zustand';
 import type { IDevice, IExecutionSession } from '../../../shared/types';
 
 interface AppState {
-    systemStatus: 'online' | 'offline';
+    systemStatus: 'online' | 'offline' | 'degraded';
+    dbConnected: boolean;
     devices: Map<string, IDevice>;
     activeSession: IExecutionSession | null;
 
-    setSystemStatus: (status: 'online' | 'offline') => void;
+    setSystemStatus: (status: 'online' | 'offline' | 'degraded', dbConnected?: boolean) => void;
     setDevices: (devices: IDevice[]) => void;
     updateDevice: (device: IDevice) => void;
     deviceTemplates: any[];
@@ -19,12 +20,16 @@ interface AppState {
 
 export const useStore = create<AppState>((set) => ({
     systemStatus: 'offline',
+    dbConnected: false,
     devices: new Map(),
     activeSession: null,
     timeOffset: 0,
     logs: [],
 
-    setSystemStatus: (status) => set({ systemStatus: status }),
+    setSystemStatus: (status, dbConnected) => set((state) => ({
+        systemStatus: status,
+        dbConnected: dbConnected !== undefined ? dbConnected : state.dbConnected
+    })),
 
     setDevices: (devicesList) => set((state) => {
         const newMap = new Map(state.devices);

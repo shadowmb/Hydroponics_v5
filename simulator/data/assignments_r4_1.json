@@ -63,7 +63,7 @@
       "A2_16"
     ],
     "values": {
-      "soil_moisture": 45
+      "soil_moisture": 47
     },
     "calibrationPoints": [
       {
@@ -92,7 +92,7 @@
       "D2_2"
     ],
     "values": {
-      "temp": 125
+      "temp": 27
     },
     "calibrationPoints": [
       {
