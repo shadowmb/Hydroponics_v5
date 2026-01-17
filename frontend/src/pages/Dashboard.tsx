@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, Wifi, WifiOff, Clock, Settings } from 'lucide-react';
+import { Activity, Wifi, WifiOff, Clock, Settings, Cpu, Server } from 'lucide-react';
 import { useStore } from '../core/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -12,6 +12,11 @@ export const Dashboard: React.FC = () => {
     const { systemStatus, devices, activeSession } = useStore();
     const [programUptime, setProgramUptime] = useState<string>('00:00:00');
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [controllersCount, setControllersCount] = useState(0);
+    const [onlineControllers, setOnlineControllers] = useState(0);
+
+    const onlineDevices = Array.from(devices.values()).filter((d: any) => d.status === 'online').length;
+    const offlineDevices = devices.size - onlineDevices;
 
     // Program Uptime Counter (if active session exists)
     useEffect(() => {
@@ -38,14 +43,22 @@ export const Dashboard: React.FC = () => {
     useEffect(() => {
         const fetchStatus = async () => {
             try {
-                const sysRes = await fetch('/api/system/status');
-                if (sysRes.ok) {
-                    const status = await sysRes.json();
-                    useStore.getState().setSystemStatus(status.status);
-                    useStore.getState().setActiveSession(status.session);
-                }
+                // Parallel fetch for speed
+                const [{ status: sysStatus, session }, devicesList, controllersList] = await Promise.all([
+                    fetch('/api/system/status').then(r => r.json()),
+                    import('../services/hardwareService').then(m => m.hardwareService.getDevices()),
+                    import('../services/hardwareService').then(m => m.hardwareService.getControllers())
+                ]);
+
+                useStore.getState().setSystemStatus(sysStatus, (sysStatus as any).dbConnected); // Handle dynamic API response
+                useStore.getState().setActiveSession(session);
+                useStore.getState().setDevices(devicesList);
+
+                setControllersCount(controllersList.length);
+                setOnlineControllers(controllersList.filter((c: any) => c.status === 'online').length);
+
             } catch (error) {
-                console.error('Failed to fetch status:', error);
+                console.error('Failed to fetch dashboard data:', error);
             }
         };
         fetchStatus();
@@ -85,15 +98,59 @@ export const Dashboard: React.FC = () => {
                     </CardContent>
                 </Card>
 
-                {/* Active Devices */}
+                {/* Active Hardware */}
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Devices</CardTitle>
-                        <Activity className="h-4 w-4 text-blue-500" />
+                    <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2 relative">
+                        <CardTitle className="text-sm font-medium">Hardware Status</CardTitle>
+                        <Activity className={`absolute right-6 h-4 w-4 ${offlineDevices > 0 || (controllersCount - onlineControllers) > 0 ? 'text-yellow-500 animate-pulse' : 'text-blue-500'}`} />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{devices.size}</div>
-                        <p className="text-xs text-muted-foreground">Connected hardware</p>
+                        <div className="grid grid-cols-2 gap-4 text-center mt-2 relative">
+                            {/* Vertical Divider */}
+                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border -translate-x-1/2" />
+
+                            {/* Devices Column */}
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <Cpu className="h-3 w-3" /> Devices
+                                </span>
+                                <div className="text-2xl font-bold leading-none mb-2">
+                                    {devices.size} <span className="text-sm text-muted-foreground font-normal">Total</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm font-medium">
+                                    <span className="text-green-500 flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                                        {onlineDevices}
+                                    </span>
+                                    <span className="text-muted-foreground/30">|</span>
+                                    <span className={offlineDevices > 0 ? "text-destructive flex items-center gap-1" : "text-muted-foreground/50 flex items-center gap-1"}>
+                                        <div className={`w-2 h-2 rounded-full ${offlineDevices > 0 ? "bg-destructive" : "bg-muted-foreground/30"}`} />
+                                        {offlineDevices}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Controllers Column */}
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <Server className="h-3 w-3" /> Controllers
+                                </span>
+                                <div className="text-2xl font-bold leading-none mb-2">
+                                    {controllersCount} <span className="text-sm text-muted-foreground font-normal">Total</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm font-medium">
+                                    <span className="text-green-500 flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                                        {onlineControllers}
+                                    </span>
+                                    <span className="text-muted-foreground/30">|</span>
+                                    <span className={(controllersCount - onlineControllers) > 0 ? "text-destructive flex items-center gap-1" : "text-muted-foreground/50 flex items-center gap-1"}>
+                                        <div className={`w-2 h-2 rounded-full ${(controllersCount - onlineControllers) > 0 ? "bg-destructive" : "bg-muted-foreground/30"}`} />
+                                        {controllersCount - onlineControllers}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 

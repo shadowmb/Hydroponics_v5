@@ -99,7 +99,7 @@ export class AutomationController {
         };
 
         // Check Database Connection
-        const mongoose = await import('mongoose');
+        const mongoose = (await import('mongoose')).default;
         const dbConnected = mongoose.connection.readyState === 1;
 
         return reply.send({
