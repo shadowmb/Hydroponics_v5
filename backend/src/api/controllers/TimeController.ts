@@ -37,14 +37,14 @@ export class TimeController {
     }
 
     // POST /api/time/offset
-    static async setOffset(req: FastifyRequest<{ Body: { minutes: number } }>, reply: FastifyReply) {
+    static async setOffset(req: FastifyRequest<{ Body: { minutes: number; persist?: boolean } }>, reply: FastifyReply) {
         try {
-            const { minutes } = req.body;
+            const { minutes, persist } = req.body;
             if (typeof minutes !== 'number') {
                 return reply.status(400).send({ success: false, error: 'minutes must be a number' });
             }
 
-            timeService.setManualOffset(minutes);
+            await timeService.setManualOffset(minutes, persist);
             return reply.send({ success: true, data: timeService.getStatus() });
         } catch (error) {
             req.log.error(error);
@@ -66,7 +66,7 @@ export class TimeController {
                 return reply.status(400).send({ success: false, error: 'Invalid timezone identifier' });
             }
 
-            timeService.setTimezone(timezone);
+            await timeService.setTimezone(timezone);
             return reply.send({ success: true, data: { timezone } });
         } catch (error) {
             req.log.error(error);

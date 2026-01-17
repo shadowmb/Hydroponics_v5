@@ -68,7 +68,7 @@
         "unit": "mm"
     },
     "sampling": {
-        "count": 3,
+        "count": 5,
         "delayMs": 50
     },
     "commands": {

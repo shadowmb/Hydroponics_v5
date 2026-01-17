@@ -66,6 +66,10 @@ export interface IDeviceTemplate extends Omit<Document, '_id'> {
         unit?: string;
         resolution?: number;
     };
+    sampling?: {
+        count: number;
+        delayMs: number;
+    };
     initialState?: Record<string, any>;
     variants?: {
         id: string;
@@ -136,6 +140,10 @@ const DeviceTemplateSchema = new Schema<IDeviceTemplate>({
         max: { type: Number },
         unit: { type: String },
         resolution: { type: Number }
+    },
+    sampling: {
+        count: { type: Number },
+        delayMs: { type: Number }
     },
     initialState: { type: Schema.Types.Mixed },
     variants: [{

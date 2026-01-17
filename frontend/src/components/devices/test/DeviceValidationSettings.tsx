@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Square, Play, AlertTriangle, Save, ChevronDown, Filter } from 'lucide-react';
+import { Square, Play, AlertTriangle, Save, ChevronDown, Filter, RotateCcw, PowerOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -155,7 +155,13 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                 <Filter className="h-4 w-4" />
                             </div>
                             <div className="text-left">
-                                <h3 className="font-medium">Noise Filtering</h3>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-medium">Noise Filtering</h3>
+                                    {(Number(sampling.count) > 1)
+                                        ? <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">ACTIVE</span>
+                                        : <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground border">RAW</span>
+                                    }
+                                </div>
                                 <p className="text-sm text-muted-foreground">Burst read with median to eliminate spikes</p>
                             </div>
                         </div>
@@ -189,6 +195,32 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                 />
                                 <p className="text-xs text-muted-foreground">Pause between samples (0-500ms)</p>
                             </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border/50">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSampling({ count: 1, delayMs: 0 })}
+                                className="h-8 text-xs flex-1"
+                                title="Set Count=1, Delay=0 (Raw Data)"
+                            >
+                                <PowerOff className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                                Disable Filtering
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => samplingDefaults && setSampling(samplingDefaults)}
+                                disabled={!samplingDefaults}
+                                className="h-8 text-xs flex-1"
+                                title="Restore Recommended Defaults"
+                            >
+                                <RotateCcw className="mr-2 h-3.5 w-3.5 text-blue-500" />
+                                Restore Recommended
+                            </Button>
                         </div>
                     </CollapsibleContent>
                 </div>

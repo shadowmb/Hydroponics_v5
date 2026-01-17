@@ -12,6 +12,7 @@ import { seedControllerTemplates } from './utils/seedTemplates';
 // import { seedDeviceTemplates } from './utils/seedDeviceTemplates';
 import { hardware } from './modules/hardware/HardwareService';
 import { historyService } from './services/HistoryService';
+import { timeService } from './core/TimeService';
 import { notifications } from './services/NotificationService';
 import { programLogService } from './services/ProgramLogService'; // Ensure listeners are registered
 import ResourceRoleManager from './services/ResourceRoleManager';
@@ -80,6 +81,9 @@ async function bootstrap() {
         // 5. Initialize Hardware Service
         console.log('Initializing Hardware Service...');
         await hardware.initialize();
+
+        console.log('Initializing Time Service...');
+        await timeService.initialize();
 
         console.log('Initializing History Service...');
         historyService.initialize();

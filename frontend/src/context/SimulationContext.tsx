@@ -111,21 +111,15 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     const disableSimulation = () => {
         setIsSimulating(false);
         setSimulationSpeed('1x');
-        setManualOffsetMinutes(0);
+        // Do NOT reset manual offset here. Backend will restore persisted offset if exists.
+        // setManualOffsetMinutes(0); 
 
-        // Reset backend
-        Promise.all([
-            fetch('/api/time/simulate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enable: false })
-            }),
-            fetch('/api/time/offset', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ minutes: 0 })
-            })
-        ]).catch(() => toast.error("Failed to reset server time"));
+        // Inform backend
+        fetch('/api/time/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enable: false })
+        }).catch(() => toast.error("Failed to reset server time"));
     };
 
     const setVirtualTimeAction = (date: Date) => {
@@ -166,7 +160,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         fetch('/api/time/offset', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ minutes: offsetMinutes })
+            body: JSON.stringify({ minutes: offsetMinutes, persist: true }) // Added persist: true
         }).catch(() => toast.error("Failed to set offset on server"));
     };
 
