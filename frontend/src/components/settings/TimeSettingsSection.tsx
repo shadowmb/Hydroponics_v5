@@ -254,14 +254,36 @@ export function TimeSettingsSection() {
 
                         <Separator className="my-3" />
 
-                        <div className="grid grid-cols-3 gap-2">
-                            <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVirtualTime(new Date(virtualTime.getTime() + 60000))}>
-                                <FastForward className="mr-1 h-3 w-3" /> +1 Min
-                            </Button>
-                            <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVirtualTime(new Date(virtualTime.getTime() + 3600000))}>
-                                <FastForward className="mr-1 h-3 w-3" /> +1 Hour
-                            </Button>
-                            <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => {
+                        {/* SIMULATION CONTROLS */}
+                        <div className="space-y-3">
+                            {/* BACKWARD (Past) */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <Button variant="outline" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground" onClick={() => setVirtualTime(new Date(virtualTime.getTime() - 60000))} title="-1 Minute">
+                                    <RotateCcw className="mr-1 h-3 w-3" /> -1m
+                                </Button>
+                                <Button variant="outline" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground" onClick={() => setVirtualTime(new Date(virtualTime.getTime() - 600000))} title="-10 Minutes">
+                                    <RotateCcw className="mr-1 h-3 w-3" /> -10m
+                                </Button>
+                                <Button variant="outline" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground" onClick={() => setVirtualTime(new Date(virtualTime.getTime() - 3600000))} title="-1 Hour">
+                                    <RotateCcw className="mr-1 h-3 w-3" /> -1h
+                                </Button>
+                            </div>
+
+                            {/* FORWARD (Future) */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVirtualTime(new Date(virtualTime.getTime() + 60000))} title="+1 Minute">
+                                    <FastForward className="mr-1 h-3 w-3" /> +1m
+                                </Button>
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVirtualTime(new Date(virtualTime.getTime() + 600000))} title="+10 Minutes">
+                                    <FastForward className="mr-1 h-3 w-3" /> +10m
+                                </Button>
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVirtualTime(new Date(virtualTime.getTime() + 3600000))} title="+1 Hour">
+                                    <FastForward className="mr-1 h-3 w-3" /> +1h
+                                </Button>
+                            </div>
+
+                            {/* SPECIAL */}
+                            <Button variant="outline" size="sm" className="w-full text-xs border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10" onClick={() => {
                                 const nextMorning = new Date(virtualTime);
                                 nextMorning.setDate(nextMorning.getDate() + 1);
                                 nextMorning.setHours(6, 0, 0, 0);

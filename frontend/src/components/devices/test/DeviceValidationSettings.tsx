@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Square, Play, AlertTriangle, Save, ChevronDown, Filter } from 'lucide-react';
+import { Square, Play, AlertTriangle, Save, ChevronDown, Filter, RotateCcw, PowerOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -24,8 +24,17 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
         fallbackAction: device.config?.validation?.fallbackAction ?? 'error',
         staleLimit: device.config?.validation?.staleLimit ?? 1,
         staleTimeoutMs: device.config?.validation?.staleTimeoutMs ?? 30000,
-        defaultValue: device.config?.validation?.defaultValue ?? ''
+        defaultValue: device.config?.validation?.defaultValue ?? '',
+        _timeUnit: 'sec' // Default unit
     });
+
+    // Determine unit on mount
+    useEffect(() => {
+        const ms = config.staleTimeoutMs || 30000;
+        if (ms % 3600000 === 0) setConfig((prev: any) => ({ ...prev, _timeUnit: 'hour' }));
+        else if (ms % 60000 === 0) setConfig((prev: any) => ({ ...prev, _timeUnit: 'min' }));
+        else setConfig((prev: any) => ({ ...prev, _timeUnit: 'sec' }));
+    }, []); // Run once on mount (or when config loaded if we depend on props)
 
     const [sampling, setSampling] = useState<any>({
         count: device.config?.sampling?.count ?? samplingDefaults?.count ?? '',
@@ -155,7 +164,13 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                 <Filter className="h-4 w-4" />
                             </div>
                             <div className="text-left">
-                                <h3 className="font-medium">Noise Filtering</h3>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-medium">Noise Filtering</h3>
+                                    {(Number(sampling.count) > 1)
+                                        ? <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">ACTIVE</span>
+                                        : <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground border">RAW</span>
+                                    }
+                                </div>
                                 <p className="text-sm text-muted-foreground">Burst read with median to eliminate spikes</p>
                             </div>
                         </div>
@@ -189,6 +204,32 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                 />
                                 <p className="text-xs text-muted-foreground">Pause between samples (0-500ms)</p>
                             </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border/50">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSampling({ count: 1, delayMs: 0 })}
+                                className="h-8 text-xs flex-1"
+                                title="Set Count=1, Delay=0 (Raw Data)"
+                            >
+                                <PowerOff className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                                Disable Filtering
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => samplingDefaults && setSampling(samplingDefaults)}
+                                disabled={!samplingDefaults}
+                                className="h-8 text-xs flex-1"
+                                title="Restore Recommended Defaults"
+                            >
+                                <RotateCcw className="mr-2 h-3.5 w-3.5 text-blue-500" />
+                                Restore Recommended
+                            </Button>
                         </div>
                     </CollapsibleContent>
                 </div>
@@ -308,40 +349,102 @@ export function DeviceValidationSettings({ device, onSave, hardwareLimits, sampl
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="error">check Report Error (Safest)</SelectItem>
-                                    <SelectItem value="useLastValid">⚠️ Use Last Valid Value</SelectItem>
-                                    <SelectItem value="useDefault">⚠️ Use Default Value</SelectItem>
-                                    <SelectItem value="skip">⚠️ Skip (Loop Only)</SelectItem>
+                                    <SelectItem value="error">🔴 Stop / Error (Default)</SelectItem>
+                                    <SelectItem value="useLastValid">🟡 Use Last Valid Value</SelectItem>
+                                    <SelectItem value="useDefault">🔵 Use Default Value</SelectItem>
                                 </SelectContent>
                             </Select>
 
                             {/* Conditional Fields based on Fallback */}
-                            {['useLastValid', 'useDefault', 'skip'].includes(config.fallbackAction) && (
+                            {['useLastValid', 'useDefault'].includes(config.fallbackAction) && (
                                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md space-y-3">
                                     <p className="text-xs text-yellow-500 font-medium flex items-center gap-2">
                                         <AlertTriangle className="h-3 w-3" />
                                         Warning: This strategy can mask invalid sensor data.
                                     </p>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium">Stale Limit (Consecutive)</label>
-                                            <input type="number" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                                value={config.staleLimit}
-                                                min={1}
-                                                onChange={(e) => updateField('staleLimit', Number(e.target.value))}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium">Stale Timeout (ms)</label>
-                                            <input type="number" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                                value={config.staleTimeoutMs}
-                                                step={1000}
-                                                onChange={(e) => updateField('staleTimeoutMs', Number(e.target.value))}
-                                            />
-                                        </div>
-                                    </div>
+                                    {/* --- USE LAST VALID CONFIG --- */}
+                                    {config.fallbackAction === 'useLastValid' && (
+                                        <div className="space-y-4">
+                                            {/* Time Config Row */}
+                                            <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium">Max Data Age</label>
+                                                    <input
+                                                        type="number"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                        value={
+                                                            (config.staleTimeoutMs || 30000) / (
+                                                                (config._timeUnit === 'min' ? 60000 : (config._timeUnit === 'hour' ? 3600000 : 1000))
+                                                            )
+                                                        }
+                                                        min={1} step={0.5}
+                                                        onChange={(e) => {
+                                                            const val = Number(e.target.value);
+                                                            const multiplier = config._timeUnit === 'min' ? 60000 : (config._timeUnit === 'hour' ? 3600000 : 1000);
+                                                            updateField('staleTimeoutMs', val * multiplier);
+                                                        }}
+                                                    />
+                                                </div>
+                                                <Select
+                                                    value={config._timeUnit || 'sec'}
+                                                    onValueChange={(unit) => {
+                                                        // Convert current value when switching unit to preserve duration?
+                                                        // Or just switch unit metadata? Let's just switch unit state and recalc value above
+                                                        // Actually simpler to just store unit in local state
+                                                        setConfig((prev: any) => ({ ...prev, _timeUnit: unit }));
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-[100px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="sec">Seconds</SelectItem>
+                                                        <SelectItem value="min">Minutes</SelectItem>
+                                                        <SelectItem value="hour">Hours</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
 
+                                            {/* Default Fallback Checkbox */}
+                                            <div className="flex items-center space-x-2 pt-1 border-t border-border/10">
+                                                <input
+                                                    type="checkbox"
+                                                    id="useDefaultOnExpiry"
+                                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    checked={config.defaultValue !== undefined && config.defaultValue !== ''}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            updateField('defaultValue', 0); // Init with 0
+                                                        } else {
+                                                            updateField('defaultValue', ''); // Clear to disable
+                                                        }
+                                                    }}
+                                                />
+                                                <label
+                                                    htmlFor="useDefaultOnExpiry"
+                                                    className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                >
+                                                    Use "Default Value" if data is too old?
+                                                </label>
+                                            </div>
+
+                                            {/* Default Value Input (Conditional) */}
+                                            {(config.defaultValue !== undefined && config.defaultValue !== '') && (
+                                                <div className="space-y-2 pl-6 animate-in fade-in slide-in-from-top-1">
+                                                    <label className="text-xs font-medium">Default Value (Safe Fallback)</label>
+                                                    <input
+                                                        type="number"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                        value={config.defaultValue}
+                                                        onChange={(e) => updateField('defaultValue', e.target.value)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* --- USE DEFAULT CONFIG --- */}
                                     {config.fallbackAction === 'useDefault' && (
                                         <div className="space-y-2">
                                             <label className="text-xs font-medium">Default Value</label>

@@ -58,12 +58,57 @@ class TimeService extends EventEmitter {
      * @param enable - Enable or disable simulation
      * @param targetDate - Optional target date to jump to
      */
+    public async initialize() {
+        try {
+            const { settingsService } = require('../modules/settings/services/SettingsService');
+            const config = await settingsService.getSetting('time_config');
+            if (config) {
+                if (config.timezone) {
+                    this.timezone = config.timezone;
+                    process.env.TZ = config.timezone;
+                    console.log(`[TimeService] Restored Timezone: ${this.timezone}`);
+                }
+                if (config.manualOffsetMs) {
+                    this.offsetMs = config.manualOffsetMs;
+                    // If we have a saved manual offset (Real World Correction), we usually treat it as permanent correction, NOT simulation.
+                    // So we do NOT set isSimulating = true.
+                    // However, if offset is present, `now()` logic needs to know if it should apply it.
+                    // Current logic: `if (!this.isSimulating && this.offsetMs === 0) return new Date();`
+                    // So if offsetMs != 0, it falls through to correction logic, which is correct.
+                    console.log(`[TimeService] Restored Manual Offset: ${this.offsetMs}ms`);
+                }
+            }
+        } catch (error) {
+            console.error('[TimeService] Failed to load time config:', error);
+        }
+    }
+
+    /**
+     * Sets the simulation mode
+     * @param enable - Enable or disable simulation
+     * @param targetDate - Optional target date to jump to
+     */
     public setSimulation(enable: boolean, targetDate?: Date) {
         this.isSimulating = enable;
         if (!enable) {
-            this.offsetMs = 0;
+            // Check if we have a persisted manual offset to fallback to?
+            // For now, disabling simulation resets everything specific to simulation, 
+            // BUT we should preserve "Real World Correction" if it was separate.
+            // Current simplified architecture mixes them.
+            // Ideally, we'd reload config or keep separate variables.
+            // For now, let's assume 'disableSimulation' clears ALL offsets (including manual).
+            // Users can re-apply Manual Offset if needed, or we improve architecture later.
+            // Wait, per user request: "Manual Offset" IS "Real World Setting". It SHOULD NOT be cleared by disableSimulation if it's meant to be permanent?
+            // But 'disableSimulation' implies "Return to Real Time". 
+            // Real Time + Correction IS the new Real Time.
+            // So, let's load the PERSISTED offset if we are disabling simulation.
+
             this.simulationSpeed = 1;
-            console.log(`[TimeService] Simulation DISABLED. Time restored to: ${new Date().toISOString()}`);
+            this.reloadPersistedOffset().then(() => {
+                console.log(`[TimeService] Simulation DISABLED. Time restored (with potential offset).`);
+                this.emit('time-changed', { isSimulating: this.isSimulating, time: this.now() });
+            });
+            return;
         } else if (targetDate) {
             this.offsetMs = targetDate.getTime() - Date.now();
             console.log(`[TimeService] Simulation ENABLED. Jumped to: ${targetDate.toISOString()} (Offset: ${this.offsetMs}ms)`);
@@ -71,27 +116,53 @@ class TimeService extends EventEmitter {
         this.emit('time-changed', { isSimulating: this.isSimulating, time: this.now() });
     }
 
+    private async reloadPersistedOffset() {
+        const { settingsService } = require('../modules/settings/services/SettingsService');
+        const config = await settingsService.getSetting('time_config');
+        if (config && config.manualOffsetMs) {
+            this.offsetMs = config.manualOffsetMs;
+        } else {
+            this.offsetMs = 0;
+        }
+    }
+
     /**
      * Manually sets the offset in minutes
+     * @param minutes - Offset in minutes
+     * @param persist - Whether to save this as a permanent configuration
      */
-    public setManualOffset(minutes: number) {
+    public async setManualOffset(minutes: number, persist: boolean = false) {
         this.offsetMs = minutes * 60 * 1000;
-        // Only enable simulation flag if offset is significant
-        this.isSimulating = minutes !== 0;
+
+        if (persist) {
+            // Real World Correction
+            this.isSimulating = false; // It's not a simulation, it's a correction
+            await this.saveConfig({ manualOffsetMs: this.offsetMs });
+        } else {
+            // Temporary Simulation Jump (legacy behavior or specific simulation tool usage)
+            this.isSimulating = minutes !== 0;
+        }
+
         this.emit('time-changed', { isSimulating: this.isSimulating, time: this.now() });
-        console.log(`[TimeService] Manual offset applied: ${minutes} min. Current Sim Time: ${this.now().toISOString()}`);
+        console.log(`[TimeService] Manual offset applied: ${minutes} min (Persist: ${persist}). Current Time: ${this.now().toISOString()}`);
     }
 
     public getTimezone(): string {
         return this.timezone;
     }
 
-    public setTimezone(tz: string) {
+    public async setTimezone(tz: string) {
         this.timezone = tz;
-        // Note: This changes the reported string, but Node process.env.TZ usually requires restart to fully take effect on Date objects.
-        // However, if we handle formatting manually, we can use this.
         process.env.TZ = tz;
         console.log(`[TimeService] Timezone set to: ${tz}`);
+        await this.saveConfig({ timezone: tz });
+    }
+
+    private async saveConfig(updates: Partial<{ timezone: string, manualOffsetMs: number }>) {
+        const { settingsService } = require('../modules/settings/services/SettingsService');
+        const currentConfig = await settingsService.getSetting('time_config') || {};
+        const newConfig = { ...currentConfig, ...updates };
+        await settingsService.saveSetting('time_config', newConfig, 'system', 'System Time Configuration');
     }
 
     public getStatus() {

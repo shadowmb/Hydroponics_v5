@@ -1019,7 +1019,10 @@ export class HardwareController {
                 name: body.name,
                 type: body.type,
                 hardware: body.hardware,
-                config: body.config,
+                config: {
+                    ...body.config,
+                    sampling: body.config.sampling || template.sampling // Use template default if not provided
+                },
                 metadata: body.metadata,
                 isEnabled: body.isEnabled,
                 tags: mergedTags, // Add tags support

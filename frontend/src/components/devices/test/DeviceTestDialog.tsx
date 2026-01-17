@@ -561,7 +561,7 @@ export const DeviceTestDialog: React.FC<DeviceTestDialogProps> = ({ open, onOpen
                                         }
                                     }}
                                     hardwareLimits={hardwareLimits}
-                                    samplingDefaults={samplingDefaults}
+                                    samplingDefaults={samplingDefaults || (device.config?.driverId?.sampling as any)}
                                 />
                             </TabsContent>
                         </div>

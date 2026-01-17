@@ -361,6 +361,7 @@ export class SchedulerService {
                         state.status = 'pending';
                         state.triggersExecuted = [];
                         state.triggersExecuting = [];
+                        state.triggerCounts = new Map(); // Reset trigger counts for the new day
                         state.currentFlowSessionId = undefined;
                         // Clear skip if it was expired
                         if (state.skipUntil && new Date(state.skipUntil) <= now) {
@@ -837,7 +838,7 @@ export class SchedulerService {
 
     private shouldCheck(lastCheck: Date | undefined, intervalMinutes: number): boolean {
         if (!lastCheck) return true;
-        const elapsed = (Date.now() - new Date(lastCheck).getTime()) / 1000 / 60;
+        const elapsed = (timeService.now().getTime() - new Date(lastCheck).getTime()) / 1000 / 60;
         return elapsed >= intervalMinutes;
     }
 }

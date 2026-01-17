@@ -21,6 +21,7 @@ export const useStore = create<AppState>((set) => ({
     systemStatus: 'offline',
     devices: new Map(),
     activeSession: null,
+    timeOffset: 0,
     logs: [],
 
     setSystemStatus: (status) => set({ systemStatus: status }),

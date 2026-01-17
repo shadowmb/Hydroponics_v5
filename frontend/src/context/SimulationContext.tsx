@@ -32,8 +32,9 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     const [serverTimezone, setServerTimezone] = useState('Europe/Sofia');
     const [manualOffsetMinutes, setManualOffsetMinutes] = useState(0);
 
-    // Initial Fetch from Backend
+    // Initial Fetch from Backend & Socket Listener
     useEffect(() => {
+        // 1. Fetch initial state
         fetch('/api/time')
             .then(res => res.json())
             .then(data => {
@@ -46,6 +47,27 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
                 }
             })
             .catch(err => console.error("Failed to fetch time status:", err));
+
+        // 2. Listen for Socket Sync (Real-time updates from Backend)
+        const onTimeSync = (data: { isSimulating: boolean, time: string, offsetMs: number }) => {
+            console.log('🔄 Socket Time Sync:', data);
+            setIsSimulating(data.isSimulating);
+            setVirtualTime(new Date(data.time));
+            if (data.offsetMs !== undefined) {
+                setManualOffsetMinutes(Math.round(data.offsetMs / 60000));
+            }
+        };
+
+        import('../core/SocketService').then(({ socketService }) => {
+            socketService.on('time:sync', onTimeSync);
+        });
+
+        // Cleanup
+        return () => {
+            import('../core/SocketService').then(({ socketService }) => {
+                socketService.off('time:sync', onTimeSync);
+            });
+        };
     }, []);
 
     // --- Clock Logic (The Heartbeat) ---
@@ -89,21 +111,15 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     const disableSimulation = () => {
         setIsSimulating(false);
         setSimulationSpeed('1x');
-        setManualOffsetMinutes(0);
+        // Do NOT reset manual offset here. Backend will restore persisted offset if exists.
+        // setManualOffsetMinutes(0); 
 
-        // Reset backend
-        Promise.all([
-            fetch('/api/time/simulate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enable: false })
-            }),
-            fetch('/api/time/offset', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ minutes: 0 })
-            })
-        ]).catch(() => toast.error("Failed to reset server time"));
+        // Inform backend
+        fetch('/api/time/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enable: false })
+        }).catch(() => toast.error("Failed to reset server time"));
     };
 
     const setVirtualTimeAction = (date: Date) => {
@@ -144,7 +160,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         fetch('/api/time/offset', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ minutes: offsetMinutes })
+            body: JSON.stringify({ minutes: offsetMinutes, persist: true }) // Added persist: true
         }).catch(() => toast.error("Failed to set offset on server"));
     };
 

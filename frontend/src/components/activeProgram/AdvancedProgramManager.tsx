@@ -27,6 +27,7 @@ import { AdvancedExecutionLog } from './AdvancedExecutionLog';
 import { VariableConfigModal } from './VariableConfigModal';
 import { NextCheckTimer } from './NextCheckTimer';
 import { ExpiredWindowsDialog } from './ExpiredWindowsDialog';
+import { useSimulation } from '@/context/SimulationContext';
 
 interface AdvancedProgramManagerProps {
     program: IActiveProgram;
@@ -95,7 +96,9 @@ const getStatusIcon = (status: string) => {
 export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramManagerProps) => {
     const [expandedWindows, setExpandedWindows] = useState<Set<string>>(new Set());
     const [processing, setProcessing] = useState(false);
-    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Use Synchronized Time (Backend Simulation aware)
+    const { virtualTime: currentTime } = useSimulation();
 
     // Delayed Start state
     const [isDelayedStartOpen, setIsDelayedStartOpen] = useState(false);
@@ -171,12 +174,6 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         loadData();
     }, []);
 
-    // Update current time every second
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
     // Initialize delayed start inputs
     useEffect(() => {
         if (program?.status === 'scheduled' && program.startTime) {
@@ -184,7 +181,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             setDateInput(format(start, 'dd.MM.yyyy'));
             setTimeInput(format(start, 'HH:mm'));
         } else {
-            const tomorrow = new Date();
+            const tomorrow = new Date(currentTime);
             tomorrow.setDate(tomorrow.getDate() + 1);
             setDateInput(format(tomorrow, 'dd.MM.yyyy'));
             setTimeInput(format(tomorrow, 'HH:mm'));
@@ -200,7 +197,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
         const updateTimer = () => {
             const start = new Date(program.startTime!);
-            const now = new Date();
+            const now = currentTime; // Sync Time
             const diffMins = differenceInMinutes(start, now);
 
             if (diffMins <= 0) {
@@ -371,7 +368,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         // If program is scheduled/running, we must check if "Now" is potentially inside this window
         // to prevent editing 1 second before start.
         if (program.status === 'running' || program.status === 'scheduled') {
-            const now = new Date();
+            const now = currentTime; // Use synchronized time
             const [startH, startM] = window.startTime.split(':').map(Number);
             const [endH, endM] = window.endTime.split(':').map(Number);
 
@@ -384,11 +381,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             // Handle overnight windows
             if (end < start) end.setDate(end.getDate() + 1);
 
-            // If we are IN the window (or very close, e.g. < 1 min?), disable edit
-            // Simple check: start <= now <= end
-            // Actually, if we are in the window, status *should* be active, but might be pending if
-            // scheduler hasn't ticked yet or just finished a cycle.
-            // Safer to disable if we are strictly inside the time range.
+            // If we are strictly inside, disable edit
             if (now >= start && now <= end) return false;
         }
 
@@ -953,57 +946,47 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
                                             {/* SKIP BUTTON */}
                                             {/* Show SKIP if Pending (and not skipped) OR Active (Force Skip) */}
-                                            {(state?.status === 'pending' || state?.status === 'active') && (
+                                            {/* Skip button (only pending) */}
+                                            {state?.status === 'pending' && isWindowEditable(window) && (
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-7 w-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                                            className="h-7 w-7 text-muted-foreground hover:text-purple-600"
                                                             onClick={(e) => e.stopPropagation()}
                                                             title="Пропусни (Skip)"
                                                         >
                                                             <CalendarClock className="h-4 w-4" />
+                                                            <span className="sr-only">Skip</span>
                                                         </Button>
                                                     </PopoverTrigger>
-                                                    <PopoverContent className="w-60" onClick={(e) => e.stopPropagation()}>
-                                                        <div className="space-y-3">
-                                                            <h4 className="font-medium text-sm">Пропусни прозорец</h4>
-                                                            <div className="flex items-center gap-2">
-                                                                <Input
-                                                                    type="number"
-                                                                    min="1"
-                                                                    defaultValue="1"
-                                                                    className="h-8"
-                                                                    id={`skip-input-${window.id}`}
-                                                                />
-                                                                <span className="text-sm text-muted-foreground">дни</span>
-                                                            </div>
-                                                            <Button size="sm" className="w-full" onClick={async () => {
-                                                                const input = document.getElementById(`skip-input-${window.id}`) as HTMLInputElement;
-                                                                const days = parseInt(input.value) || 1;
+                                                    <PopoverContent className="w-56 p-3" align="end">
+                                                        <div className="space-y-2">
+                                                            <h4 className="font-medium leading-none text-sm">Пропусни прозореца?</h4>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Този прозорец няма да се изпълни днес.
+                                                            </p>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="destructive"
+                                                                className="w-full h-8 text-xs"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    try {
+                                                                        // Calculate tomorrow 00:00 relative to SIMULATED time
+                                                                        const tomorrow = new Date(currentTime);
+                                                                        tomorrow.setDate(tomorrow.getDate() + 1);
+                                                                        tomorrow.setHours(0, 0, 0, 0);
 
-                                                                // Calculate date: Now + Days (at 00:00 of target day?) 
-                                                                // Logic agreed: "2 days" = Skip Today + Skip Tomorrow (Expiring at 00:00 after tomorrow)
-                                                                // "1 day" = Skip Today (Expiring at 00:00 tomorrow)
-                                                                // So we add 'days' to today, and set time to 00:00:00?
-                                                                // Wait, if I add 1 day to today (3rd), result is 4th. 
-                                                                // If I set to 4th 00:00:00.
-                                                                // Any check on 3rd will be < 4th. Skipped.
-                                                                // Any check on 4th (00:01) will be > 4th. Not skipped. Correct.
-
-                                                                const targetDate = new Date();
-                                                                targetDate.setDate(targetDate.getDate() + days);
-                                                                targetDate.setHours(0, 0, 0, 0);
-
-                                                                try {
-                                                                    await activeProgramService.skipWindow(window.id, targetDate);
-                                                                    toast.success(`Прозорецът е пропуснат за ${days} дни`);
-                                                                    onUpdate();
-                                                                } catch (e) {
-                                                                    toast.error('Грешка при пропускане');
-                                                                }
-                                                            }}>
+                                                                        await activeProgramService.skipWindow(window.id, tomorrow);
+                                                                        toast.success('Прозорецът е пропуснат');
+                                                                        onUpdate();
+                                                                    } catch (err) {
+                                                                        toast.error('Грешка при пропускане');
+                                                                    }
+                                                                }}
+                                                            >
                                                                 Пропусни
                                                             </Button>
                                                         </div>
@@ -1064,257 +1047,268 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                 </Button>
                                             )}
                                         </div>
-                                    </div>
+                                    </div >
 
                                     {/* Expanded Content */}
-                                    {isExpanded && (
-                                        <div className="border-t bg-muted/20 p-4 space-y-3">
-                                            {triggers.length === 0 ? (
-                                                <div className="text-sm text-muted-foreground text-center py-2">
-                                                    Няма тригери в този прозорец
-                                                </div>
-                                            ) : (
-                                                triggers.map((trigger: any, triggerIndex: number) => {
-                                                    const isExecuted = executedTriggers.includes(trigger.id);
-                                                    const canEdit = isWindowEditable(window) && !isExecuted;
+                                    {
+                                        isExpanded && (
+                                            <div className="border-t bg-muted/20 p-4 space-y-3">
+                                                {triggers.length === 0 ? (
+                                                    <div className="text-sm text-muted-foreground text-center py-2">
+                                                        Няма тригери в този прозорец
+                                                    </div>
+                                                ) : (
+                                                    triggers.map((trigger: any, triggerIndex: number) => {
+                                                        const isExecuted = executedTriggers.includes(trigger.id);
+                                                        const canEdit = isWindowEditable(window) && !isExecuted;
 
-                                                    // Normalize conditions
-                                                    const conditions = trigger.conditions?.length
-                                                        ? trigger.conditions
-                                                        : [{ sensorId: trigger.sensorId, operator: trigger.operator, value: trigger.value, valueMax: trigger.valueMax }];
+                                                        // Normalize conditions
+                                                        const conditions = trigger.conditions?.length
+                                                            ? trigger.conditions
+                                                            : [{ sensorId: trigger.sensorId, operator: trigger.operator, value: trigger.value, valueMax: trigger.valueMax }];
 
-                                                    return (
-                                                        <div
-                                                            key={trigger.id}
-                                                            className={cn(
-                                                                "flex items-center justify-between p-3 rounded-md border-l-4 transition-all",
-                                                                isExecuted
-                                                                    ? "border-l-green-500 bg-green-500/10 opacity-70"
-                                                                    : trigger.behavior === 'break'
-                                                                        ? "border-l-red-500 bg-red-500/5"
-                                                                        : "border-l-orange-500 bg-orange-500/5"
-                                                            )}
-                                                        >
-                                                            <div className="flex items-center gap-4 flex-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    {isExecuted ? (
-                                                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                                                    ) : (
-                                                                        <Circle className="h-4 w-4 text-muted-foreground" />
-                                                                    )}
-                                                                    <span className="text-xs text-muted-foreground mr-1">
-                                                                        #{triggerIndex + 1}
-                                                                    </span>
-                                                                </div>
+                                                        return (
+                                                            <div
+                                                                key={trigger.id}
+                                                                className={cn(
+                                                                    "flex items-center justify-between p-3 rounded-md border-l-4 transition-all",
+                                                                    isExecuted
+                                                                        ? "border-l-green-500 bg-green-500/10 opacity-70"
+                                                                        : trigger.behavior === 'break'
+                                                                            ? "border-l-red-500 bg-red-500/5"
+                                                                            : "border-l-orange-500 bg-orange-500/5"
+                                                                )}
+                                                            >
+                                                                <div className="flex items-center gap-4 flex-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        {isExecuted ? (
+                                                                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                                        ) : (
+                                                                            <Circle className="h-4 w-4 text-muted-foreground" />
+                                                                        )}
+                                                                        <span className="text-xs text-muted-foreground mr-1">
+                                                                            #{triggerIndex + 1}
+                                                                        </span>
+                                                                    </div>
 
-                                                                {/* Conditions Stack */}
-                                                                <div className="flex flex-col">
-                                                                    {trigger.conditionEnabled === false ? (
-                                                                        <div className="flex items-center gap-2 text-orange-500 font-bold">
-                                                                            <span>⚠️</span>
-                                                                            <span>БЕЗ УСЛОВИЕ</span>
-                                                                        </div>
-                                                                    ) : (
-                                                                        conditions.map((cond: any, cIndex: number) => (
-                                                                            <React.Fragment key={cIndex}>
-                                                                                {cIndex > 0 && (
-                                                                                    <div className="flex items-center gap-2 my-0.5">
-                                                                                        <div className="h-4 w-0.5 bg-muted-foreground/30 mx-2"></div>
-                                                                                        <span className={cn(
-                                                                                            "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded",
-                                                                                            trigger.logicalOperator === 'OR'
-                                                                                                ? "bg-orange-500/20 text-orange-600"
-                                                                                                : "bg-blue-500/20 text-blue-600"
-                                                                                        )}>
-                                                                                            {trigger.logicalOperator || 'AND'}
+                                                                    {/* Conditions Stack */}
+                                                                    <div className="flex flex-col">
+                                                                        {trigger.conditionEnabled === false ? (
+                                                                            <div className="flex items-center gap-2 text-orange-500 font-bold">
+                                                                                <span>⚠️</span>
+                                                                                <span>БЕЗ УСЛОВИЕ</span>
+                                                                            </div>
+                                                                        ) : (
+                                                                            conditions.map((cond: any, cIndex: number) => (
+                                                                                <React.Fragment key={cIndex}>
+                                                                                    {cIndex > 0 && (
+                                                                                        <div className="flex items-center gap-2 my-0.5">
+                                                                                            <div className="h-4 w-0.5 bg-muted-foreground/30 mx-2"></div>
+                                                                                            <span className={cn(
+                                                                                                "text-[10px] uppercase font-bold px-1.5 py-0.5 rounded",
+                                                                                                trigger.logicalOperator === 'OR'
+                                                                                                    ? "bg-orange-500/20 text-orange-600"
+                                                                                                    : "bg-blue-500/20 text-blue-600"
+                                                                                            )}>
+                                                                                                {trigger.logicalOperator || 'AND'}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    )}
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <Activity className="h-3.5 w-3.5 text-cyan-500" />
+                                                                                        <span className={cn("font-medium", isExecuted && "line-through")}>
+                                                                                            {getSensorName(cond.sensorId)}
+                                                                                        </span>
+
+                                                                                        <span
+                                                                                            className={cn(
+                                                                                                "font-mono text-sm",
+                                                                                                canEdit && "cursor-pointer hover:bg-muted/50 px-1 rounded"
+                                                                                            )}
+                                                                                            onClick={(e) => canEdit && handleEditTrigger(window.id, trigger, e)}
+                                                                                            title={canEdit ? "Кликнете за пълна редакция" : undefined}
+                                                                                        >
+                                                                                            {formatOperator(cond.operator)} {cond.value}
+                                                                                            {cond.operator === 'between' && ` - ${cond.valueMax}`}
                                                                                         </span>
                                                                                     </div>
-                                                                                )}
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <Activity className="h-3.5 w-3.5 text-cyan-500" />
-                                                                                    <span className={cn("font-medium", isExecuted && "line-through")}>
-                                                                                        {getSensorName(cond.sensorId)}
-                                                                                    </span>
+                                                                                </React.Fragment>
+                                                                            ))
+                                                                        )}
+                                                                    </div>
 
-                                                                                    <span
-                                                                                        className={cn(
-                                                                                            "font-mono text-sm",
-                                                                                            canEdit && "cursor-pointer hover:bg-muted/50 px-1 rounded"
-                                                                                        )}
-                                                                                        onClick={(e) => canEdit && handleEditTrigger(window.id, trigger, e)}
-                                                                                        title={canEdit ? "Кликнете за пълна редакция" : undefined}
-                                                                                    >
-                                                                                        {formatOperator(cond.operator)} {cond.value}
-                                                                                        {cond.operator === 'between' && ` - ${cond.valueMax}`}
-                                                                                    </span>
-                                                                                </div>
-                                                                            </React.Fragment>
-                                                                        ))
-                                                                    )}
+                                                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Zap className="h-3.5 w-3.5 text-yellow-500" />
+                                                                        <span className="text-sm text-primary font-medium">
+                                                                            {trigger.flowIds && trigger.flowIds.length > 0
+                                                                                ? trigger.flowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                                : getFlowName(trigger.flowId)
+                                                                            }
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
-
-                                                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
 
                                                                 <div className="flex items-center gap-2">
-                                                                    <Zap className="h-3.5 w-3.5 text-yellow-500" />
-                                                                    <span className="text-sm text-primary font-medium">
-                                                                        {trigger.flowIds && trigger.flowIds.length > 0
-                                                                            ? trigger.flowIds.map((fid: string) => getFlowName(fid)).join(' + ')
-                                                                            : getFlowName(trigger.flowId)
-                                                                        }
+                                                                    {isExecuted && (
+                                                                        <span className="text-xs text-green-600 font-medium">
+                                                                            ✓ Изпълнен
+                                                                        </span>
+                                                                    )}
+                                                                    {/* Full Edit Button */}
+                                                                    {canEdit && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-6 w-6"
+                                                                            onClick={(e) => handleEditTrigger(window.id, trigger, e)}
+                                                                            title="Пълна редакция"
+                                                                        >
+                                                                            <Pencil className="h-3 w-3" />
+                                                                        </Button>
+                                                                    )}
+                                                                    <span className={cn(
+                                                                        "text-xs px-2 py-1 rounded-full font-medium",
+                                                                        trigger.behavior === 'break'
+                                                                            ? "bg-red-500/10 text-red-600"
+                                                                            : "bg-orange-500/10 text-orange-600"
+                                                                    )}>
+                                                                        {trigger.behavior === 'break' ? '🛑 Break' : '⏭️ Continue'}
                                                                     </span>
+
+                                                                    {/* REPEAT BADGE */}
+                                                                    {trigger.repeatMode && trigger.repeatMode !== 'once' && (
+                                                                        <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
+                                                                            {trigger.repeatMode === 'always'
+                                                                                ? <span>🔄 Always</span>
+                                                                                : <span>🔢 {(state?.triggerCounts as any)?.[trigger.id] || 0} / {trigger.repeatCount}</span>
+                                                                            }
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
+                                                        );
+                                                    })
+                                                )}
 
-                                                            <div className="flex items-center gap-2">
-                                                                {isExecuted && (
-                                                                    <span className="text-xs text-green-600 font-medium">
-                                                                        ✓ Изпълнен
-                                                                    </span>
-                                                                )}
-                                                                {/* Full Edit Button */}
-                                                                {canEdit && (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-6 w-6"
-                                                                        onClick={(e) => handleEditTrigger(window.id, trigger, e)}
-                                                                        title="Пълна редакция"
-                                                                    >
-                                                                        <Pencil className="h-3 w-3" />
-                                                                    </Button>
-                                                                )}
-                                                                <span className={cn(
-                                                                    "text-xs px-2 py-1 rounded-full font-medium",
-                                                                    trigger.behavior === 'break'
-                                                                        ? "bg-red-500/10 text-red-600"
-                                                                        : "bg-orange-500/10 text-orange-600"
-                                                                )}>
-                                                                    {trigger.behavior === 'break' ? '🛑 Break' : '⏭️ Continue'}
-                                                                </span>
+                                                {/* Fallback Info & Edit */}
+                                                {(state?.status !== 'completed' && state?.status !== 'skipped') && (
+                                                    <div className={cn(
+                                                        "mt-4 p-3 rounded-md flex items-center justify-center gap-4 text-sm border mx-auto w-fit min-w-[50%]",
+                                                        "bg-muted/5 border-white/10 shadow-sm"
+                                                    )}>
+                                                        <TooltipProvider>
+                                                            <Tooltip delayDuration={300}>
+                                                                <TooltipTrigger asChild>
+                                                                    <div className="flex items-center gap-1 cursor-help hover:text-primary transition-colors">
+                                                                        <span>🛡️</span>
+                                                                        <span className="text-muted-foreground whitespace-nowrap font-medium">Fallback:</span>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="max-w-[300px] text-center">
+                                                                    <p>Fallback дефинира действията, които ще се изпълнят, ако <b>НИТО ЕДИН</b> от тригърите в този прозорец не е активен.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
 
-                                                                {/* REPEAT BADGE */}
-                                                                {trigger.repeatMode && trigger.repeatMode !== 'once' && (
-                                                                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
-                                                                        {trigger.repeatMode === 'always'
-                                                                            ? <span>🔄 Always</span>
-                                                                            : <span>🔢 {(state?.triggerCounts as any)?.[trigger.id] || 0} / {trigger.repeatCount}</span>
-                                                                        }
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })
-                                            )}
-
-                                            {/* Fallback Info & Edit */}
-                                            {(state?.status !== 'completed' && state?.status !== 'skipped') && (
-                                                <div className={cn(
-                                                    "mt-4 p-3 rounded-md flex items-center justify-center gap-4 text-sm border mx-auto w-fit min-w-[50%]",
-                                                    "bg-muted/5 border-white/10 shadow-sm"
-                                                )}>
-                                                    <TooltipProvider>
-                                                        <Tooltip delayDuration={300}>
-                                                            <TooltipTrigger asChild>
-                                                                <div className="flex items-center gap-1 cursor-help hover:text-primary transition-colors">
-                                                                    <span>🛡️</span>
-                                                                    <span className="text-muted-foreground whitespace-nowrap font-medium">Fallback:</span>
-                                                                </div>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent className="max-w-[300px] text-center">
-                                                                <p>Fallback дефинира действията, които ще се изпълнят, ако <b>НИТО ЕДИН</b> от тригърите в този прозорец не е активен.</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-
-                                                    <div className="flex items-center gap-3">
-                                                        <Select
-                                                            value={window.fallbackTriggerId || ((window.fallbackFlowIds?.length || window.fallbackFlowId) ? 'manual' : 'none')}
-                                                            onValueChange={(val) => {
-                                                                // If val is 'manual' or 'none', we clear the linked trigger.
-                                                                // If manual flows exist, they will take over (Manual Mode).
-                                                                // If no manual flows exist, 'none' means no fallback.
-                                                                handleUpdateFallback(window.id, { fallbackTriggerId: val === 'manual' || val === 'none' ? '' : val });
-                                                            }}
-                                                        >
-                                                            <SelectTrigger className="h-8 w-fit min-w-[200px] max-w-[400px]">
-                                                                <SelectValue placeholder="Избери тригър..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {/* Manual Option (Visible only if manual flows exist) */}
-                                                                {(window.fallbackFlowIds?.length || window.fallbackFlowId) && (
-                                                                    <SelectItem value="manual" className="font-medium text-amber-500">
-                                                                        ⚡ Manual: {
-                                                                            window.fallbackFlowIds && window.fallbackFlowIds.length > 0
-                                                                                ? window.fallbackFlowIds.map((fid: string) => getFlowName(fid)).join(' + ')
-                                                                                : getFlowName(window.fallbackFlowId)
-                                                                        }
-                                                                    </SelectItem>
-                                                                )}
-
-                                                                <SelectItem value="none">-- Няма (No Fallback) --</SelectItem>
-                                                                {window.triggers.map((t: any, idx: number) => {
-                                                                    const label = t.conditions?.map((c: any) => {
-                                                                        const sName = getSensorName(c.sensorId);
-                                                                        return `${sName} ${formatOperator(c.operator)} ${c.value}`;
-                                                                    }).join(' & ');
-
-                                                                    return (
-                                                                        <SelectItem key={t.id} value={t.id}>
-                                                                            <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
-                                                                            {label || `Trigger #${idx + 1}`}
+                                                        <div className="flex items-center gap-3">
+                                                            <Select
+                                                                value={window.fallbackTriggerId || ((window.fallbackFlowIds?.length || window.fallbackFlowId) ? 'manual' : 'none')}
+                                                                onValueChange={(val) => {
+                                                                    // If val is 'manual' or 'none', we clear the linked trigger.
+                                                                    // If manual flows exist, they will take over (Manual Mode).
+                                                                    // If no manual flows exist, 'none' means no fallback.
+                                                                    handleUpdateFallback(window.id, { fallbackTriggerId: val === 'manual' || val === 'none' ? '' : val });
+                                                                }}
+                                                            >
+                                                                <SelectTrigger className="h-8 w-fit min-w-[200px] max-w-[400px]">
+                                                                    <SelectValue placeholder="Избери тригър..." />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {/* Manual Option (Visible only if manual flows exist) */}
+                                                                    {(window.fallbackFlowIds?.length || window.fallbackFlowId) && (
+                                                                        <SelectItem value="manual" className="font-medium text-amber-500">
+                                                                            ⚡ Manual: {
+                                                                                window.fallbackFlowIds && window.fallbackFlowIds.length > 0
+                                                                                    ? window.fallbackFlowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                                    : getFlowName(window.fallbackFlowId)
+                                                                            }
                                                                         </SelectItem>
-                                                                    );
-                                                                })}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-                                            )}
+                                                                    )}
 
-                                            {/* Static Display for Completed Windows */}
-                                            {(state?.status === 'completed' || state?.status === 'skipped') && (window.fallbackFlowIds?.length || window.fallbackFlowId || window.fallbackTriggerId) && (
-                                                <div className={cn(
-                                                    "mt-3 p-3 border rounded-md",
-                                                    state?.status === 'completed' && !triggers.some((t: any) =>
-                                                        t.behavior === 'break' && executedTriggers.includes(t.id)
-                                                    )
-                                                        ? "bg-amber-500/20 border-amber-500"
-                                                        : "bg-amber-500/10 border-amber-500/20"
-                                                )}>
-                                                    <span className="text-amber-600 font-medium font-mono text-sm block mb-1 uppercase tracking-xs">
-                                                        Fallback Executed
-                                                    </span>
-                                                    <span className="text-foreground/80 font-medium text-sm">
-                                                        {window.fallbackTriggerId ? (
-                                                            // Resolve Trigger Name
-                                                            (() => {
-                                                                const t = window.triggers.find((tr: any) => tr.id === window.fallbackTriggerId);
-                                                                return t ? `Linked: Trigger #${window.triggers.indexOf(t) + 1}` : 'Linked Trigger (Deleted)';
-                                                            })()
-                                                        ) : (
-                                                            window.fallbackFlowIds && window.fallbackFlowIds.length > 0
-                                                                ? window.fallbackFlowIds.map((fid: string) => getFlowName(fid)).join(' + ')
-                                                                : getFlowName(window.fallbackFlowId)
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                                                    <SelectItem value="none">-- Няма (No Fallback) --</SelectItem>
+                                                                    {window.triggers
+                                                                        .filter((t: any) => t.conditionEnabled !== false)
+                                                                        .map((t: any, idx: number) => {
+                                                                            const label = t.conditions?.map((c: any) => {
+                                                                                const sName = getSensorName(c.sensorId);
+                                                                                return `${sName} ${formatOperator(c.operator)} ${c.value}`;
+                                                                            }).join(' & ');
+
+                                                                            return (
+                                                                                <SelectItem key={t.id} value={t.id}>
+                                                                                    <span className="font-mono text-muted-foreground mr-2">{idx + 1}.</span>
+                                                                                    {label || `Trigger #${idx + 1}`}
+                                                                                </SelectItem>
+                                                                            );
+                                                                        })}
+
+                                                                    {/* Edge Case: If currently selected fallback is disabled (hidden), show it as invalid */}
+                                                                    {window.fallbackTriggerId && window.triggers.find((t: any) => t.id === window.fallbackTriggerId && t.conditionEnabled === false) && (
+                                                                        <SelectItem value={window.fallbackTriggerId} disabled>
+                                                                            <span className="text-orange-500 font-bold">⚠️ БЕЗ УСЛОВИЕ (Current - Invalid)</span>
+                                                                        </SelectItem>
+                                                                    )}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Static Display for Completed Windows */}
+                                                {(state?.status === 'completed' || state?.status === 'skipped') && (window.fallbackFlowIds?.length || window.fallbackFlowId || window.fallbackTriggerId) && (
+                                                    <div className={cn(
+                                                        "mt-3 p-3 border rounded-md",
+                                                        state?.status === 'completed' && !triggers.some((t: any) =>
+                                                            t.behavior === 'break' && executedTriggers.includes(t.id)
+                                                        )
+                                                            ? "bg-amber-500/20 border-amber-500"
+                                                            : "bg-amber-500/10 border-amber-500/20"
+                                                    )}>
+                                                        <span className="text-amber-600 font-medium font-mono text-sm block mb-1 uppercase tracking-xs">
+                                                            Fallback Executed
+                                                        </span>
+                                                        <span className="text-foreground/80 font-medium text-sm">
+                                                            {window.fallbackTriggerId ? (
+                                                                // Resolve Trigger Name
+                                                                (() => {
+                                                                    const t = window.triggers.find((tr: any) => tr.id === window.fallbackTriggerId);
+                                                                    return t ? `Linked: Trigger #${window.triggers.indexOf(t) + 1}` : 'Linked Trigger (Deleted)';
+                                                                })()
+                                                            ) : (
+                                                                window.fallbackFlowIds && window.fallbackFlowIds.length > 0
+                                                                    ? window.fallbackFlowIds.map((fid: string) => getFlowName(fid)).join(' + ')
+                                                                    : getFlowName(window.fallbackFlowId)
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    }
+                                </div >
                             );
                         })}
-                    </CardContent>
-                </Card>
+                    </CardContent >
+                </Card >
 
                 {/* Live Execution Log */}
-                <AdvancedExecutionLog programId={program.sourceProgramId} />
-            </div>
+                < AdvancedExecutionLog programId={program.sourceProgramId} />
+            </div >
 
             {/* TimeWindowModal for editing */}
-            <TimeWindowModal
+            < TimeWindowModal
                 open={isEditModalOpen}
                 onClose={() => {
                     setIsEditModalOpen(false);
@@ -1327,7 +1321,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             />
 
             {/* Full Trigger Edit Modal */}
-            <TriggerModal
+            < TriggerModal
                 open={isTriggerModalOpen}
                 onClose={() => setIsTriggerModalOpen(false)}
                 onSave={handleSaveTrigger}
@@ -1337,7 +1331,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             />
 
             {/* Variable Config Modal */}
-            <VariableConfigModal
+            < VariableConfigModal
                 isOpen={!!configWindowId}
                 onClose={() => {
                     setConfigWindowId(null);

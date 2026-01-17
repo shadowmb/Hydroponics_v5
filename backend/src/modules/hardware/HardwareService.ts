@@ -276,61 +276,95 @@ export class HardwareService {
         const valuePath = driverDoc.commands?.READ?.valuePath;
         const { sensorProcessor } = await import('./SensorProcessor');
 
-        let raw = 0;
-        const samplingConfig = device.config?.sampling || driverDoc.sampling;
+        const { sensorValidation } = await import('../../services/validation/SensorValidationService');
 
-        if (samplingConfig && typeof samplingConfig.count === 'number' && samplingConfig.count > 1) {
-            raw = await sensorProcessor.performSampling(
-                deviceId,
-                drvId as string,
-                {
-                    count: samplingConfig.count,
-                    delayMs: samplingConfig.delayMs || 0
-                },
-                async () => this.sendCommand(deviceId, drvId as string, 'READ', {}, { pins: device.hardware?.pins }),
-                valuePath
-            );
-        } else {
-            raw = sensorProcessor.extractRawValue(rawResponse, valuePath);
+        // Define the read operation as a closure
+        const readOperation = async () => {
+            const samplingConfig = device.config?.sampling || driverDoc.sampling;
+            let raw: number;
+
+            if (samplingConfig && typeof samplingConfig.count === 'number' && samplingConfig.count > 1) {
+                raw = await sensorProcessor.performSampling(
+                    deviceId,
+                    drvId as string,
+                    {
+                        count: samplingConfig.count,
+                        delayMs: samplingConfig.delayMs || 0
+                    },
+                    async () => this.sendCommand(deviceId, drvId as string, 'READ', {}, { pins: device.hardware?.pins }),
+                    valuePath
+                );
+            } else {
+                raw = sensorProcessor.extractRawValue(rawResponse, valuePath);
+            }
+
+            if (isNaN(raw)) raw = 0;
+
+            const basicResult = await sensorProcessor.processRawToBasic(raw, device, driverDoc, context, strategyOverride);
+            const { value: baseLogValue, unit: baseLogUnit, hwValue: baseHwValue, hwUnit: baseHwUnit, activeStrategy, details: conversionDetails } = basicResult;
+
+            const displayResult = sensorProcessor.processBasicToDisplay(baseLogValue, baseLogUnit, device);
+            const { value: displayVal, unit: displayUnitFinal } = displayResult;
+
+            return {
+                value: typeof displayVal === 'number' ? displayVal : 0, // Ensure number for validation
+                unit: displayUnitFinal,
+                raw,
+                details: {
+                    baseLogValue, baseLogUnit, hwValue: baseHwValue, hwUnit: baseHwUnit, activeStrategy, ...conversionDetails,
+                    displayVal, displayUnitFinal
+                }
+            };
+        };
+
+        // Execute via Validation Service (Retry, Range, Fallback)
+        const protectedResult = await sensorValidation.executeProtectedRead(device, readOperation);
+
+        if (!protectedResult.success) {
+            throw new Error(protectedResult.error || 'Protected Read Failed');
         }
 
-        if (isNaN(raw)) raw = 0;
+        // Unpack Result
+        const finalValue = protectedResult.value;
+        const resultData = protectedResult.data || {};
+        const isFallback = protectedResult.isFallback || false;
 
-        const basicResult = await sensorProcessor.processRawToBasic(raw, device, driverDoc, context, strategyOverride);
-        const { value: baseLogValue, unit: baseLogUnit, hwValue: baseHwValue, hwUnit: baseHwUnit, activeStrategy, details: conversionDetails } = basicResult;
+        // IMPORTANT: If fallback, we use the fallback value as the display value.
+        // We might need to reconstruct the full details object if fallback happened without a successful read data.
+        const displayVal = finalValue;
+        const displayUnitFinal = resultData.unit || device.displayUnit || device.baseUnit;
+        const raw = resultData.raw ?? 0; // If fallback default, raw might be 0
+        const details = resultData.details || {};
 
         try {
             // Save value AND unit to DB for data integrity
             device.lastReading = {
-                value: isNaN(baseLogValue) ? null : baseLogValue,
+                value: typeof displayVal === 'number' ? displayVal : null,
                 raw,
-                unit: baseLogUnit, // Persistent Unit
+                unit: displayUnitFinal, // Persistent Unit
                 timestamp: new Date()
             };
             await device.save();
         } catch (err) { logger.warn({ deviceId, err }, '⚠️ DB Save Failed'); }
 
-        const displayResult = sensorProcessor.processBasicToDisplay(baseLogValue, baseLogUnit, device);
-        const { value: displayVal, unit: displayUnitFinal } = displayResult;
-
         const readings: Record<string, any> = (typeof rawResponse === 'object') ? { ...rawResponse } : { value: rawResponse };
         const outputs = driverDoc.commands?.READ?.outputs;
-        if (outputs && outputs.length === 1 && outputs[0].key) readings[outputs[0].key] = isNaN(displayVal) ? null : displayVal;
+        if (outputs && outputs.length === 1 && outputs[0].key) readings[outputs[0].key] = displayVal;
 
         events.emit('device:data', {
             deviceId: device.id, deviceName: device.name, driverId: drvId as string,
-            value: isNaN(displayVal) ? null : displayVal, raw, unit: displayUnitFinal,
-            baseValue: isNaN(baseLogValue) ? null : baseLogValue, baseUnit: baseLogUnit,
-            hwValue: baseHwValue, hwUnit: baseHwUnit, readings,
-            details: { ...rawResponse, baseHwValue, baseHwUnit, baseLogValue, baseLogUnit, activeStrategy, ...conversionDetails },
+            value: displayVal, raw, unit: displayUnitFinal,
+            baseValue: details.baseLogValue, baseUnit: details.baseLogUnit,
+            hwValue: details.hwValue, hwUnit: details.hwUnit, readings,
+            details: { ...details, isFallback, fallbackType: protectedResult.fallbackType },
             timestamp: new Date()
         });
 
         return {
-            raw, value: isNaN(displayVal) ? null : displayVal, unit: displayUnitFinal,
-            baseValue: isNaN(baseLogValue) ? null : baseLogValue, baseUnit: baseLogUnit,
-            hwValue: baseHwValue, hwUnit: baseHwUnit,
-            details: { ...(typeof rawResponse === 'object' ? rawResponse : { rawResponse }), baseHwValue, baseHwUnit, baseLogValue, baseLogUnit, activeStrategy, ...conversionDetails }
+            raw, value: displayVal ?? null, unit: displayUnitFinal,
+            baseValue: details.baseLogValue ?? null, baseUnit: details.baseLogUnit, // Use from details
+            hwValue: details.hwValue, hwUnit: details.hwUnit,
+            details: { ...details, isFallback, fallbackType: protectedResult.fallbackType }
         };
     }
 

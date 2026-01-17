@@ -108,25 +108,41 @@ export class SensorValidationService {
         const staleLimit = validation.staleLimit ?? 1;
         const staleTimeoutMs = validation.staleTimeoutMs ?? 30000;
 
+
+
         logger.error(`[SensorValidation] Device ${device.name} failed after ${attempts} attempts. Action: ${fallbackAction}. Consec. Failures: ${failures}`);
 
         if (fallbackAction === 'error') {
             return { success: false, error: lastError?.message || 'Read failed' };
         }
 
-        // Check Stale Limit for non-error fallbacks
-        if (failures > staleLimit) {
-            return { success: false, error: `Fallback limit reached (${failures} > ${staleLimit}). Original error: ${lastError?.message}` };
-        }
+        // Stale limit check removed to allow infinite fallback retries
 
         if (fallbackAction === 'useLastValid') {
             if (device.lastReading && device.lastReading.value != null) {
                 // Check Staleness Age
                 const age = Date.now() - new Date(device.lastReading.timestamp).getTime();
+
+
+
                 if (age > staleTimeoutMs) {
-                    return { success: false, error: `Last valid value too old (${age}ms > ${staleTimeoutMs}ms)` };
+                    // --- EXPIRED FALLBACK: Check if we can fallback to DEFAULT ---
+                    const defVal = validation.defaultValue as any;
+                    if (defVal !== undefined && defVal !== null && defVal !== '') {
+                        logger.warn(`[SensorValidation] Last valid value expired (${age}ms > ${staleTimeoutMs}ms). Switching to Default Value: ${defVal}`);
+                        return {
+                            success: true,
+                            value: Number(defVal),
+                            isFallback: true,
+                            fallbackType: 'useDefault'
+                        };
+                    }
+
+                    logger.warn(`[SensorValidation] FAIL: Last valid expired (${age}ms > ${staleTimeoutMs}ms) AND No Default Value allowed/set.`);
+                    return { success: false, error: `Last valid value too old (${age}ms > ${staleTimeoutMs}ms) and no valid Default Value configured.` };
                 }
 
+                logger.info(`[SensorValidation] Using Last Valid Value: ${device.lastReading.value} (Age: ${age}ms)`);
                 return {
                     success: true,
                     value: device.lastReading.value as number,
@@ -134,33 +150,38 @@ export class SensorValidationService {
                     fallbackType: 'useLastValid'
                 };
             } else {
-                return { success: false, error: 'No last valid value available for fallback' };
+                // No Last Reading at all? Try Default
+                const defVal = validation.defaultValue as any;
+                if (defVal !== undefined && defVal !== null && defVal !== '') {
+                    logger.warn(`[SensorValidation] No Last Reading available. Switching to Default Value: ${defVal}`);
+                    return {
+                        success: true,
+                        value: Number(defVal),
+                        isFallback: true,
+                        fallbackType: 'useDefault'
+                    };
+                }
+                return { success: false, error: 'No last valid value available and no Default Value configured.' };
             }
         }
 
         if (fallbackAction === 'useDefault') {
-            if (validation.defaultValue !== undefined) {
+            const defVal = validation.defaultValue as any;
+            if (defVal !== undefined && defVal !== null && defVal !== '') {
+                logger.warn(`[SensorValidation] Fallback Action is 'useDefault'. Returning: ${defVal}`);
                 return {
                     success: true,
-                    value: validation.defaultValue,
+                    value: Number(defVal),
                     isFallback: true,
                     fallbackType: 'useDefault'
                 };
             }
+            logger.warn(`[SensorValidation] FAIL: Action is 'useDefault' BUT No Default Value allowed/set.`);
             return { success: false, error: 'No default value configured for fallback' };
         }
 
-        if (fallbackAction === 'skip') {
-            // "Skip" usually implies returning a specific signal so the caller knows to skip execution
-            // But here we return success: false? No, that triggers error handling.
-            // If the loop block sees error, it stops/errors. 
-            // If we want to skip SILENTLY, we might need a specific flag?
-            // "skip" in loop context means "continue". 
-            // Let's return a specific error string that blocks can recognize if they want?
-            // Or return success: false with error: 'SKIP_ITERATION'.
-            return { success: false, error: 'SKIP_ITERATION' };
-        }
-
+        // Removed 'skip' logic as per new requirements. 
+        // Any unknown action defaults to error.
         return { success: false, error: lastError?.message || 'Unknown validation error' };
     }
 }

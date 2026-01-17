@@ -25,7 +25,7 @@ export const NextCheckTimer = ({ lastCheck, checkInterval = 1, status, programSt
     // Filter visibility driven by props
     const isVisible =
         (programStatus === 'running') && // Global status
-        (status === 'active' || status === 'pending') && // Window status
+        (status === 'active') && // Window status
         lastCheck; // Must have a last check time
 
     useEffect(() => {

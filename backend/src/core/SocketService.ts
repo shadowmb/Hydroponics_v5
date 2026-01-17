@@ -27,6 +27,10 @@ export class SocketService {
         this.io.on('connection', (socket: Socket) => {
             logger.info({ socketId: socket.id }, '🔌 Client Connected to WebSocket');
 
+            // Send initial time sync
+            const { isSimulating, now, offsetMs } = require('./TimeService').timeService.getStatus();
+            socket.emit('time:sync', { isSimulating, time: now, offsetMs });
+
             socket.on('disconnect', () => {
                 logger.info({ socketId: socket.id }, '🔌 Client Disconnected');
             });
@@ -61,7 +65,8 @@ export class SocketService {
             'advanced:fallback_executed',
             'advanced:program_day_complete',
             'active:program_started',
-            'automation:program_start'
+            'automation:program_start',
+            'time:sync' // Forward time sync events
         ];
 
         eventsToForward.forEach(eventName => {

@@ -65,7 +65,7 @@
     },
     "sampling": {
         "count": 5,
-        "delayMs": 30
+        "delayMs": 50
     },
     "commands": {
         "READ": {
