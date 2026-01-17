@@ -235,6 +235,53 @@ export class FlowValidator {
             });
         }
 
+        // D. Branch Completeness Check
+        nodes.forEach(node => {
+            const outgoing = edges.filter(e => e.source === node.id);
+
+            // 1. IF Block (Condition)
+            if (node.data.type === 'IF') {
+                const trueConnected = outgoing.some(e => e.sourceHandle === 'true');
+                const falseConnected = outgoing.some(e => e.sourceHandle === 'false');
+
+                if (!trueConnected || !falseConnected) {
+                    const missing = [];
+                    if (!trueConnected) missing.push('TRUE');
+                    if (!falseConnected) missing.push('FALSE');
+
+                    const error: ValidationError = {
+                        blockId: node.id,
+                        message: `Dead End: The ${missing.join(' and ')} path(s) must be connected.`,
+                        severity: 'error'
+                    };
+                    errors.push(error);
+                    if (!blockErrors[node.id]) blockErrors[node.id] = [];
+                    blockErrors[node.id].push(error);
+                }
+            }
+
+            // 2. LOOP Block
+            if (node.data.type === 'LOOP') {
+                const bodyConnected = outgoing.some(e => e.sourceHandle === 'body');
+                const exitConnected = outgoing.some(e => e.sourceHandle === 'exit');
+
+                if (!bodyConnected || !exitConnected) {
+                    const missing = [];
+                    if (!bodyConnected) missing.push('LOOP');
+                    if (!exitConnected) missing.push('DONE');
+
+                    const error: ValidationError = {
+                        blockId: node.id,
+                        message: `Dead End: The ${missing.join(' and ')} path(s) must be connected.`,
+                        severity: 'error'
+                    };
+                    errors.push(error);
+                    if (!blockErrors[node.id]) blockErrors[node.id] = [];
+                    blockErrors[node.id].push(error);
+                }
+            }
+        });
+
         return {
             isValid: errors.length === 0,
             errors,

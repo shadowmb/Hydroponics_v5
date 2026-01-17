@@ -312,16 +312,7 @@ const Controllers: React.FC<ControllersProps> = ({ initialWizardData, onWizardCl
                         <h1 className="text-3xl font-bold tracking-tight">Controllers</h1>
                         <p className="text-muted-foreground">Manage your hardware controllers and gateways.</p>
                     </div>
-                    <div className="flex gap-2">
-                        <Button onClick={handleRefresh} variant="outline" disabled={isSyncing}>
-                            <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                            Sync Status
-                        </Button>
-                        <Button onClick={() => { setControllerToEdit(undefined); setEditWizardOpen(true); }}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Controller
-                        </Button>
-                    </div>
+                    {/* Secondary buttons removed as requested */}
                 </div>
 
                 <Card>

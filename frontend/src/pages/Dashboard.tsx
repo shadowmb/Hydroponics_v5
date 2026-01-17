@@ -67,11 +67,21 @@ export const Dashboard: React.FC = () => {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">System Status</CardTitle>
-                        {systemStatus === 'online' ? <Wifi className="h-4 w-4 text-green-500" /> : <WifiOff className="h-4 w-4 text-destructive" />}
+                        {systemStatus === 'online' ? (
+                            <Wifi className="h-4 w-4 text-green-500" />
+                        ) : systemStatus === 'degraded' ? (
+                            <WifiOff className="h-4 w-4 text-yellow-500 animate-pulse" />
+                        ) : (
+                            <WifiOff className="h-4 w-4 text-destructive" />
+                        )}
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold capitalize">{systemStatus}</div>
-                        <p className="text-xs text-muted-foreground">Backend connection</p>
+                        <div className={`text-2xl font-bold capitalize ${systemStatus === 'degraded' ? 'text-yellow-500' : ''}`}>
+                            {systemStatus === 'degraded' ? 'Warning' : systemStatus}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            {systemStatus === 'degraded' ? 'Database Disconnected' : 'Backend connection'}
+                        </p>
                     </CardContent>
                 </Card>
 

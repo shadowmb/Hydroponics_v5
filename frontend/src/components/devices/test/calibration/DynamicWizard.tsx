@@ -18,7 +18,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import type { WizardStep } from '../../../../types/Calibration';
-import { Play, Check, ArrowRight } from 'lucide-react';
+import { Play, Check, ArrowRight, Target } from 'lucide-react';
 
 import { StrategyRegistry } from '../../../../../../shared/strategies/StrategyRegistry';
 
@@ -600,6 +600,7 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
                 const addPoint = () => {
                     // Sort by raw (distance) automatically? Or just append.
                     // Let's just append for now.
+                    // Default to 0 instead of live value
                     const newPoint = { raw: 0, value: 0 };
                     handleInputChange(step.key!, [...points, newPoint]);
                 };
@@ -661,6 +662,8 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
                             {step.instructions}
                         </div>
 
+
+
                         <div className="border rounded-md overflow-hidden">
                             <table className="w-full text-sm">
                                 <thead className="bg-muted">
@@ -675,16 +678,20 @@ export const DynamicWizard: React.FC<DynamicWizardProps> = ({ strategyId, onSave
                                     {points.map((point: any, idx: number) => (
                                         <tr key={idx} className="border-t">
                                             <td className="p-2">
-                                                <div className="flex gap-2">
+                                                <div className="relative">
                                                     <Input
                                                         type="number"
                                                         value={point.raw}
                                                         onChange={(e) => updatePoint(idx, 'raw', parseFloat(e.target.value))}
-                                                        className="w-full"
+                                                        className="w-full pr-8" // Padding for icon
                                                     />
-                                                    <Button variant="outline" size="icon" onClick={() => captureReading(idx)} title="Get Reading">
-                                                        <ArrowRight className="h-3 w-3" /> {/* Reusing icon for 'Fetch' */}
-                                                    </Button>
+                                                    <button
+                                                        onClick={() => captureReading(idx)}
+                                                        title="Capture Current Value"
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                                    >
+                                                        <Target className="h-4 w-4" />
+                                                    </button>
                                                 </div>
                                             </td>
                                             <td className="p-2">

@@ -129,7 +129,6 @@ export const RelayManager: React.FC = () => {
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold tracking-tight">Relay Modules</h2>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={fetchData}>Refresh Status</Button>
                     <RelayWizard
                         open={wizardOpen}
                         onOpenChange={setWizardOpen}
