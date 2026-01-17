@@ -548,6 +548,7 @@ export class ActiveProgramService {
                 ws.status = 'pending';
                 ws.triggersExecuted = [];
                 ws.triggersExecuting = [];
+                ws.triggerCounts = new Map(); // Reset trigger counts
                 ws.lastCheck = undefined;
                 ws.currentFlowSessionId = undefined;
                 // Reset skips as well to treat as fresh start? 

@@ -361,6 +361,7 @@ export class SchedulerService {
                         state.status = 'pending';
                         state.triggersExecuted = [];
                         state.triggersExecuting = [];
+                        state.triggerCounts = new Map(); // Reset trigger counts for the new day
                         state.currentFlowSessionId = undefined;
                         // Clear skip if it was expired
                         if (state.skipUntil && new Date(state.skipUntil) <= now) {
