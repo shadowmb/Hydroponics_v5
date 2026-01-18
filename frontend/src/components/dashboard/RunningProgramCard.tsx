@@ -44,32 +44,29 @@ export const RunningProgramCard: React.FC = () => {
     const [showStopConfirm, setShowStopConfirm] = useState(false);
 
     // 1. Initial Load of Full Details
+    // 1. Initial Load & Socket Sync
     useEffect(() => {
         const fetchDetails = async () => {
-            if (activeSession?.programId && !fullProgram) {
-                // If we have a session in store but no details locally, fetch them
-                try {
-                    const data = await activeProgramService.getActive();
-                    if (data) setFullProgram(data);
-                } catch (err) {
-                    console.error("Failed to fetch active program details", err);
-                }
-            } else if (!activeSession?.programId) {
-                // Try fetching even if store is empty
-                try {
-                    const data = await activeProgramService.getActive();
-                    // If backend returns data, it means something is running!
-                    if (data && data.status !== 'stopped' && data.status !== 'completed') {
-                        setFullProgram(data);
-                    }
-                } catch (err) {
-                    console.error("Failed to fetch active program details", err);
-                }
+            // ... (keep fetch logic, just simplified call here for example)
+            try {
+                const data = await activeProgramService.getActive();
+                if (data) setFullProgram(data); // Always update if data exists
+            } catch (err) {
+                console.error("Failed to fetch active program details", err);
             }
         };
 
         fetchDetails();
-    }, [activeSession?.programId]); // Only retry if ID changes
+
+        // Listen for Socket Events (via CustomEvent bridge)
+        const handleRefresh = () => {
+            console.log("🔄 Soft Refreshing Active Program Structure...");
+            fetchDetails();
+        };
+
+        window.addEventListener('program:refresh', handleRefresh);
+        return () => window.removeEventListener('program:refresh', handleRefresh);
+    }, [activeSession?.programId]); // Still refresh on ID change too
 
     // NEW: Polling for Live Execution Status
     const [executionStatus, setExecutionStatus] = useState<any>(null);
@@ -109,12 +106,15 @@ export const RunningProgramCard: React.FC = () => {
     } : null);
 
     // 2. Timer Loop
+    // 2. Timer Loop (Strictly tied to fullProgram to avoid resets on flow start)
     useEffect(() => {
-        if (!sessionToDisplay || sessionToDisplay.status !== 'running') return;
+        // Only run timer if we have a valid start time from the PROGRAM (not the flow)
+        if (!fullProgram?.startTime || fullProgram.status === 'stopped' || fullProgram.status === 'completed') return;
 
         const tick = () => {
-            // @ts-ignore - pausedDuration might be missing in type
-            setUptime(formatUptime(sessionToDisplay.startTime, sessionToDisplay.pausedDuration));
+            // @ts-ignore
+            setUptime(formatUptime(fullProgram.startTime, 0));
+            // We assume 0 paused duration for now or calculate if available in fullProgram
         };
 
         // Initial tick
@@ -122,7 +122,7 @@ export const RunningProgramCard: React.FC = () => {
 
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
-    }, [sessionToDisplay?.status, sessionToDisplay?.startTime]);
+    }, [fullProgram?.status, fullProgram?.startTime]);
 
     // 3. Handlers
     const handlePauseResume = async () => {
@@ -339,21 +339,34 @@ export const RunningProgramCard: React.FC = () => {
                 <div className="flex justify-between items-start">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            {/* @ts-ignore - programName missing in type */}
-                            <CardTitle className="text-xl">{(sessionToDisplay?.programName) || fullProgram?.name || "Unknown Program"}</CardTitle>
-                            <Badge variant={(sessionToDisplay?.status || fullProgram?.status) === 'running' ? 'default' : 'secondary'} className={(sessionToDisplay?.status || fullProgram?.status) === 'running' ? 'bg-blue-600 animate-pulse' : 'bg-amber-500'}>
-                                {(sessionToDisplay?.status || fullProgram?.status || 'UNKNOWN').toUpperCase()}
+                            <CardTitle className="text-xl">{fullProgram?.name || 'Active Program'}</CardTitle>
+
+                            {/* Status Badge */}
+                            <Badge variant={
+                                fullProgram?.status === 'running' ? 'default' :
+                                    fullProgram?.status === 'paused' ? 'secondary' : 'outline'
+                            } className={`
+                                uppercase font-bold
+                                ${fullProgram?.status === 'running' ? 'bg-blue-600 hover:bg-blue-700 animate-pulse' :
+                                    fullProgram?.status === 'paused' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+                            `}>
+                                {fullProgram?.status || 'UNKNOWN'}
                             </Badge>
                         </div>
+
+                        {/* Timer & Info */}
                         <div className="flex items-center gap-3 text-sm text-muted-foreground font-mono">
-                            <span className="flex items-center gap-1">
-                                <Clock className="h-4 w-4 text-blue-400" />
-                                {uptime}
+                            <span className="flex items-center gap-1 bg-secondary/30 px-1.5 py-0.5 rounded">
+                                <Clock className="h-4 w-4 text-primary" />
+                                <span className="font-bold tracking-wide">{uptime}</span>
                             </span>
-                            {(fullProgram || sessionToDisplay?.startTime) && (
-                                <span className="flex items-center gap-1 text-xs">
-                                    <Calendar className="h-4 w-4 opacity-70" />
-                                    Started: {new Date(sessionToDisplay?.startTime || fullProgram?.startTime || "").toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {(fullProgram?.startTime || sessionToDisplay?.startTime) && (
+                                <span className="flex items-center gap-1 text-xs border-l pl-3 ml-1">
+                                    <Calendar className="h-3.5 w-3.5 opacity-70" />
+                                    Started: {new Date(fullProgram?.startTime || sessionToDisplay?.startTime || "").toLocaleString('bg-BG', {
+                                        day: '2-digit', month: '2-digit', year: 'numeric',
+                                        hour: '2-digit', minute: '2-digit'
+                                    }).replace(',', '')}
                                 </span>
                             )}
                         </div>

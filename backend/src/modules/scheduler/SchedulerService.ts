@@ -532,6 +532,10 @@ export class SchedulerService {
 
                         logger.info({ windowId: window.id, result: resultReason }, '🛑 Flow finished (Break/Fallback) - closing window');
 
+                        // Save BEFORE emitting to prevent race condition
+                        activeProgram.markModified('windowsState');
+                        await activeProgram.save();
+
                         events.emit('advanced:window_completed', {
                             programId: activeProgram.sourceProgramId,
                             windowId: window.id,
@@ -572,17 +576,17 @@ export class SchedulerService {
             if (this.isInTimeWindow(timeString, window.startTime, window.endTime)) {
                 // Emit window_active event only when status changes to active
                 if (state.status !== 'active') {
+                    state.status = 'active';
+                    // Save immediately to prevent duplicate event on next tick
+                    activeProgram.markModified('windowsState');
+                    await activeProgram.save();
+
                     events.emit('advanced:window_active', {
                         programId: activeProgram.sourceProgramId,
                         windowId: window.id,
                         windowName: window.name,
                         timestamp: timeService.now()
                     });
-
-                    state.status = 'active';
-                    // Save immediately to prevent duplicate event on next tick
-                    activeProgram.markModified('windowsState');
-                    await activeProgram.save();
                 }
 
                 // Check if it's time to poll (based on checkInterval) or FORCE check
@@ -618,6 +622,10 @@ export class SchedulerService {
                     if (result === 'triggered' || result === 'all_done') {
                         state.status = 'completed';
                         logger.info({ windowId: window.id, result }, '✅ Window completed');
+
+                        // Save BEFORE emitting to prevent race condition
+                        await activeProgram.save();
+
                         events.emit('advanced:window_completed', {
                             programId: activeProgram.sourceProgramId,
                             windowId: window.id,
@@ -627,10 +635,10 @@ export class SchedulerService {
                             flowId: this.getFlowIdFromExecution(window, state),
                             flowName: this.getFlowIdFromExecution(window, state)
                         });
+                    } else {
+                        // Save after each window evaluation (if not completed above)
+                        await activeProgram.save();
                     }
-
-                    // Save after each window evaluation
-                    await activeProgram.save();
                 }
             }
 
@@ -738,6 +746,9 @@ export class SchedulerService {
                 // 1. No break trigger + No fallback defined.
                 // 2. Program missed window (handled above).
 
+                // Save BEFORE emitting to preve race condition
+                await activeProgram.save();
+
                 events.emit('advanced:window_completed', {
                     programId: activeProgram.sourceProgramId,
                     windowId: window.id,
@@ -747,7 +758,6 @@ export class SchedulerService {
                     flowId: this.getFlowIdFromExecution(window, state),
                     flowName: this.getFlowIdFromExecution(window, state)
                 });
-                await activeProgram.save();
             }
         }
 
@@ -757,12 +767,14 @@ export class SchedulerService {
         );
         if (allDone && !activeProgram.dayCompleteEmitted) {
             logger.info('🏁 All windows completed - Advanced Program finished for today');
+            activeProgram.dayCompleteEmitted = true;
+            await activeProgram.save();
+
+            // Emit AFTER save
             events.emit('advanced:program_day_complete', {
                 programId: activeProgram.sourceProgramId,
                 timestamp: timeService.now()
             });
-            activeProgram.dayCompleteEmitted = true;
-            await activeProgram.save();
             // Note: We don't stop the program, it will reset at midnight or on next load
         }
     }

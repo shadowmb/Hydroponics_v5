@@ -143,6 +143,25 @@ class SocketService {
             // console.log('Block end:', _data);
         });
 
+        // --- NEW: Active Program Structure Updates ---
+        // When these events happen, the Structure (Full Program) has changed in DB.
+        // We notify components to re-fetch "getActive()".
+        const refreshEvents = [
+            'advanced:window_completed',
+            'advanced:window_active',
+            'advanced:program_day_complete',
+            'active:program_started',
+            'advanced:window_skipped',
+            'advanced:fallback_executed'
+        ];
+
+        refreshEvents.forEach(evt => {
+            this.socket?.on(evt, (data) => {
+                console.log(`Socket Event [${evt}]: Triggering Program Refresh`);
+                window.dispatchEvent(new CustomEvent('program:refresh', { detail: { event: evt, data } }));
+            });
+        });
+
         // Real-time Logs
         this.socket.on('log', (log: any) => {
             console.log('Log received:', log);
