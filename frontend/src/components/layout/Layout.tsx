@@ -57,7 +57,7 @@ const NavGroup = ({ label, icon: Icon, items }: { label: string, icon: any, item
 function Sidebar({ className }: SidebarProps) {
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/dashboard-v2', icon: LayoutDashboard, label: 'Dashboard V2' },
+
         {
             group: 'Automation',
             icon: Play,
