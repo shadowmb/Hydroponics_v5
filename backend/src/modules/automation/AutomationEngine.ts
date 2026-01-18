@@ -253,6 +253,11 @@ export class AutomationEngine {
             variables['_parentCycleSessionId'] = overrides['_parentCycleSessionId'];
         }
 
+        // RICH CONTEXT PERSISTENCE
+        if (overrides['_triggerReason']) variables['_triggerReason'] = overrides['_triggerReason'];
+        if (overrides['_triggerSummary']) variables['_triggerSummary'] = overrides['_triggerSummary'];
+        if (overrides['_triggerIndex']) variables['_triggerIndex'] = overrides['_triggerIndex'];
+
         // Store activeProgramId for event emission
         if (overrides['activeProgramId']) {
             this.activeProgramId = overrides['activeProgramId'];
@@ -270,9 +275,30 @@ export class AutomationEngine {
             this.executionType = null;
         }
 
-        // 3. Create Session
+        // 3. AUTO-CLEANUP: Soft Kill any zombie sessions in DB
+        // We use 'error' status to indicate it was forcefully terminated (not a clean stop)
+        try {
+            await (sessionRepository as any).constructor.name; // Dummy access
+            const { ExecutionSessionModel } = require('../persistence/schemas/ExecutionSession.schema');
+
+            await ExecutionSessionModel.updateMany(
+                { status: { $in: ['running', 'paused'] } },
+                {
+                    $set: {
+                        status: 'error',
+                        endTime: new Date(),
+                        error: 'Forcefully terminated: Preempted by new Execution'
+                    }
+                }
+            );
+        } catch (err: any) {
+            logger.warn({ err: err.message }, '⚠️ Auto-Cleanup failed to update old sessions');
+        }
+
+        // 4. Create Session
         const session = await sessionRepository.create({
             programId: flow.id,
+            programName: flow.name, // Persist human-readable name
             startTime: new Date(),
             status: 'loaded', // Initial status
             logs: [],

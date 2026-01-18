@@ -7,7 +7,6 @@ import {
     Usb,
     Code,
     Trash2,
-    Plus,
     Pencil
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
