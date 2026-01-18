@@ -519,9 +519,16 @@ export class SchedulerService {
                         }
                     }
 
-                    // 3. Close Window if needed
                     if (shouldCloseWindow) {
                         state.status = 'completed';
+
+                        // HARD STOP: Ensure engine is stopped if it's running THIS session
+                        // This prevents "Zombie" running states after the window officially closes in Scheduler logic
+                        const snapshot = automation.getSnapshot();
+                        if (snapshot.context?.sessionId === currentSessionId && (snapshot.value === 'running' || snapshot.value === 'paused')) {
+                            logger.info({ windowId: window.id, sessionId: currentSessionId }, '🛑 Hard Stop: Stopping Automation Engine for closed window');
+                            automation.stopProgram();
+                        }
 
                         logger.info({ windowId: window.id, result: resultReason }, '🛑 Flow finished (Break/Fallback) - closing window');
 

@@ -8,7 +8,10 @@ import {
     Pause,
     Square,
     Clock,
-    Calendar
+    Calendar,
+    Zap,
+    ArrowRight,
+    Waves
 } from 'lucide-react';
 import { useStore } from '../../core/useStore';
 import { activeProgramService } from '../../services/activeProgramService';
@@ -170,6 +173,7 @@ export const RunningProgramCard: React.FC = () => {
     interface TriggerInfo {
         index?: number;
         flowName: string;
+        condition?: string;
     }
 
     interface VisualItem {
@@ -221,53 +225,62 @@ export const RunningProgramCard: React.FC = () => {
                 }
 
                 // 2. Trigger Info Logic
-                // PRIORITY 1: LIVE EXECUTION STATUS (Socket/Poll)
-                if (executionStatus && (executionStatus.state === 'running' || executionStatus.state === 'paused')) {
-                    const runCtx = executionStatus.context; // This is execContext
+                // REVISED PRIORITY: DB SOURCE OF TRUTH
+                const dbSession = executionStatus?.dbActiveSession;
+
+                // Only show "Executing" if DB says we are running!
+                if (dbSession && (dbSession.status === 'running' || dbSession.status === 'paused')) {
+                    const runCtx = dbSession.context; // Usage of DB context
                     const vars = runCtx?.variables || {};
-                    const runningFlowId = runCtx?.programId;
+                    const runningFlowId = dbSession.programId; // Use programId from DB session
 
                     // 1. Try to get rich context from System Variables (propagated from backend)
                     const richReason = vars._triggerReason;
-                    const richSummary = vars._triggerSummary;
+                    const richSummary = vars._triggerSummary; // e.g. "Trigger #1: Humidity < 40"
                     const richIndex = vars._triggerIndex;
 
                     // 2. Resolve Flow Name
-                    let flowName = 'Active Flow';
-                    if (fullProgram?.flows) {
+                    let flowName = dbSession.programName || 'Active Flow'; // Priority: DB Name
+
+                    // Fallback to searching in fullProgram.flows if DB Name not present (backward compatibility)
+                    if (!dbSession.programName && fullProgram?.flows) {
                         const found = fullProgram.flows.find(f => f.id === runningFlowId);
-                        if (found) flowName = found.name;
+                        if (found) {
+                            flowName = found.name;
+                        } else {
+                            // If still not found, try to format the ID (polivane_test -> Polivane Test)
+                            flowName = runningFlowId
+                                .split('_')
+                                .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+                                .join(' ');
+                        }
                     }
 
                     // 3. Construct Trigger Info
                     if (richReason || richSummary) {
-                        // We have rich context!
+                        // CLEANUP: Extract only the condition part (remove "Trigger #1: ")
+                        let cleanCondition = richSummary || "";
+                        if (cleanCondition.includes(': ')) {
+                            cleanCondition = cleanCondition.split(': ').slice(1).join(': ');
+                        }
+
                         triggerInfo = {
-                            index: richIndex, // e.g. 1
-                            flowName: richSummary || flowName // "Trigger #1: Humidity < 40%"
+                            index: richIndex,
+                            flowName: flowName,
+                            condition: cleanCondition // Now contains just "Humidity < 40"
                         };
                     } else {
+
                         // Fallback to basic ID lookup
                         triggerInfo = {
                             index: undefined,
-                            flowName: flowName
+                            flowName: flowName,
+                            condition: undefined
                         };
                     }
                 }
-                // PRIORITY 2: FULL PROGRAM STATE (Legacy/Fallback)
-                else if (fullProgram &&
-                    fullProgram.currentTriggerIndex !== undefined &&
-                    fullProgram.currentTriggerIndex >= 0 &&
-                    fullProgram.currentFlowId) {
-
-                    // Lookup Flow Name
-                    const flowName = fullProgram.flows?.find(f => f.id === fullProgram.currentFlowId)?.name || 'Unknown Flow';
-
-                    triggerInfo = {
-                        index: fullProgram.currentTriggerIndex + 1, // 1-based for UI
-                        flowName: flowName
-                    };
-                }
+                // Fallback: If DB says nothing is running, but UI thinks it is (legacy/lag), we DO NOT show executing.
+                // We rely 100% on dbActiveSession to clear the "Executing" state immediately.
             }
             else if (statusRaw === 'completed') displayStatus = 'completed';
             else if (statusRaw === 'skipped') {
@@ -467,18 +480,33 @@ export const RunningProgramCard: React.FC = () => {
                                         {isRunning && (
                                             <div className="mt-2 w-full bg-green-950/20 border-t border-green-500/20 px-3 py-2 flex items-center justify-between text-xs">
                                                 {/* Left: Trigger Info or Default msg */}
+                                                {/* Left: Trigger Info or Default msg */}
                                                 <div className="flex items-center gap-2 text-green-200 min-h-[24px]">
                                                     {item.triggerInfo ? (
-                                                        <>
-                                                            <div className="flex items-center gap-1.5 animate-pulse">
-                                                                <span className="text-amber-400 text-sm">⚡</span>
-                                                                <span className="font-bold text-amber-100">#{item.triggerInfo.index}</span>
+                                                        <div className="flex items-center gap-2 text-sm">
+
+                                                            {/* 1. Trigger Index & Name (Amber / White) */}
+                                                            {item.triggerInfo.index !== undefined && (
+                                                                <span className="text-amber-500 font-bold">#{item.triggerInfo.index}</span>
+                                                            )}
+
+                                                            {item.triggerInfo.condition && (
+                                                                <div className="flex items-center gap-1.5 font-bold text-white tracking-wide">
+                                                                    <Zap className="h-3.5 w-3.5 text-blue-400" />
+                                                                    {item.triggerInfo.condition}
+                                                                </div>
+                                                            )}
+
+                                                            {/* 2. Arrow Separator */}
+                                                            <ArrowRight className="h-4 w-4 text-slate-500 mx-1" />
+
+                                                            {/* 3. Flow Name (Blue / Bold) */}
+                                                            <div className="flex items-center gap-1.5 font-bold text-amber-500">
+                                                                <Waves className="h-3.5 w-3.5" />
+                                                                {item.triggerInfo.flowName}
                                                             </div>
-                                                            <span className="text-slate-500">→</span>
-                                                            <span className="flex items-center gap-1 text-blue-200 font-medium bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/10">
-                                                                🌊 {item.triggerInfo.flowName}
-                                                            </span>
-                                                        </>
+
+                                                        </div>
                                                     ) : (
                                                         <span className="text-slate-400 italic flex items-center gap-1">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse"></span>
@@ -501,7 +529,7 @@ export const RunningProgramCard: React.FC = () => {
                                                     )}
 
                                                     {item.triggerInfo && (
-                                                        <div className="flex items-center gap-1 text-amber-400/80 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10">
+                                                        <div className="flex items-center gap-1 text-amber-400/80 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10 h-full">
                                                             <span className="animate-spin text-[10px]">⚙️</span> Executing
                                                         </div>
                                                     )}

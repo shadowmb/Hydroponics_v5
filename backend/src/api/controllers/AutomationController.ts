@@ -9,22 +9,26 @@ export class AutomationController {
         const body = AutomationStartSchema.parse(req.body);
 
         try {
-            // 1. STRICT STOP CHECK: Database Sessions
-            const { ExecutionSessionModel } = await import('../../modules/persistence/schemas/ExecutionSession.schema');
-            const runningSessionsCount = await ExecutionSessionModel.countDocuments({
-                status: { $in: ['running', 'paused'] },
-                deletedAt: null
-            });
+            // 1. STRICT STOP CHECK: Database Sessions (Bypass if FORCE is true)
+            if (!body.force) {
+                const { ExecutionSessionModel } = await import('../../modules/persistence/schemas/ExecutionSession.schema');
+                const runningSessionsCount = await ExecutionSessionModel.countDocuments({
+                    status: { $in: ['running', 'paused'] },
+                    deletedAt: null
+                });
 
-            if (runningSessionsCount > 0) {
-                throw { statusCode: 409, message: 'Cannot load flow: Another execution session is currently running or paused.' };
-            }
+                if (runningSessionsCount > 0) {
+                    throw { statusCode: 409, message: 'Cannot load flow: Another execution session is currently running or paused.' };
+                }
 
-            // 2. STRICT STOP CHECK: Active Program Schedule
-            const { activeProgramService } = await import('../../modules/scheduler/ActiveProgramService');
-            const activeProgram = await activeProgramService.getActive();
-            if (activeProgram && (activeProgram.status === 'running' || activeProgram.status === 'paused')) {
-                throw { statusCode: 409, message: 'Cannot load flow: The main Active Program is currently running.' };
+                // 2. STRICT STOP CHECK: Active Program Schedule
+                const { activeProgramService } = await import('../../modules/scheduler/ActiveProgramService');
+                const activeProgram = await activeProgramService.getActive();
+                if (activeProgram && (activeProgram.status === 'running' || activeProgram.status === 'paused')) {
+                    throw { statusCode: 409, message: 'Cannot load flow: The main Active Program is currently running.' };
+                }
+            } else {
+                logger.info({ programId: body.programId }, '⚠️ FORCE LOAD: Bypassing session checks (VIP Priority)');
             }
 
             const sessionId = await automation.loadProgram(body.programId, body.overrides);
@@ -67,11 +71,28 @@ export class AutomationController {
 
     static async getStatus(req: FastifyRequest, reply: FastifyReply) {
         const snapshot = automation.getSnapshot();
+
+        // SOURCE OF TRUTH: Fetch the official active session from DB
+        const { ExecutionSessionModel } = await import('../../modules/persistence/schemas/ExecutionSession.schema');
+        const dbActiveSession = await ExecutionSessionModel.findOne({
+            status: { $in: ['running', 'paused'] },
+            deletedAt: null
+        }).sort({ startTime: -1 }).lean();
+
         return reply.send({
-            state: snapshot.value,
+            state: snapshot.value, // XState (Memory)
             context: snapshot.context.execContext,
             currentBlock: snapshot.context.currentBlockId,
-            sessionId: (snapshot as any).sessionId
+            sessionId: (snapshot as any).sessionId,
+            // New Field: Confirmed state from DB
+            dbActiveSession: dbActiveSession ? {
+                id: dbActiveSession._id,
+                programId: dbActiveSession.programId,
+                programName: dbActiveSession.programName, // EXPOSE PROGRAM NAME!
+                status: dbActiveSession.status,
+                context: dbActiveSession.context,
+                startTime: dbActiveSession.startTime
+            } : null
         });
     }
 

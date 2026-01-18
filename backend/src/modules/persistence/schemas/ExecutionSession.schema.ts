@@ -3,6 +3,7 @@ import { softDeletePlugin, ISoftDelete } from '../plugins/softDelete.plugin';
 
 export interface IExecutionSession extends Document, ISoftDelete {
     programId: string;
+    programName?: string; // Human readable name (e.g., "Поливане тест")
     startTime: Date;
     endTime?: Date;
     status: 'idle' | 'loaded' | 'running' | 'completed' | 'failed' | 'error' | 'paused' | 'stopped';
@@ -12,6 +13,7 @@ export interface IExecutionSession extends Document, ISoftDelete {
 
 const ExecutionSessionSchema = new Schema<IExecutionSession>({
     programId: { type: String, required: true, index: true },
+    programName: { type: String }, // Optional for backward compatibility
     startTime: { type: Date, required: true, index: true },
     endTime: { type: Date },
     status: {

@@ -278,7 +278,10 @@ export class AutomationEngine {
         // 3. AUTO-CLEANUP: Soft Kill any zombie sessions in DB
         // We use 'error' status to indicate it was forcefully terminated (not a clean stop)
         try {
-            await sessionRepository.model.updateMany(
+            await (sessionRepository as any).constructor.name; // Dummy access
+            const { ExecutionSessionModel } = require('../persistence/schemas/ExecutionSession.schema');
+
+            await ExecutionSessionModel.updateMany(
                 { status: { $in: ['running', 'paused'] } },
                 {
                     $set: {
@@ -295,6 +298,7 @@ export class AutomationEngine {
         // 4. Create Session
         const session = await sessionRepository.create({
             programId: flow.id,
+            programName: flow.name, // Persist human-readable name
             startTime: new Date(),
             status: 'loaded', // Initial status
             logs: [],
