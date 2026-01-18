@@ -212,6 +212,17 @@ export class TriggerEvaluator {
                         return 'pending';
                     }
 
+                    // Construct Rich Context for UI and Logging
+                    const triggerReason = {
+                        type: 'TRIGGER',
+                        summary: `Trigger #${originalTIdx + 1}: ${logDetails.matchingConditions.join(', ') || (logDetails.unconditional ? 'Unconditional' : 'Matched')}`,
+                        details: {
+                            triggerIndex: originalTIdx + 1,
+                            triggerId: trigger.id,
+                            conditions: detailedConditions
+                        }
+                    };
+
                     // Context injection
                     const baseContext = {
                         ...globalOverrides,
@@ -219,6 +230,10 @@ export class TriggerEvaluator {
                         windowId: window.id,
                         windowName: window.name,
                         executionType: 'trigger',
+                        // Rich Context Keys (prefixed with _ to indicate system variables)
+                        _triggerReason: triggerReason,
+                        _triggerSummary: triggerReason.summary,
+                        _triggerIndex: originalTIdx + 1
                     };
 
                     steps = steps.map(s => ({
@@ -343,6 +358,16 @@ export class TriggerEvaluator {
                 windowId: window.id,
                 windowName: window.name,
                 executionType: 'fallback', // <--- Track as Fallback Execution
+                // Rich Context Keys
+                _triggerReason: {
+                    type: 'FALLBACK',
+                    summary: sourceDescription || 'Fallback Flow',
+                    details: {
+                        windowId: window.id,
+                        reason: 'Window conditions not met or ended'
+                    }
+                },
+                _triggerSummary: sourceDescription || 'Fallback Flow'
             };
 
             // Apply base context to all steps

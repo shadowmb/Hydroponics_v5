@@ -18,6 +18,7 @@ export interface IActiveScheduleItem {
     skipUntil?: string; // ISO Date string
 }
 
+// Active Program Interface Updates
 export interface IActiveProgram {
     _id: string;
     sourceProgramId: string;
@@ -32,10 +33,17 @@ export interface IActiveProgram {
     createdAt: string;
     updatedAt: string;
     // Advanced Mode Fields
-    windows?: any[]; // keeping as any for now to avoid circular deps with ITimeWindow if complex
+    windows?: any[];
     windowsState?: IWindowState[];
     variableOverrides?: Record<string, any>;
     windowOverrides?: Record<string, Record<string, any>>;
+    // Runtime execution fields
+    nextCheckTime?: string; // ISO date
+    forceCheckRequired?: boolean;
+    currentTriggerIndex?: number;
+    currentFlowId?: string;
+    // Flows reference for lookup
+    flows?: { id: string, name: string }[];
 }
 
 export interface IWindowState {

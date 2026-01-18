@@ -14,6 +14,7 @@ import { useStore } from '../../core/useStore';
 import { activeProgramService } from '../../services/activeProgramService';
 import type { IActiveProgram } from '../../types/ActiveProgram';
 import { toast } from 'sonner';
+import { NextCheckTimer } from '../activeProgram/NextCheckTimer';
 
 // Helper for Uptime
 const formatUptime = (startTime: string | Date | undefined, pausedDuration: number = 0): string => {
@@ -66,6 +67,31 @@ export const RunningProgramCard: React.FC = () => {
 
         fetchDetails();
     }, [activeSession?.programId]); // Only retry if ID changes
+
+    // NEW: Polling for Live Execution Status
+    const [executionStatus, setExecutionStatus] = useState<any>(null);
+    useEffect(() => {
+        let intervalId: any;
+
+        const checkExecution = async () => {
+            const isRunning = (activeSession?.status === 'running') || (fullProgram?.status === 'running');
+            if (isRunning) {
+                try {
+                    const status = await activeProgramService.getExecutionStatus();
+                    setExecutionStatus(status);
+                } catch (e) { } // Silent fail 
+            } else {
+                setExecutionStatus(null);
+            }
+        };
+
+        if (activeSession?.status === 'running' || fullProgram?.status === 'running') {
+            checkExecution();
+            intervalId = setInterval(checkExecution, 3000);
+        }
+
+        return () => clearInterval(intervalId);
+    }, [activeSession?.status, fullProgram?.status]);
 
     // Fallback: If store is empty but we fetched fullProgram successfully, construct a temporary session object
     const sessionToDisplay = activeSession && activeSession.status !== 'idle' ? activeSession : (fullProgram && fullProgram.status !== 'stopped' ? {
@@ -132,20 +158,30 @@ export const RunningProgramCard: React.FC = () => {
     };
 
     // 4. Render Logic
-    if (!sessionToDisplay || sessionToDisplay.status === 'idle' || sessionToDisplay.status === 'stopped' || sessionToDisplay.status === 'completed') {
-        // If we really have no data after attempting fetch, render nothing
+    // Fix: Show card if we have ANY full program loaded, regardless of store status (to fix flickering)
+    // Also allows showing "Loaded but not started" programs
+    const shouldRender = fullProgram || (sessionToDisplay && sessionToDisplay.status === 'running');
+
+    if (!shouldRender) {
         return null;
     }
 
     // 5. Timeline Logic - Prepare Visual Items based on Program Type
+    interface TriggerInfo {
+        index?: number;
+        flowName: string;
+    }
 
-    // Define the structure for our visual list
     interface VisualItem {
         _id: string;
         name: string;
         time: string;
         displayStatus: 'completed' | 'running' | 'next' | 'pending' | 'skipped';
         details?: string; // e.g., "until 19.01"
+        nextCheck?: string; // ISO String
+        lastCheck?: Date; // For NextCheckTimer
+        interval?: number; // For NextCheckTimer
+        triggerInfo?: TriggerInfo;
     }
 
     let visualItems: VisualItem[] = [];
@@ -165,8 +201,74 @@ export const RunningProgramCard: React.FC = () => {
 
             let displayStatus: VisualItem['displayStatus'] = 'pending';
             let details = "";
+            let triggerInfo: TriggerInfo | undefined;
+            // Only populate nextCheck for the ACTIVE window
+            let nextCheck: string | undefined;
+            let lastCheck: Date | undefined;
+            let interval = window.checkInterval || fullProgram?.minCycleInterval || 1;
 
-            if (statusRaw === 'active') displayStatus = 'running';
+            if (statusRaw === 'active') {
+                displayStatus = 'running';
+
+                // --- Action Panel Logic ---
+                // 1. Next Check Timer
+                if (fullProgram && fullProgram.nextCheckTime) {
+                    nextCheck = fullProgram.nextCheckTime;
+                }
+
+                if (state?.lastCheck) {
+                    lastCheck = new Date(state.lastCheck);
+                }
+
+                // 2. Trigger Info Logic
+                // PRIORITY 1: LIVE EXECUTION STATUS (Socket/Poll)
+                if (executionStatus && (executionStatus.state === 'running' || executionStatus.state === 'paused')) {
+                    const runCtx = executionStatus.context; // This is execContext
+                    const vars = runCtx?.variables || {};
+                    const runningFlowId = runCtx?.programId;
+
+                    // 1. Try to get rich context from System Variables (propagated from backend)
+                    const richReason = vars._triggerReason;
+                    const richSummary = vars._triggerSummary;
+                    const richIndex = vars._triggerIndex;
+
+                    // 2. Resolve Flow Name
+                    let flowName = 'Active Flow';
+                    if (fullProgram?.flows) {
+                        const found = fullProgram.flows.find(f => f.id === runningFlowId);
+                        if (found) flowName = found.name;
+                    }
+
+                    // 3. Construct Trigger Info
+                    if (richReason || richSummary) {
+                        // We have rich context!
+                        triggerInfo = {
+                            index: richIndex, // e.g. 1
+                            flowName: richSummary || flowName // "Trigger #1: Humidity < 40%"
+                        };
+                    } else {
+                        // Fallback to basic ID lookup
+                        triggerInfo = {
+                            index: undefined,
+                            flowName: flowName
+                        };
+                    }
+                }
+                // PRIORITY 2: FULL PROGRAM STATE (Legacy/Fallback)
+                else if (fullProgram &&
+                    fullProgram.currentTriggerIndex !== undefined &&
+                    fullProgram.currentTriggerIndex >= 0 &&
+                    fullProgram.currentFlowId) {
+
+                    // Lookup Flow Name
+                    const flowName = fullProgram.flows?.find(f => f.id === fullProgram.currentFlowId)?.name || 'Unknown Flow';
+
+                    triggerInfo = {
+                        index: fullProgram.currentTriggerIndex + 1, // 1-based for UI
+                        flowName: flowName
+                    };
+                }
+            }
             else if (statusRaw === 'completed') displayStatus = 'completed';
             else if (statusRaw === 'skipped') {
                 displayStatus = 'skipped';
@@ -182,7 +284,11 @@ export const RunningProgramCard: React.FC = () => {
                 name: window.name,
                 time: `${window.startTime} - ${window.endTime}`,
                 displayStatus,
-                details
+                details,
+                nextCheck,
+                lastCheck,
+                interval,
+                triggerInfo
             };
         });
 
@@ -213,6 +319,7 @@ export const RunningProgramCard: React.FC = () => {
         }
         return item;
     });
+
     return (
         <Card className="border-l-4 border-l-blue-500 shadow-md">
             <CardHeader className="pb-3">
@@ -220,9 +327,9 @@ export const RunningProgramCard: React.FC = () => {
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             {/* @ts-ignore - programName missing in type */}
-                            <CardTitle className="text-xl">{sessionToDisplay.programName || fullProgram?.name || "Unknown Program"}</CardTitle>
-                            <Badge variant={sessionToDisplay.status === 'running' ? 'default' : 'secondary'} className={sessionToDisplay.status === 'running' ? 'bg-blue-600 animate-pulse' : 'bg-amber-500'}>
-                                {sessionToDisplay.status.toUpperCase()}
+                            <CardTitle className="text-xl">{(sessionToDisplay?.programName) || fullProgram?.name || "Unknown Program"}</CardTitle>
+                            <Badge variant={(sessionToDisplay?.status || fullProgram?.status) === 'running' ? 'default' : 'secondary'} className={(sessionToDisplay?.status || fullProgram?.status) === 'running' ? 'bg-blue-600 animate-pulse' : 'bg-amber-500'}>
+                                {(sessionToDisplay?.status || fullProgram?.status || 'UNKNOWN').toUpperCase()}
                             </Badge>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground font-mono">
@@ -230,10 +337,10 @@ export const RunningProgramCard: React.FC = () => {
                                 <Clock className="h-4 w-4 text-blue-400" />
                                 {uptime}
                             </span>
-                            {(fullProgram || sessionToDisplay.startTime) && (
+                            {(fullProgram || sessionToDisplay?.startTime) && (
                                 <span className="flex items-center gap-1 text-xs">
                                     <Calendar className="h-4 w-4 opacity-70" />
-                                    Started: {new Date(sessionToDisplay.startTime || "").toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    Started: {new Date(sessionToDisplay?.startTime || fullProgram?.startTime || "").toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             )}
                         </div>
@@ -247,7 +354,7 @@ export const RunningProgramCard: React.FC = () => {
                             onClick={handlePauseResume}
                             disabled={isLoading}
                         >
-                            {sessionToDisplay.status === 'running' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                            {(sessionToDisplay?.status || fullProgram?.status) === 'running' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                         </Button>
 
                         {!showStopConfirm ? (
@@ -282,7 +389,7 @@ export const RunningProgramCard: React.FC = () => {
                                 const isNext = item.displayStatus === 'next';
 
                                 // Base class
-                                let rowClass = "flex items-center justify-between p-2 rounded-md border transition-all duration-300 ease-in-out";
+                                let rowClass = "flex flex-col rounded-md border transition-all duration-300 ease-in-out relative overflow-hidden";
                                 let label = "";
 
                                 if (isRunning) {
@@ -291,56 +398,114 @@ export const RunningProgramCard: React.FC = () => {
                                     label = "ACTIVE";
                                 } else if (isNext) {
                                     // NEXT: Muted theme
-                                    rowClass += " bg-muted/30 border-muted-foreground/20 text-foreground min-h-[48px] opacity-90";
+                                    rowClass += " bg-muted/30 border-muted-foreground/20 text-foreground min-h-[48px] opacity-90 flex-row items-center justify-between p-2";
                                     label = "NEXT";
                                 } else if (isCompleted) {
                                     // DONE: Blue theme (Completed is Blue based on legend)
-                                    rowClass += " opacity-60 bg-blue-500/5 border-blue-500/20 text-blue-200 min-h-[48px]";
+                                    rowClass += " opacity-60 bg-blue-500/5 border-blue-500/20 text-blue-200 min-h-[48px] flex-row items-center justify-between p-2";
                                     label = "DONE";
                                 } else if (isSkipped) {
                                     // SKIPPED: Purple theme
-                                    rowClass += " opacity-70 bg-purple-500/5 border-purple-500/20 text-purple-200 min-h-[48px]";
+                                    rowClass += " opacity-70 bg-purple-500/5 border-purple-500/20 text-purple-200 min-h-[48px] flex-row items-center justify-between p-2";
                                     label = item.details ? `SKIPPED (${item.details})` : "SKIPPED";
                                 } else {
-                                    rowClass += " opacity-30 border-transparent min-h-[40px]"; // Pending far future
+                                    rowClass += " opacity-30 border-transparent min-h-[40px] flex-row items-center justify-between p-2"; // Pending
                                 }
+
+                                const handleVisualForceCheck = async () => {
+                                    try {
+                                        await activeProgramService.forceCheck();
+                                        toast.success("Check triggered");
+                                    } catch (e) {
+                                        toast.error("Failed to trigger check");
+                                    }
+                                };
 
                                 return (
                                     <div key={item._id} className={rowClass}>
-                                        <div className="flex items-center gap-4 pl-1">
-                                            {/* Status Icon */}
-                                            <div className="w-4 flex justify-center items-center">
-                                                {isRunning && (
-                                                    <span className="relative flex h-3 w-3">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 shadow-[0_0_10px_#22c55e]"></span>
+                                        {/* Main Content Row */}
+                                        <div className={`flex items-center justify-between w-full ${isRunning ? 'p-3 pb-1' : ''}`}>
+                                            <div className="flex items-center gap-4 pl-1">
+                                                {/* Status Icon */}
+                                                <div className="w-4 flex justify-center items-center">
+                                                    {isRunning && (
+                                                        <span className="relative flex h-3 w-3">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 shadow-[0_0_10px_#22c55e]"></span>
+                                                        </span>
+                                                    )}
+                                                    {isCompleted && <div className="h-2 w-2 rounded-full bg-blue-500" />}
+                                                    {isSkipped && <div className="h-2 w-2 rounded-full bg-purple-500" />}
+                                                    {isNext && <div className="h-2.5 w-2.5 rounded-full border-2 border-slate-400" />}
+                                                    {item.displayStatus === 'pending' && <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />}
+                                                </div>
+
+                                                {/* Time & Name */}
+                                                <div className="flex flex-col justify-center">
+                                                    <span className={`font-medium leading-tight ${isCompleted ? 'line-through decoration-blue-500/50' : ''} ${isRunning ? 'text-lg font-bold tracking-tight text-white' : 'text-sm'}`}>
+                                                        {item.name}
                                                     </span>
-                                                )}
-                                                {isCompleted && <div className="h-2 w-2 rounded-full bg-blue-500" />}
-                                                {isSkipped && <div className="h-2 w-2 rounded-full bg-purple-500" />}
-                                                {isNext && <div className="h-2.5 w-2.5 rounded-full border-2 border-slate-400" />}
-                                                {item.displayStatus === 'pending' && <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />}
+                                                    <span className={`font-mono mt-0.5 ${isRunning ? 'text-xs text-green-200/80 font-bold' : 'text-[10px] opacity-70'}`}>
+                                                        {item.time || "00:00"}
+                                                    </span>
+                                                </div>
                                             </div>
 
-                                            {/* Time & Name */}
-                                            <div className="flex flex-col justify-center">
-                                                <span className={`font-medium leading-tight ${isCompleted ? 'line-through decoration-blue-500/50' : ''} ${isRunning ? 'text-lg font-bold tracking-tight text-white' : 'text-sm'}`}>
-                                                    {item.name}
-                                                </span>
-                                                <span className={`font-mono mt-0.5 ${isRunning ? 'text-xs text-green-200/80 font-bold' : 'text-[10px] opacity-70'}`}>
-                                                    {item.time || "00:00"}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Status Label (Right Side) */}
-                                        {label && (
-                                            <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors ${isRunning ? 'bg-green-500 text-black shadow-sm' :
+                                            {/* Status Label (Right Side - Only for Non-Running or Running Header) */}
+                                            {label && (
+                                                <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors ${isRunning ? 'bg-green-500 text-black shadow-sm' :
                                                     isCompleted ? 'text-blue-400 bg-blue-500/10' :
                                                         isSkipped ? 'text-purple-300 bg-purple-500/10' :
                                                             isNext ? 'text-foreground/70 bg-muted' : ''
-                                                }`}>
-                                                {label}
+                                                    }`}>
+                                                    {label}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* ACTION PANEL (Only for Running) */}
+                                        {isRunning && (
+                                            <div className="mt-2 w-full bg-green-950/20 border-t border-green-500/20 px-3 py-2 flex items-center justify-between text-xs">
+                                                {/* Left: Trigger Info or Default msg */}
+                                                <div className="flex items-center gap-2 text-green-200 min-h-[24px]">
+                                                    {item.triggerInfo ? (
+                                                        <>
+                                                            <div className="flex items-center gap-1.5 animate-pulse">
+                                                                <span className="text-amber-400 text-sm">⚡</span>
+                                                                <span className="font-bold text-amber-100">#{item.triggerInfo.index}</span>
+                                                            </div>
+                                                            <span className="text-slate-500">→</span>
+                                                            <span className="flex items-center gap-1 text-blue-200 font-medium bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/10">
+                                                                🌊 {item.triggerInfo.flowName}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-slate-400 italic flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse"></span>
+                                                            Monitoring conditions...
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Right: Timer (Using reused component) */}
+                                                <div className="flex items-center">
+                                                    {/* Show timer if not executing triggers */}
+                                                    {!item.triggerInfo && (
+                                                        <NextCheckTimer
+                                                            lastCheck={item.lastCheck || new Date(0)}
+                                                            checkInterval={item.interval}
+                                                            status="active"
+                                                            programStatus={fullProgram?.status}
+                                                            onRefresh={handleVisualForceCheck}
+                                                        />
+                                                    )}
+
+                                                    {item.triggerInfo && (
+                                                        <div className="flex items-center gap-1 text-amber-400/80 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10">
+                                                            <span className="animate-spin text-[10px]">⚙️</span> Executing
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>

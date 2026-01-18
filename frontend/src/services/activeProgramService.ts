@@ -12,6 +12,11 @@ export const activeProgramService = {
         return response.data;
     },
 
+    getExecutionStatus: async (): Promise<any> => {
+        const response = await axios.get(`${API_URL}/automation/status`);
+        return response.data;
+    },
+
     load: async (programId: string, overrides: Record<string, any> = {}, minCycleInterval: number = 0): Promise<IActiveProgram> => {
         const response = await axios.post<IActiveProgram>(`${BASE_URL}/load`, { programId, overrides, minCycleInterval });
         return response.data;
