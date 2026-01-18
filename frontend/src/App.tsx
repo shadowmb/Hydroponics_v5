@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route, N
 import { ThemeProvider } from './components/theme-provider';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
-import { DashboardV2 } from './pages/DashboardV2';
+
 import Controllers from './pages/Controllers'; // Default import
 import { Devices } from './pages/Devices';
 import { FlowEditor } from './pages/FlowEditor';
@@ -31,7 +31,7 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<Layout />}>
       <Route path="/" element={<Dashboard />} />
-      <Route path="/dashboard-v2" element={<DashboardV2 />} />
+
       <Route path="/flows" element={<Flows />} />
       <Route path="/controllers" element={<Controllers />} />
       <Route path="/devices" element={<Devices />} />

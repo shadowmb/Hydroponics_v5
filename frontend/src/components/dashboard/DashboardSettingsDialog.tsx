@@ -3,7 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
+import { Input } from '../ui/input';
 import { toast } from 'sonner';
+import { Settings } from 'lucide-react';
+import { useDashboardConfig } from '../../hooks/useDashboardConfig';
+import { Collapsible, CollapsibleContent } from '../ui/collapsible';
 
 interface Device {
     _id: string;
@@ -29,6 +33,10 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
 
+    // New Config Hook
+    const { updateSensorConfig, getSensorConfig } = useDashboardConfig();
+    const [openConfigId, setOpenConfigId] = useState<string | null>(null);
+
     useEffect(() => {
         if (open) {
             fetchDevices();
@@ -43,7 +51,6 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                 const sensorDevices = (data.data || []).filter((d: Device) => d.type === 'SENSOR');
                 setDevices(sensorDevices);
 
-                // Pre-select pinned devices
                 const pinned = new Set<string>(
                     sensorDevices
                         .filter((d: Device) => d.dashboardPinned)
@@ -76,7 +83,6 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
     const handleSave = async () => {
         setLoading(true);
         try {
-            // Unpin all first
             const unpinPromises = devices
                 .filter(d => d.dashboardPinned && !selectedIds.has(d._id))
                 .map(d =>
@@ -87,7 +93,6 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                     })
                 );
 
-            // Pin selected
             const pinPromises = Array.from(selectedIds).map((id, index) =>
                 fetch(`/api/hardware/devices/${id}/pin`, {
                     method: 'PATCH',
@@ -122,7 +127,7 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                             📊 Pinned Sensors (max 6)
                         </h4>
                         <p className="text-xs text-muted-foreground mb-4">
-                            Select up to 6 sensors to display on the dashboard
+                            Select up to 6 sensors to display on the dashboard. Click the gear icon to configure ranges and aliases.
                         </p>
 
                         {devices.length === 0 ? (
@@ -130,30 +135,107 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                                 No sensors available
                             </div>
                         ) : (
-                            <div className="space-y-2 max-h-96 overflow-y-auto">
-                                {devices.map(device => (
-                                    <div
-                                        key={device._id}
-                                        className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                                    >
-                                        <Checkbox
-                                            id={device._id}
-                                            checked={selectedIds.has(device._id)}
-                                            onCheckedChange={() => handleToggle(device._id)}
-                                        />
-                                        <Label
-                                            htmlFor={device._id}
-                                            className="flex-1 cursor-pointer"
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-medium">{device.name}</span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {device.group}
-                                                </span>
+                            <div className="space-y-2">
+                                {devices.map(device => {
+                                    const isSelected = selectedIds.has(device._id);
+                                    const sensorConfig = getSensorConfig(device._id);
+                                    const isConfigOpen = openConfigId === device._id;
+
+                                    return (
+                                        <div key={device._id} className={`rounded-lg border transition-all ${isConfigOpen ? 'bg-muted/30 border-primary/30' : 'hover:bg-muted/50'}`}>
+                                            <div className="flex items-center space-x-2 p-3">
+                                                <Checkbox
+                                                    id={device._id}
+                                                    checked={isSelected}
+                                                    onCheckedChange={() => handleToggle(device._id)}
+                                                />
+                                                <Label
+                                                    htmlFor={device._id}
+                                                    className="flex-1 cursor-pointer select-none"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-medium">
+                                                            {sensorConfig.alias || device.name}
+                                                            {sensorConfig.alias && <span className="text-xs text-muted-foreground ml-2">({device.name})</span>}
+                                                        </span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {device.group}
+                                                        </span>
+                                                    </div>
+                                                </Label>
+
+                                                {isSelected && (
+                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setOpenConfigId(isConfigOpen ? null : device._id)}>
+                                                        <Settings className={`h-4 w-4 ${isConfigOpen ? 'text-primary' : 'text-muted-foreground'}`} />
+                                                    </Button>
+                                                )}
                                             </div>
-                                        </Label>
-                                    </div>
-                                ))}
+
+                                            <Collapsible open={isConfigOpen && isSelected}>
+                                                <CollapsibleContent className="px-4 pb-4 pt-0 space-y-3 border-t border-border/50 mt-2">
+                                                    <div className="grid grid-cols-2 gap-4 pt-3">
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs">Custom Alias</Label>
+                                                            <Input
+                                                                className="h-8 text-xs"
+                                                                placeholder="e.g. Nutrient Tank 1"
+                                                                value={sensorConfig.alias || ''}
+                                                                onChange={(e) => updateSensorConfig(device._id, { alias: e.target.value })}
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-2 pt-6">
+                                                            <Checkbox
+                                                                id={`trend-${device._id}`}
+                                                                checked={sensorConfig.showTrend !== false} // Default true
+                                                                onCheckedChange={(c) => updateSensorConfig(device._id, { showTrend: c === true })}
+                                                            />
+                                                            <Label htmlFor={`trend-${device._id}`} className="text-xs cursor-pointer">Show Trend Arrow</Label>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-1">
+                                                        <Label className="text-xs font-semibold">Target Range (Green Zone)</Label>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1 space-y-1">
+                                                                <Label className="text-[10px] text-muted-foreground">Min</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    className="h-8 text-xs font-mono"
+                                                                    value={sensorConfig.min ?? ''}
+                                                                    placeholder="No Limit"
+                                                                    onChange={(e) => updateSensorConfig(device._id, { min: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                                                />
+                                                            </div>
+                                                            <div className="flex-1 space-y-1">
+                                                                <Label className="text-[10px] text-muted-foreground">Max</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    className="h-8 text-xs font-mono"
+                                                                    value={sensorConfig.max ?? ''}
+                                                                    placeholder="No Limit"
+                                                                    onChange={(e) => updateSensorConfig(device._id, { max: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                                                />
+                                                            </div>
+                                                            <div className="flex-1 space-y-1">
+                                                                <Label className="text-[10px] text-muted-foreground">Tolerance (+/-)</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    className="h-8 text-xs font-mono"
+                                                                    value={sensorConfig.tolerance ?? ''}
+                                                                    placeholder="0"
+                                                                    onChange={(e) => updateSensorConfig(device._id, { tolerance: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-[10px] text-muted-foreground italic pt-1">
+                                                            Values outside (Min-Tol) to (Max+Tol) will show as warnings (Orange/Red).
+                                                        </p>
+                                                    </div>
+                                                </CollapsibleContent>
+                                            </Collapsible>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
