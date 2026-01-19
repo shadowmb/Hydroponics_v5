@@ -134,8 +134,8 @@ export class ProgramLogService {
 
         // Window Completed
         events.on('advanced:window_completed', async (data: any) => {
-            const reason = data.data?.result === 'triggered' ? 'Тригер' :
-                data.data?.result === 'fallback' ? 'Fallback' : 'Изтекло време';
+            const reason = data.result === 'triggered' ? 'Поток приключен' :
+                data.result === 'fallback' ? 'Fallback' : 'Изтекло време';
 
             await this.logEvent({
                 programId: data.programId,

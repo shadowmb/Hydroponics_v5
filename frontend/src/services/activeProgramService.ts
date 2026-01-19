@@ -32,7 +32,10 @@ export const activeProgramService = {
         return response.data;
     },
 
-    start: async (startTime?: Date, options?: { expiredStrategy?: 'run' | 'skip' }): Promise<any> => {
+    start: async (startTime?: Date, options?: {
+        resumeStrategy?: 'resume_flow' | 'skip_active' | 'stop_program' | 'run_expired' | 'skip_expired',
+        expiredStrategy?: 'run' | 'skip'
+    }): Promise<any> => {
         const response = await axios.post<any>(`${BASE_URL}/start`, { startTime, ...options });
         return response.data;
     },

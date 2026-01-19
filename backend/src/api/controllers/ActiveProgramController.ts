@@ -33,8 +33,8 @@ export class ActiveProgramController {
 
     static async start(req: FastifyRequest, reply: FastifyReply) {
         try {
-            const { startTime, expiredStrategy } = req.body as any || {};
-            const result = await activeProgramService.start(startTime, { expiredStrategy });
+            const { startTime, expiredStrategy, resumeStrategy } = req.body as any || {};
+            const result = await activeProgramService.start(startTime, { expiredStrategy, resumeStrategy });
 
             // Check for confirmation requirement
             if ('status' in result && result.status === 'confirmation_required') {

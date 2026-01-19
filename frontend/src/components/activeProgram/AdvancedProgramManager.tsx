@@ -26,7 +26,7 @@ import type { ITimeWindow, ITrigger } from '../programs/types';
 import { AdvancedExecutionLog } from './AdvancedExecutionLog';
 import { VariableConfigModal } from './VariableConfigModal';
 import { NextCheckTimer } from './NextCheckTimer';
-import { ExpiredWindowsDialog } from './ExpiredWindowsDialog';
+import { ResumeProgramDialog, type ResumeContext } from './ResumeProgramDialog';
 import { useSimulation } from '@/context/SimulationContext';
 
 interface AdvancedProgramManagerProps {
@@ -134,7 +134,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     const [editingFullTrigger, setEditingFullTrigger] = useState<ITrigger | null>(null);
     const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false);
     const [editingTriggerWindowId, setEditingTriggerWindowId] = useState<string | null>(null);
-    const [expiredDialogData, setExpiredDialogData] = useState<{ open: boolean, windows: any[] }>({ open: false, windows: [] });
+    const [resumeDialogContext, setResumeDialogContext] = useState<ResumeContext | null>(null);
 
 
     const windows = (program as any).windows || [];
@@ -269,19 +269,36 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         }
     };
 
-    const handleConfirmExpired = useCallback(async (strategy: 'run' | 'skip') => {
-        setExpiredDialogData(prev => ({ ...prev, open: false })); // Use functional update
+    const handleConfirmResume = useCallback(async (strategy: 'resume_flow' | 'skip_active' | 'stop_program' | 'run_expired' | 'skip_expired') => {
+        console.log('[AdvancedProgramManager] handleConfirmResume called with strategy:', strategy);
+        setResumeDialogContext(null);
         setProcessing(true);
         try {
-            await activeProgramService.start(undefined, { expiredStrategy: strategy });
-            toast.success(`Program resumed (${strategy === 'skip' ? 'Skipped' : 'Force Run'} expired windows)`);
+            console.log('[AdvancedProgramManager] Calling activeProgramService.start with resumeStrategy:', strategy);
+            const result = await activeProgramService.start(undefined, { resumeStrategy: strategy });
+            console.log('[AdvancedProgramManager] Resume completed, result:', result);
+
+            if (strategy === 'stop_program') {
+                toast.success('Program Stopped');
+            } else {
+                toast.success('Program Resumed');
+            }
+
+            // Force update to refresh logs and program state
             onUpdate();
+
+            // Small delay to ensure logs are written before refresh
+            setTimeout(() => {
+                console.log('[AdvancedProgramManager] Forcing log refresh after resume action');
+                onUpdate();
+            }, 500);
         } catch (error) {
+            console.error('[AdvancedProgramManager] Resume failed:', error);
             toast.error('Failed to resume with strategy');
         } finally {
             setProcessing(false);
         }
-    }, [onUpdate]); // Add dependency onUpdate
+    }, [onUpdate]);
 
     const handleResume = async () => {
         setProcessing(true);
@@ -289,11 +306,8 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             const result = await activeProgramService.start();
 
             // Check for confirmation requirement
-            if (result && result.status === 'confirmation_required') {
-                setExpiredDialogData({
-                    open: true,
-                    windows: result.expiredWindows || []
-                });
+            if (result && result.status === 'confirmation_required' && result.resumeContext) {
+                setResumeDialogContext(result.resumeContext);
                 return; // Stop here, wait for user input
             }
 
@@ -1320,6 +1334,14 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                 existingWindows={localWindows}
             />
 
+            {/* Resume Dialog */}
+            <ResumeProgramDialog
+                open={!!resumeDialogContext}
+                context={resumeDialogContext}
+                onConfirm={handleConfirmResume}
+                onCancel={() => setResumeDialogContext(null)}
+            />
+
             {/* Full Trigger Edit Modal */}
             < TriggerModal
                 open={isTriggerModalOpen}
@@ -1330,8 +1352,8 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                 flows={flows}
             />
 
-            {/* Variable Config Modal */}
-            < VariableConfigModal
+            {/* Variable Configuration Modal - Blocks Save until resolved */}
+            <VariableConfigModal
                 isOpen={!!configWindowId}
                 onClose={() => {
                     setConfigWindowId(null);
@@ -1357,14 +1379,6 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                         toast.error('Failed to save variables');
                     }
                 }}
-            />
-
-            {/* Expired Windows Dialog */}
-            <ExpiredWindowsDialog
-                open={expiredDialogData.open}
-                expiredWindows={expiredDialogData.windows}
-                onConfirm={handleConfirmExpired}
-                onCancel={() => setExpiredDialogData({ ...expiredDialogData, open: false })}
             />
         </>
     );

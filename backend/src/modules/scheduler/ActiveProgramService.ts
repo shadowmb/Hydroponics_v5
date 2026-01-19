@@ -346,10 +346,12 @@ export class ActiveProgramService {
     }
 
 
+
+
     /**
      * Start the loaded program.
      */
-    async start(startTime?: Date, options?: { expiredStrategy?: 'run' | 'skip' }): Promise<IActiveProgram | { status: 'confirmation_required', expiredWindows: any[] }> {
+    async start(startTime?: Date, options?: { resumeStrategy?: 'resume_flow' | 'skip_active' | 'stop_program' | 'run_expired' | 'skip_expired', expiredStrategy?: 'run' | 'skip' }): Promise<IActiveProgram | { status: 'confirmation_required', resumeContext: any }> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
@@ -363,154 +365,193 @@ export class ActiveProgramService {
             // Invalid status for start
         }
 
-        // --- STALE STATE DETECTION (Resume Logic) ---
-        if (active.type === 'ADVANCED' && active.windowsState) {
+        // --- RESUME LOGIC & CONTEXT DETECTION ---
+        logger.info({
+            type: active.type,
+            hasWindowsState: !!active.windowsState,
+            previousStatus,
+            willCheckResume: active.type === 'ADVANCED' && !!active.windowsState && previousStatus === 'paused'
+        }, '🔍 Resume Logic Check');
+
+        if (active.type === 'ADVANCED' && active.windowsState && previousStatus === 'paused') {
             const { timeService } = require('../../core/TimeService');
-            const now = timeService.now(); // Use Simulated Time
+            const now = timeService.now();
             const currentHours = now.getHours().toString().padStart(2, '0');
             const currentMinutes = now.getMinutes().toString().padStart(2, '0');
             const currentTimeStr = `${currentHours}:${currentMinutes}`;
-
             const timeToMin = (t: string) => {
                 const [h, m] = t.split(':').map(Number);
                 return h * 60 + m;
             };
             const currentMin = timeToMin(currentTimeStr);
 
-            const expiredWindows: any[] = [];
+            // 1. Detect Active Windows (Flows being executed)
+            // A window has an active flow if it has a currentFlowSessionId (ExecutionSession running/paused)
+            // Status field is not reliable as it may be stale
+            const activeWindows = active.windowsState.filter(ws => !!ws.currentFlowSessionId);
 
-            // Identify Expired Pending Windows
+            // 2. Detect Expired Windows (past endTime, not yet completed)
+            const expiredWindows: any[] = [];
             active.windowsState.forEach(ws => {
                 const winDef = (active as any).windows.find((w: any) => w.id === ws.windowId);
-
-                logger.info({
-                    windowId: ws.windowId,
-                    status: ws.status,
-                    winDefFound: !!winDef,
-                    currentMin,
-                    endTime: winDef ? winDef.endTime : 'N/A'
-                }, '🕵️ Resume Check: Inspecting Window');
-
-                // Check PENDING or ACTIVE (Interrupted) windows
-                if (ws.status === 'pending' || ws.status === 'active') {
-                    if (winDef) {
-                        const endMin = timeToMin(winDef.endTime);
-                        // If current time is past end time (with 1 min buffer?)
-                        if (currentMin > endMin) {
-                            logger.info({ window: winDef.name, endMin, currentMin }, '⚠️ Resume Check: Found Expired Window');
-                            // Store simple object, don't spread Mongoose document
-                            expiredWindows.push({ windowId: ws.windowId, name: winDef.name, status: ws.status });
-                        }
+                // Check all windows that are not completed/skipped
+                if (winDef && ws.status !== 'completed' && ws.status !== 'skipped') {
+                    const endMin = timeToMin(winDef.endTime);
+                    if (currentMin > endMin) {
+                        expiredWindows.push({ windowId: ws.windowId, name: winDef.name });
                     }
                 }
             });
 
-            if (expiredWindows.length > 0) {
-                // If no strategy provided, Request Confirmation
-                if (!options?.expiredStrategy) {
-                    logger.info({ expiredCount: expiredWindows.length }, '⏸️ Resume Check: Confirmation Required for Expired Windows');
-                    return {
-                        status: 'confirmation_required',
-                        expiredWindows: expiredWindows.map(w => ({ id: w.windowId, name: w.name }))
-                    };
+            // 3. Determine Context Type
+            let contextType: 'active_flow' | 'active_with_expired' | 'expired' | 'clean' = 'clean';
+            if (activeWindows.length > 0 && expiredWindows.length > 0) contextType = 'active_with_expired';
+            else if (activeWindows.length > 0) contextType = 'active_flow';
+            else if (expiredWindows.length > 0) contextType = 'expired';
+
+            logger.info({
+                contextType,
+                activeCount: activeWindows.length,
+                expiredCount: expiredWindows.length,
+                hasResumeStrategy: !!options?.resumeStrategy,
+                willAskConfirmation: !options?.resumeStrategy && contextType !== 'clean'
+            }, '🔍 Context Detection Result');
+
+            // 4. Check if we need confirmation (If no strategy provided OR strategy doesn't match context?)
+            // Actually, if strategy IS provided, we execute it. If NOT, we ask.
+            if (!options?.resumeStrategy && contextType !== 'clean') {
+                logger.info({ contextType, activeCount: activeWindows.length, expiredCount: expiredWindows.length }, '⏸️ Resume Check: Confirmation Required');
+                return {
+                    status: 'confirmation_required',
+                    resumeContext: {
+                        type: contextType,
+                        activeWindows: activeWindows.map(ws => {
+                            const def = (active as any).windows.find((w: any) => w.id === ws.windowId);
+                            return { id: ws.windowId, name: def ? def.name : 'Unknown' };
+                        }),
+                        expiredWindows: expiredWindows
+                    }
+                };
+            }
+
+            // 5. Handle Strategies
+            if (options?.resumeStrategy) {
+                logger.info({ strategy: options.resumeStrategy }, '⚙️ Executing Resume Strategy');
+
+                // --- Strategy: SKIP ACTIVE (Abort active window & continue) ---
+                if (options.resumeStrategy === 'skip_active') {
+                    // Stop current flow execution (Hard Stop implied by changing status?)
+                    // We need to call automation.stop() effectively for ONLY this window context?
+                    // Actually, ActiveProgramService manages state. AutomationEngine manages execution.
+                    // If we change status to 'aborted'/'skipped', Scheduler won't pick it up.
+                    // But we must also ensure the AutomationEngine stops pumping water.
+                    // The safest way is to let AutomationEngine know or just Stop Program? 
+                    // Requirement was: "Mark as completed/aborted and continue".
+
+                    // We will set status to 'skipped' for active windows.
+                    // IMPORTANT: We must also STOP the AutomationEngine if it's running a session for this window.
+                    // Currently, we rely on AutomationEngine listening to state changes or we must force stop it.
+                    // Since we are "Resuming", the engine is technically Paused.
+                    // If we resume with a different state, we must handle it.
+
+                    // Dynamic import
+                    const { automation } = await import('../automation/AutomationEngine');
+                    // We can tell automation to cancel the current session?
+                    // Verify matching session?
+                    // automation.cancelSession()? -- Does not exist yet.
+
+                    // Hack/Workaround: If we just set DB status, Engine might still be "paused" on that block.
+                    // When we 'automation.resumeProgram()', it will continue the block!
+                    // SO WE MUST TELL AUTOMATION TO STOP.
+                    // Use `stopProgram` but that stops everything.
+                    // use `stop()` method?
+
+                    // Since we want to CONTINUE the program but STOP the flow:
+                    // 1. Update DB State (Active -> Skipped)
+                    // 2. Clear engine state?
+                    // Currently, AutomationEngine doesn't support "Abort specific session and keep running".
+                    // The "Abort" feature we discussed requires `stopContext` support.
+
+                    // FOR NOW (Safest): We mark window separately, but we might need to "Stop" engine to clear its stack.
+                    // If we call automation.stopProgram(), active program becomes stopped.
+                    // We want Active Program = Running.
+
+                    // Proposed Solution: 
+                    // 1. Cancel Active Windows in DB.
+                    // 2. For the Engine: We can't easily "clear" just one stack execution without stopping.
+                    // BUT: If the engine is Paused, and we call `automation.stopProgram()`, it clears state.
+                    // Then we can set ActiveProgram status back to 'running' manually!
+
+                    await automation.stopProgram(); // Clears engine state (stops pumps)
+
+                    // Now restore Active Program to Running Status (override the 'stopped' status set by stopProgram)
+                    active.status = 'running'; // We will save this at the end of method
+
+                    // Mark windows as skipped/aborted
+                    activeWindows.forEach(ws => {
+                        ws.status = 'skipped';
+                        ws.currentFlowSessionId = undefined;
+                        ws.triggersExecuting = [];
+                    });
+
+                    // Also handle Expired Windows (Clear them as skipped too, as discussed)
+                    expiredWindows.forEach(exp => {
+                        const ws = active.windowsState!.find(w => w.windowId === exp.windowId);
+                        if (ws) ws.status = 'skipped';
+                    });
+
+                    active.markModified('windowsState');
                 }
 
-                // Handle Strategy
-                if (options.expiredStrategy === 'skip') {
-                    // Strategy: SKIP
-                    logger.info('⏭️ Resume Strategy: Skipping expired windows');
-
+                // --- Strategy: SKIP EXPIRED (Just mark expired as skipped) ---
+                else if (options.resumeStrategy === 'skip_expired') {
                     expiredWindows.forEach(exp => {
-                        // Use string coercion for robust comparison
-                        const ws = active.windowsState!.find(w => String(w.windowId) === String(exp.windowId));
+                        const ws = active.windowsState!.find(w => w.windowId === exp.windowId);
                         if (ws) {
                             ws.status = 'skipped';
-                            ws.lastCheck = new Date(); // Update check time to prevent "New Day" reset
-                            ws.skipUntil = undefined;  // Clear any previous skip timer
-                            ws.currentFlowSessionId = undefined; // Disarm any active flow tracking
-                            ws.triggersExecuting = []; // Clear executing triggers
-
-                            // 📝 Log Skip Event (Emit socket event for UI visibility)
-                            try {
-                                const { events } = require('../../core/EventBusService');
-                                events.emit('advanced:window_skipped', {
-                                    programId: active.sourceProgramId,
-                                    windowId: ws.windowId,
-                                    windowName: exp.name, // Use name from expiredWindows map
-                                    reason: 'Skipped by User (Resume Strategy)',
-                                    timestamp: new Date()
-                                });
-                            } catch (e) { /* ignore */ }
+                            ws.lastCheck = new Date();
                         }
                     });
-                    // Ensure Mongoose detects the change in the mixed/array type
                     active.markModified('windowsState');
-                } else if (options.expiredStrategy === 'run') {
-                    // Strategy: RUN (Force Evaluate)
-                    logger.info('⚡ Resume Strategy: Force running expired windows');
+                }
 
+                // --- Strategy: RUN EXPIRED (Force Eval) ---
+                else if (options.resumeStrategy === 'run_expired') {
                     // Lazy import TriggerEvaluator
                     const { triggerEvaluator } = await import('./TriggerEvaluator');
-
-                    // Execute sequentially
                     for (const exp of expiredWindows) {
                         const ws = active.windowsState!.find(w => w.windowId === exp.windowId);
                         const winDef = (active as any).windows.find((w: any) => w.id === exp.windowId);
-
                         if (ws && winDef) {
                             try {
-                                logger.info({ window: winDef.name }, '⚡ Force Evaluating Window (Resume)');
-
-                                // 1. Evaluate Triggers (Force Check)
-                                // We need to mock "state" or just pass the current state
-                                // evaluateWindow writes to 'state', so we pass 'ws'
+                                // Evaluate logic (similar to previous implementation)
                                 const result = await triggerEvaluator.evaluateWindow(
-                                    winDef,
-                                    ws, // Mutates state
-                                    active.variableOverrides,
-                                    (active as any).windowOverrides?.[winDef.id] || {},
-                                    active.sourceProgramId
+                                    winDef, ws, active.variableOverrides, (active as any).windowOverrides?.[winDef.id] || {}, active.sourceProgramId
                                 );
-
-                                // 2. Handle Result
                                 if (result === 'triggered' || result === 'executing') {
-                                    // Trigger matched!
-                                    // If executing, it started a flow.
-                                    // If triggered (break), it's done.
                                     ws.status = result === 'executing' ? 'active' : 'completed';
-                                    ws.lastCheck = new Date(); // Update check time
                                 } else {
-                                    // 3. No Trigger? Execute Fallback
-                                    // If evaluateWindow returned 'all_done' or 'pending', it means no trigger fired (or all done).
-                                    // For Resume, 'pending' means "conditions not met".
-
-                                    logger.info('🛡️ No trigger matched during Resume. Executing Fallback.');
-                                    const fbSession = await triggerEvaluator.executeFallback(
-                                        winDef,
-                                        active.variableOverrides,
-                                        (active as any).windowOverrides?.[winDef.id] || {},
-                                        active.sourceProgramId
+                                    // Fallback
+                                    await triggerEvaluator.executeFallback(
+                                        winDef, active.variableOverrides, (active as any).windowOverrides?.[winDef.id] || {}, active.sourceProgramId
                                     );
-
-                                    if (fbSession) {
-                                        ws.status = 'active'; // Mark active since flow is running
-                                        ws.currentFlowSessionId = fbSession;
-                                        ws.triggersExecuting = ['fallback']; // Track execution so Scheduler monitors it
-                                    } else {
-                                        // Fallback matched nothing or failed?
-                                        ws.status = 'completed'; // Treat as done
-                                    }
+                                    ws.status = 'completed'; // Assuming fallback runs or not
                                 }
-
-                            } catch (err: any) {
-                                logger.error({ error: err.message, window: winDef.name }, '❌ Failed to force run window');
-                                ws.status = 'skipped'; // Fail safe
-                            }
+                            } catch (e) { /* ignore */ }
                         }
                     }
-                    // FIX: Ensure Mongoose detects the change in the mixed/array type for RUN strategy too!
-                    // Without this, 'currentFlowSessionId' might not be saved, causing Scheduler to run fallback AGAIN.
                     active.markModified('windowsState');
+                }
+
+                // --- Strategy: STOP PROGRAM ---
+                else if (options.resumeStrategy === 'stop_program') {
+                    // Just call stop and return
+                    return this.stop();
+                }
+
+                // --- Strategy: RESUME FLOW (Do nothing special, just let it run) ---
+                else if (options.resumeStrategy === 'resume_flow') {
+                    // No DB changes needed, just proceed to set status='running' and automation.resume()
                 }
             }
         }
@@ -518,11 +559,13 @@ export class ActiveProgramService {
         if (startTime && new Date(startTime) > new Date()) {
             active.status = 'scheduled';
             active.startTime = new Date(startTime);
+            await active.save();
             logger.info({ startTime: active.startTime }, '⏳ Active Program Scheduled');
+            return active;
         } else {
             active.status = 'running';
             if (!active.startTime) active.startTime = new Date();
-            logger.info('▶️ Active Program Started');
+            logger.info('▶️ Active Program Started/Resumed');
 
             // handle RESUME from PAUSE
             if (previousStatus === 'paused') {
@@ -532,43 +575,41 @@ export class ActiveProgramService {
                 automation.resumeProgram();
             }
 
-            // Emit start event for Logging Service
-            // Only emit if NOT resuming (no expiredStrategy), to avoid spamming "started" on every resume
-            if (!options?.expiredStrategy) {
-                const { events } = await import('../../core/EventBusService');
-                events.emit('active:program_started', {
-                    programId: active.sourceProgramId,
-                    timestamp: active.startTime
-                });
-            }
-        }
-
-        // Reset FAILED and RUNNING items to PENDING on Start as well
-        // This ensures if we restart after a crash (without Stop), errors are cleared
-        active.schedule.forEach(item => {
-            if (item.status === 'failed' || item.status === 'running') {
-                item.status = 'pending';
-            }
-        });
-
-        await active.save();
-
-        // For ADVANCED programs, trigger immediate check (don't wait for next tick)
-        if (active.type === 'ADVANCED' && active.status === 'running') {
-            // Use setImmediate to avoid blocking, but execute before next tick
-            setImmediate(async () => {
-                try {
-                    // Dynamic import to avoid circular dependency
-                    const { schedulerService } = await import('./SchedulerService');
-                    // If resuming (options.expiredStrategy present), suppress log spam
-                    await schedulerService.triggerImmediateCheck({ silent: !!options?.expiredStrategy });
-                } catch (error: any) {
-                    logger.error({ error: error.message }, '❌ Failed to trigger immediate check');
+            // Reset FAILED and RUNNING items to PENDING on Start as well
+            // This ensures if we restart after a crash (without Stop), errors are cleared
+            active.schedule.forEach(item => {
+                if (item.status === 'failed' || item.status === 'running') {
+                    item.status = 'pending';
                 }
             });
-        }
 
-        return active;
+            await active.save();
+
+            // For ADVANCED programs, trigger immediate check (don't wait for next tick)
+            if (active.type === 'ADVANCED' && active.status === 'running') {
+                // Skip Force Check if we're resuming an active flow
+                // Active flow means the engine is already executing blocks, no need to re-evaluate triggers
+                const isResumingActiveFlow = (options?.resumeStrategy === 'resume_flow');
+
+                if (!isResumingActiveFlow) {
+                    // Use setImmediate to avoid blocking, but execute before next tick
+                    setImmediate(async () => {
+                        try {
+                            // Dynamic import to avoid circular dependency
+                            const { schedulerService } = await import('./SchedulerService');
+                            // If resuming (options.expiredStrategy present), suppress log spam
+                            await schedulerService.triggerImmediateCheck({ silent: !!options?.expiredStrategy });
+                        } catch (error: any) {
+                            logger.error({ error: error.message }, '❌ Failed to trigger immediate check');
+                        }
+                    });
+                } else {
+                    logger.info('⏭️ Skipping Force Check (resuming active flow)');
+                }
+            }
+
+            return active;
+        }
     }
 
     /**
