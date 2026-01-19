@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { activeProgramService } from '../services/activeProgramService';
 import type { IActiveProgram } from '../types/ActiveProgram';
-import { Loader2, Zap, Calendar, Waves, ArrowRight } from 'lucide-react';
+import { Loader2, Zap, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
 // UI Components
