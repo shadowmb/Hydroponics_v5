@@ -7,15 +7,18 @@ export class LogBlockExecutor implements IBlockExecutor {
     async execute(ctx: ExecutionContext, params: any): Promise<BlockResult> {
         const level = params.level || 'info';
         const message = params.message || '';
+        const systemAction = params.systemAction || 'NONE';
 
-        (logger as any)[level]({ block: 'LOG', ctx: ctx.programId }, message);
+        (logger as any)[level]({ block: 'LOG', ctx: ctx.programId, action: systemAction }, message);
 
         return {
             success: true,
+            output: { systemAction },
             logData: {
                 action: 'LOG',
                 level,
                 message,
+                systemAction,
                 flowId: ctx.programId || 'default'
             }
         };

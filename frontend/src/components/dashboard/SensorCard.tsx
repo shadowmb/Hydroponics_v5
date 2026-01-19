@@ -3,7 +3,7 @@ import { Card, CardContent } from '../ui/card';
 import { Activity, AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
-export type SensorStatus = 'normal' | 'warning' | 'critical' | 'error';
+export type SensorStatus = 'normal' | 'warning' | 'critical' | 'error' | 'success';
 export type TrendDirection = 'up' | 'down' | 'flat' | null;
 
 interface SensorCardProps {
@@ -68,18 +68,44 @@ export const SensorCard: React.FC<SensorCardProps> = ({
     }, [lastUpdate]); // Dependency on the raw prop is fine as long as we parse inside
 
     // Color Logic
-    let cardClass = "border-border";
-    let textClass = "text-foreground";
-    let statusIcon = null;
+    const statusStyles = {
+        normal: {
+            border: 'border-border/50 hover:border-border',
+            bg: 'bg-card',
+            text: 'text-foreground',
+            icon: null
+        },
+        success: {
+            border: 'border-emerald-500/20 hover:border-emerald-500/40',
+            bg: 'bg-emerald-500/5',
+            text: 'text-emerald-500',
+            icon: null
+        },
+        warning: {
+            border: 'border-orange-500/50 hover:border-orange-500',
+            bg: 'bg-orange-500/5',
+            text: 'text-orange-500',
+            icon: null
+        },
+        critical: {
+            border: 'border-red-500/50 hover:border-red-500',
+            bg: 'bg-red-500/10',
+            text: 'text-red-500',
+            icon: <AlertCircle className="h-4 w-4 text-red-500 animate-pulse" />
+        },
+        error: {
+            border: 'border-destructive/50 hover:border-destructive',
+            bg: 'bg-destructive/10',
+            text: 'text-destructive',
+            icon: <AlertCircle className="h-4 w-4 text-destructive" />
+        }
+    };
 
-    if (status === 'critical') {
-        cardClass = "border-destructive bg-destructive/10 animate-in fade-in";
-        textClass = "text-destructive";
-        statusIcon = <AlertCircle className="h-4 w-4 text-destructive animate-pulse" />;
-    } else if (status === 'warning') {
-        cardClass = "border-amber-500 bg-amber-500/10";
-        textClass = "text-amber-500";
-    }
+    const currentStyle = statusStyles[status] || statusStyles.normal;
+
+    const cardClass = `${currentStyle.border} ${currentStyle.bg}`;
+    const textClass = currentStyle.text;
+    const statusIcon = currentStyle.icon;
 
     // Trend Logic
     const renderTrend = () => {

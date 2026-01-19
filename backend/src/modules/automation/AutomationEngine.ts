@@ -558,7 +558,58 @@ export class AutomationEngine {
                 const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type, context.execContext.variableDefinitions);
                 const result = await executor.execute(context.execContext, resolvedParams, signal);
 
-                if (!result.success) throw new Error(result.error || 'Block execution returned failure');
+                // --- UNIFIED FAILURE HANDLING ---
+                if (!result.success) {
+                    const errorMessage = result.error || 'Block execution returned failure';
+
+                    if (onFailure === 'STOP') {
+                        throw new Error(errorMessage);
+                    } else if (onFailure === 'PAUSE') {
+                        // Soft Failure -> Pause Program
+                        logger.warn({ blockId, error: errorMessage }, '⚠️ Block Failed. Action: PAUSE');
+
+                        // Fake success to pass data to Machine, but set systemAction=PAUSE
+                        // We must return 'nextBlockId' so resume knows where to go.
+                        // Assuming flow continues to next block? Or retry current?
+                        // "Pause Flow" usually means: Stop here, let user fix, then Resume (Try Again or Next).
+                        // Let's assume Resume -> Next Block (similar to LOG block logic).
+
+                        // Determine Next Block (Standard Navigation)
+                        // We need to run navigation logic even on failure output if we want to proceed.
+                        // Since execution failed, we might not have output to drive navigation (e.g. IF block).
+                        // For linear blocks, it's just the 'source' edge.
+
+                        events.emit('automation:block_end', {
+                            blockId,
+                            blockType: block.type,
+                            blockLabel: params.label || block.type,
+                            success: false, // Mark as failed visually
+                            error: errorMessage,
+                            output: { systemAction: 'PAUSE' }, // TRIGGER PAUSE
+                            sessionId: this.currentSessionId,
+                            activeProgramId: this.activeProgramId
+                        });
+
+                        return {
+                            success: false,
+                            output: { systemAction: 'PAUSE' },
+                            // We don't verify nextBlockId here, navigation logic below will find it
+                            // actually, we return here, so we must find next block IF we want to skip.
+                            // But for PAUSE, we let the machine pause. The Resume state will point to... ??
+                            // If we don't provide nextBlockId, machine keeps currentBlockId?
+                            // Let's rely on machine.ts Unified Handler: "const targetBlockId = nextBlockId || context.currentBlockId;"
+                        };
+
+                    } else if (onFailure === 'CONTINUE') {
+                        // Soft Failure -> Ignore
+                        logger.warn({ blockId, error: errorMessage }, '⚠️ Block Failed. Action: CONTINUE (Ignored)');
+                        // Treat as Success for flow control
+                        // Falls through to Success handling...
+                    }
+                }
+
+                // If we are here, treated as Success (Real or CONTINUE)
+                // ... (Original Success Logic) ... 
 
                 // Success!
                 // Calculate Duration if END block
@@ -634,6 +685,20 @@ export class AutomationEngine {
                         nextBlockId = edge ? edge.target : null;
 
                         logger.info({ blockId, edgeFound: !!edge, nextBlockId }, 'Graph Navigation Trace');
+                    }
+                }
+
+                // SYSTEM ACTION HANDLER (LOG Block Control)
+                if (result.output && typeof result.output === 'object' && result.output.systemAction) {
+                    const action = result.output.systemAction;
+                    if (action === 'PAUSE') {
+                        // We pause and want to resume from the NEXT block, or current if no next
+                        const targetBlockId = nextBlockId || blockId;
+                        logger.info({ blockId, action, targetBlockId }, '⏸️ System Action: PAUSE triggered by block');
+                        this.actor.send({ type: 'PAUSE', resumeState: { blockId: targetBlockId } } as any);
+                    } else if (action === 'STOP') {
+                        logger.info({ blockId }, '🛑 System Action: STOP triggered by block');
+                        this.actor.send({ type: 'STOP' });
                     }
                 }
 

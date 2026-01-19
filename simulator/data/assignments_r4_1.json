@@ -5,7 +5,7 @@
       "A0_14"
     ],
     "values": {
-      "ph": 600
+      "ph": 302
     },
     "calibrationPoints": [
       {
@@ -24,7 +24,7 @@
       "A1_15"
     ],
     "values": {
-      "ec": 492.01351704892295
+      "ec": 225.93694950728178
     },
     "calibrationPoints": [
       {
@@ -44,7 +44,7 @@
       "D11_11"
     ],
     "values": {
-      "distance": 37
+      "distance": 72
     },
     "calibrationPoints": [
       {
@@ -63,7 +63,7 @@
       "A2_16"
     ],
     "values": {
-      "soil_moisture": 15
+      "soil_moisture": 68
     },
     "calibrationPoints": [
       {
@@ -83,7 +83,7 @@
       "D1_1"
     ],
     "values": {
-      "par": 80
+      "par": 110
     }
   },
   {
@@ -92,7 +92,7 @@
       "D2_2"
     ],
     "values": {
-      "temp": 22
+      "temp": 20
     },
     "calibrationPoints": [
       {

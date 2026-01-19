@@ -162,7 +162,7 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
         const max = config.max ?? Infinity;
         const tol = config.tolerance ?? 0;
 
-        if (value >= min && value <= max) return 'normal';
+        if (value >= min && value <= max) return 'success';
         if ((value >= min - tol && value < min) || (value > max && value <= max + tol)) {
             return 'warning';
         }

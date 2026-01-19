@@ -5,7 +5,7 @@ import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
-import { Settings, Thermometer, Droplet, Zap, Ruler, Wind, Sun, Percent, Beaker, Leaf, Gauge, Activity, Clock, ChevronDown } from 'lucide-react';
+import { Settings, Thermometer, Droplet, Zap, Ruler, Wind, Sun, Percent, Beaker, Leaf, Gauge, Activity, Clock, ChevronDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useDashboardConfig } from '../../hooks/useDashboardConfig';
 import { Collapsible, CollapsibleContent } from '../ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -49,7 +49,8 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
             const res = await fetch('/api/hardware/devices');
             if (res.ok) {
                 const data = await res.json();
-                const sensorDevices = (data.data || []).filter((d: Device) => d.type === 'SENSOR');
+                const sensorDevices = (data.data || []).filter((d: Device) => d.type === 'SENSOR')
+                    .sort((a: Device, b: Device) => (a.dashboardOrder || 999) - (b.dashboardOrder || 999));
                 setDevices(sensorDevices);
 
                 const pinned = new Set<string>(
@@ -81,9 +82,24 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
         });
     };
 
+    const handleMoveUp = (index: number) => {
+        if (index === 0) return;
+        const newDevices = [...devices];
+        [newDevices[index - 1], newDevices[index]] = [newDevices[index], newDevices[index - 1]];
+        setDevices(newDevices);
+    };
+
+    const handleMoveDown = (index: number) => {
+        if (index === devices.length - 1) return;
+        const newDevices = [...devices];
+        [newDevices[index], newDevices[index + 1]] = [newDevices[index + 1], newDevices[index]];
+        setDevices(newDevices);
+    };
+
     const handleSave = async () => {
         setLoading(true);
         try {
+            // Unpin devices not in selectedIds
             const unpinPromises = devices
                 .filter(d => d.dashboardPinned && !selectedIds.has(d._id))
                 .map(d =>
@@ -94,8 +110,12 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                     })
                 );
 
-            const pinPromises = Array.from(selectedIds).map((id, index) =>
-                fetch(`/api/hardware/devices/${id}/pin`, {
+            // Save order based on current devices array
+            // ONLY consider pinned devices for ordering
+            const pinnedDevices = devices.filter(d => selectedIds.has(d._id));
+
+            const pinPromises = pinnedDevices.map((d, index) =>
+                fetch(`/api/hardware/devices/${d._id}/pin`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ pinned: true, order: index })
@@ -137,7 +157,7 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {devices.map(device => {
+                                {devices.map((device, index) => {
                                     const isSelected = selectedIds.has(device._id);
                                     const sensorConfig = getSensorConfig(device._id);
                                     const isConfigOpen = openConfigId === device._id;
@@ -161,7 +181,31 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                                                         {sensorConfig.alias && <span className="text-xs text-muted-foreground ml-2">({device.name})</span>}
                                                     </span>
 
-                                                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isConfigOpen ? 'rotate-180' : ''}`} />
+                                                    <div className="flex items-center gap-2">
+                                                        {isSelected && (
+                                                            <div className="flex items-center gap-1 mr-2" onClick={(e) => e.stopPropagation()}>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 w-6 p-0 hover:bg-muted"
+                                                                    disabled={index === 0}
+                                                                    onClick={() => handleMoveUp(index)}
+                                                                >
+                                                                    <ArrowUp className="h-3 w-3" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 w-6 p-0 hover:bg-muted"
+                                                                    disabled={index === devices.length - 1}
+                                                                    onClick={() => handleMoveDown(index)}
+                                                                >
+                                                                    <ArrowDown className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isConfigOpen ? 'rotate-180' : ''}`} />
+                                                    </div>
                                                 </div>
                                             </div>
 

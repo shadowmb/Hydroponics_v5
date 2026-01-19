@@ -20,6 +20,17 @@ export const BLOCK_DEFINITIONS: Record<string, BlockDefinition> = {
     LOG: {
         label: 'Log Message',
         fields: {
+            systemAction: {
+                label: 'System Action',
+                type: 'select',
+                options: [
+                    { label: '⚪ None (Continue Flow)', value: 'NONE' },
+                    { label: '⏸️ PAUSE PROGRAM', value: 'PAUSE' },
+                    { label: '🔴 STOP PROGRAM', value: 'STOP' }
+                ],
+                // defaultValue: 'NONE', // Removed to enforce selection/validation
+                description: 'Critical: Choose what happens after logging'
+            },
             message: {
                 label: 'Message',
                 type: 'text',

@@ -94,7 +94,27 @@ export const automationMachine = createMachine({
                     target: 'running',
                     reenter: true,
                     actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
-                        const { nextBlockId, output, variables, resumeState } = event.output;
+                        const { nextBlockId, output, variables, resumeState, systemAction } = event.output;
+
+                        // Unified System Action Handler
+                        // If a block returns a systemAction (e.g. LOG block or onFailure policy), handle it here.
+                        if (systemAction === 'PAUSE') {
+                            // When pausing, we want to resume from the NEXT block (or the current one if specified in resumeState)
+                            // We do NOT update currentBlockId yet. We store the target in resumeState.
+                            const targetBlockId = nextBlockId || context.currentBlockId;
+                            return {
+                                execContext: {
+                                    ...context.execContext,
+                                    resumeState: { blockId: targetBlockId }
+                                }
+                            };
+                        }
+
+                        if (systemAction === 'STOP') {
+                            return {}; // State transition to 'stopped' handles the rest
+                        }
+
+                        // Default Flow: Move to next block
                         return {
                             currentBlockId: nextBlockId || null,
                             execContext: {
@@ -106,6 +126,13 @@ export const automationMachine = createMachine({
                         };
                     })
                 },
+                always: [
+                    // System Action Transition Guards
+                    { target: 'paused', guard: ({ event }: any) => event.output?.systemAction === 'PAUSE' },
+                    { target: 'stopped', guard: ({ event }: any) => event.output?.systemAction === 'STOP' },
+                    // Normal Completion Guard
+                    { target: 'completed', guard: ({ context }: any) => !context.currentBlockId }
+                ],
                 onError: {
                     target: 'error',
                     actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
@@ -128,7 +155,16 @@ export const automationMachine = createMachine({
                 { target: 'completed', guard: ({ context }: { context: AutomationContext }) => !context.currentBlockId }
             ],
             on: {
-                PAUSE: { target: 'paused' },
+                PAUSE: {
+                    target: 'paused',
+                    actions: assign(({ context, event }: { context: AutomationContext, event: any }) => {
+                        // Support explicit resume target (e.g. from LOG block System Action)
+                        if (event.resumeState && event.resumeState.blockId) {
+                            return { currentBlockId: event.resumeState.blockId };
+                        }
+                        return {};
+                    })
+                },
                 STOP: { target: 'stopped' },
                 BLOCK_ERROR: { target: 'error' }
             }
