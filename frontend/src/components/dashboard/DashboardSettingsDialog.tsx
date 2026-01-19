@@ -5,9 +5,10 @@ import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
-import { Settings } from 'lucide-react';
+import { Settings, Thermometer, Droplet, Zap, Ruler, Wind, Sun, Percent, Beaker, Leaf, Gauge, Activity, Clock, ChevronDown } from 'lucide-react';
 import { useDashboardConfig } from '../../hooks/useDashboardConfig';
 import { Collapsible, CollapsibleContent } from '../ui/collapsible';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface Device {
     _id: string;
@@ -70,8 +71,8 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
             if (newSet.has(deviceId)) {
                 newSet.delete(deviceId);
             } else {
-                if (newSet.size >= 6) {
-                    toast.error('Maximum 6 sensors can be pinned');
+                if (newSet.size >= 9) {
+                    toast.error('Maximum 9 sensors can be pinned');
                     return prev;
                 }
                 newSet.add(deviceId);
@@ -124,10 +125,10 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                 <div className="space-y-4">
                     <div>
                         <h4 className="text-sm font-semibold mb-2">
-                            📊 Pinned Sensors (max 6)
+                            📊 Pinned Sensors (max 9)
                         </h4>
                         <p className="text-xs text-muted-foreground mb-4">
-                            Select up to 6 sensors to display on the dashboard. Click the gear icon to configure ranges and aliases.
+                            Select up to 9 sensors to display on the dashboard. Click the gear icon to configure ranges and aliases.
                         </p>
 
                         {devices.length === 0 ? (
@@ -143,36 +144,31 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
 
                                     return (
                                         <div key={device._id} className={`rounded-lg border transition-all ${isConfigOpen ? 'bg-muted/30 border-primary/30' : 'hover:bg-muted/50'}`}>
-                                            <div className="flex items-center space-x-2 p-3">
-                                                <Checkbox
-                                                    id={device._id}
-                                                    checked={isSelected}
-                                                    onCheckedChange={() => handleToggle(device._id)}
-                                                />
-                                                <Label
-                                                    htmlFor={device._id}
-                                                    className="flex-1 cursor-pointer select-none"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-medium">
-                                                            {sensorConfig.alias || device.name}
-                                                            {sensorConfig.alias && <span className="text-xs text-muted-foreground ml-2">({device.name})</span>}
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {device.group}
-                                                        </span>
-                                                    </div>
-                                                </Label>
+                                            <div
+                                                className="flex items-center space-x-3 p-3 select-none cursor-pointer"
+                                                onClick={() => setOpenConfigId(isConfigOpen ? null : device._id)}
+                                            >
+                                                <div onClick={(e) => e.stopPropagation()}>
+                                                    <Checkbox
+                                                        id={device._id}
+                                                        checked={isSelected}
+                                                        onCheckedChange={() => handleToggle(device._id)}
+                                                    />
+                                                </div>
+                                                <div className="flex-1 flex items-center justify-between">
+                                                    <span className={`font-medium text-sm ${!isSelected && 'text-muted-foreground'}`}>
+                                                        {sensorConfig.alias || device.name}
+                                                        {sensorConfig.alias && <span className="text-xs text-muted-foreground ml-2">({device.name})</span>}
+                                                    </span>
 
-                                                {isSelected && (
-                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setOpenConfigId(isConfigOpen ? null : device._id)}>
-                                                        <Settings className={`h-4 w-4 ${isConfigOpen ? 'text-primary' : 'text-muted-foreground'}`} />
-                                                    </Button>
-                                                )}
+                                                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isConfigOpen ? 'rotate-180' : ''}`} />
+                                                </div>
                                             </div>
 
-                                            <Collapsible open={isConfigOpen && isSelected}>
+                                            <Collapsible open={isConfigOpen}>
                                                 <CollapsibleContent className="px-4 pb-4 pt-0 space-y-3 border-t border-border/50 mt-2">
+
+
                                                     <div className="grid grid-cols-2 gap-4 pt-3">
                                                         <div className="space-y-1">
                                                             <Label className="text-xs">Custom Alias</Label>
@@ -183,14 +179,41 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                                                                 onChange={(e) => updateSensorConfig(device._id, { alias: e.target.value })}
                                                             />
                                                         </div>
-                                                        <div className="flex items-center gap-2 pt-6">
-                                                            <Checkbox
-                                                                id={`trend-${device._id}`}
-                                                                checked={sensorConfig.showTrend !== false} // Default true
-                                                                onCheckedChange={(c) => updateSensorConfig(device._id, { showTrend: c === true })}
-                                                            />
-                                                            <Label htmlFor={`trend-${device._id}`} className="text-xs cursor-pointer">Show Trend Arrow</Label>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs">Icon</Label>
+                                                            <Select
+                                                                value={sensorConfig.icon || 'auto'}
+                                                                onValueChange={(val) => updateSensorConfig(device._id, { icon: val === 'auto' ? undefined : val })}
+                                                            >
+                                                                <SelectTrigger className="h-8 text-xs w-full">
+                                                                    <SelectValue placeholder="Auto" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="auto"><span className="flex items-center gap-2"><Settings className="h-3 w-3" /> Auto (Default)</span></SelectItem>
+                                                                    <SelectItem value="thermometer"><span className="flex items-center gap-2"><Thermometer className="h-3 w-3 text-orange-500" /> Thermometer</span></SelectItem>
+                                                                    <SelectItem value="droplet"><span className="flex items-center gap-2"><Droplet className="h-3 w-3 text-blue-500" /> Water/Humidity</span></SelectItem>
+                                                                    <SelectItem value="zap"><span className="flex items-center gap-2"><Zap className="h-3 w-3 text-yellow-500" /> Energy/EC</span></SelectItem>
+                                                                    <SelectItem value="ruler"><span className="flex items-center gap-2"><Ruler className="h-3 w-3 text-green-500" /> Level/Distance</span></SelectItem>
+                                                                    <SelectItem value="wind"><span className="flex items-center gap-2"><Wind className="h-3 w-3 text-sky-500" /> Air/CO2</span></SelectItem>
+                                                                    <SelectItem value="sun"><span className="flex items-center gap-2"><Sun className="h-3 w-3 text-amber-500" /> Light/PAR</span></SelectItem>
+                                                                    <SelectItem value="percent"><span className="flex items-center gap-2"><Percent className="h-3 w-3 text-indigo-500" /> Percentage</span></SelectItem>
+                                                                    <SelectItem value="beaker"><span className="flex items-center gap-2"><Beaker className="h-3 w-3 text-purple-500" /> pH/Chemical</span></SelectItem>
+                                                                    <SelectItem value="leaf"><span className="flex items-center gap-2"><Leaf className="h-3 w-3 text-emerald-600" /> Soil/Plant</span></SelectItem>
+                                                                    <SelectItem value="gauge"><span className="flex items-center gap-2"><Gauge className="h-3 w-3 text-red-500" /> Pressure/Flow</span></SelectItem>
+                                                                    <SelectItem value="clock"><span className="flex items-center gap-2"><Clock className="h-3 w-3 text-gray-500" /> Time/Cycle</span></SelectItem>
+                                                                    <SelectItem value="activity"><span className="flex items-center gap-2"><Activity className="h-3 w-3 text-pink-500" /> Generic</span></SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
                                                         </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 pt-2">
+                                                        <Checkbox
+                                                            id={`trend-${device._id}`}
+                                                            checked={sensorConfig.showTrend !== false} // Default true
+                                                            onCheckedChange={(c) => updateSensorConfig(device._id, { showTrend: c === true })}
+                                                        />
+                                                        <Label htmlFor={`trend-${device._id}`} className="text-xs cursor-pointer">Show Trend Arrow</Label>
                                                     </div>
 
                                                     <div className="space-y-1">
@@ -241,7 +264,7 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                        Selected: {selectedIds.size} / 6
+                        Selected: {selectedIds.size} / 9
                     </div>
                 </div>
 

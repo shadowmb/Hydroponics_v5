@@ -86,20 +86,20 @@ export const SensorCard: React.FC<SensorCardProps> = ({
         if (!showTrend) return null;
 
         // Show Flat (-) if null or explicit flat
-        if (trend === 'up') return <TrendingUp className="h-5 w-5 text-emerald-500 animate-pulse" />;
-        if (trend === 'down') return <TrendingDown className="h-5 w-5 text-rose-500 animate-pulse" />;
+        if (trend === 'up') return <TrendingUp className="h-4 w-4 text-emerald-500 animate-pulse" />;
+        if (trend === 'down') return <TrendingDown className="h-4 w-4 text-rose-500 animate-pulse" />;
 
         // Default / Flat state
-        return <Minus className="h-5 w-5 text-muted-foreground/30" />;
+        return <Minus className="h-4 w-4 text-muted-foreground/30" />;
     };
 
     const StatusCard = (
         <Card className={`transition-all duration-300 hover:shadow-md cursor-help ${cardClass}`}>
-            <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
+            <CardContent className="p-3 pb-4">
+                <div className="flex items-start justify-between mb-1">
                     <div className="flex items-center gap-2">
-                        {icon || <Activity className="h-4 w-4 text-muted-foreground" />}
-                        <span className="text-sm font-medium text-muted-foreground truncate max-w-[150px]" title={name}>
+                        {icon || <Activity className="h-3 w-3 text-muted-foreground" />}
+                        <span className="text-xs font-medium text-muted-foreground truncate max-w-[150px]" title={name}>
                             {alias || name}
                         </span>
                     </div>
@@ -108,24 +108,24 @@ export const SensorCard: React.FC<SensorCardProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    {/* Value */}
-                    <div className="flex items-baseline gap-1">
-                        <span className={`text-2xl font-bold tracking-tight ${textClass}`}>
-                            {typeof value === 'number' ? value.toFixed(2) : value}
-                        </span>
-                        {unit && (
-                            <span className="text-sm text-muted-foreground font-medium opacity-80">{unit}</span>
-                        )}
-                    </div>
-
-                    {/* Render Trend Next to Value */}
+                <div className="flex items-center justify-center gap-2">
+                    {/* Render Trend Left of Value */}
                     <div className="flex items-center">
                         {renderTrend()}
                     </div>
+
+                    {/* Value */}
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-xl font-bold tracking-tight ${textClass}`}>
+                            {typeof value === 'number' ? value.toFixed(2) : value}
+                        </span>
+                        {unit && (
+                            <span className="text-xs text-muted-foreground font-medium opacity-80">{unit}</span>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center justify-center gap-2 mt-1">
                     <span className={`text-[10px] uppercase font-bold tracking-wider ${isStale ? 'text-amber-500' : 'text-muted-foreground/60'}`}>
                         {isStale ? '⚠️ No recent data' : timeSince}
                     </span>
