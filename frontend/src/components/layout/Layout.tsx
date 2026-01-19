@@ -44,7 +44,7 @@ const NavGroup = ({ label, icon: Icon, items }: { label: string, icon: any, item
                                 )
                             }
                         >
-                            {subItem.icon && <subItem.icon className="mr-2 h-4 w-4 opacity-70" />}
+                            {subItem.icon && <subItem.icon className={cn("mr-2 h-4 w-4 opacity-70", subItem.iconClass)} />}
                             <span>{subItem.label}</span>
                         </NavLink>
                     ))}
@@ -62,7 +62,7 @@ function Sidebar({ className }: SidebarProps) {
             group: 'Automation',
             icon: Play,
             items: [
-                { to: '/active-program', label: 'Active Program', icon: Play },
+                { to: '/active-program', label: 'Active Program', icon: Play, iconClass: "text-red-500 opacity-100" },
                 { to: '/programs', label: 'Programs', icon: Calendar },
                 { to: '/flows', label: 'Flows', icon: Workflow },
             ]

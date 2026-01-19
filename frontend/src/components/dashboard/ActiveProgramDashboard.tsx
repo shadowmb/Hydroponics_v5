@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+// Removed invalid programService import
 
 import {
     Clock,
@@ -126,8 +128,37 @@ export const ActiveProgramDashboard: React.FC = () => {
     // Also allows showing "Loaded but not started" programs
     const shouldRender = fullProgram || (sessionToDisplay && sessionToDisplay.status === 'running');
 
+
     if (!shouldRender) {
-        return null;
+        return (
+            <Card className="border-l-4 border-l-muted border-y border-r border-dashed border-slate-700/50 bg-slate-900/20 shadow-sm relative overflow-hidden">
+                <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:20px_20px]" />
+                <CardHeader className="pb-2 relative z-10">
+                    <CardTitle className="text-xl text-muted-foreground flex items-center gap-2">
+                        <Calendar className="h-5 w-5 opacity-50" />
+                        Active Program
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                    <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+                        <div className="bg-slate-800/50 p-4 rounded-full border border-dashed border-slate-700">
+                            <Waves className="h-8 w-8 text-blue-500/40" />
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-medium text-foreground">No active program</h3>
+                            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                                No program is currently running. Go to the Active Program page to load and configure one.
+                            </p>
+                        </div>
+                        <a href="/active-program" className="mt-2 block">
+                            <Button variant="outline" className="gap-2 border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-400">
+                                Go to Active Program <ArrowRight className="h-4 w-4" />
+                            </Button>
+                        </a>
+                    </div>
+                </CardContent>
+            </Card>
+        );
     }
 
     // 5. Timeline Logic - Prepare Visual Items based on Program Type
