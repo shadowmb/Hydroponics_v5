@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { softDeletePlugin, ISoftDelete } from '../plugins/softDelete.plugin';
 
-export type LogEventType = 'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING' | 'TRIGGER_EVALUATION' | 'TRIGGER' | 'FLOW_STATE' | 'SYSTEM';
+export type LogEventType = 'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING' | 'TRIGGER_EVALUATION' | 'TRIGGER' | 'FLOW_STATE' | 'SYSTEM' | 'USER_LOG' | 'WAIT_START' | 'SYSTEM_PAUSE' | 'SYSTEM_RESUME' | 'SYSTEM_STOP';
 
 export interface ILogEvent {
     timestamp: Date;
@@ -24,7 +24,7 @@ const LogEventSchema = new Schema({
     timestamp: { type: Date, required: true, default: Date.now },
     type: {
         type: String,
-        enum: ['WINDOW_EVENT', 'TRIGGER_MATCH', 'TRIGGER_SKIP', 'FLOW_EXECUTED', 'ERROR', 'INFO', 'WARNING', 'TRIGGER_EVALUATION', 'TRIGGER', 'FLOW_STATE', 'SYSTEM'],
+        enum: ['WINDOW_EVENT', 'TRIGGER_MATCH', 'TRIGGER_SKIP', 'FLOW_EXECUTED', 'ERROR', 'INFO', 'WARNING', 'TRIGGER_EVALUATION', 'TRIGGER', 'FLOW_STATE', 'SYSTEM', 'USER_LOG', 'WAIT_START', 'SYSTEM_PAUSE', 'SYSTEM_RESUME', 'SYSTEM_STOP'],
         required: true
     },
     message: { type: String, required: true },

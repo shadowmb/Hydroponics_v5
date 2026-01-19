@@ -5,6 +5,44 @@ import { cycleManager } from './CycleManager';
 
 export class ActiveProgramService {
 
+    constructor() {
+        this.setupEventListeners();
+    }
+
+    private setupEventListeners() {
+        // We use a dynamic import or referenced import to avoid circular dep issues during module loading
+        // pushing this to next tick or just executing it.
+        // Since 'events' is a singleton, we can import it at top or lazy load it.
+        // Let's lazy load to be safe given the codebase structure.
+        setImmediate(async () => {
+            const { events } = await import('../../core/EventBusService');
+
+            events.on('automation:state_change', async (event: any) => {
+                try {
+                    const active = await this.getActive();
+                    // Strict Security Guard: Only update if there is an active program
+                    if (!active) return;
+
+                    // 1. Handle PAUSE
+                    if (event.state === 'paused' && active.status !== 'paused') {
+                        logger.info('⏸️ Syncing Active Program Status: Engine -> Paused');
+                        active.status = 'paused';
+                        await active.save();
+                    }
+                    // 2. Handle RESUME (Running)
+                    // Only update if we are currently paused/scheduled/loaded, not if already running (to save DB writes)
+                    else if (event.state === 'running' && active.status !== 'running') {
+                        logger.info('▶️ Syncing Active Program Status: Engine -> Running');
+                        active.status = 'running';
+                        await active.save();
+                    }
+                } catch (error) {
+                    logger.error({ error }, '❌ Error syncing active program status');
+                }
+            });
+        });
+    }
+
     /**
      * Load a program template into the active state.
      * Replaces any existing active program.
@@ -317,6 +355,9 @@ export class ActiveProgramService {
 
         if (active.status === 'running') return active;
 
+        // Capture previous status to handle Resume logic
+        const previousStatus = active.status;
+
         // Allow starting from loaded, ready, paused, or stopped
         if (active.status !== 'loaded' && active.status !== 'ready' && active.status !== 'paused' && active.status !== 'stopped' && active.status !== 'scheduled') {
             // Invalid status for start
@@ -482,6 +523,14 @@ export class ActiveProgramService {
             active.status = 'running';
             if (!active.startTime) active.startTime = new Date();
             logger.info('▶️ Active Program Started');
+
+            // handle RESUME from PAUSE
+            if (previousStatus === 'paused') {
+                logger.info('▶️ Resuming Paused Program in Automation Engine');
+                // Dynamic import to avoid circular dependency
+                const { automation } = await import('../automation/AutomationEngine');
+                automation.resumeProgram();
+            }
 
             // Emit start event for Logging Service
             // Only emit if NOT resuming (no expiredStrategy), to avoid spamming "started" on every resume

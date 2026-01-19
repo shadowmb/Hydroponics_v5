@@ -120,7 +120,8 @@ export class AutomationEngine {
                 sessionId: this.currentSessionId,
                 error: snapshot.context.error,
                 // @ts-ignore - Triggered by BlockResult properties
-                summary: (snapshot.event as any)?.output?.summary
+                summary: (snapshot.event as any)?.output?.summary,
+                activeProgramId: this.activeProgramId // CRITICAL: Required for ProgramLogService to log state changes
             });
 
             // Emit Program Stop on Terminal States
