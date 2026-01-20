@@ -21,8 +21,8 @@ export class ProgramLogService {
     private setupListeners() {
         // --- Scheduler / Advanced Program Events ---
 
-        // Automation State Change (Pause/Resume/Stop)
-        events.on('automation:state_change', async (data: any) => {
+        // Flow State Change (Pause/Resume/Stop)
+        events.on('flow:state_change', async (data: any) => {
             const progId = data.activeProgramId;
             if (!progId) return;
 
@@ -54,7 +54,7 @@ export class ProgramLogService {
         });
 
         // Block Execution
-        events.on('automation:block_end', async (data: any) => {
+        events.on('flow:block_end', async (data: any) => {
             const progId = data.activeProgramId;
             if (!progId) return;
 
@@ -135,7 +135,9 @@ export class ProgramLogService {
         // Window Completed
         events.on('advanced:window_completed', async (data: any) => {
             const reason = data.result === 'triggered' ? 'Поток приключен' :
-                data.result === 'fallback' ? 'Fallback' : 'Изтекло време';
+                data.result === 'fallback' ? 'Fallback' :
+                    data.result === 'interrupted' ? 'Прекъснат' :
+                        'Изтекло време';
 
             await this.logEvent({
                 programId: data.programId,

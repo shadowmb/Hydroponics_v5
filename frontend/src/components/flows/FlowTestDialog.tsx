@@ -91,10 +91,10 @@ export const FlowTestDialog: React.FC<FlowTestDialogProps> = ({
             }
         };
 
-        socketService.on('automation:state_change', handleStateChange);
+        socketService.on('flow:state_change', handleStateChange);
 
         return () => {
-            socketService.off('automation:state_change', handleStateChange);
+            socketService.off('flow:state_change', handleStateChange);
         };
     }, [open, step]);
 

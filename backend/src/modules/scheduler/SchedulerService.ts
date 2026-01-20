@@ -343,7 +343,7 @@ export class SchedulerService {
 
             // A. Check for New Day (Reset Logic)
             // If window is done (completed/skipped) but last check was previous day
-            if (state.lastCheck && (state.status === 'completed' || state.status === 'skipped')) {
+            if (state.lastCheck && (state.status === 'completed' || state.status === 'skipped' || state.status === 'interrupted')) {
                 const lastCheckDate = new Date(state.lastCheck);
                 if (lastCheckDate.getDate() !== now.getDate() || lastCheckDate.getMonth() !== now.getMonth()) {
                     // It's a new day!
@@ -405,8 +405,8 @@ export class SchedulerService {
                 await activeProgram.save();
             }
 
-            // Skip completed or skipped windows
-            if (state.status === 'completed' || state.status === 'skipped') continue;
+            // Skip completed, skipped, or interrupted windows
+            if (state.status === 'completed' || state.status === 'skipped' || state.status === 'interrupted') continue;
 
             // ---------------------------------------------------------
             // ASYNC FLOW TRACKING (Variant C) - HOISTED

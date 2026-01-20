@@ -367,22 +367,24 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
             'advanced:window_skipped',
             'advanced:trigger_matched',
             'advanced:trigger_skipped',
-            'advanced:trigger_evaluation', // <-- Add this
+            'advanced:trigger_evaluation',
             'advanced:fallback_executed',
             'advanced:program_day_complete',
             'active:program_started',
-            'automation:program_start'
+            'automation:program_start',
+            'flow:execution_step', // Flow block execution
+            'flow:block_end' // Trigger log refetch
         ];
 
         events.forEach(event => socketService.on(event, handleRealtimeEvent));
-        socketService.on('automation:block_start', handleBlockStart);
-        socketService.on('automation:block_end', handleBlockEnd);
+        socketService.on('flow:block_start', handleBlockStart);
+        socketService.on('flow:block_end', handleBlockEnd);
 
         return () => {
             if (refetchTimeout) clearTimeout(refetchTimeout);
             events.forEach(event => socketService.off(event, handleRealtimeEvent));
-            socketService.off('automation:block_start', handleBlockStart);
-            socketService.off('automation:block_end', handleBlockEnd);
+            socketService.off('flow:block_start', handleBlockStart);
+            socketService.off('flow:block_end', handleBlockEnd);
         };
     }, [isToday, programId]);
 

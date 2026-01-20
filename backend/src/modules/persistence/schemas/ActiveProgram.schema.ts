@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { ProgramType, ITimeWindow } from './Program.schema';
 
 export type ActiveProgramStatus = 'loaded' | 'ready' | 'running' | 'paused' | 'stopped' | 'completed' | 'scheduled';
-export type WindowStatus = 'pending' | 'active' | 'completed' | 'skipped';
+export type WindowStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'interrupted';
 
 export interface IActiveScheduleItem {
     _id?: string;
@@ -61,9 +61,13 @@ export interface IActiveProgram extends Document {
     // Pause State (for resume)
     pausedAt?: Date;                    // When was paused
     pauseFlowSessionId?: string;        // ID of the paused flow
+    pauseFlowName?: string;             // Name of the paused flow (for UI)
     pauseBlockId?: string;              // ID of current block at pause
+    pauseBlockLabel?: string;           // Label of block at pause (for UI)
     pauseWindowId?: string;             // ID of window at pause (ADVANCED)
+    pauseWindowName?: string;           // Name of window at pause (for UI)
     pauseTimeout?: number;              // Seconds until auto-stop (0 = no timeout)
+    pendingDayReset?: boolean;          // Flag for pending 00:00 reset
 }
 
 const ActiveScheduleItemSchema = new Schema<IActiveScheduleItem>({
@@ -89,7 +93,7 @@ const ActiveScheduleItemSchema = new Schema<IActiveScheduleItem>({
 // --- Window State Sub-Schema (Advanced Mode) ---
 const WindowStateSchema = new Schema({
     windowId: { type: String, required: true },
-    status: { type: String, enum: ['pending', 'active', 'completed', 'skipped'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'active', 'completed', 'skipped', 'interrupted'], default: 'pending' },
     triggersExecuted: [{ type: String }],
     triggersExecuting: [{ type: String }],
     currentFlowSessionId: { type: String },
@@ -130,9 +134,13 @@ const ActiveProgramSchema = new Schema<IActiveProgram>({
     // Pause State
     pausedAt: { type: Date },
     pauseFlowSessionId: { type: String },
+    pauseFlowName: { type: String },
     pauseBlockId: { type: String },
+    pauseBlockLabel: { type: String },
     pauseWindowId: { type: String },
-    pauseTimeout: { type: Number, default: 600 }  // Default 10 minutes
+    pauseWindowName: { type: String },
+    pauseTimeout: { type: Number, default: 600 },  // Default 10 minutes
+    pendingDayReset: { type: Boolean, default: false }
 }, {
     timestamps: true,
     toJSON: {

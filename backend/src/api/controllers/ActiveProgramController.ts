@@ -223,4 +223,25 @@ export class ActiveProgramController {
             reply.status(500).send({ message: error.message });
         }
     }
+
+    static async getResumeContext(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { resumeContextService } = require('../../modules/scheduler/ResumeContextService');
+            const context = await resumeContextService.getResumeContext();
+
+            if (!context) {
+                return reply.status(404).send({
+                    success: false,
+                    error: 'No paused program found'
+                });
+            }
+
+            reply.send({ success: true, data: context });
+        } catch (error: any) {
+            reply.status(500).send({
+                success: false,
+                error: error.message
+            });
+        }
+    }
 }

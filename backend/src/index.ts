@@ -15,6 +15,7 @@ import { historyService } from './services/HistoryService';
 import { timeService } from './core/TimeService';
 import { notifications } from './services/NotificationService';
 import { programLogService } from './services/ProgramLogService'; // Ensure listeners are registered
+import { events } from './core/EventBusService';
 import ResourceRoleManager from './services/ResourceRoleManager';
 
 const app = Fastify({
@@ -99,16 +100,18 @@ async function bootstrap() {
         const logService = programLogService;
         logger.info('📋 Program Log Service Active', { active: !!logService });
 
-        // DEBUG: Verify Event Bus Connection
-        const { events } = require('./core/EventBusService');
-        events.on('automation:block_end', (payload: any) => {
-            console.log('✅ DEBUG LISTENER: automation:block_end received!', payload?.blockId);
-        });
+
 
         // 6. Start Server
         console.log('Starting Server...');
         await app.ready(); // Ensure server is ready
         socketService.initialize(app.server);
+
+        // 6.1 Initialize AutomationRelay Bridge (Engine → Socket.IO)
+        console.log('Initializing AutomationRelay Bridge...');
+        const { AutomationRelay } = require('./core/AutomationRelay');
+        new AutomationRelay(automation, events);
+        logger.info('🌉 AutomationRelay Bridge Active');
 
         // 7. Start Scheduler
         console.log('Starting Scheduler...');
