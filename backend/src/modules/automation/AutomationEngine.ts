@@ -11,6 +11,7 @@ import { actionTemplateRepository } from '../persistence/repositories/ActionTemp
 import { historyService, HistoryService } from '../../services/HistoryService';
 import { unitConversionService, UnitConversionService } from '../../services/conversion/UnitConversionService';
 import { hardware, HardwareService } from '../hardware/HardwareService';
+import { activeProgramService } from '../scheduler/ActiveProgramService';
 
 // Import Executors
 import { SensorReadBlockExecutor } from './blocks/SensorReadBlockExecutor';
@@ -89,6 +90,17 @@ export class AutomationEngine {
             if (stateValue === 'stopped' || stateValue === 'error') {
                 if (snapshot.context.execContext) {
                     await this.cleanupResources(snapshot.context.execContext);
+                }
+
+                // CRITICAL: If this flow is part of an Active Program, stop the entire program
+                // This ensures LOG block with "STOP PROGRAM" action behaves like the UI Stop button
+                if (this.activeProgramId && stateValue === 'stopped') {
+                    try {
+                        logger.info({ activeProgramId: this.activeProgramId }, '🛑 Stopping Active Program (triggered by LOG block STOP action)');
+                        await activeProgramService.stop();
+                    } catch (err: any) {
+                        logger.error({ err: err.message }, '❌ Failed to stop Active Program');
+                    }
                 }
             }
             // ---------------------------

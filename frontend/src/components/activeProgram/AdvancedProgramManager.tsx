@@ -270,13 +270,10 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     };
 
     const handleConfirmResume = useCallback(async (strategy: 'resume_flow' | 'skip_active' | 'stop_program' | 'run_expired' | 'skip_expired') => {
-        console.log('[AdvancedProgramManager] handleConfirmResume called with strategy:', strategy);
         setResumeDialogContext(null);
         setProcessing(true);
         try {
-            console.log('[AdvancedProgramManager] Calling activeProgramService.start with resumeStrategy:', strategy);
-            const result = await activeProgramService.start(undefined, { resumeStrategy: strategy });
-            console.log('[AdvancedProgramManager] Resume completed, result:', result);
+            await activeProgramService.start(undefined, { resumeStrategy: strategy });
 
             if (strategy === 'stop_program') {
                 toast.success('Program Stopped');
@@ -289,11 +286,9 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
 
             // Small delay to ensure logs are written before refresh
             setTimeout(() => {
-                console.log('[AdvancedProgramManager] Forcing log refresh after resume action');
                 onUpdate();
             }, 500);
         } catch (error) {
-            console.error('[AdvancedProgramManager] Resume failed:', error);
             toast.error('Failed to resume with strategy');
         } finally {
             setProcessing(false);

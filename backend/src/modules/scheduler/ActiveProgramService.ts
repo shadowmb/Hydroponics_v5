@@ -366,13 +366,6 @@ export class ActiveProgramService {
         }
 
         // --- RESUME LOGIC & CONTEXT DETECTION ---
-        logger.info({
-            type: active.type,
-            hasWindowsState: !!active.windowsState,
-            previousStatus,
-            willCheckResume: active.type === 'ADVANCED' && !!active.windowsState && previousStatus === 'paused'
-        }, '🔍 Resume Logic Check');
-
         if (active.type === 'ADVANCED' && active.windowsState && previousStatus === 'paused') {
             const { timeService } = require('../../core/TimeService');
             const now = timeService.now();
@@ -409,13 +402,6 @@ export class ActiveProgramService {
             else if (activeWindows.length > 0) contextType = 'active_flow';
             else if (expiredWindows.length > 0) contextType = 'expired';
 
-            logger.info({
-                contextType,
-                activeCount: activeWindows.length,
-                expiredCount: expiredWindows.length,
-                hasResumeStrategy: !!options?.resumeStrategy,
-                willAskConfirmation: !options?.resumeStrategy && contextType !== 'clean'
-            }, '🔍 Context Detection Result');
 
             // 4. Check if we need confirmation (If no strategy provided OR strategy doesn't match context?)
             // Actually, if strategy IS provided, we execute it. If NOT, we ask.
