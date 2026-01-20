@@ -619,18 +619,21 @@ export class ActiveProgramService {
             }
         });
 
-        // For ADVANCED programs: Reset all window states to pending
+        // For ADVANCED programs: Preserve completed/skipped, reset only in-progress
         if (active.type === 'ADVANCED' && active.windowsState) {
             active.windowsState.forEach(ws => {
-                ws.status = 'pending';
-                ws.triggersExecuted = [];
-                ws.triggersExecuting = [];
-                ws.triggerCounts = new Map(); // Reset trigger counts
-                ws.lastCheck = undefined;
-                ws.currentFlowSessionId = undefined;
-                // Reset skips as well to treat as fresh start? 
-                // User said "Start as if for the first time".
-                ws.skipUntil = undefined;
+                // PRESERVE completed and skipped statuses!
+                if (ws.status === 'active') {
+                    // Was actively executing - reset to pending
+                    ws.status = 'pending';
+                    ws.triggersExecuting = [];
+                    ws.currentFlowSessionId = undefined;
+                }
+                // For pending windows with active flow session (edge case)
+                if (ws.status === 'pending' && ws.currentFlowSessionId) {
+                    ws.currentFlowSessionId = undefined;
+                }
+                // DO NOT touch: status='completed', status='skipped', triggersExecuted, triggerCounts
             });
             active.markModified('windowsState');
         }
@@ -643,14 +646,39 @@ export class ActiveProgramService {
     /**
      * Pause the active program.
      */
-    async pause(): Promise<IActiveProgram> {
+    async pause(options?: { timeout?: number }): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
         if (active.status === 'running') {
+            // 1. Get snapshot from AutomationEngine
+            const { automation } = await import('../automation/AutomationEngine');
+            const engineSnapshot = automation.getSnapshot();
+
+            // 2. Record pause state
             active.status = 'paused';
+            active.pausedAt = new Date();
+            active.pauseBlockId = engineSnapshot.context?.currentBlockId || undefined;
+            active.pauseFlowSessionId = engineSnapshot.sessionId || undefined;
+            active.pauseTimeout = options?.timeout || 600; // Default 10 min
+
+            // 3. For ADVANCED mode - find active window
+            if (active.type === 'ADVANCED' && active.windowsState) {
+                const activeWindow = active.windowsState.find(ws => ws.currentFlowSessionId);
+                if (activeWindow) {
+                    active.pauseWindowId = activeWindow.windowId;
+                }
+            }
+
+            // 4. Call AutomationEngine.pauseProgram()
+            automation.pauseProgram();
+
             await active.save();
-            logger.info('⏸️ Active Program Paused');
+            logger.info({
+                blockId: active.pauseBlockId,
+                windowId: active.pauseWindowId,
+                timeout: active.pauseTimeout
+            }, '⏸️ Active Program Paused (position saved)');
         }
         return active;
     }

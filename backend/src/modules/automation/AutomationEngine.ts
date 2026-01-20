@@ -94,10 +94,16 @@ export class AutomationEngine {
 
                 // CRITICAL: If this flow is part of an Active Program, stop the entire program
                 // This ensures LOG block with "STOP PROGRAM" action behaves like the UI Stop button
+                // BUT: Do NOT stop if program is already paused (to prevent overwriting pause state)
                 if (this.activeProgramId && stateValue === 'stopped') {
                     try {
-                        logger.info({ activeProgramId: this.activeProgramId }, '🛑 Stopping Active Program (triggered by LOG block STOP action)');
-                        await activeProgramService.stop();
+                        const currentProgram = await activeProgramService.getActive();
+
+                        // Only stop if program is NOT already paused
+                        if (currentProgram && currentProgram.status !== 'paused') {
+                            logger.info({ activeProgramId: this.activeProgramId }, '🛑 Stopping Active Program (triggered by LOG block STOP action)');
+                            await activeProgramService.stop();
+                        }
                     } catch (err: any) {
                         logger.error({ err: err.message }, '❌ Failed to stop Active Program');
                     }

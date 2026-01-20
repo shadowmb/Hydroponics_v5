@@ -57,6 +57,13 @@ export interface IActiveProgram extends Document {
     windows?: ITimeWindow[];  // Snapshot from template
     windowsState?: IWindowState[];  // Runtime state
     dayCompleteEmitted?: boolean;  // Prevent duplicate day_complete events
+
+    // Pause State (for resume)
+    pausedAt?: Date;                    // When was paused
+    pauseFlowSessionId?: string;        // ID of the paused flow
+    pauseBlockId?: string;              // ID of current block at pause
+    pauseWindowId?: string;             // ID of window at pause (ADVANCED)
+    pauseTimeout?: number;              // Seconds until auto-stop (0 = no timeout)
 }
 
 const ActiveScheduleItemSchema = new Schema<IActiveScheduleItem>({
@@ -118,7 +125,14 @@ const ActiveProgramSchema = new Schema<IActiveProgram>({
     // ADVANCED mode
     windows: { type: Schema.Types.Mixed },  // Snapshot of ITimeWindow[]
     windowsState: [WindowStateSchema],
-    dayCompleteEmitted: { type: Boolean, default: false }  // Prevent duplicate day_complete events
+    dayCompleteEmitted: { type: Boolean, default: false },  // Prevent duplicate day_complete events
+
+    // Pause State
+    pausedAt: { type: Date },
+    pauseFlowSessionId: { type: String },
+    pauseBlockId: { type: String },
+    pauseWindowId: { type: String },
+    pauseTimeout: { type: Number, default: 600 }  // Default 10 minutes
 }, {
     timestamps: true,
     toJSON: {

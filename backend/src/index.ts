@@ -115,6 +115,13 @@ async function bootstrap() {
         const { schedulerService } = require('./modules/scheduler/SchedulerService');
         schedulerService.start();
 
+        // 7.1 Start Pause Timeout Monitor
+        console.log('Starting Pause Timeout Service...');
+        const { pauseTimeoutService } = require('./modules/scheduler/PauseTimeoutService');
+        pauseTimeoutService.start();
+        logger.info('⏰ Pause Timeout Service Active');
+
+
         await app.listen({ port: config.PORT, host: '0.0.0.0' });
         console.log(`🚀 Server running on port ${config.PORT}`);
         logger.info(`🚀 Server running on port ${config.PORT}`);
@@ -131,6 +138,11 @@ const signals = ['SIGINT', 'SIGTERM'];
 signals.forEach((signal) => {
     process.on(signal, async () => {
         logger.info(`🛑 Received ${signal}, shutting down...`);
+
+        // Stop services
+        const { pauseTimeoutService } = require('./modules/scheduler/PauseTimeoutService');
+        pauseTimeoutService.stop();
+
         await app.close();
         await db.disconnect();
         process.exit(0);

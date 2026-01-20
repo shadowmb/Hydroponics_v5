@@ -59,7 +59,8 @@ export class ActiveProgramController {
 
     static async pause(req: FastifyRequest, reply: FastifyReply) {
         try {
-            const active = await activeProgramService.pause();
+            const { timeout } = req.body as any || {};
+            const active = await activeProgramService.pause({ timeout });
             reply.send(active);
         } catch (error: any) {
             reply.status(500).send({ message: error.message });
