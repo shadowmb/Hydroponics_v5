@@ -1,51 +1,45 @@
-{
-  "_id": {
-    "$oid": "696e318ee11b927143d6c6b2"
-  },
-  "sourceProgramId": "prog_test_pause_resume",
-  "name": "Test pause resume",
-  "status": "running",
-  "minCycleInterval": 60,
-  "type": "BASIC",
-  "schedule": [
-    {
-      "time": "08:00",
-      "name": "Event 1",
-      "description": "",
-      "cycleId": "696e3133e11b927143d6c53e",
-      "cycleName": "Event 1",
-      "cycleDescription": "",
-      "steps": [
-        {
-          "flowId": "test",
-          "overrides": {
-            "ГР желано": 100,
-            "ГР желано_tolerance": 10
-          },
-          "_id": {
-            "$oid": "696e3133e11b927143d6c53f"
-          }
-        }
-      ],
-      "status": "running",
-      "_id": {
-        "$oid": "696e318ee11b927143d6c6b3"
-      }
-    }
-  ],
-  "dayCompleteEmitted": false,
-  "windowsState": [],
-  "createdAt": {
-    "$date": "2026-01-19T13:28:46.491Z"
-  },
-  "updatedAt": {
-    "$date": "2026-01-19T14:11:46.610Z"
-  },
-  "__v": 1,
-  "endTime": {
-    "$date": "2026-01-19T14:11:28.816Z"
-  },
-  "startTime": {
-    "$date": "2026-01-19T13:29:18.768Z"
-  }
-}
+Критичен преглед на предложението
+1. Оптимизация на Socket логиката (Избягвай излишни Fetch-ове)
+В схемата ти пише: socket.on('program:paused') -> fetchAndSet().
+
+Критика: Това е "мързелив" подход. Ако сокетът ти изпраща събитие, той обикновено може да изпрати и малък обект с промяната (напр. { status: 'paused', timestamp: ... }).
+
+Препоръка: Накарай разработчика да обновява Zustand стейта директно с данните от сокета, вместо да кара браузъра да прави нова HTTP заявка всеки път.
+
+2. Проблемът с "Over-rendering" (Презареждане на интерфейса)
+Ако трите компонента просто извикат const activeProgram = useStore(), те ще се презареждат при всяка промяна в обекта (дори ако се промени нещо, което не показват).
+
+Препоръка: Използвай Selectors. Това е професионалният начин за работа със Zustand.
+
+Пример: const status = useStore(state => state.activeProgram?.status);
+
+3. Къде да "живее" Sync логиката?
+Поставянето на логиката в Layout.tsx е лесно, но "зацапва" компонента.
+
+Препоръка: Създайте Headless Component или инициализирайте синхронизацията в App.tsx (или основния Router) чрез custom hook, който не рендерира нищо, а само управлява потока от данни.
+
+🛠️ Финално предложение към разработчика (Кратко и ясно)
+Можеш да му го изпратиш така:
+
+Решение: Миграция към Zustand за ActiveProgram (Single Source of Truth)
+
+Store (Zustand): Дефинираме activeProgram и setActiveProgram в глобалния стор.
+
+Centralized Sync Hook (useActiveProgramSync):
+
+Извиква се веднъж в корена на приложението (App.tsx или Layout.tsx).
+
+Прави първоначален fetch на данните.
+
+Слуша сокетите и директно обновява стор-а (patch-ва данните), за да избегнем дублиращи HTTP заявки.
+
+Selectors в Компонентите: Компонентите консумират само необходимите им свойства (напр. state => state.activeProgram.status), за да се избегнат излишни презареждания (re-renders).
+
+Cleanup: Премахваме всички локални useEffect и useState от Dashboard, Manager и Header компонентите.
+
+✅ Защо това е по-добро?
+Network: Намаляваме трафика с 60-70%.
+
+UX: UI реагира мигновено (няма "loading" спинъри при превключване между страниците, защото данните са вече в паметта).
+
+Maintenance: Ако трябва да променим структурата на програмата, го правим на 1 място (Store), а не в 3 компонен

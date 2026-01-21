@@ -9,6 +9,7 @@ import { ServerClock } from "./ServerClock"
 import { AIChatButton } from "../ai/AIChatButton"
 import { AIChatPopup } from "../ai/AIChatPopup"
 import { AIInsightsButton } from "../ai/AIInsightsButton"
+import { useActiveProgramSync } from "../../hooks/useActiveProgramSync"
 
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -120,6 +121,9 @@ import { useSimulation } from "@/context/SimulationContext"; // Add import
 export function Layout() {
     const { setSystemStatus, devices, updateDevice } = useStore();
     const { isSimulating, virtualTime } = useSimulation(); // Destructure Context
+
+    // Initialize Active Program Sync
+    useActiveProgramSync();
 
     useEffect(() => {
         // Initialize Socket

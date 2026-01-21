@@ -84,6 +84,9 @@ export const ResumeProgramDialog: React.FC<ResumeProgramDialogProps> = ({
         return (
             <Dialog open={open} onOpenChange={(val) => !val && onCancel()}>
                 <DialogContent className="sm:max-w-md border-amber-500/30 bg-slate-950/95 backdrop-blur-xl">
+                    <DialogHeader>
+                        <DialogTitle>Loading...</DialogTitle>
+                    </DialogHeader>
                     <div className="flex items-center justify-center p-8">
                         <Clock className="h-8 w-8 animate-spin text-amber-500" />
                     </div>
