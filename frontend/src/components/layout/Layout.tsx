@@ -114,6 +114,7 @@ function Sidebar({ className }: SidebarProps) {
     )
 }
 
+import { GlobalPauseTimer } from "../activeProgram/GlobalPauseTimer";
 import { useSimulation } from "@/context/SimulationContext"; // Add import
 
 export function Layout() {
@@ -174,6 +175,7 @@ export function Layout() {
                         )}
                     </div>
                     <div className="flex items-center gap-4">
+                        <GlobalPauseTimer />
                         <AIInsightsButton />
                         <AIChatButton />
                         <ServerClock />

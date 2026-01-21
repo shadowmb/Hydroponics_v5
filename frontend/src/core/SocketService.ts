@@ -96,6 +96,11 @@ class SocketService {
         this.socket.on('flow:state_change', (data: any) => {
             console.log('Flow state change:', data);
 
+            // Notify Active Program components to refresh (sync status)
+            if (['running', 'paused', 'stopped', 'completed'].includes(data.state)) {
+                window.dispatchEvent(new CustomEvent('program:refresh', { detail: { event: 'flow:state_change', data } }));
+            }
+
             if (data.state === 'running' || data.state === 'paused' || data.state === 'error' || data.state === 'loaded' || data.state === 'stopped' || data.state === 'completed') {
                 const currentSession = useStore.getState().activeSession;
 
@@ -150,6 +155,9 @@ class SocketService {
             'advanced:window_active',
             'advanced:program_day_complete',
             'active:program_started',
+            'active:program_stopped',
+            'program:paused',
+            'program:resumed',
             'advanced:window_skipped',
             'advanced:fallback_executed'
         ];

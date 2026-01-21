@@ -42,6 +42,11 @@ export interface IActiveProgram {
     forceCheckRequired?: boolean;
     currentTriggerIndex?: number;
     currentFlowId?: string;
+    // Pause State
+    pausedAt?: string; // ISO date
+    pauseTimeout?: number; // seconds
+    pauseFlowName?: string;
+    pauseBlockLabel?: string;
     // Flows reference for lookup
     flows?: { id: string, name: string }[];
 }
