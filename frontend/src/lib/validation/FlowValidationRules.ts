@@ -168,6 +168,14 @@ export const BlockValidationRules: Record<string, ValidationRule[]> = {
             message: 'Interval must be positive',
             validate: (val) => !val || val >= 0
         }
+    ],
+    'LOG': [
+        {
+            field: 'systemAction',
+            required: true,
+            message: 'System Action is required (e.g. None, Pause, Stop)',
+            validate: (val) => val === 'NONE' || val === 'PAUSE' || val === 'STOP'
+        }
     ]
 };
 

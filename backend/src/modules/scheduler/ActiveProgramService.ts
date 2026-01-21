@@ -2,13 +2,71 @@ import { ActiveProgramModel, IActiveProgram, IActiveScheduleItem, IWindowState }
 import { programRepository } from '../persistence/repositories/ProgramRepository';
 import { logger } from '../../core/LoggerService';
 import { cycleManager } from './CycleManager';
+import { automation } from '../automation/AutomationEngine';
+import { events } from '../../core/EventBusService';
 
+/**
+ * ActiveProgramService v2.0
+ * 
+ * Orchestrator for Active Programs. Listens to AutomationEngine events
+ * and manages the lifecycle of programs (load, start, stop, pause).
+ * 
+ * Key Changes from v1:
+ * - Uses AutomationEngine EventEmitter instead of global events bus
+ * - Cleaner separation of concerns
+ * - No circular dependency (Engine doesn't import this service)
+ */
 export class ActiveProgramService {
+
+    constructor() {
+        this.setupEngineListeners();
+    }
+
+    /**
+     * Setup listeners for AutomationEngine events
+     */
+    private setupEngineListeners() {
+        // Listen for flow state changes
+        automation.on('flow:state_change', async (event: any) => {
+            try {
+                const active = await this.getActive();
+                if (!active) return;
+
+                // 1. Handle PAUSE
+                if (event.state === 'paused' && active.status !== 'paused') {
+                    logger.info('⏸️ Syncing Active Program Status: Engine -> Paused');
+                    active.status = 'paused';
+                    await active.save();
+                }
+                // 2. Handle RESUME (Running)
+                else if (event.state === 'running' && active.status !== 'running') {
+                    logger.info('▶️ Syncing Active Program Status: Engine -> Running');
+                    active.status = 'running';
+                    await active.save();
+                }
+            } catch (error) {
+                logger.error({ error }, '❌ Error syncing active program status');
+            }
+        });
+
+        // Listen for STOP_PROGRAM signal from LOG block
+        automation.on('flow:signal', async (event: any) => {
+            if (event.signal === 'STOP_PROGRAM') {
+                logger.info({ activeProgramId: event.activeProgramId }, '🛑 Received STOP_PROGRAM signal from flow');
+                try {
+                    const active = await this.getActive();
+                    if (active && active.status !== 'paused') {
+                        await this.stop();
+                    }
+                } catch (err: any) {
+                    logger.error({ err: err.message }, '❌ Failed to stop Active Program from signal');
+                }
+            }
+        });
+    }
 
     /**
      * Load a program template into the active state.
-     * Replaces any existing active program.
-     * Supports both BASIC and ADVANCED program types.
      */
     async loadProgram(programId: string, globalOverrides: Record<string, any> = {}, minCycleInterval: number = 0): Promise<IActiveProgram> {
         // 1. Check if running
@@ -21,24 +79,22 @@ export class ActiveProgramService {
         const template = await programRepository.findById(programId);
         if (!template) throw new Error(`Program template not found: ${programId}`);
 
-        // 3. Validation Check: Ensure no flows are invalid OR missing
+        // 3. Validation Check
         const { FlowModel } = require('../persistence/schemas/Flow.schema');
         const allFlows = await FlowModel.find({}, { id: 1, name: 1, validationStatus: 1 });
         const flowMap = new Map(allFlows.map((f: any) => [f.id, f]));
 
         const checkFlow = (flowId: string) => {
             const flow = flowMap.get(flowId) as any;
-            if (!flow) throw new Error(`Cannot load program. Referenced flow '${flowId}' was not found (deleted?).`);
-            if (flow.validationStatus === 'INVALID') throw new Error(`Cannot load program. Flow '${flow.name}' is invalid/broken.`);
+            if (!flow) throw new Error(`Cannot load program. Referenced flow '${flowId}' was not found.`);
+            if (flow.validationStatus === 'INVALID') throw new Error(`Cannot load program. Flow '${flow.name}' is invalid.`);
         };
 
         // Check Basic Schedule
         if (template.schedule) {
             for (const item of template.schedule) {
                 if (item.steps) {
-                    for (const step of item.steps) {
-                        checkFlow(step.flowId);
-                    }
+                    for (const step of item.steps) checkFlow(step.flowId);
                 }
             }
         }
@@ -49,7 +105,7 @@ export class ActiveProgramService {
                 if (window.triggers) {
                     for (const trigger of window.triggers) {
                         if (trigger.flowId) checkFlow(trigger.flowId);
-                        if (trigger.flowIds) { // Array support
+                        if (trigger.flowIds) {
                             for (const fid of trigger.flowIds) checkFlow(fid);
                         }
                     }
@@ -66,22 +122,19 @@ export class ActiveProgramService {
         // 4. Clear existing
         await ActiveProgramModel.deleteMany({});
 
-        // 4. Determine program type
-        const programType = template.type || 'BASIC';
-
         // 5. Build active program data
+        const programType = template.type || 'BASIC';
         const activeProgramData: any = {
             sourceProgramId: template.id,
             name: template.name,
             status: 'loaded',
             type: programType,
             minCycleInterval: minCycleInterval || template.minCycleInterval || 60,
-            variableOverrides: globalOverrides // Store global variables!
+            variableOverrides: globalOverrides
         };
 
         if (programType === 'ADVANCED' && template.windows) {
-            // ADVANCED MODE: Initialize windows and windowsState
-            activeProgramData.windows = template.windows;  // Snapshot from template
+            activeProgramData.windows = template.windows;
             activeProgramData.windowsState = template.windows.map(w => ({
                 windowId: w.id,
                 status: 'pending',
@@ -89,11 +142,9 @@ export class ActiveProgramService {
                 triggersExecuting: [],
                 lastCheck: undefined
             } as IWindowState));
-            activeProgramData.schedule = [];  // Empty for advanced mode
-
+            activeProgramData.schedule = [];
             logger.info({ program: template.name, windowCount: template.windows.length }, '📥 Advanced Program Loaded');
         } else {
-            // BASIC MODE: Create Schedule Items (existing logic)
             const scheduleItems = template.schedule.map(item => {
                 const cycleId = (item as any)._id?.toString() || Math.random().toString(36).substring(7);
                 return {
@@ -109,7 +160,6 @@ export class ActiveProgramService {
                 } as IActiveScheduleItem;
             });
             activeProgramData.schedule = scheduleItems;
-
             logger.info({ program: template.name }, '📥 Basic Program Loaded');
         }
 
@@ -129,13 +179,8 @@ export class ActiveProgramService {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
-        // For ADVANCED programs, allow window updates even when running
-        // (so users can edit trigger values during execution)
         const isAdvancedWindowUpdate = active.type === 'ADVANCED' &&
-            (
-                (updates.windows && Object.keys(updates).length === 1) ||
-                (updates.windowOverrides && Object.keys(updates).length === 1)
-            );
+            ((updates.windows && Object.keys(updates).length === 1) || (updates.windowOverrides && Object.keys(updates).length === 1));
 
         if (!isAdvancedWindowUpdate && active.status !== 'loaded' && active.status !== 'ready') {
             throw new Error('Cannot update program settings after it has started');
@@ -144,30 +189,24 @@ export class ActiveProgramService {
         if (updates.minCycleInterval !== undefined) active.minCycleInterval = updates.minCycleInterval;
         if (updates.schedule) active.schedule = updates.schedule;
 
-        // Update windows for ADVANCED mode
         if (updates.windows && active.type === 'ADVANCED') {
             (active as any).windows = updates.windows;
         }
 
-        // Apply global overrides
         if (updates.globalOverrides) {
             if (active.type === 'ADVANCED') {
-                // For ADVANCED: store in dedicated field
                 (active as any).variableOverrides = updates.globalOverrides;
             } else {
-                // For BASIC: apply to ALL schedule items
                 active.schedule.forEach(item => {
                     item.overrides = { ...item.overrides, ...updates.globalOverrides };
                 });
             }
         }
 
-        // Apply window overrides (ADVANCED only)
         if (updates.windowOverrides && active.type === 'ADVANCED') {
             (active as any).windowOverrides = updates.windowOverrides;
         }
 
-        // If we are saving changes, we can mark it as ready
         if (updates.status === 'ready') active.status = 'ready';
 
         await active.save();
@@ -177,8 +216,6 @@ export class ActiveProgramService {
 
     /**
      * Get variables defined in the flows of the active program.
-     * For BASIC mode: grouped by Cycle ID.
-     * For ADVANCED mode: grouped by Flow ID from triggers.
      */
     async getProgramVariables(): Promise<Record<string, any[]>> {
         const active = await this.getActive();
@@ -187,59 +224,38 @@ export class ActiveProgramService {
         const FlowModel = require('../persistence/schemas/Flow.schema').FlowModel;
         const variablesMap: Record<string, any[]> = {};
 
-        // Helper to get flow name
         const getFlowName = async (id: string) => {
             const f = await FlowModel.findOne({ id });
             return f ? f.name : id;
         };
 
-        // Helper to extract variables from a flow, using a scoped seenVars set
         const extractFlowVariables = async (flowId: string, scopedSeenVars: Set<string>, outputArray: any[]) => {
             const flow = await FlowModel.findOne({ id: flowId });
             if (flow && flow.variables) {
                 for (const v of flow.variables) {
-                    // Only global variables are exposed to the program
                     if (v.scope === 'global' && !scopedSeenVars.has(v.name)) {
                         outputArray.push({
-                            name: v.name,
-                            type: v.type,
-                            default: v.value,
-                            unit: v.unit,
-                            hasTolerance: v.hasTolerance,
-                            description: v.description,
-                            flowId: flowId,
-                            flowName: flow.name,
-                            flowDescription: flow.description
+                            name: v.name, type: v.type, default: v.value, unit: v.unit,
+                            hasTolerance: v.hasTolerance, description: v.description,
+                            flowId: flowId, flowName: flow.name, flowDescription: flow.description
                         });
                         scopedSeenVars.add(v.name);
                     }
                 }
             }
         };
-        // ADVANCED MODE: Extract from windows/triggers
-        if (active.type === 'ADVANCED' && (active as any).windows) {
-            // We need to return a structure that preserves the context of each flow
-            // Return type: Record<WindowId, { contextId: string, label: string, variables: IVariable[] }[]>
-            const windowContexts: Record<string, any[]> = {};
 
+        if (active.type === 'ADVANCED' && (active as any).windows) {
+            const windowContexts: Record<string, any[]> = {};
             for (const window of (active as any).windows) {
                 const windowId = window.id;
                 windowContexts[windowId] = [];
 
-                // Helper to extract vars for a specific flow and add to context list
                 const addContext = async (fid: string, contextId: string, label: string, description?: string) => {
                     const vars: any[] = [];
-                    // We use a temporary set just for this extraction to avoid duplicates WITHIN the flow definition itself
-                    // but we allow duplicates across different contexts
                     await extractFlowVariables(fid, new Set<string>(), vars);
-
                     if (vars.length > 0) {
-                        windowContexts[windowId].push({
-                            contextId,
-                            label,
-                            description,
-                            variables: vars
-                        });
+                        windowContexts[windowId].push({ contextId, label, description, variables: vars });
                     }
                 };
 
@@ -247,15 +263,12 @@ export class ActiveProgramService {
                     for (let tIdx = 0; tIdx < window.triggers.length; tIdx++) {
                         const trigger = window.triggers[tIdx];
                         const triggerName = `Trigger ${tIdx + 1}`;
-
-                        // Handle flowIds (New Format) OR flowId (Legacy) - BUT NOT BOTH
                         if (trigger.flowIds && Array.isArray(trigger.flowIds) && trigger.flowIds.length > 0) {
                             for (let fIdx = 0; fIdx < trigger.flowIds.length; fIdx++) {
                                 const fid = trigger.flowIds[fIdx];
                                 await addContext(fid, `t_${tIdx}_f_${fIdx}`, `${triggerName}: ${await getFlowName(fid)}`, trigger.description);
                             }
                         } else if (trigger.flowId) {
-                            // Fallback to legacy single flow only if flowIds is empty/missing
                             await addContext(trigger.flowId, `t_${tIdx}_f_0`, `${triggerName}: ${await getFlowName(trigger.flowId)}`, trigger.description);
                         }
                     }
@@ -271,255 +284,190 @@ export class ActiveProgramService {
                 }
             }
             return windowContexts;
-        }
-
-        // BASIC MODE: Extract from schedule/cycles
-        else {
+        } else {
             for (const item of active.schedule) {
                 const cycleId = item.cycleId;
-                const cycleSeenVars = new Set<string>(); // Scope seenVars to this cycle
-
                 if (!item.steps || item.steps.length === 0) continue;
-
                 if (!variablesMap[cycleId]) variablesMap[cycleId] = [];
 
                 for (let i = 0; i < item.steps.length; i++) {
                     const step = item.steps[i];
                     const vars: any[] = [];
-                    // Extract to a temp array, not directly to `variablesMap`
-                    // We pass a new Set() for seenVars if we want FULL isolation scope per step (or keep cycleSeenVars to dedupe across cycle?)
-                    // For now, let's allow duplicates across steps (so distinct controls), so use separate set or empty set.
-                    // Actually, if we want separate controls for identical flows, we MUST use a fresh set per step or just not dedupe by name across steps.
                     await extractFlowVariables(step.flowId, new Set<string>(), vars);
-
                     if (vars.length > 0) {
-                        variablesMap[cycleId].push({
-                            stepIndex: i,
-                            flowId: step.flowId,
-                            flowName: await getFlowName(step.flowId),
-                            variables: vars
-                        });
+                        variablesMap[cycleId].push({ stepIndex: i, flowId: step.flowId, flowName: await getFlowName(step.flowId), variables: vars });
                     }
                 }
             }
         }
-
         return variablesMap;
     }
-
 
     /**
      * Start the loaded program.
      */
-    async start(startTime?: Date, options?: { expiredStrategy?: 'run' | 'skip' }): Promise<IActiveProgram | { status: 'confirmation_required', expiredWindows: any[] }> {
+    async start(startTime?: Date, options?: { resumeStrategy?: 'resume_flow' | 'skip_active' | 'stop_program' | 'run_expired' | 'skip_expired' | 'terminate_flow' | 'clean_start', expiredStrategy?: 'run' | 'skip' }): Promise<IActiveProgram | { status: 'confirmation_required', resumeContext: any }> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
         if (active.status === 'running') return active;
 
-        // Allow starting from loaded, ready, paused, or stopped
-        if (active.status !== 'loaded' && active.status !== 'ready' && active.status !== 'paused' && active.status !== 'stopped' && active.status !== 'scheduled') {
-            // Invalid status for start
-        }
+        const previousStatus = active.status;
 
-        // --- STALE STATE DETECTION (Resume Logic) ---
-        if (active.type === 'ADVANCED' && active.windowsState) {
+        // --- RESUME LOGIC ---
+        if (active.type === 'ADVANCED' && active.windowsState && previousStatus === 'paused') {
             const { timeService } = require('../../core/TimeService');
-            const now = timeService.now(); // Use Simulated Time
-            const currentHours = now.getHours().toString().padStart(2, '0');
-            const currentMinutes = now.getMinutes().toString().padStart(2, '0');
-            const currentTimeStr = `${currentHours}:${currentMinutes}`;
-
-            const timeToMin = (t: string) => {
-                const [h, m] = t.split(':').map(Number);
-                return h * 60 + m;
-            };
+            const now = timeService.now();
+            const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            const timeToMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
             const currentMin = timeToMin(currentTimeStr);
 
+            const activeWindows = active.windowsState.filter(ws => !!ws.currentFlowSessionId);
             const expiredWindows: any[] = [];
-
-            // Identify Expired Pending Windows
             active.windowsState.forEach(ws => {
                 const winDef = (active as any).windows.find((w: any) => w.id === ws.windowId);
-
-                logger.info({
-                    windowId: ws.windowId,
-                    status: ws.status,
-                    winDefFound: !!winDef,
-                    currentMin,
-                    endTime: winDef ? winDef.endTime : 'N/A'
-                }, '🕵️ Resume Check: Inspecting Window');
-
-                // Check PENDING or ACTIVE (Interrupted) windows
-                if (ws.status === 'pending' || ws.status === 'active') {
-                    if (winDef) {
-                        const endMin = timeToMin(winDef.endTime);
-                        // If current time is past end time (with 1 min buffer?)
-                        if (currentMin > endMin) {
-                            logger.info({ window: winDef.name, endMin, currentMin }, '⚠️ Resume Check: Found Expired Window');
-                            // Store simple object, don't spread Mongoose document
-                            expiredWindows.push({ windowId: ws.windowId, name: winDef.name, status: ws.status });
-                        }
-                    }
+                if (winDef && ws.status !== 'completed' && ws.status !== 'skipped') {
+                    const endMin = timeToMin(winDef.endTime);
+                    if (currentMin > endMin) expiredWindows.push({ windowId: ws.windowId, name: winDef.name });
                 }
             });
 
-            if (expiredWindows.length > 0) {
-                // If no strategy provided, Request Confirmation
-                if (!options?.expiredStrategy) {
-                    logger.info({ expiredCount: expiredWindows.length }, '⏸️ Resume Check: Confirmation Required for Expired Windows');
-                    return {
-                        status: 'confirmation_required',
-                        expiredWindows: expiredWindows.map(w => ({ id: w.windowId, name: w.name }))
-                    };
-                }
+            let contextType: 'active_flow' | 'active_with_expired' | 'expired' | 'clean' = 'clean';
+            if (activeWindows.length > 0 && expiredWindows.length > 0) contextType = 'active_with_expired';
+            else if (activeWindows.length > 0) contextType = 'active_flow';
+            else if (expiredWindows.length > 0) contextType = 'expired';
 
-                // Handle Strategy
-                if (options.expiredStrategy === 'skip') {
-                    // Strategy: SKIP
-                    logger.info('⏭️ Resume Strategy: Skipping expired windows');
-
-                    expiredWindows.forEach(exp => {
-                        // Use string coercion for robust comparison
-                        const ws = active.windowsState!.find(w => String(w.windowId) === String(exp.windowId));
-                        if (ws) {
-                            ws.status = 'skipped';
-                            ws.lastCheck = new Date(); // Update check time to prevent "New Day" reset
-                            ws.skipUntil = undefined;  // Clear any previous skip timer
-                            ws.currentFlowSessionId = undefined; // Disarm any active flow tracking
-                            ws.triggersExecuting = []; // Clear executing triggers
-
-                            // 📝 Log Skip Event (Emit socket event for UI visibility)
-                            try {
-                                const { events } = require('../../core/EventBusService');
-                                events.emit('advanced:window_skipped', {
-                                    programId: active.sourceProgramId,
-                                    windowId: ws.windowId,
-                                    windowName: exp.name, // Use name from expiredWindows map
-                                    reason: 'Skipped by User (Resume Strategy)',
-                                    timestamp: new Date()
-                                });
-                            } catch (e) { /* ignore */ }
-                        }
-                    });
-                    // Ensure Mongoose detects the change in the mixed/array type
-                    active.markModified('windowsState');
-                } else if (options.expiredStrategy === 'run') {
-                    // Strategy: RUN (Force Evaluate)
-                    logger.info('⚡ Resume Strategy: Force running expired windows');
-
-                    // Lazy import TriggerEvaluator
-                    const { triggerEvaluator } = await import('./TriggerEvaluator');
-
-                    // Execute sequentially
-                    for (const exp of expiredWindows) {
-                        const ws = active.windowsState!.find(w => w.windowId === exp.windowId);
-                        const winDef = (active as any).windows.find((w: any) => w.id === exp.windowId);
-
-                        if (ws && winDef) {
-                            try {
-                                logger.info({ window: winDef.name }, '⚡ Force Evaluating Window (Resume)');
-
-                                // 1. Evaluate Triggers (Force Check)
-                                // We need to mock "state" or just pass the current state
-                                // evaluateWindow writes to 'state', so we pass 'ws'
-                                const result = await triggerEvaluator.evaluateWindow(
-                                    winDef,
-                                    ws, // Mutates state
-                                    active.variableOverrides,
-                                    (active as any).windowOverrides?.[winDef.id] || {},
-                                    active.sourceProgramId
-                                );
-
-                                // 2. Handle Result
-                                if (result === 'triggered' || result === 'executing') {
-                                    // Trigger matched!
-                                    // If executing, it started a flow.
-                                    // If triggered (break), it's done.
-                                    ws.status = result === 'executing' ? 'active' : 'completed';
-                                    ws.lastCheck = new Date(); // Update check time
-                                } else {
-                                    // 3. No Trigger? Execute Fallback
-                                    // If evaluateWindow returned 'all_done' or 'pending', it means no trigger fired (or all done).
-                                    // For Resume, 'pending' means "conditions not met".
-
-                                    logger.info('🛡️ No trigger matched during Resume. Executing Fallback.');
-                                    const fbSession = await triggerEvaluator.executeFallback(
-                                        winDef,
-                                        active.variableOverrides,
-                                        (active as any).windowOverrides?.[winDef.id] || {},
-                                        active.sourceProgramId
-                                    );
-
-                                    if (fbSession) {
-                                        ws.status = 'active'; // Mark active since flow is running
-                                        ws.currentFlowSessionId = fbSession;
-                                        ws.triggersExecuting = ['fallback']; // Track execution so Scheduler monitors it
-                                    } else {
-                                        // Fallback matched nothing or failed?
-                                        ws.status = 'completed'; // Treat as done
-                                    }
-                                }
-
-                            } catch (err: any) {
-                                logger.error({ error: err.message, window: winDef.name }, '❌ Failed to force run window');
-                                ws.status = 'skipped'; // Fail safe
-                            }
-                        }
+            if (!options?.resumeStrategy) {
+                logger.info({ contextType, activeCount: activeWindows.length, expiredCount: expiredWindows.length }, '⏸️ Resume Check: Confirmation Required');
+                return {
+                    status: 'confirmation_required',
+                    resumeContext: {
+                        type: contextType,
+                        activeWindows: activeWindows.map(ws => {
+                            const def = (active as any).windows.find((w: any) => w.id === ws.windowId);
+                            return { id: ws.windowId, name: def ? def.name : 'Unknown' };
+                        }),
+                        expiredWindows: expiredWindows
                     }
-                    // FIX: Ensure Mongoose detects the change in the mixed/array type for RUN strategy too!
-                    // Without this, 'currentFlowSessionId' might not be saved, causing Scheduler to run fallback AGAIN.
-                    active.markModified('windowsState');
+                };
+            }
+
+            // Handle Strategies
+            if (options?.resumeStrategy === 'skip_active') {
+                automation.stopProgram();
+                active.status = 'running';
+                activeWindows.forEach(ws => { ws.status = 'skipped'; ws.currentFlowSessionId = undefined; ws.triggersExecuting = []; });
+                expiredWindows.forEach(exp => { const ws = active.windowsState!.find(w => w.windowId === exp.windowId); if (ws) ws.status = 'skipped'; });
+                active.markModified('windowsState');
+            } else if (options?.resumeStrategy === 'terminate_flow') {
+                logger.info('🛑 Strategy: Terminating Active Flow & Continuing Program');
+                if (active.pauseFlowSessionId) {
+                    const { ExecutionSessionModel } = await import('../persistence/schemas/ExecutionSession.schema');
+                    await ExecutionSessionModel.findByIdAndUpdate(active.pauseFlowSessionId, {
+                        status: 'interrupted', endTime: new Date(),
+                        $push: { logs: { timestamp: new Date(), level: 'WARN', message: 'Flow interrupted by user during resume' } }
+                    });
                 }
+                automation.cancelFlow();
+                active.status = 'running';
+                if (active.pauseWindowId) {
+                    const ws = active.windowsState?.find(w => w.windowId === active.pauseWindowId);
+                    if (ws) {
+                        ws.status = 'interrupted';
+                        ws.currentFlowSessionId = undefined;
+                        ws.triggersExecuting = [];
+
+                        // Emit window completion event for UI/logging
+                        const winDef = (active as any).windows?.find((w: any) => w.id === active.pauseWindowId);
+                        events.emit('advanced:window_completed', {
+                            programId: active.sourceProgramId,
+                            windowId: active.pauseWindowId,
+                            windowName: winDef?.name || 'Unknown',
+                            result: 'interrupted',
+                            timestamp: new Date()
+                        });
+                    }
+                }
+                active.markModified('windowsState');
+            } else if (options?.resumeStrategy === 'skip_expired') {
+                expiredWindows.forEach(exp => {
+                    const ws = active.windowsState!.find(w => w.windowId === exp.windowId);
+                    if (ws) { ws.status = 'skipped'; ws.lastCheck = new Date(); }
+                });
+                active.markModified('windowsState');
+            } else if (options?.resumeStrategy === 'run_expired') {
+                const { triggerEvaluator } = await import('./TriggerEvaluator');
+                for (const exp of expiredWindows) {
+                    const ws = active.windowsState!.find(w => w.windowId === exp.windowId);
+                    const winDef = (active as any).windows.find((w: any) => w.id === exp.windowId);
+                    if (ws && winDef) {
+                        try {
+                            const result = await triggerEvaluator.evaluateWindow(winDef, ws, active.variableOverrides, (active as any).windowOverrides?.[winDef.id] || {}, active.sourceProgramId);
+                            if (result === 'triggered' || result === 'executing') ws.status = result === 'executing' ? 'active' : 'completed';
+                            else {
+                                await triggerEvaluator.executeFallback(winDef, active.variableOverrides, (active as any).windowOverrides?.[winDef.id] || {}, active.sourceProgramId);
+                                ws.status = 'completed';
+                            }
+                        } catch (e) { /* ignore */ }
+                    }
+                }
+                active.markModified('windowsState');
+            } else if (options?.resumeStrategy === 'stop_program') {
+                return this.stop();
             }
         }
 
         if (startTime && new Date(startTime) > new Date()) {
             active.status = 'scheduled';
             active.startTime = new Date(startTime);
+            await active.save();
             logger.info({ startTime: active.startTime }, '⏳ Active Program Scheduled');
+            return active;
         } else {
             active.status = 'running';
             if (!active.startTime) active.startTime = new Date();
-            logger.info('▶️ Active Program Started');
+            logger.info('▶️ Active Program Started/Resumed');
 
-            // Emit start event for Logging Service
-            // Only emit if NOT resuming (no expiredStrategy), to avoid spamming "started" on every resume
-            if (!options?.expiredStrategy) {
-                const { events } = await import('../../core/EventBusService');
-                events.emit('active:program_started', {
-                    programId: active.sourceProgramId,
-                    timestamp: active.startTime
-                });
+            const shouldResumeEngine = previousStatus === 'paused' && options?.resumeStrategy !== 'terminate_flow' && options?.resumeStrategy !== 'clean_start';
+            if (shouldResumeEngine) {
+                logger.info('▶️ Resuming Paused Program in Automation Engine');
+                automation.resumeProgram();
             }
-        }
 
-        // Reset FAILED and RUNNING items to PENDING on Start as well
-        // This ensures if we restart after a crash (without Stop), errors are cleared
-        active.schedule.forEach(item => {
-            if (item.status === 'failed' || item.status === 'running') {
-                item.status = 'pending';
+            active.schedule.forEach(item => { if (item.status === 'failed' || item.status === 'running') item.status = 'pending'; });
+
+            if (previousStatus === 'paused') {
+                active.pausedAt = undefined;
+                active.pauseFlowSessionId = undefined;
+                active.pauseFlowName = undefined;
+                active.pauseBlockId = undefined;
+                active.pauseBlockLabel = undefined;
+                active.pauseWindowId = undefined;
+                active.pauseWindowName = undefined;
+                active.pauseTimeout = undefined;
+                const { pauseTimeoutService } = await import('./PauseTimeoutService');
+                pauseTimeoutService.stop();
             }
-        });
 
-        await active.save();
+            await active.save();
 
-        // For ADVANCED programs, trigger immediate check (don't wait for next tick)
-        if (active.type === 'ADVANCED' && active.status === 'running') {
-            // Use setImmediate to avoid blocking, but execute before next tick
-            setImmediate(async () => {
-                try {
-                    // Dynamic import to avoid circular dependency
-                    const { schedulerService } = await import('./SchedulerService');
-                    // If resuming (options.expiredStrategy present), suppress log spam
-                    await schedulerService.triggerImmediateCheck({ silent: !!options?.expiredStrategy });
-                } catch (error: any) {
-                    logger.error({ error: error.message }, '❌ Failed to trigger immediate check');
+            if (active.type === 'ADVANCED' && active.status === 'running') {
+                const isResumingActiveFlow = (options?.resumeStrategy === 'resume_flow');
+                if (!isResumingActiveFlow) {
+                    setImmediate(async () => {
+                        try {
+                            const { schedulerService } = await import('./SchedulerService');
+                            await schedulerService.triggerImmediateCheck({ silent: !!options?.expiredStrategy });
+                        } catch (error: any) {
+                            logger.error({ error: error.message }, '❌ Failed to trigger immediate check');
+                        }
+                    });
+                } else {
+                    logger.info('⏭️ Skipping Force Check (resuming active flow)');
                 }
-            });
+            }
+            return active;
         }
-
-        return active;
     }
 
     /**
@@ -532,49 +480,74 @@ export class ActiveProgramService {
         active.status = 'stopped';
         active.endTime = new Date();
 
-        // Stop any running cycle
         await cycleManager.stopCycle();
 
-        // Reset FAILED and RUNNING items to PENDING so they are cleared from UI errors
-        // and ready for next run (or manual interaction)
-        active.schedule.forEach(item => {
-            if (item.status === 'failed' || item.status === 'running') {
-                item.status = 'pending';
-            }
-        });
+        active.schedule.forEach(item => { if (item.status === 'failed' || item.status === 'running') item.status = 'pending'; });
 
-        // For ADVANCED programs: Reset all window states to pending
         if (active.type === 'ADVANCED' && active.windowsState) {
             active.windowsState.forEach(ws => {
-                ws.status = 'pending';
-                ws.triggersExecuted = [];
-                ws.triggersExecuting = [];
-                ws.triggerCounts = new Map(); // Reset trigger counts
-                ws.lastCheck = undefined;
-                ws.currentFlowSessionId = undefined;
-                // Reset skips as well to treat as fresh start? 
-                // User said "Start as if for the first time".
-                ws.skipUntil = undefined;
+                if (ws.status === 'active') { ws.status = 'pending'; ws.triggersExecuting = []; ws.currentFlowSessionId = undefined; }
+                if (ws.status === 'pending' && ws.currentFlowSessionId) ws.currentFlowSessionId = undefined;
             });
             active.markModified('windowsState');
         }
 
         await active.save();
-        logger.info('⏹️ Active Program Stopped (Statuses Reset)');
+        logger.info('⏹️ Active Program Stopped');
         return active;
     }
 
     /**
      * Pause the active program.
      */
-    async pause(): Promise<IActiveProgram> {
+    async pause(options?: { timeout?: number }): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program loaded');
 
         if (active.status === 'running') {
+            const { ExecutionSessionModel } = await import('../persistence/schemas/ExecutionSession.schema');
+            const activeSession = await ExecutionSessionModel.findOne({ status: 'running' });
+
+            if (activeSession) {
+                active.pauseFlowSessionId = activeSession._id.toString();
+                active.pauseFlowName = activeSession.programName;
+                const engineSnapshot = automation.getSnapshot();
+                active.pauseBlockId = engineSnapshot.context?.currentBlockId;
+
+                const { flowRepository } = await import('../persistence/repositories/FlowRepository');
+                const flow = await flowRepository.findById(activeSession.programId) as any;
+                if (flow) {
+                    const flowData = flow.toObject() as any;
+                    const blocks = flowData.blocks || flowData.nodes || [];
+                    const block = blocks.find((b: any) => b.id === active.pauseBlockId);
+                    active.pauseBlockLabel = block?.params?.label || active.pauseBlockId;
+                } else {
+                    active.pauseBlockLabel = active.pauseBlockId;
+                }
+                automation.pauseProgram();
+            } else {
+                active.pauseFlowSessionId = undefined;
+                active.pauseFlowName = undefined;
+                active.pauseBlockId = undefined;
+                active.pauseBlockLabel = undefined;
+            }
+
+            const currentWindow = active.windowsState?.find(w => w.status === 'active');
+            if (currentWindow) {
+                const windowDef = active.windows?.find(w => w.id === currentWindow.windowId);
+                active.pauseWindowId = currentWindow.windowId;
+                active.pauseWindowName = windowDef?.name;
+            }
+
             active.status = 'paused';
+            active.pausedAt = new Date();
+            active.pauseTimeout = options?.timeout || 600;
             await active.save();
-            logger.info('⏸️ Active Program Paused');
+
+            const io = (global as any).socketIO;
+            if (io) io.emit('program:paused', { programId: active.sourceProgramId, pausedAt: active.pausedAt, timeout: active.pauseTimeout });
+
+            logger.info({ hasActiveFlow: !!activeSession, flowName: active.pauseFlowName, blockId: active.pauseBlockId, blockLabel: active.pauseBlockLabel, windowId: active.pauseWindowId, timeout: active.pauseTimeout }, '⏸️ Active Program Paused');
         }
         return active;
     }
@@ -584,57 +557,27 @@ export class ActiveProgramService {
      */
     async unload(): Promise<void> {
         await ActiveProgramModel.deleteMany({});
-        // Ensure cycle is stopped
         await cycleManager.stopCycle();
-
-        // Sync persistent state (none active)
         await programRepository.syncActiveStatus(null);
-
         logger.info('🗑️ Active Program Unloaded');
     }
 
-    /**
-     * Update a specific schedule item (Time, Variables, or Step Overrides).
-     */
+    // === BASIC MODE: Cycle Management ===
+
     async updateScheduleItem(itemId: string, updates: { time?: string, overrides?: Record<string, any>, steps?: any[] }): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
         const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
         if (!item) throw new Error('Schedule item not found');
-
-        if (item.status === 'running') {
-            throw new Error('Cannot update a cycle that is currently running');
-        }
+        if (item.status === 'running') throw new Error('Cannot update a cycle that is currently running');
 
         if (updates.time) {
             item.time = updates.time;
-            // Reset status if time is changed so it can run again
-            if (item.status === 'completed' || item.status === 'failed') {
-                item.status = 'pending';
-                logger.info({ itemId }, '🔄 Cycle Status Reset to Pending due to Time Update');
-            }
+            if (item.status === 'completed' || item.status === 'failed') { item.status = 'pending'; }
         }
-
-        if (updates.overrides) {
-            item.overrides = { ...item.overrides, ...updates.overrides };
-        }
-
-        if (updates.steps) {
-            // Merge step overrides
-            // Assumes updates.steps is an array matching item.steps length or containing objects with index?
-            // Let's assume the frontend sends the FULL steps array or we map by index.
-            // Safer: The frontend should send the full updated steps array structure (just like Program updates).
-            // But here we are just updating overrides.
-
-            // Assume updates.steps is an array of { overrides: ... } corresponding to item.steps indices
-            if (Array.isArray(updates.steps)) {
-                updates.steps.forEach((uStep, idx) => {
-                    if (item.steps[idx] && uStep.overrides) {
-                        item.steps[idx].overrides = { ...item.steps[idx].overrides, ...uStep.overrides };
-                    }
-                });
-            }
+        if (updates.overrides) item.overrides = { ...item.overrides, ...updates.overrides };
+        if (updates.steps && Array.isArray(updates.steps)) {
+            updates.steps.forEach((uStep, idx) => { if (item.steps[idx] && uStep.overrides) item.steps[idx].overrides = { ...item.steps[idx].overrides, ...uStep.overrides }; });
         }
 
         await active.save();
@@ -642,300 +585,155 @@ export class ActiveProgramService {
         return active;
     }
 
-    /**
-     * Swap two cycles in the schedule.
-     */
     async swapCycles(itemIdA: string, itemIdB: string): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
         const indexA = active.schedule.findIndex(i => (i as any)._id.toString() === itemIdA);
         const indexB = active.schedule.findIndex(i => (i as any)._id.toString() === itemIdB);
-
         if (indexA === -1 || indexB === -1) throw new Error('Schedule item not found');
 
         const itemA = active.schedule[indexA];
         const itemB = active.schedule[indexB];
+        if (itemA.status === 'running' || itemB.status === 'running') throw new Error('Cannot swap cycles that are running');
 
-        if (itemA.status === 'running' || itemB.status === 'running') {
-            throw new Error('Cannot swap cycles that are running');
-        }
-
-        // Swap CycleID and Overrides, BUT KEEP TIME
-        // This effectively swaps the "Content" of the slots
-        const tempCycleId = itemA.cycleId;
-        const tempOverrides = itemA.overrides;
-        const tempCycleName = itemA.cycleName;
-
-        itemA.cycleId = itemB.cycleId;
-        itemA.overrides = itemB.overrides;
-        itemA.cycleName = itemB.cycleName;
-
-        itemB.cycleId = tempCycleId;
-        itemB.overrides = tempOverrides;
-        itemB.cycleName = tempCycleName;
+        const tempCycleId = itemA.cycleId; const tempOverrides = itemA.overrides; const tempCycleName = itemA.cycleName;
+        itemA.cycleId = itemB.cycleId; itemA.overrides = itemB.overrides; itemA.cycleName = itemB.cycleName;
+        itemB.cycleId = tempCycleId; itemB.overrides = tempOverrides; itemB.cycleName = tempCycleName;
 
         await active.save();
         logger.info({ indexA, indexB }, '🔄 Cycles Swapped');
         return active;
     }
 
-    /**
-     * Skip a cycle.
-     */
     async skipCycle(itemId: string, type: 'once' | 'until', untilDate?: Date): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
         const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
         if (!item) throw new Error('Schedule item not found');
-
         item.status = 'skipped';
-        if (type === 'until' && untilDate) {
-            item.skipUntil = untilDate;
-        }
-
+        if (type === 'until' && untilDate) item.skipUntil = untilDate;
         await active.save();
         logger.info({ itemId, type }, '⏭️ Cycle Skipped');
         return active;
     }
 
-    /**
-     * Restore a skipped cycle to pending status.
-     */
     async restoreCycle(itemId: string): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
         const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
         if (!item) throw new Error('Schedule item not found');
-
-        if (item.status !== 'skipped') {
-            throw new Error('Cannot restore a cycle that is not skipped');
-        }
-
-        item.status = 'pending';
-        item.skipUntil = undefined;
-
+        if (item.status !== 'skipped') throw new Error('Cannot restore a cycle that is not skipped');
+        item.status = 'pending'; item.skipUntil = undefined;
         await active.save();
         logger.info({ itemId }, '⏪ Cycle Restored');
         return active;
     }
 
-    /**
-     * Retry a failed cycle.
-     */
     async retryCycle(itemId: string): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
         const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
         if (!item) throw new Error('Schedule item not found');
-
-        if (item.status !== 'failed') {
-            throw new Error('Cannot retry a cycle that is not failed');
-        }
-
+        if (item.status !== 'failed') throw new Error('Cannot retry a cycle that is not failed');
         item.status = 'pending';
-
-        // Update time to NOW to ensure immediate pickup by Scheduler
         const now = new Date();
-        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        item.time = timeString;
-
+        item.time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         await active.save();
-
-        logger.info({ itemId, newTime: timeString }, '🔄 Cycle Retried (Reset to Pending & Time Updated)');
+        logger.info({ itemId, newTime: item.time }, '🔄 Cycle Retried');
         return active;
     }
 
-    /**
-     * Force start a pending cycle immediately.
-     */
     async forceStartCycle(itemId: string): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
         const item = active.schedule.find(i => (i as any)._id.toString() === itemId);
         if (!item) throw new Error('Schedule item not found');
-
-        if (item.status === 'running') {
-            throw new Error('Cannot force start a cycle that is currently running');
-        }
-
-        // Stop any currently running cycle first?
-        // Ideally, we should tell the SchedulerService to run this NOW.
-
-        // Implementation Update:
-        // Do NOT update time to NOW, as that alters the persistent schedule.
-        // Instead, mark as running and Invoke CycleManager directly.
+        if (item.status === 'running') throw new Error('Cannot force start a cycle that is currently running');
 
         item.status = 'running';
         await active.save();
 
-        const stepOverrides = item.steps?.map(s => ({
-            flowId: s.flowId,
-            overrides: s.overrides
-        })) || [];
-
-        // Determine overrides (Program Level + Item Level)
-        const runtimeOverrides = {
-            ...active.variableOverrides, // Global
-            ...item.overrides,            // Item Specific
-            activeProgramId: active.sourceProgramId
-        };
+        const stepOverrides = item.steps?.map(s => ({ flowId: s.flowId, overrides: s.overrides })) || [];
+        const runtimeOverrides = { ...active.variableOverrides, ...item.overrides, activeProgramId: active.sourceProgramId };
 
         try {
             await cycleManager.startCycle(item.cycleId, item.cycleName || item.name || 'Unknown Cycle', stepOverrides, runtimeOverrides);
-            logger.info({ itemId }, '⚡ Cycle Force Started (Direct Invocation)');
+            logger.info({ itemId }, '⚡ Cycle Force Started');
         } catch (error: any) {
             item.status = 'failed';
             await active.save();
-            throw error; // Re-throw to notify caller
+            throw error;
         }
-
         return active;
     }
 
-    /**
-     * Mark a cycle as failed in the schedule.
-     */
     async markCycleFailed(cycleId: string, reason: string): Promise<void> {
         const active = await this.getActive();
         if (!active) return;
-
-        // Find the running item for this cycle
-        // We look for 'running' or 'pending' (if it failed immediately on start)
-        const item = active.schedule.find(i =>
-            i.cycleId === cycleId && (i.status === 'running' || i.status === 'pending')
-        );
-
-        if (item) {
-            item.status = 'failed';
-            // We could store the reason in overrides or a new field if schema supported it
-            // For now, just marking as failed is enough for the UI
-            await active.save();
-            logger.info({ cycleId, reason }, '❌ Active Program Cycle Marked Failed');
-        }
+        const item = active.schedule.find(i => i.cycleId === cycleId && (i.status === 'running' || i.status === 'pending'));
+        if (item) { item.status = 'failed'; await active.save(); logger.info({ cycleId, reason }, '❌ Cycle Marked Failed'); }
     }
 
-    /**
-     * Mark a cycle as completed in the schedule.
-     */
     async markCycleCompleted(cycleId: string): Promise<void> {
         const active = await this.getActive();
         if (!active) return;
-
-        const item = active.schedule.find(i =>
-            i.cycleId === cycleId && i.status === 'running'
-        );
-
-        if (item) {
-            item.status = 'completed';
-            await active.save();
-            logger.info({ cycleId }, '✅ Active Program Cycle Marked Completed');
-        }
+        const item = active.schedule.find(i => i.cycleId === cycleId && i.status === 'running');
+        if (item) { item.status = 'completed'; await active.save(); logger.info({ cycleId }, '✅ Cycle Marked Completed'); }
     }
 
-    /**
-     * Skip a window (Advanced Mode).
-     */
+    // === ADVANCED MODE: Window Management ===
+
     async skipWindow(windowId: string, untilDate: Date): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
-        if (!active.windowsState) throw new Error('Not an advanced program (no windowsState)');
-
+        if (!active.windowsState) throw new Error('Not an advanced program');
         const windowState = active.windowsState.find(w => w.windowId === windowId);
         if (!windowState) throw new Error('Window state not found');
 
-        // If currently active, we might want to stop running flows?
-        // For now, we update status. Scheduler should respect this next tick.
         windowState.status = 'skipped';
         windowState.skipUntil = untilDate;
-        windowState.triggersExecuting = []; // Clear executing flags
-        windowState.currentFlowSessionId = undefined; // Detach session
-
-        // We mark as modified because we are modifying a sub-document array element directly
+        windowState.triggersExecuting = [];
+        windowState.currentFlowSessionId = undefined;
         active.markModified('windowsState');
         await active.save();
-
         logger.info({ windowId, untilDate }, '⏭️ Window Skipped');
         return active;
     }
 
-    /**
-     * Restore a skipped window (Advanced Mode).
-     */
     async restoreWindow(windowId: string): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
         if (!active.windowsState) throw new Error('Not an advanced program');
-
         const windowState = active.windowsState.find(w => w.windowId === windowId);
         if (!windowState) throw new Error('Window state not found');
-
-        if (windowState.status !== 'skipped') {
-            throw new Error('Cannot restore a window that is not skipped');
-        }
+        if (windowState.status !== 'skipped') throw new Error('Cannot restore a window that is not skipped');
 
         windowState.status = 'pending';
         windowState.skipUntil = undefined;
-
         active.markModified('windowsState');
         await active.save();
-
         logger.info({ windowId }, '⏪ Window Restored');
         return active;
     }
 
-    /**
-     * Update a specific trigger in an active window.
-     * Allows live editing of parameters (sensor, value, flows, etc.)
-     */
     async updateTrigger(windowId: string, trigger: any): Promise<IActiveProgram> {
         const active = await this.getActive();
         if (!active) throw new Error('No active program');
-
         if (!active.windowsState) throw new Error('Not an advanced program');
 
-        // 1. Find Window Definition
         const windowDef = (active as any).windows.find((w: any) => w.id === windowId);
         if (!windowDef) throw new Error('Window definition not found');
-
-        // 2. Find Window State
         const windowState = active.windowsState.find(w => w.windowId === windowId);
         if (!windowState) throw new Error('Window state not found');
+        if (windowState.status === 'active') throw new Error('Cannot edit trigger while window is active');
 
-        // 3. Safety Check: Cannot edit if window is ACTIVE/RUNNING
-        if (windowState.status === 'active') {
-            throw new Error('Cannot edit trigger while window is active');
-        }
-
-        // 4. Find Trigger index
         const triggerIndex = windowDef.triggers.findIndex((t: any) => t.id === trigger.id);
         if (triggerIndex === -1) throw new Error('Trigger not found');
 
-        // 5. Update Trigger
-        // We replace the entire text of the trigger object
-
-        // DEBUG LOGGING
-        logger.info({
-            windowId,
-            triggerId: trigger.id,
-            repeatMode: trigger.repeatMode,
-            repeatCount: trigger.repeatCount,
-            fullTrigger: trigger
-        }, '🔍 DEBUG: Updating Trigger - Payload Inspection');
-
         windowDef.triggers[triggerIndex] = trigger;
-
-        // Mark as modified
         active.markModified('windows');
         await active.save();
-
-        logger.info({ windowId, triggerId: trigger.id }, '✏️ Active Program Trigger Updated');
+        logger.info({ windowId, triggerId: trigger.id }, '✏️ Trigger Updated');
         return active;
     }
 

@@ -6,6 +6,7 @@ export interface SensorConfig {
     min?: number;
     max?: number;
     tolerance?: number;
+    icon?: string;
 }
 
 export type DashboardConfig = Record<string, SensorConfig>;

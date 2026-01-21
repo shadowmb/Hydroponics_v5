@@ -5,7 +5,7 @@ import { timeService } from '../core/TimeService';
 
 interface LogEntry {
     programId: string | undefined;
-    type: 'TRIGGER' | 'FLOW_STATE' | 'WINDOW_EVENT' | 'ERROR' | 'SYSTEM' | 'INFO' | 'WARNING' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED';
+    type: 'TRIGGER' | 'FLOW_STATE' | 'WINDOW_EVENT' | 'ERROR' | 'SYSTEM' | 'INFO' | 'WARNING' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'USER_LOG' | 'WAIT_START' | 'SYSTEM_PAUSE' | 'SYSTEM_RESUME' | 'SYSTEM_STOP';
     message: string;
     metadata?: any;
     level?: 'info' | 'warn' | 'error';
@@ -20,6 +20,102 @@ export class ProgramLogService {
 
     private setupListeners() {
         // --- Scheduler / Advanced Program Events ---
+
+        // Flow State Change (Pause/Resume/Stop)
+        events.on('flow:state_change', async (data: any) => {
+            const progId = data.activeProgramId;
+            if (!progId) return;
+
+            let type: any = 'INFO';
+            let message = '';
+
+            if (data.state === 'paused') {
+                type = 'SYSTEM_PAUSE';
+                message = '⏸️ Програмата е паузирана';
+            } else if (data.state === 'running' && data.previousState === 'paused') {
+                type = 'SYSTEM_RESUME';
+                message = '▶️ Програмата е възобновена';
+            } else if (data.state === 'stopped') {
+                type = 'SYSTEM_STOP';
+                message = '🛑 Програмата е спряна';
+            } else {
+                return; // Ignore other state changes for now
+            }
+
+            await this.logEvent({
+                programId: progId,
+                type: type,
+                message,
+                metadata: {
+                    state: data.state,
+                    previousState: data.previousState
+                }
+            });
+        });
+
+        // Block Execution
+        events.on('flow:block_end', async (data: any) => {
+            const progId = data.activeProgramId;
+            if (!progId) return;
+
+            const { blockId, blockType, blockLabel, success, summary, error, output, logData } = data;
+
+            // Determine which blocks to log
+            const importantBlocks = ['SENSOR_READ', 'ACTUATOR_SET', 'IF', 'LOOP', 'LOG', 'WAIT'];
+            if (!importantBlocks.includes(blockType)) return;
+
+            const name = blockLabel || blockType;
+            let message = '';
+            let type: any = success ? 'INFO' : 'ERROR';
+
+            switch (blockType) {
+                case 'SENSOR_READ':
+                    message = `📊 ${name}: ${summary || output?.displayValue || 'Прочит'}`;
+                    break;
+                case 'ACTUATOR_SET':
+                    message = `⚡ ${name}: ${summary || 'Действие'}`;
+                    break;
+                case 'IF':
+                    message = `❓ ${name}: ${summary || (output?.result ? 'TRUE' : 'FALSE')}`;
+                    break;
+                case 'LOOP':
+                    message = `🔄 ${name}: ${summary || `Итерация ${output?.iteration || '?'}`}`;
+                    break;
+                case 'LOG':
+                    type = 'USER_LOG';
+                    // summary contains the Action (e.g. "Pause Program") or just "Log Only"
+                    // name contains the block label (e.g. "Level Error")
+                    message = `📝 ${name} - ${summary || 'Log'}`; // Added Notepad icon for visibility
+                    break;
+                case 'WAIT':
+                    type = 'WAIT_START';
+                    message = `⏳ Изчакване: ${summary || '...'}`;
+                    break;
+            }
+
+            if (!success && error) {
+                message = `❌ ${name}: ${error}`;
+                type = 'ERROR';
+            }
+
+            await this.logEvent({
+                programId: progId,
+                type: type,
+                message: message,
+                metadata: {
+                    blockId,
+                    blockType,
+                    blockLabel,
+                    success,
+                    output: output?.displayValue || output?.result,
+                    logData,
+                    sessionId: data.sessionId,
+                    windowId: data.windowId,
+                    windowName: data.windowName,
+                    flowName: data.programName
+                }
+            });
+        });
 
         // Window Active
         events.on('advanced:window_active', async (data: any) => {
@@ -38,8 +134,10 @@ export class ProgramLogService {
 
         // Window Completed
         events.on('advanced:window_completed', async (data: any) => {
-            const reason = data.data?.result === 'triggered' ? 'Тригер' :
-                data.data?.result === 'fallback' ? 'Fallback' : 'Изтекло време';
+            const reason = data.result === 'triggered' ? 'Поток приключен' :
+                data.result === 'fallback' ? 'Fallback' :
+                    data.result === 'interrupted' ? 'Прекъснат' :
+                        'Изтекло време';
 
             await this.logEvent({
                 programId: data.programId,
@@ -215,67 +313,6 @@ export class ProgramLogService {
                     }
                 });
             }
-        });
-
-        // Block Execution
-        events.on('automation:block_end', async (data: any) => {
-            // logger.info({ activeProgramId: data.activeProgramId, blockType: data.blockType, blockId: data.blockId }, '📋 [ProgramLogService] Received block_end event');
-
-            const progId = data.activeProgramId;
-            if (!progId) {
-                // logger.warn({ blockId: data.blockId }, '⚠️ [ProgramLogService] Skipping - no activeProgramId');
-                return;
-            }
-
-            const { blockId, blockType, blockLabel, success, summary, error, output, logData } = data;
-
-            // Determine which blocks to log
-            const importantBlocks = ['SENSOR_READ', 'ACTUATOR_SET', 'IF', 'LOOP'];
-            if (!importantBlocks.includes(blockType)) return;
-
-            // Use blockLabel if available, otherwise fallback to blockType
-            const name = blockLabel || blockType;
-
-            // Build message based on block type
-            let message = '';
-            let type: 'INFO' | 'WARNING' | 'ERROR' = success ? 'INFO' : 'ERROR';
-
-            switch (blockType) {
-                case 'SENSOR_READ':
-                    message = `📊 ${name}: ${summary || output?.displayValue || 'Прочит'}`;
-                    break;
-                case 'ACTUATOR_SET':
-                    message = `⚡ ${name}: ${summary || 'Действие'}`;
-                    break;
-                case 'IF':
-                    message = `❓ ${name}: ${summary || (output?.result ? 'TRUE' : 'FALSE')}`;
-                    break;
-                case 'LOOP':
-                    message = `🔄 ${name}: ${summary || `Итерация ${output?.iteration || '?'}`}`;
-                    break;
-            }
-
-            if (!success && error) {
-                message = `❌ ${name}: ${error}`;
-            }
-
-            await this.logEvent({
-                programId: progId,
-                type: type,
-                message: message,
-                metadata: {
-                    blockId,
-                    blockType,
-                    blockLabel,
-                    success,
-                    output: output?.displayValue || output?.result,
-                    logData,
-                    sessionId: data.sessionId,
-                    windowId: data.windowId,
-                    windowName: data.windowName,
-                    flowName: data.programName
-                }
-            });
         });
     }
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+// Removed invalid programService import
 
 import {
     Clock,
@@ -11,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../core/useStore';
 import { activeProgramService } from '../../services/activeProgramService';
-import type { IActiveProgram } from '../../types/ActiveProgram';
 import { toast } from 'sonner';
 import { NextCheckTimer } from '../activeProgram/NextCheckTimer';
 
@@ -33,34 +34,10 @@ const formatUptime = (startTime: string | Date | undefined, pausedDuration: numb
 };
 
 export const ActiveProgramDashboard: React.FC = () => {
-    const { activeSession } = useStore();
-    const [fullProgram, setFullProgram] = useState<IActiveProgram | null>(null);
+    const { activeSession, activeProgram } = useStore();
     const [uptime, setUptime] = useState<string>("00:00:00");
 
-    // 1. Initial Load of Full Details
-    // 1. Initial Load & Socket Sync
-    useEffect(() => {
-        const fetchDetails = async () => {
-            // ... (keep fetch logic, just simplified call here for example)
-            try {
-                const data = await activeProgramService.getActive();
-                if (data) setFullProgram(data); // Always update if data exists
-            } catch (err) {
-                console.error("Failed to fetch active program details", err);
-            }
-        };
-
-        fetchDetails();
-
-        // Listen for Socket Events (via CustomEvent bridge)
-        const handleRefresh = () => {
-            console.log("🔄 Soft Refreshing Active Program Structure...");
-            fetchDetails();
-        };
-
-        window.addEventListener('program:refresh', handleRefresh);
-        return () => window.removeEventListener('program:refresh', handleRefresh);
-    }, [activeSession?.programId]); // Still refresh on ID change too
+    // Use activeProgram from store (managed by useActiveProgramSync hook in Layout)
 
     // NEW: Polling for Live Execution Status
     const [executionStatus, setExecutionStatus] = useState<any>(null);
@@ -68,7 +45,7 @@ export const ActiveProgramDashboard: React.FC = () => {
         let intervalId: any;
 
         const checkExecution = async () => {
-            const isRunning = (activeSession?.status === 'running') || (fullProgram?.status === 'running');
+            const isRunning = (activeSession?.status === 'running') || (activeProgram?.status === 'running');
             if (isRunning) {
                 try {
                     const status = await activeProgramService.getExecutionStatus();
@@ -79,7 +56,7 @@ export const ActiveProgramDashboard: React.FC = () => {
             }
         };
 
-        const isRunning = activeSession?.status === 'running' || fullProgram?.status === 'running';
+        const isRunning = activeSession?.status === 'running' || activeProgram?.status === 'running';
 
         if (isRunning) {
             checkExecution();
@@ -87,30 +64,30 @@ export const ActiveProgramDashboard: React.FC = () => {
         }
 
         return () => clearInterval(intervalId);
-    }, [activeSession?.status, fullProgram?.status]);
+    }, [activeSession?.status, activeProgram?.status]);
 
-    // Fallback: If store is empty but we fetched fullProgram successfully, construct a temporary session object
-    const sessionToDisplay = activeSession && activeSession.status !== 'idle' ? activeSession : (fullProgram && fullProgram.status !== 'stopped' ? {
-        programId: fullProgram._id,
+    // Fallback: If store is empty but we have activeProgram, construct a temporary session object
+    const sessionToDisplay = activeSession && activeSession.status !== 'idle' ? activeSession : (activeProgram && activeProgram.status !== 'stopped' ? {
+        programId: activeProgram._id,
         // @ts-ignore
-        programName: fullProgram.name,
-        status: fullProgram.status || 'running',
-        startTime: fullProgram.startTime || new Date().toISOString(), // Fallback
+        programName: activeProgram.name,
+        status: activeProgram.status || 'running',
+        startTime: activeProgram.startTime || new Date().toISOString(), // Fallback
         currentBlockId: 'unknown',
         // @ts-ignore
         pausedDuration: 0 // Simplification
     } : null);
 
     // 2. Timer Loop
-    // 2. Timer Loop (Strictly tied to fullProgram to avoid resets on flow start)
+    // 2. Timer Loop (Strictly tied to activeProgram to avoid resets on flow start)
     useEffect(() => {
         // Only run timer if we have a valid start time from the PROGRAM (not the flow)
-        if (!fullProgram?.startTime || fullProgram.status === 'stopped' || fullProgram.status === 'completed') return;
+        if (!activeProgram?.startTime || activeProgram.status === 'stopped' || activeProgram.status === 'completed') return;
 
         const tick = () => {
             // @ts-ignore
-            setUptime(formatUptime(fullProgram.startTime, 0));
-            // We assume 0 paused duration for now or calculate if available in fullProgram
+            setUptime(formatUptime(activeProgram.startTime, 0));
+            // We assume 0 paused duration for now or calculate if available in activeProgram
         };
 
         // Initial tick
@@ -118,16 +95,45 @@ export const ActiveProgramDashboard: React.FC = () => {
 
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
-    }, [fullProgram?.status, fullProgram?.startTime]);
+    }, [activeProgram?.status, activeProgram?.startTime]);
 
 
     // 4. Render Logic
-    // Fix: Show card if we have ANY full program loaded, regardless of store status (to fix flickering)
+    // Fix: Show card if we have ANY activeProgram loaded, regardless of store status (to fix flickering)
     // Also allows showing "Loaded but not started" programs
-    const shouldRender = fullProgram || (sessionToDisplay && sessionToDisplay.status === 'running');
+    const shouldRender = activeProgram || (sessionToDisplay && sessionToDisplay.status === 'running');
+
 
     if (!shouldRender) {
-        return null;
+        return (
+            <Card className="border-l-4 border-l-muted border-y border-r border-dashed border-slate-700/50 bg-slate-900/20 shadow-sm relative overflow-hidden">
+                <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:20px_20px]" />
+                <CardHeader className="pb-2 relative z-10">
+                    <CardTitle className="text-xl text-muted-foreground flex items-center gap-2">
+                        <Calendar className="h-5 w-5 opacity-50" />
+                        Active Program
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                    <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+                        <div className="bg-slate-800/50 p-4 rounded-full border border-dashed border-slate-700">
+                            <Waves className="h-8 w-8 text-blue-500/40" />
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-medium text-foreground">No active program</h3>
+                            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                                No program is currently running. Go to the Active Program page to load and configure one.
+                            </p>
+                        </div>
+                        <a href="/active-program" className="mt-2 block">
+                            <Button variant="outline" className="gap-2 border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-400">
+                                Go to Active Program <ArrowRight className="h-4 w-4" />
+                            </Button>
+                        </a>
+                    </div>
+                </CardContent>
+            </Card>
+        );
     }
 
     // 5. Timeline Logic - Prepare Visual Items based on Program Type
@@ -153,11 +159,11 @@ export const ActiveProgramDashboard: React.FC = () => {
 
     // BRANCH A: ADVANCED MODE (Windows)
     // @ts-ignore - windows property might not be in IActiveProgram type definition yet, but comes from backend
-    if (fullProgram?.type === 'ADVANCED' || (fullProgram?.windows && fullProgram.windows.length > 0)) {
+    if (activeProgram?.type === 'ADVANCED' || (activeProgram?.windows && activeProgram.windows.length > 0)) {
         // @ts-ignore
-        const windows = fullProgram.windows || [];
+        const windows = activeProgram.windows || [];
         // @ts-ignore
-        const windowsState = fullProgram.windowsState || [];
+        const windowsState = activeProgram.windowsState || [];
 
         visualItems = windows.map((window: any) => {
             // Find status in state
@@ -170,15 +176,14 @@ export const ActiveProgramDashboard: React.FC = () => {
             // Only populate nextCheck for the ACTIVE window
             let nextCheck: string | undefined;
             let lastCheck: Date | undefined;
-            let interval = window.checkInterval || fullProgram?.minCycleInterval || 1;
+            let interval = window.checkInterval || activeProgram?.minCycleInterval || 1;
 
             if (statusRaw === 'active') {
                 displayStatus = 'running';
 
-                // --- Action Panel Logic ---
                 // 1. Next Check Timer
-                if (fullProgram && fullProgram.nextCheckTime) {
-                    nextCheck = fullProgram.nextCheckTime;
+                if (activeProgram && activeProgram.nextCheckTime) {
+                    nextCheck = activeProgram.nextCheckTime;
                 }
 
                 if (state?.lastCheck) {
@@ -203,9 +208,9 @@ export const ActiveProgramDashboard: React.FC = () => {
                     // 2. Resolve Flow Name
                     let flowName = dbSession.programName || 'Active Flow'; // Priority: DB Name
 
-                    // Fallback to searching in fullProgram.flows if DB Name not present (backward compatibility)
-                    if (!dbSession.programName && fullProgram?.flows) {
-                        const found = fullProgram.flows.find(f => f.id === runningFlowId);
+                    // Fallback to searching in activeProgram.flows if DB Name not present (backward compatibility)
+                    if (!dbSession.programName && activeProgram?.flows) {
+                        const found = activeProgram.flows.find((f: any) => f.id === runningFlowId);
                         if (found) {
                             flowName = found.name;
                         } else {
@@ -268,8 +273,8 @@ export const ActiveProgramDashboard: React.FC = () => {
 
         // BRANCH B: BASIC MODE (Schedule)
     } else {
-        const schedule = fullProgram?.schedule || [];
-        visualItems = schedule.map((item) => {
+        const schedule = activeProgram?.schedule || [];
+        visualItems = schedule.map((item: any) => {
             let status: VisualItem['displayStatus'] = 'pending';
             if (item.status === 'completed') status = 'completed';
             else if (item.status === 'skipped') status = 'skipped';
@@ -300,18 +305,18 @@ export const ActiveProgramDashboard: React.FC = () => {
                 <div className="flex justify-between items-start">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <CardTitle className="text-xl">{fullProgram?.name || 'Active Program'}</CardTitle>
+                            <CardTitle className="text-xl">{activeProgram?.name || 'Active Program'}</CardTitle>
 
                             {/* Status Badge */}
                             <Badge variant={
-                                fullProgram?.status === 'running' ? 'default' :
-                                    fullProgram?.status === 'paused' ? 'secondary' : 'outline'
+                                activeProgram?.status === 'running' ? 'default' :
+                                    activeProgram?.status === 'paused' ? 'secondary' : 'outline'
                             } className={`
                                 uppercase font-bold
-                                ${fullProgram?.status === 'running' ? 'bg-blue-600 hover:bg-blue-700 animate-pulse' :
-                                    fullProgram?.status === 'paused' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+                                ${activeProgram?.status === 'running' ? 'bg-blue-600 hover:bg-blue-700 animate-pulse' :
+                                    activeProgram?.status === 'paused' ? 'bg-amber-500 hover:bg-amber-600' : ''}
                             `}>
-                                {fullProgram?.status || 'UNKNOWN'}
+                                {activeProgram?.status || 'UNKNOWN'}
                             </Badge>
                         </div>
 
@@ -321,10 +326,10 @@ export const ActiveProgramDashboard: React.FC = () => {
                                 <Clock className="h-4 w-4 text-primary" />
                                 <span className="font-bold tracking-wide">{uptime}</span>
                             </span>
-                            {(fullProgram?.startTime || sessionToDisplay?.startTime) && (
+                            {(activeProgram?.startTime || sessionToDisplay?.startTime) && (
                                 <span className="flex items-center gap-1 text-xs border-l pl-3 ml-1">
                                     <Calendar className="h-3.5 w-3.5 opacity-70" />
-                                    Started: {new Date(fullProgram?.startTime || sessionToDisplay?.startTime || "").toLocaleString('bg-BG', {
+                                    Started: {new Date(activeProgram?.startTime || sessionToDisplay?.startTime || "").toLocaleString('bg-BG', {
                                         day: '2-digit', month: '2-digit', year: 'numeric',
                                         hour: '2-digit', minute: '2-digit'
                                     }).replace(',', '')}
@@ -470,7 +475,7 @@ export const ActiveProgramDashboard: React.FC = () => {
                                                             lastCheck={item.lastCheck || new Date(0)}
                                                             checkInterval={item.interval}
                                                             status="active"
-                                                            programStatus={fullProgram?.status}
+                                                            programStatus={activeProgram?.status}
                                                             onRefresh={handleVisualForceCheck}
                                                         />
                                                     )}

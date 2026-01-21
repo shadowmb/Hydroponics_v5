@@ -269,12 +269,12 @@ export const LiveExecutionMonitor: React.FC<LiveExecutionMonitorProps> = ({ prog
             });
         };
 
-        socketService.on('automation:execution_step', handleExecutionStep);
-        socketService.on('automation:block_end', handleBlockEnd);
+        socketService.on('flow:execution_step', handleExecutionStep);
+        socketService.on('flow:block_end', handleBlockEnd);
 
         return () => {
-            socketService.off('automation:execution_step', handleExecutionStep);
-            socketService.off('automation:block_end', handleBlockEnd);
+            socketService.off('flow:execution_step', handleExecutionStep);
+            socketService.off('flow:block_end', handleBlockEnd);
         };
     }, [programId, isActive]);
 

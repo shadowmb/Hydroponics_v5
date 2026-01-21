@@ -29,16 +29,21 @@ export interface SystemEvents {
     };
     'command:sent': { deviceId: string; controllerId: string; packet: any; raw?: string };
 
-    // Automation Events
-    'automation:block_start': {
+    // Automation Events (Legacy - kept for backward compatibility)
+    // Note: Flow events now use 'flow:*' prefix
+    'log': { timestamp: Date | string; level: string; message: string; blockId?: string; data?: any; sessionId?: string | null };
+
+    // AutomationEngine v2 Events (flow:*)
+    'flow:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null; error?: string | null };
+    'flow:block_start': {
         blockId: string;
         type: string;
         sessionId?: string | null;
         blockLabel?: string;
-        expectedDuration?: number; // in milliseconds
+        expectedDuration?: number;
         activeProgramId?: string | null;
     };
-    'automation:block_end': {
+    'flow:block_end': {
         blockId: string;
         blockType?: string;
         blockLabel?: string;
@@ -50,13 +55,12 @@ export interface SystemEvents {
         error?: string;
         notification?: { channelId: string; mode: string; config?: any };
         activeProgramId?: string | null;
-        windowId?: string | null; // For Analytics Cascading Filters
-        windowName?: string | null; // For Analytics Cascading Filters
-        logData?: IBlockLogData; // Structured data for analytics
+        windowId?: string | null;
+        windowName?: string | null;
+        logData?: IBlockLogData;
     };
-    'automation:state_change': { state: string; currentBlock: string | null; context: ExecutionContext; sessionId?: string | null; error?: string | null };
-    'automation:execution_step': { blockId: string; type: string; sessionId?: string | null; label: string; duration?: number; timestamp: number; params?: any };
-    'log': { timestamp: Date | string; level: string; message: string; blockId?: string; data?: any; sessionId?: string | null };
+    'flow:execution_step': { blockId: string; type: string; sessionId?: string | null; label: string; duration?: number; timestamp: number; params?: any };
+    'flow:signal': { signal: string; activeProgramId?: string | null; data?: any };
 
     // System Lifecycle Events
     'automation:program_start': { programId: string; sessionId: string; programName?: string; activeProgramId?: string | null; executionType?: string | null };
@@ -85,7 +89,7 @@ export interface SystemEvents {
         programId?: string;
         windowId: string;
         windowName: string;
-        result: 'triggered' | 'fallback' | 'no_trigger';
+        result: 'triggered' | 'fallback' | 'no_trigger' | 'interrupted';
         timestamp: Date;
         flowId?: string;
         flowName?: string;

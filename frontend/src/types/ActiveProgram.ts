@@ -42,13 +42,18 @@ export interface IActiveProgram {
     forceCheckRequired?: boolean;
     currentTriggerIndex?: number;
     currentFlowId?: string;
+    // Pause State
+    pausedAt?: string; // ISO date
+    pauseTimeout?: number; // seconds
+    pauseFlowName?: string;
+    pauseBlockLabel?: string;
     // Flows reference for lookup
     flows?: { id: string, name: string }[];
 }
 
 export interface IWindowState {
     windowId: string;
-    status: 'pending' | 'active' | 'completed' | 'skipped';
+    status: 'pending' | 'active' | 'completed' | 'skipped' | 'interrupted';
     triggersExecuted: string[]; // IDs of triggers that are "done" (won't fire again)
     triggersExecuting?: string[]; // IDs of triggers currently running a flow
     triggerCounts?: Map<string, number>; // Map of triggerId -> execution count

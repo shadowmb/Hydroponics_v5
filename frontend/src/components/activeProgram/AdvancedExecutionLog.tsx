@@ -5,7 +5,8 @@ import { Button } from '../ui/button';
 import {
     Activity, Zap, Play, CheckCircle2, SkipForward,
     Clock, XCircle, Loader2,
-    Calendar, Trash2, EyeOff, RefreshCw
+    Calendar, Trash2, EyeOff, RefreshCw,
+    FileText, PauseCircle, PlayCircle, StopCircle, Hourglass
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { socketService } from '../../core/SocketService';
@@ -15,7 +16,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar as CalendarComponent } from '../ui/calendar';
 import { toast } from 'sonner';
 
-// Log entry types
+interface AdvancedExecutionLogProps {
+    programId?: string;
+    className?: string;
+}
+
 interface LogEntry {
     id?: string;
     _id?: string;
@@ -24,28 +29,31 @@ interface LogEntry {
     'WINDOW_EVENT' | 'TRIGGER_MATCH' | 'TRIGGER_SKIP' | 'FLOW_EXECUTED' | 'ERROR' | 'INFO' | 'WARNING' |
     'active:program_started' | 'automation:program_start' | 'advanced:program_day_complete' |
     'advanced:window_active' | 'advanced:window_completed' | 'advanced:window_skipped' |
-    'advanced:trigger_matched' | 'SENSOR_READ' | 'advanced:fallback_executed' | string; // Allow string fallback
+    'advanced:trigger_matched' | 'SENSOR_READ' | 'advanced:fallback_executed' |
+    'USER_LOG' | 'WAIT_START' | 'SYSTEM_PAUSE' | 'SYSTEM_RESUME' | 'SYSTEM_STOP' | string; // Allow string fallback
     windowId?: string;
     windowName?: string;
     timestamp: Date | string;
-    data?: any; // Frontend format
-    message?: string; // Backend format
-    metadata?: any; // Backend format
-    count?: number; // Deduplication count
+    // Added missing properties
+    message?: string;
+    data?: any;
+    metadata?: any;
+    count?: number;
 }
-
-interface AdvancedExecutionLogProps {
-    programId?: string;
-    className?: string;
-}
-
 // Icon mapping for log entry types
 const getIcon = (type: LogEntry['type']) => {
     switch (type) {
         // High Level Lifecycle
         case 'active:program_started':
         case 'automation:program_start':
-            return <Play className="h-4 w-4 text-green-600 dark:text-green-500" />;
+        case 'SYSTEM_RESUME':
+            return <PlayCircle className="h-4 w-4 text-green-600 dark:text-green-500" />;
+
+        case 'SYSTEM_PAUSE':
+            return <PauseCircle className="h-4 w-4 text-orange-500" />;
+
+        case 'SYSTEM_STOP':
+            return <StopCircle className="h-4 w-4 text-red-600 dark:text-red-500" />;
 
         case 'program_day_complete':
         case 'advanced:program_day_complete':
@@ -79,6 +87,12 @@ const getIcon = (type: LogEntry['type']) => {
         case 'SENSOR_READ':
             // Try to infer icon from message content if possible, mainly generic here
             return <Activity className="h-3 w-3 text-gray-400" />;
+
+        case 'USER_LOG':
+            return <FileText className="h-3.5 w-3.5 text-indigo-500" />;
+
+        case 'WAIT_START':
+            return <Hourglass className="h-3.5 w-3.5 text-yellow-600/70" />;
 
         // Errors/Warnings
         case 'ERROR':
@@ -175,17 +189,30 @@ const formatMessage = (entry: LogEntry): React.ReactNode => {
     return JSON.stringify(entry.data || {});
 };
 
+// ... formatMessage is fine ...
+
 // Style mapping for row container
 const getEntryStyle = (entry: LogEntry): string => {
     const type = entry.type;
 
-    // 1. Program/Window Start/End (Top Level)
+    // 1. Program/Window Start/End (Top Level) + System Actions
     if ([
         'active:program_started', 'automation:program_start',
         'window_active', 'advanced:window_active', 'WINDOW_EVENT',
-        'program_day_complete', 'advanced:program_day_complete'
+        'program_day_complete', 'advanced:program_day_complete',
+        'SYSTEM_RESUME'
     ].includes(type)) {
         return "bg-blue-500/5 border-l-2 border-blue-500 pl-3 font-medium text-foreground";
+    }
+
+    // System Pause - Warning style
+    if (type === 'SYSTEM_PAUSE') {
+        return "bg-orange-500/10 border-l-2 border-orange-500 pl-3 font-medium text-foreground";
+    }
+
+    // System Stop - Red style
+    if (type === 'SYSTEM_STOP') {
+        return "bg-red-500/10 border-l-2 border-red-500 pl-3 font-medium text-red-600 dark:text-red-400";
     }
 
     if (['window_completed', 'advanced:window_completed'].includes(type)) {
@@ -193,7 +220,7 @@ const getEntryStyle = (entry: LogEntry): string => {
     }
 
     // 2. Flow / Trigger (Mid Level)
-    if (['trigger_matched', 'advanced:trigger_matched', 'TRIGGER_MATCH', 'FLOW_EXECUTED'].includes(type)) {
+    if (['trigger_matched', 'advanced:trigger_matched', 'TRIGGER_MATCH', 'FLOW_EXECUTED', 'USER_LOG'].includes(type)) {
         return "ml-4 border-l-2 border-transparent pl-2 text-foreground/90";
     }
 
@@ -340,22 +367,24 @@ export function AdvancedExecutionLog({ className, programId }: AdvancedExecution
             'advanced:window_skipped',
             'advanced:trigger_matched',
             'advanced:trigger_skipped',
-            'advanced:trigger_evaluation', // <-- Add this
+            'advanced:trigger_evaluation',
             'advanced:fallback_executed',
             'advanced:program_day_complete',
             'active:program_started',
-            'automation:program_start'
+            'automation:program_start',
+            'flow:execution_step', // Flow block execution
+            'flow:block_end' // Trigger log refetch
         ];
 
         events.forEach(event => socketService.on(event, handleRealtimeEvent));
-        socketService.on('automation:block_start', handleBlockStart);
-        socketService.on('automation:block_end', handleBlockEnd);
+        socketService.on('flow:block_start', handleBlockStart);
+        socketService.on('flow:block_end', handleBlockEnd);
 
         return () => {
             if (refetchTimeout) clearTimeout(refetchTimeout);
             events.forEach(event => socketService.off(event, handleRealtimeEvent));
-            socketService.off('automation:block_start', handleBlockStart);
-            socketService.off('automation:block_end', handleBlockEnd);
+            socketService.off('flow:block_start', handleBlockStart);
+            socketService.off('flow:block_end', handleBlockEnd);
         };
     }, [isToday, programId]);
 

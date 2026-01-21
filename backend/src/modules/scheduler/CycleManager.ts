@@ -13,7 +13,7 @@ export class CycleManager {
     }
 
     private setupEventListeners() {
-        events.on('automation:state_change', async (data) => {
+        events.on('flow:state_change', async (data) => {
             const session = this.currentSession;
             if (!session) return;
             if (session.status !== 'running') return;

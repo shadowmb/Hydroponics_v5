@@ -64,12 +64,16 @@ export class SocketService {
             'device:disconnected',
             'sensor:data',
             'error:critical',
-            'automation:block_start',
-            'automation:block_end',
-            'automation:state_change',
             'command:sent',
             'log',
-            'automation:execution_step',
+            // AutomationEngine v2 events (via AutomationRelay)
+            'flow:state_change',
+            'flow:block_start',
+            'flow:block_end',
+            'flow:execution_step',
+            'flow:signal',
+            // Legacy program events (for backward compatibility)
+            'automation:program_start',
             // Advanced Program events
             'advanced:window_skipped',
             'advanced:window_active',
@@ -80,7 +84,6 @@ export class SocketService {
             'advanced:fallback_executed',
             'advanced:program_day_complete',
             'active:program_started',
-            'automation:program_start',
             'time:sync' // Forward time sync events
         ];
 

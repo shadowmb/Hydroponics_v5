@@ -717,7 +717,7 @@ export class HardwareController {
             const devices = await DeviceModel.find({ dashboardPinned: true })
                 .sort({ dashboardOrder: 1 })
                 .populate('config.driverId')
-                .limit(6); // Max 6 pinned devices
+                .limit(9); // Max 9 pinned devices
 
             return reply.send({ success: true, data: devices });
         } catch (error) {
@@ -740,10 +740,10 @@ export class HardwareController {
             // Check if we're trying to pin and already have 6 pinned
             if (pinned) {
                 const pinnedCount = await DeviceModel.countDocuments({ dashboardPinned: true });
-                if (pinnedCount >= 6 && !device.dashboardPinned) {
+                if (pinnedCount >= 9 && !device.dashboardPinned) {
                     return reply.status(400).send({
                         success: false,
-                        error: 'Maximum 6 devices can be pinned to dashboard'
+                        error: 'Maximum 9 devices can be pinned to dashboard'
                     });
                 }
             }

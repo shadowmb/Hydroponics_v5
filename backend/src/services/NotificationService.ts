@@ -83,8 +83,8 @@ export class NotificationService {
     private initializeListeners() {
         logger.info('🔔 [NotificationService] Initializing Listeners...');
 
-        // 1. Listen for Automation Block Events (Success & Error)
-        events.on('automation:block_end', async (payload) => {
+        // 1. Listen for Flow Block Events (Success & Error)
+        events.on('flow:block_end', async (payload) => {
             await this.handleBlockEvent(payload);
         });
 

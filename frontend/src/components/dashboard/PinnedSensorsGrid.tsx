@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Settings, Thermometer, Droplet, Zap, Ruler, Wind } from 'lucide-react';
+import { Settings, Thermometer, Droplet, Zap, Ruler, Wind, Sun, Percent, Beaker, Leaf, Gauge, Activity, Clock } from 'lucide-react';
 import { SensorCard, type SensorStatus, type TrendDirection } from './SensorCard';
 import { useStore } from '../../core/useStore';
 import { useDashboardConfig } from '../../hooks/useDashboardConfig';
@@ -132,6 +132,8 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
 
     }, [devices]);
 
+    // ... existing code ...
+
     const getIcon = (iconName?: string) => {
         switch (iconName) {
             case 'thermometer': return <Thermometer className="h-4 w-4 text-orange-500" />;
@@ -139,6 +141,15 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
             case 'zap': return <Zap className="h-4 w-4 text-yellow-500" />;
             case 'ruler': return <Ruler className="h-4 w-4 text-green-500" />;
             case 'wind': return <Wind className="h-4 w-4 text-sky-500" />;
+            // New Icons
+            case 'sun': return <Sun className="h-4 w-4 text-amber-500" />;
+            case 'percent': return <Percent className="h-4 w-4 text-indigo-500" />;
+            case 'beaker': return <Beaker className="h-4 w-4 text-purple-500" />;
+            case 'leaf': return <Leaf className="h-4 w-4 text-emerald-600" />;
+            case 'gauge': return <Gauge className="h-4 w-4 text-red-500" />;
+            case 'clock': return <Clock className="h-4 w-4 text-gray-500" />;
+            case 'activity': return <Activity className="h-4 w-4 text-pink-500" />;
+
             default: return <Thermometer className="h-4 w-4 text-muted-foreground" />;
         }
     };
@@ -151,7 +162,7 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
         const max = config.max ?? Infinity;
         const tol = config.tolerance ?? 0;
 
-        if (value >= min && value <= max) return 'normal';
+        if (value >= min && value <= max) return 'success';
         if ((value >= min - tol && value < min) || (value > max && value <= max + tol)) {
             return 'warning';
         }
@@ -186,16 +197,9 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                    📊 Quick Stats
-                </h3>
-                <Button variant="ghost" size="sm" onClick={onSettingsClick}>
-                    <Settings className="h-4 w-4" />
-                </Button>
-            </div>
+            {/* Header Removed as per request */}
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2 grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9">
                 {devices.map(device => {
                     const config = getSensorConfig(device._id);
                     const currentVal = device.lastReading?.value;
@@ -208,7 +212,7 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
                             alias={config.alias}
                             value={currentVal ?? 'N/A'}
                             unit={device.lastReading?.unit || device.displayUnit || device.config.driverId?.uiConfig?.unit}
-                            icon={getIcon(device.config.driverId?.uiConfig?.icon)}
+                            icon={getIcon(config.icon || device.config.driverId?.uiConfig?.icon)}
                             lastUpdate={device.lastReading?.timestamp}
                             status={calculateStatus(currentVal, config)}
                             trend={trend}
@@ -217,6 +221,15 @@ export const PinnedSensorsGrid: React.FC<PinnedSensorsGridProps> = ({ onSettings
                         />
                     );
                 })}
+
+                {/* Placeholder / Add New Sensor Card */}
+                <Card
+                    className="border-dashed border-muted bg-transparent hover:bg-muted/10 cursor-pointer flex flex-col items-center justify-center min-h-[80px] transition-colors"
+                    onClick={onSettingsClick}
+                >
+                    <Settings className="h-5 w-5 text-muted-foreground mb-1" />
+                    <span className="text-[10px] font-medium text-muted-foreground">Configure</span>
+                </Card>
             </div>
         </div>
     );

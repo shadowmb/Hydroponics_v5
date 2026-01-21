@@ -9,6 +9,7 @@ import { ServerClock } from "./ServerClock"
 import { AIChatButton } from "../ai/AIChatButton"
 import { AIChatPopup } from "../ai/AIChatPopup"
 import { AIInsightsButton } from "../ai/AIInsightsButton"
+import { useActiveProgramSync } from "../../hooks/useActiveProgramSync"
 
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -44,7 +45,7 @@ const NavGroup = ({ label, icon: Icon, items }: { label: string, icon: any, item
                                 )
                             }
                         >
-                            {subItem.icon && <subItem.icon className="mr-2 h-4 w-4 opacity-70" />}
+                            {subItem.icon && <subItem.icon className={cn("mr-2 h-4 w-4 opacity-70", subItem.iconClass)} />}
                             <span>{subItem.label}</span>
                         </NavLink>
                     ))}
@@ -62,7 +63,7 @@ function Sidebar({ className }: SidebarProps) {
             group: 'Automation',
             icon: Play,
             items: [
-                { to: '/active-program', label: 'Active Program', icon: Play },
+                { to: '/active-program', label: 'Active Program', icon: Play, iconClass: "text-red-500 opacity-100" },
                 { to: '/programs', label: 'Programs', icon: Calendar },
                 { to: '/flows', label: 'Flows', icon: Workflow },
             ]
@@ -114,11 +115,15 @@ function Sidebar({ className }: SidebarProps) {
     )
 }
 
+import { GlobalPauseTimer } from "../activeProgram/GlobalPauseTimer";
 import { useSimulation } from "@/context/SimulationContext"; // Add import
 
 export function Layout() {
     const { setSystemStatus, devices, updateDevice } = useStore();
     const { isSimulating, virtualTime } = useSimulation(); // Destructure Context
+
+    // Initialize Active Program Sync
+    useActiveProgramSync();
 
     useEffect(() => {
         // Initialize Socket
@@ -174,6 +179,7 @@ export function Layout() {
                         )}
                     </div>
                     <div className="flex items-center gap-4">
+                        <GlobalPauseTimer />
                         <AIInsightsButton />
                         <AIChatButton />
                         <ServerClock />

@@ -62,6 +62,15 @@ export class LoopBlockExecutor implements IBlockExecutor {
             // Time-based limit
             const elapsedSeconds = (Date.now() - loopStartTime) / 1000;
             if (timeoutSeconds && elapsedSeconds > timeoutSeconds) {
+                // Soft Timeout Logic
+                const onFailure = params.onFailure || 'STOP';
+                if (onFailure === 'CONTINUE') {
+                    return {
+                        success: true,
+                        output: false, // Output false means "Exit Loop" for LoopBlock
+                        summary: `Loop timer expired (${elapsedSeconds.toFixed(1)}s) -> Exiting (Continue)`
+                    };
+                }
                 return { success: false, error: `Loop timed out after ${elapsedSeconds.toFixed(1)}s (Limit: ${timeoutSeconds}s)` };
             }
             // For Time mode, we default 'shouldLoop' to TRUE (infinite until timeout),

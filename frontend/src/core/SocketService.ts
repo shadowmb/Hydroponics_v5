@@ -92,10 +92,14 @@ class SocketService {
             useStore.getState().updateDevice(device);
         });
 
-        // Automation State Changes
-        // Automation State Changes
-        this.socket.on('automation:state_change', (data: any) => {
-            console.log('Automation state change:', data);
+        // Flow State Changes (AutomationEngine v2)
+        this.socket.on('flow:state_change', (data: any) => {
+            console.log('Flow state change:', data);
+
+            // Notify Active Program components to refresh (sync status)
+            if (['running', 'paused', 'stopped', 'completed'].includes(data.state)) {
+                window.dispatchEvent(new CustomEvent('program:refresh', { detail: { event: 'flow:state_change', data } }));
+            }
 
             if (data.state === 'running' || data.state === 'paused' || data.state === 'error' || data.state === 'loaded' || data.state === 'stopped' || data.state === 'completed') {
                 const currentSession = useStore.getState().activeSession;
@@ -126,8 +130,8 @@ class SocketService {
             }
         });
 
-        // Automation Block Events (Start/End)
-        this.socket.on('automation:block_start', (data: { sessionId: string, blockId: string }) => {
+        // Flow Block Events (Start/End) - AutomationEngine v2
+        this.socket.on('flow:block_start', (data: { sessionId: string, blockId: string }) => {
             // console.log('Block start:', data);
             const currentSession = useStore.getState().activeSession;
             if (currentSession && currentSession.id === data.sessionId) {
@@ -139,7 +143,7 @@ class SocketService {
             }
         });
 
-        this.socket.on('automation:block_end', (_data: { sessionId: string, blockId: string }) => {
+        this.socket.on('flow:block_end', (_data: { sessionId: string, blockId: string }) => {
             // console.log('Block end:', _data);
         });
 
@@ -151,6 +155,9 @@ class SocketService {
             'advanced:window_active',
             'advanced:program_day_complete',
             'active:program_started',
+            'active:program_stopped',
+            'program:paused',
+            'program:resumed',
             'advanced:window_skipped',
             'advanced:fallback_executed'
         ];

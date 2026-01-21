@@ -131,7 +131,8 @@ export class AutomationController {
             schedulerState: require('../../modules/scheduler/SchedulerService').schedulerService.getState(),
             session: snapshot.context.programId ? session : null,
             runningSessionsCount,
-            activeProgramStatus: activeProgram ? activeProgram.status : 'stopped'
+            activeProgramStatus: activeProgram ? activeProgram.status : 'stopped',
+            uptimeSeconds: process.uptime()
         });
     }
 }

@@ -13,7 +13,7 @@ export class BaseRepository<T extends Document> {
 
     async findById(id: string): Promise<T | null> {
         // Assume 'id' is the custom ID field, not _id
-        return this.model.findOne({ id } as FilterQuery<T>).exec();
+        return this.model.findOne({ id, deletedAt: null } as FilterQuery<T>).exec();
     }
 
     async findBy_Id(_id: string): Promise<T | null> {

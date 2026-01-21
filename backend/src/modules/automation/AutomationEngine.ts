@@ -1,11 +1,10 @@
+import { EventEmitter } from 'events';
 import { createActor, Actor, fromPromise } from 'xstate';
 import { automationMachine, AutomationContext, AutomationEvent } from './machine';
 import { Block, BlockResult, IBlockExecutor, ExecutionContext, PauseError } from './interfaces';
-import { events } from '../../core/EventBusService';
 import { logger } from '../../core/LoggerService';
 import { flowRepository } from '../persistence/repositories/FlowRepository';
 import { sessionRepository } from '../persistence/repositories/SessionRepository';
-import { actionTemplateRepository } from '../persistence/repositories/ActionTemplateRepository';
 
 // Import Services (Singletons)
 import { historyService, HistoryService } from '../../services/HistoryService';
@@ -23,33 +22,58 @@ import { EndBlockExecutor } from './blocks/EndBlockExecutor';
 import { LoopBlockExecutor } from './blocks/LoopBlockExecutor';
 import { FlowControlBlockExecutor } from './blocks/FlowControlBlockExecutor';
 
-export class AutomationEngine {
+/**
+ * AutomationEngine v2.0
+ * 
+ * A "dumb" worker that only executes flows (block by block).
+ * Communicates via EventEmitter events - NO direct dependencies on ActiveProgramService.
+ * 
+ * Responsibilities:
+ * - Load/Start/Stop/Pause/Resume flows
+ * - Execute blocks using registered executors
+ * - Track active hardware resources for safety cleanup
+ * - Emit events for external listeners (Orchestrator pattern)
+ */
+export class AutomationEngine extends EventEmitter {
+    // Centralized event names for type safety and relay bridge
+    static readonly EVENTS = [
+        'flow:state_change',
+        'flow:block_start',
+        'flow:block_end',
+        'flow:execution_step',
+        'flow:signal'
+    ] as const;
+
     private actor!: Actor<any>;
     private executors = new Map<string, IBlockExecutor>();
     private currentSessionId: string | null = null;
     private currentProgramName: string | null = null;
+    private executionStartTime: number = 0;
+
+    // Context metadata (passed via overrides, used in events)
     private activeProgramId: string | null = null;
     private currentWindowId: string | null = null;
     private currentWindowName: string | null = null;
     private executionType: string | null = null;
-    private executionStartTime: number = 0;
 
     private instanceId = Math.random().toString(36).substring(7);
+    private _suppressStopEvent = false;
 
     constructor(
         private historyService: HistoryService,
         private unitConversion: UnitConversionService,
         private deviceService: HardwareService
     ) {
-        console.log(`DEBUG: AutomationEngine Created: ${this.instanceId}`);
+        super();
+        console.log(`DEBUG: AutomationEngine v2 Created: ${this.instanceId}`);
 
         // Register Executors
         this.registerExecutor(new StartBlockExecutor());
         this.registerExecutor(new EndBlockExecutor());
         this.registerExecutor(new LogBlockExecutor());
         this.registerExecutor(new WaitBlockExecutor());
-        this.registerExecutor(new ActuatorSetBlockExecutor()); // Fixed: No args
-        this.registerExecutor(new SensorReadBlockExecutor()); // Fixed: No args
+        this.registerExecutor(new ActuatorSetBlockExecutor());
+        this.registerExecutor(new SensorReadBlockExecutor());
         this.registerExecutor(new IfBlockExecutor());
         this.registerExecutor(new LoopBlockExecutor());
         this.registerExecutor(new FlowControlBlockExecutor());
@@ -62,12 +86,10 @@ export class AutomationEngine {
             this.actor.stop();
         }
 
-        // Define the logic for 'executeBlock'
         const executeBlockLogic = fromPromise(async ({ input, signal }: { input: { context: AutomationContext }, signal: AbortSignal }) => {
             return this.executeBlock(input.context, signal);
         });
 
-        // Create the actor with the machine and provided implementations
         this.actor = createActor(automationMachine.provide({
             actors: {
                 executeBlock: executeBlockLogic
@@ -76,8 +98,7 @@ export class AutomationEngine {
 
         this.setupEventListeners();
         this.actor.start();
-        logger.info(`✨ AutomationEngine Actor Initialized/Reset (Session: ${this.currentSessionId || 'none'})`);
-
+        logger.info(`✨ AutomationEngine v2 Actor Initialized (Session: ${this.currentSessionId || 'none'})`);
     }
 
     private setupEventListeners() {
@@ -91,43 +112,46 @@ export class AutomationEngine {
                     await this.cleanupResources(snapshot.context.execContext);
                 }
             }
-            // ---------------------------
-
-            // ... (skip purely existing code references if possible, or use larger chunks)
 
             // Sync with DB Session
             if (this.currentSessionId) {
                 try {
                     const updates: any = { status: stateValue };
-                    // Fix: Set endTime for completed as well
                     if (['stopped', 'error', 'completed'].includes(stateValue)) {
                         updates.endTime = new Date();
                     }
-
-                    // Log the sync attempt
                     logger.info({ sessionId: this.currentSessionId, updates }, '💾 Syncing Session Status to DB');
-
                     await sessionRepository.update(this.currentSessionId, updates);
                 } catch (err: any) {
                     logger.error({ err: err.message, sessionId: this.currentSessionId }, '❌ Failed to update session status');
                 }
             }
 
-            events.emit('automation:state_change', {
-                state: stateValue,
-                currentBlock: snapshot.context.currentBlockId,
-                context: snapshot.context.execContext,
-                sessionId: this.currentSessionId,
-                error: snapshot.context.error,
-                // @ts-ignore - Triggered by BlockResult properties
-                summary: (snapshot.event as any)?.output?.summary
-            });
+            // Emit local event for state change (replaces global events bus)
+            // Fix: Suppress 'stopped' state change if we are cancelling flow silently
+            if (!(stateValue === 'stopped' && this._suppressStopEvent)) {
+                this.emit('flow:state_change', {
+                    state: stateValue,
+                    currentBlock: snapshot.context.currentBlockId,
+                    context: snapshot.context.execContext,
+                    sessionId: this.currentSessionId,
+                    error: snapshot.context.error,
+                    summary: (snapshot.event as any)?.output?.summary,
+                    activeProgramId: this.activeProgramId
+                });
+            }
 
-            // Emit Program Stop on Terminal States
+            // Emit specific events for terminal states
             if (['stopped', 'error', 'completed'].includes(stateValue)) {
-                events.emit('automation:program_stop', {
+                if (stateValue === 'stopped' && this._suppressStopEvent) {
+                    logger.info('🛑 Stop Event Suppressed (Flow Cancellation)');
+                    return;
+                }
+
+                this.emit('flow:stopped', {
                     sessionId: this.currentSessionId!,
-                    reason: stateValue
+                    reason: stateValue,
+                    activeProgramId: this.activeProgramId
                 });
             }
         });
@@ -138,19 +162,15 @@ export class AutomationEngine {
     }
 
     /**
-     * Start a program by ID.
-     * Loads program from DB, creates a session, and starts the machine.
-     */
-    /**
-     * Load a program into memory (Idle state).
+     * Load a flow into memory (Idle -> Loaded state).
      */
     public async loadProgram(programId: string, overrides: Record<string, any> = {}): Promise<string> {
         // HARD RESET: Ensure clean state before loading new program
-        // This prevents 'dirty' variables from previous runs leaking into the new session.
-        this.currentSessionId = null; // Clear old session ref
+        this.currentSessionId = null;
+        this._suppressStopEvent = false;
         this.initializeActor();
 
-        // 1. Load Program (Flow)
+        // 1. Load Flow from DB
         const flow = await flowRepository.findById(programId);
         if (!flow) {
             throw new Error(`Flow not found: ${programId}`);
@@ -158,16 +178,14 @@ export class AutomationEngine {
         this.currentProgramName = flow.name;
 
         if (!flow.isActive) {
-            // WARN: We allow loading inactive flows for testing purposes, but log it.
             logger.warn({ programId }, '⚠️ Loading inactive flow into AutomationEngine');
-            // throw new Error(`Flow is not active: ${programId}`);
         }
 
         if (flow.validationStatus === 'INVALID') {
             throw new Error(`Cannot load invalid flow (Draft mode): ${programId}`);
         }
 
-        // 2. Resolve Inputs
+        // 2. Resolve Inputs & Variables
         const variables: Record<string, any> = {};
         if (flow.inputs) {
             for (const input of flow.inputs) {
@@ -187,149 +205,91 @@ export class AutomationEngine {
         const variableDefinitions: Record<string, any> = {};
         if (flow.variables) {
             flow.variables.forEach((v: any) => {
-                // Key by ID if available (preferred), otherwise Name
                 const key = v.id || v.name;
                 const name = v.name;
+                variableDefinitions[key] = { type: v.type, unit: v.unit, scope: v.scope, name: name };
 
-                variableDefinitions[key] = {
-                    type: v.type,
-                    unit: v.unit,
-                    scope: v.scope,
-                    name: name
-                };
-
-                // 2b. INJECTION FIX: Check overrides for this variable
                 let val = undefined;
-
-                // Try finding by ID
                 if (v.id && overrides[v.id] !== undefined) val = overrides[v.id];
-                // Try finding by Name (this is what we see in logs)
                 else if (name && overrides[name] !== undefined) val = overrides[name];
-                // Fallback to default
                 else if (v.default !== undefined) val = v.default;
 
-                // If we found a value, inject it into the runtime map
                 if (val !== undefined) {
                     variables[key] = val;
-                    // Also enable access by Name if ID is primary key (for convenience in Condition checks)
                     if (v.id && name) {
                         variables[name] = val;
                     }
 
-                    // Tolerance Injection: Check and alias tolerance to the ID/Key
-                    // UI sends them as "VariableName_tolerance", but we need "ID_tolerance" accessible
+                    // Tolerance Injection
                     if (name) {
                         const nameTol = `${name}_tolerance`;
                         const nameMode = `${name}_tolerance_mode`;
-
                         const idTol = `${key}_tolerance`;
                         const idMode = `${key}_tolerance_mode`;
 
-                        // 1. Check for overrides using the Readable Name (most common from UI)
                         if (overrides[nameTol] !== undefined) {
-                            variables[nameTol] = overrides[nameTol]; // Keep readable ver
-                            variables[idTol] = overrides[nameTol];   // ALIAS TO ID (Critical Fix)
+                            variables[nameTol] = overrides[nameTol];
+                            variables[idTol] = overrides[nameTol];
                         }
                         if (overrides[nameMode] !== undefined) {
                             variables[nameMode] = overrides[nameMode];
                             variables[idMode] = overrides[nameMode];
                         }
-
-                        // 2. Check for overrides using the ID directly (unlikely but possible)
-                        if (overrides[idTol] !== undefined) {
-                            variables[idTol] = overrides[idTol];
-                        }
-                        if (overrides[idMode] !== undefined) {
-                            variables[idMode] = overrides[idMode];
-                        }
+                        if (overrides[idTol] !== undefined) variables[idTol] = overrides[idTol];
+                        if (overrides[idMode] !== undefined) variables[idMode] = overrides[idMode];
                     }
                 }
             });
         }
 
-        // CRITICAL FIX: Persist System Overrides (like _parentCycleSessionId)
-        // These are not defined in Inputs/Variables but are required for runtime logic (Scheduler)
-        if (overrides['_parentCycleSessionId']) {
-            variables['_parentCycleSessionId'] = overrides['_parentCycleSessionId'];
-        }
-
-        // RICH CONTEXT PERSISTENCE
+        // System Overrides
+        if (overrides['_parentCycleSessionId']) variables['_parentCycleSessionId'] = overrides['_parentCycleSessionId'];
         if (overrides['_triggerReason']) variables['_triggerReason'] = overrides['_triggerReason'];
         if (overrides['_triggerSummary']) variables['_triggerSummary'] = overrides['_triggerSummary'];
         if (overrides['_triggerIndex']) variables['_triggerIndex'] = overrides['_triggerIndex'];
 
-        // Store activeProgramId for event emission
-        if (overrides['activeProgramId']) {
-            this.activeProgramId = overrides['activeProgramId'];
-        }
-        // Store window context for analytics
-        if (overrides['windowId']) {
-            this.currentWindowId = overrides['windowId'];
-        }
-        if (overrides['windowName']) {
-            this.currentWindowName = overrides['windowName'];
-        }
-        if (overrides['executionType']) {
-            this.executionType = overrides['executionType'];
-        } else {
-            this.executionType = null;
-        }
+        // Store metadata for events
+        if (overrides['activeProgramId']) this.activeProgramId = overrides['activeProgramId'];
+        if (overrides['windowId']) this.currentWindowId = overrides['windowId'];
+        if (overrides['windowName']) this.currentWindowName = overrides['windowName'];
+        this.executionType = overrides['executionType'] || null;
 
-        // 3. AUTO-CLEANUP: Soft Kill any zombie sessions in DB
-        // We use 'error' status to indicate it was forcefully terminated (not a clean stop)
+        // 3. Cleanup zombie sessions
         try {
-            await (sessionRepository as any).constructor.name; // Dummy access
             const { ExecutionSessionModel } = require('../persistence/schemas/ExecutionSession.schema');
-
             await ExecutionSessionModel.updateMany(
                 { status: { $in: ['running', 'paused'] } },
-                {
-                    $set: {
-                        status: 'error',
-                        endTime: new Date(),
-                        error: 'Forcefully terminated: Preempted by new Execution'
-                    }
-                }
+                { $set: { status: 'error', endTime: new Date(), error: 'Forcefully terminated: Preempted by new Execution' } }
             );
         } catch (err: any) {
-            logger.warn({ err: err.message }, '⚠️ Auto-Cleanup failed to update old sessions');
+            logger.warn({ err: err.message }, '⚠️ Auto-Cleanup failed');
         }
 
         // 4. Create Session
         const session = await sessionRepository.create({
             programId: flow.id,
-            programName: flow.name, // Persist human-readable name
+            programName: flow.name,
             startTime: new Date(),
-            status: 'loaded', // Initial status
+            status: 'loaded',
             logs: [],
-            context: {
-                resumeState: {},
-                variables: variables, // Store resolved variables in context
-                variableDefinitions: variableDefinitions // Store metadata
-            }
+            context: { resumeState: {}, variables: variables, variableDefinitions: variableDefinitions }
         });
 
         this.currentSessionId = session.id;
-
         logger.info({ sessionId: this.currentSessionId, programId, variables }, '📥 Loading Program Session');
 
-        // 4. Send LOAD event to Machine
+        // 5. Send LOAD event to Machine
         this.actor.send({
             type: 'LOAD',
             programId: flow.id,
             templateId: 'default',
-            blocks: flow.nodes.map((n: any) => ({
-                id: n.id,
-                type: n.type,
-                params: n.params || n.data || {}
-            })),
+            blocks: flow.nodes.map((n: any) => ({ id: n.id, type: n.type, params: n.params || n.data || {} })),
             edges: flow.edges as any[],
-            execContext: { // Pass initial context to machine
-                variables,
-                variableDefinitions,
-                resumeState: {} // FORCE EMPTY STATE
-            }
+            execContext: { variables, variableDefinitions, resumeState: {} }
         } as any);
+
+        // Emit flow:loaded event
+        this.emit('flow:loaded', { flowId: flow.id, sessionId: this.currentSessionId, flowName: flow.name });
 
         return this.currentSessionId!;
     }
@@ -344,9 +304,10 @@ export class AutomationEngine {
         }
 
         this.executionStartTime = Date.now();
+        this._suppressStopEvent = false;
         this.actor.send({ type: 'START' });
 
-        events.emit('automation:program_start', {
+        this.emit('flow:started', {
             programId: this.activeProgramId || 'unknown',
             sessionId: this.currentSessionId!,
             programName: this.currentProgramName || 'Unknown Program',
@@ -372,25 +333,28 @@ export class AutomationEngine {
         this.actor.send({ type: 'RESUME' });
     }
 
+    /**
+     * Cancel current execution flow silently.
+     * Stops the engine but suppresses the 'flow:stopped' event.
+     */
+    public cancelFlow() {
+        logger.info('🛑 Cancelling Flow Silently...');
+        this._suppressStopEvent = true;
+        this.actor.send({ type: 'STOP' });
+    }
+
     public getSnapshot() {
         const snapshot = this.actor.getSnapshot();
-        return {
-            ...snapshot,
-            sessionId: this.currentSessionId
-        };
+        return { ...snapshot, sessionId: this.currentSessionId };
     }
 
     public getStatus() {
         const snapshot = this.getSnapshot();
-        return {
-            status: snapshot.value as string,
-            sessionId: snapshot.sessionId
-        };
+        return { status: snapshot.value as string, sessionId: snapshot.sessionId };
     }
 
     /**
-     * Safety Stop Mechanism
-     * Reverts active resources to their initial state if they are flagged for revert.
+     * Safety Stop Mechanism: Revert active resources to their initial state.
      */
     private async cleanupResources(context: ExecutionContext) {
         if (!context.activeResources) return;
@@ -403,19 +367,14 @@ export class AutomationEngine {
         for (const res of resources) {
             if (res.revertOnStop) {
                 try {
-                    // Only revert if we define "Active=1" and "Initial=0" or vice versa.
-                    // For now, we blindly revert to initialState.
-                    // We also check if the driverId was captured successfully.
                     if (!res.driverId) continue;
-
                     logger.info({ deviceId: res.deviceId, restoreTo: res.initialState }, '🔄 Safety Stop: Reverting Device Status');
-
-                    // We use RELAY_SET as the universal "Set State" command for actuators.
-                    // If complex devices need other commands, this logic might need expansion.
                     await this.deviceService.sendCommand(res.deviceId, res.driverId, 'RELAY_SET', { state: res.initialState });
 
+                    // Emit resource released event
+                    this.emit('resource:released', { deviceId: res.deviceId });
                 } catch (err: any) {
-                    logger.error({ err: err.message, deviceId: res.deviceId }, '❌ Failed to revert device state during Safety Stop');
+                    logger.error({ err: err.message, deviceId: res.deviceId }, '❌ Failed to revert device state');
                 }
             }
         }
@@ -423,7 +382,6 @@ export class AutomationEngine {
 
     /**
      * Helper to resolve variable references in params (e.g. "{{duration}}")
-     * Also injects source unit metadata (_fieldNameSourceUnit) for unit conversion.
      */
     private resolveParams(
         params: Record<string, any>,
@@ -432,14 +390,9 @@ export class AutomationEngine {
         variableDefinitions?: Record<string, any>
     ): Record<string, any> {
         const resolved: Record<string, any> = {};
-
-        // Fields that may need unit conversion (time-based fields for actuators/wait/loop)
         const timeFields = ['duration', 'timeout', 'interval', 'retryDelay'];
 
         for (const [key, value] of Object.entries(params)) {
-            // SPECIAL CASE: Don't resolve 'value' parameter for IF/LOOP blocks
-            // This is critical effectively to preserve the variable reference (e.g. "{{Global var}}")
-            // so the block executor can look up associated metadata like Tolerance.
             if ((blockType === 'IF' || blockType === 'LOOP') && key === 'value') {
                 resolved[key] = value;
                 continue;
@@ -449,7 +402,6 @@ export class AutomationEngine {
                 const varName = value.slice(2, -2).trim();
                 resolved[key] = variables[varName] !== undefined ? variables[varName] : value;
 
-                // Inject source unit metadata for time-related fields
                 if (timeFields.includes(key) && variableDefinitions && variableDefinitions[varName]) {
                     const varDef = variableDefinitions[varName];
                     if (varDef.unit) {
@@ -477,23 +429,6 @@ export class AutomationEngine {
         const executor = this.executors.get(block.type);
         if (!executor) throw new Error(`No executor for block type: ${block.type}`);
 
-        // 0. Sync Context from DB (Critical for Resume)
-        // REMOVED: This causes stale data issues. In-memory context is the source of truth during execution.
-        // DB Sync happens via 'persistState' or on explicit Resume.
-        /*
-        if (this.currentSessionId) {
-            try {
-                const session = await sessionRepository.findById(this.currentSessionId);
-                if (session && session.context) {
-                    if (session.context.resumeState) context.execContext.resumeState = session.context.resumeState;
-                    if (session.context.variables) context.execContext.variables = session.context.variables;
-                    if (session.context.variableDefinitions) context.execContext.variableDefinitions = session.context.variableDefinitions;
-                }
-            } catch (err) { }
-        }
-        */
-
-        // --- ERROR HANDLING & RETRY LOGIC ---
         let params = { ...block.params };
         if (params.mirrorOf) {
             const sourceBlock = context.blocks.get(params.mirrorOf);
@@ -514,54 +449,56 @@ export class AutomationEngine {
                 if (attempts === 0) {
                     const resolvedParamsForUI = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type, context.execContext.variableDefinitions);
 
-                    // Determine meaningful label
                     let label = resolvedParamsForUI.label || block.type;
                     if (block.type === 'LOG') label = `Log: ${resolvedParamsForUI.message || ''}`;
 
-                    // Determine duration if applicable
                     let duration = 0;
                     if (block.type === 'WAIT' && resolvedParamsForUI.duration) duration = Number(resolvedParamsForUI.duration);
-                    // Calculate expected duration for ACTUATOR_SET
                     if (block.type === 'ACTUATOR_SET' && resolvedParamsForUI.action) {
-                        // Duration depends on action type and calibration
-                        // This is an estimate - actual duration comes from the executor
                         const amount = Number(resolvedParamsForUI.amount) || 1;
                         if (resolvedParamsForUI.action === 'DOSE') {
-                            // Rough estimate: 1 dose ≈ 1.15 seconds (based on calibration)
-                            duration = amount * 1150; // ms
+                            duration = amount * 1150;
                         } else if (resolvedParamsForUI.action === 'PULSE_ON' || resolvedParamsForUI.action === 'PULSE_OFF') {
-                            duration = Number(resolvedParamsForUI.duration) * 1000 || 0; // Convert to ms
+                            duration = Number(resolvedParamsForUI.duration) * 1000 || 0;
                         }
                     }
 
-                    events.emit('automation:block_start', {
-                        blockId,
-                        type: block.type,
-                        sessionId: this.currentSessionId,
-                        blockLabel: label,
-                        expectedDuration: duration,
-                        activeProgramId: this.activeProgramId
+                    // Emit block_start event
+                    this.emit('flow:block_start', {
+                        blockId, type: block.type, sessionId: this.currentSessionId,
+                        blockLabel: label, expectedDuration: duration, activeProgramId: this.activeProgramId
                     });
 
-                    // New Rich Execution Event
-                    events.emit('automation:execution_step', {
-                        blockId,
-                        type: block.type,
-                        sessionId: this.currentSessionId,
-                        label: label,
-                        duration: duration,
-                        timestamp: Date.now(),
-                        params: resolvedParamsForUI
+                    // Emit execution_step event
+                    this.emit('flow:execution_step', {
+                        blockId, type: block.type, sessionId: this.currentSessionId,
+                        label: label, duration: duration, timestamp: Date.now(), params: resolvedParamsForUI
                     });
                 }
 
                 const resolvedParams = this.resolveParams({ ...params, _blockId: blockId }, context.execContext.variables || {}, block.type, context.execContext.variableDefinitions);
                 const result = await executor.execute(context.execContext, resolvedParams, signal);
 
-                if (!result.success) throw new Error(result.error || 'Block execution returned failure');
+                // --- UNIFIED FAILURE HANDLING ---
+                if (!result.success) {
+                    const errorMessage = result.error || 'Block execution returned failure';
+
+                    if (onFailure === 'STOP') {
+                        throw new Error(errorMessage);
+                    } else if (onFailure === 'PAUSE') {
+                        logger.warn({ blockId, error: errorMessage }, '⚠️ Block Failed. Action: PAUSE');
+                        this.emit('flow:block_end', {
+                            blockId, blockType: block.type, blockLabel: params.label || block.type,
+                            success: false, error: errorMessage, output: { systemAction: 'PAUSE' },
+                            sessionId: this.currentSessionId, activeProgramId: this.activeProgramId
+                        });
+                        return { success: false, output: { systemAction: 'PAUSE' } };
+                    } else if (onFailure === 'CONTINUE') {
+                        logger.warn({ blockId, error: errorMessage }, '⚠️ Block Failed. Action: CONTINUE');
+                    }
+                }
 
                 // Success!
-                // Calculate Duration if END block
                 let finalSummary = result.summary;
                 if (block.type === 'END' && this.executionStartTime > 0) {
                     const totalMs = Date.now() - this.executionStartTime;
@@ -570,38 +507,18 @@ export class AutomationEngine {
                     finalSummary = `Total Time: ${mins}m ${secs}s`;
                 }
 
-                if (params.notificationChannelId) {
-                    logger.info({ blockId, channel: params.notificationChannelId, mode: params.notificationMode }, '🔔 AutomationEngine: Prepared Notification Payload');
-                } else {
-                    // logger.debug({ blockId }, '🔕 AutomationEngine: No Notification Channel Configured');
-                }
-
-                events.emit('automation:block_end', {
-                    blockId,
-                    blockType: block.type,
-                    blockLabel: params.label || block.type, // Human-readable name
-                    success: true,
-                    output: result.output,
-                    summary: finalSummary, // Pass Summary
-                    logData: result.logData, // <--- Propagate Structured Data
-                    sessionId: this.currentSessionId,
-                    programName: this.currentProgramName, // Expose Flow Name for Logging
-                    activeProgramId: this.activeProgramId, // For ProgramLogService
-                    windowId: this.currentWindowId, // For Analytics Filtering
-                    windowName: this.currentWindowName, // For Analytics Filtering
-                    // Pass Notification Config
-                    notification: {
-                        channelId: params.notificationChannelId,
-                        mode: params.notificationMode,
-                        config: params // Pass full params just in case for templates
-                    }
+                this.emit('flow:block_end', {
+                    blockId, blockType: block.type, blockLabel: params.label || block.type,
+                    success: true, output: result.output, summary: finalSummary, logData: result.logData,
+                    sessionId: this.currentSessionId, programName: this.currentProgramName,
+                    activeProgramId: this.activeProgramId, windowId: this.currentWindowId, windowName: this.currentWindowName,
+                    notification: { channelId: params.notificationChannelId, mode: params.notificationMode, config: params }
                 });
 
                 // Loop Safety Check
                 if (result.output && result.output.status === 'MAX_ITERATIONS') {
                     const onSafety = params.onMaxIterations || 'STOP';
                     if (onSafety === 'CONTINUE') {
-                        // Determine 'exit' edge for loop
                         const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'exit');
                         return { nextBlockId: edge ? edge.target : null };
                     }
@@ -619,9 +536,7 @@ export class AutomationEngine {
                         const expectedHandle = result.output ? 'true' : 'false';
                         const edge = context.edges.find(e => e.source === blockId && e.sourceHandle === expectedHandle);
                         nextBlockId = edge ? edge.target : null;
-
                         logger.info({ blockId, result: result.output, expectedHandle, nextBlockId: nextBlockId || 'null' }, '❓ IF Block Navigation Trace');
-
                         if (!nextBlockId) logger.warn({ blockId, result: result.output }, '⚠️ IF block has no matching edge');
                     }
                     else if (block.type === 'LOOP' && typeof result.output === 'boolean') {
@@ -632,8 +547,22 @@ export class AutomationEngine {
                     else {
                         const edge = context.edges.find(e => e.source === blockId);
                         nextBlockId = edge ? edge.target : null;
-
                         logger.info({ blockId, edgeFound: !!edge, nextBlockId }, 'Graph Navigation Trace');
+                    }
+                }
+
+                // SYSTEM ACTION HANDLER (LOG Block Control)
+                if (result.output && typeof result.output === 'object' && result.output.systemAction) {
+                    const action = result.output.systemAction;
+                    if (action === 'PAUSE') {
+                        const targetBlockId = nextBlockId || blockId;
+                        logger.info({ blockId, action, targetBlockId }, '⏸️ System Action: PAUSE triggered');
+                        this.actor.send({ type: 'PAUSE', resumeState: { blockId: targetBlockId } } as any);
+                    } else if (action === 'STOP') {
+                        logger.info({ blockId }, '🛑 System Action: STOP triggered');
+                        // Emit signal event instead of calling activeProgramService directly
+                        this.emit('flow:signal', { signal: 'STOP_PROGRAM', blockId, activeProgramId: this.activeProgramId });
+                        this.actor.send({ type: 'STOP' });
                     }
                 }
 
@@ -645,8 +574,8 @@ export class AutomationEngine {
                 return {
                     nextBlockId,
                     output: result.output,
-                    variables: context.execContext.variables, // PASS UPDATED VARIABLES BACK
-                    resumeState: currentResumeState // PASS STATE BACK WITHOUT MUTATION
+                    variables: context.execContext.variables,
+                    resumeState: currentResumeState
                 };
             } catch (err: any) {
                 lastError = err;
@@ -657,35 +586,21 @@ export class AutomationEngine {
         }
 
         // FAILURE HANDLING
-        // EMIT BLOCK_END (Failed) so frontend knows to close any groups
-        events.emit('automation:block_end', {
-            blockId,
-            blockType: block.type,
-            blockLabel: params.label || block.type,
-            success: false,
-            error: lastError?.message || 'Block Failed',
-            sessionId: this.currentSessionId,
-            activeProgramId: this.activeProgramId,
-            windowId: this.currentWindowId, // For Analytics Filtering
-            windowName: this.currentWindowName, // For Analytics Filtering
-            // Pass Notification Config
-            notification: {
-                channelId: params.notificationChannelId,
-                mode: params.notificationMode
-            }
+        this.emit('flow:block_end', {
+            blockId, blockType: block.type, blockLabel: params.label || block.type,
+            success: false, error: lastError?.message || 'Block Failed',
+            sessionId: this.currentSessionId, activeProgramId: this.activeProgramId,
+            windowId: this.currentWindowId, windowName: this.currentWindowName,
+            notification: { channelId: params.notificationChannelId, mode: params.notificationMode }
         });
 
         logger.error({ blockId, policy: onFailure }, 'All retries exhausted.');
 
         if (onFailure === 'CONTINUE') {
-            // Try to find a default outgoing edge to continue, prioritizing "escape" paths
             let edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'exit');
             if (!edge) edge = context.edges.find(e => e.source === blockId && e.sourceHandle === 'false');
             if (!edge) edge = context.edges.find(e => e.source === blockId && (e.sourceHandle === 'default' || !e.sourceHandle));
-
-            // Fallback: just take the first one (Legacy behavior)
             if (!edge) edge = context.edges.find(e => e.source === blockId);
-
             return { nextBlockId: edge ? edge.target : null };
         }
 
@@ -697,15 +612,11 @@ export class AutomationEngine {
         if (onFailure === 'GOTO_LABEL') {
             const targetLabelName = params.errorTargetLabel;
             if (targetLabelName) {
-                // If target is explicitly 'END', try to find an actual END block to execute it (for logging visibility)
                 if (targetLabelName === 'END') {
                     const endBlockEntry = Array.from(context.blocks.entries()).find(([_id, b]) => b.type === 'END');
-                    if (endBlockEntry) {
-                        return { nextBlockId: endBlockEntry[0] };
-                    }
-                    return { nextBlockId: null }; // Fallback if no End block
+                    if (endBlockEntry) return { nextBlockId: endBlockEntry[0] };
+                    return { nextBlockId: null };
                 }
-
                 for (const [id, b] of context.blocks) {
                     if (b.type === 'FLOW_CONTROL' && b.params.controlType === 'LABEL' && b.params.labelName === targetLabelName) {
                         return { nextBlockId: id };
@@ -718,4 +629,5 @@ export class AutomationEngine {
     }
 }
 
+// Export singleton instance
 export const automation = new AutomationEngine(historyService, unitConversionService, hardware);

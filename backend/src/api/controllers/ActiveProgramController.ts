@@ -33,8 +33,8 @@ export class ActiveProgramController {
 
     static async start(req: FastifyRequest, reply: FastifyReply) {
         try {
-            const { startTime, expiredStrategy } = req.body as any || {};
-            const result = await activeProgramService.start(startTime, { expiredStrategy });
+            const { startTime, expiredStrategy, resumeStrategy } = req.body as any || {};
+            const result = await activeProgramService.start(startTime, { expiredStrategy, resumeStrategy });
 
             // Check for confirmation requirement
             if ('status' in result && result.status === 'confirmation_required') {
@@ -59,7 +59,8 @@ export class ActiveProgramController {
 
     static async pause(req: FastifyRequest, reply: FastifyReply) {
         try {
-            const active = await activeProgramService.pause();
+            const { timeout } = req.body as any || {};
+            const active = await activeProgramService.pause({ timeout });
             reply.send(active);
         } catch (error: any) {
             reply.status(500).send({ message: error.message });
@@ -220,6 +221,27 @@ export class ActiveProgramController {
             reply.send({ success: true });
         } catch (error: any) {
             reply.status(500).send({ message: error.message });
+        }
+    }
+
+    static async getResumeContext(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { resumeContextService } = require('../../modules/scheduler/ResumeContextService');
+            const context = await resumeContextService.getResumeContext();
+
+            if (!context) {
+                return reply.status(404).send({
+                    success: false,
+                    error: 'No paused program found'
+                });
+            }
+
+            reply.send({ success: true, data: context });
+        } catch (error: any) {
+            reply.status(500).send({
+                success: false,
+                error: error.message
+            });
         }
     }
 }

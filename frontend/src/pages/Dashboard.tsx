@@ -1,61 +1,70 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, Wifi, WifiOff, Clock, Settings, Cpu, Server } from 'lucide-react';
+import { Activity, Wifi, WifiOff, Settings, Cpu, Server, Database, Info, Bell, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../core/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../components/ui/tooltip';
 import { Button } from '../components/ui/button';
 import { ActiveProgramDashboard } from '../components/dashboard/ActiveProgramDashboard';
 import { PinnedSensorsGrid } from '../components/dashboard/PinnedSensorsGrid';
-import { AlertsPanel } from '../components/dashboard/AlertsPanel';
 import { DashboardSettingsDialog } from '../components/dashboard/DashboardSettingsDialog';
 
 export const Dashboard: React.FC = () => {
-    const { systemStatus, devices, activeSession } = useStore();
-    const [programUptime, setProgramUptime] = useState<string>('00:00:00');
+    const { systemStatus, devices } = useStore();
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [controllersCount, setControllersCount] = useState(0);
     const [onlineControllers, setOnlineControllers] = useState(0);
+    const [serverUptime, setServerUptime] = useState<string>('00:00:00');
+    const [serverStartTime, setServerStartTime] = useState<number | null>(null);
 
     const onlineDevices = Array.from(devices.values()).filter((d: any) => d.status === 'online').length;
     const offlineDevices = devices.size - onlineDevices;
 
-    // Program Uptime Counter (if active session exists)
-    useEffect(() => {
-        if (!activeSession?.startTime) {
-            setProgramUptime('00:00:00');
-            return;
-        }
 
-        const updateUptime = () => {
-            const start = new Date(activeSession.startTime).getTime();
-            const diff = Date.now() - start;
+
+    // Server Uptime Counter
+    useEffect(() => {
+        if (!serverStartTime) return;
+
+        const updateServerUptime = () => {
+            const diff = Date.now() - serverStartTime;
             const seconds = Math.floor((diff / 1000) % 60);
             const minutes = Math.floor((diff / (1000 * 60)) % 60);
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            setProgramUptime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            setServerUptime(days > 0 ? `${days} дни ${timeStr}` : timeStr);
         };
 
-        updateUptime();
-        const interval = setInterval(updateUptime, 1000);
+        updateServerUptime();
+        const interval = setInterval(updateServerUptime, 1000);
         return () => clearInterval(interval);
-    }, [activeSession]);
+    }, [serverStartTime]);
 
     // Fetch initial status on mount
     useEffect(() => {
         const fetchStatus = async () => {
             try {
                 // Parallel fetch for speed
-                const [{ status: sysStatus, session }, devicesList, controllersList] = await Promise.all([
+                const [systemData, devicesList, controllersList] = await Promise.all([
                     fetch('/api/system/status').then(r => r.json()),
                     import('../services/hardwareService').then(m => m.hardwareService.getDevices()),
                     import('../services/hardwareService').then(m => m.hardwareService.getControllers())
                 ]);
 
-                useStore.getState().setSystemStatus(sysStatus, (sysStatus as any).dbConnected); // Handle dynamic API response
+                const { status: sysStatus, session, uptimeSeconds, dbConnected } = systemData as any;
+
+                useStore.getState().setSystemStatus(sysStatus, dbConnected);
                 useStore.getState().setActiveSession(session);
                 useStore.getState().setDevices(devicesList);
 
                 setControllersCount(controllersList.length);
                 setOnlineControllers(controllersList.filter((c: any) => c.status === 'online').length);
+
+                // Calculate server start time based on uptimeSeconds from backend
+                if (uptimeSeconds) {
+                    setServerStartTime(Date.now() - (uptimeSeconds * 1000));
+                }
 
             } catch (error) {
                 console.error('Failed to fetch dashboard data:', error);
@@ -79,7 +88,29 @@ export const Dashboard: React.FC = () => {
                 {/* Connection Status */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">System Status</CardTitle>
+                        <div className="flex items-center gap-2">
+                            <CardTitle className="text-sm font-medium">System Status</CardTitle>
+                            <TooltipProvider>
+                                <Tooltip delayDuration={0}>
+                                    <TooltipTrigger>
+                                        <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-[250px] p-4">
+                                        <div className="space-y-2">
+                                            <h4 className="font-semibold text-sm">System Diagnostics</h4>
+                                            <div className="grid grid-cols-[80px_1fr] gap-2 text-xs">
+                                                <span className="text-muted-foreground">Status:</span>
+                                                <span>Monitoring system health</span>
+                                                <span className="text-muted-foreground">Uptime:</span>
+                                                <span>Time since last server restart</span>
+                                                <span className="text-muted-foreground">Icons:</span>
+                                                <span>Backend & DB connectivity</span>
+                                            </div>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                         {systemStatus === 'online' ? (
                             <Wifi className="h-4 w-4 text-green-500" />
                         ) : systemStatus === 'degraded' ? (
@@ -89,12 +120,42 @@ export const Dashboard: React.FC = () => {
                         )}
                     </CardHeader>
                     <CardContent>
-                        <div className={`text-2xl font-bold capitalize ${systemStatus === 'degraded' ? 'text-yellow-500' : ''}`}>
-                            {systemStatus === 'degraded' ? 'Warning' : systemStatus}
+                        <div className="flex items-baseline justify-between">
+                            <div className={`text-2xl font-bold capitalize ${systemStatus === 'degraded' ? 'text-yellow-500' : ''}`}>
+                                {systemStatus === 'degraded' ? 'Warning' : systemStatus}
+                            </div>
+                            <div className="text-xs font-mono text-muted-foreground">
+                                {serverUptime}
+                            </div>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            {systemStatus === 'degraded' ? 'Database Disconnected' : 'Backend connection'}
-                        </p>
+
+                        <div className="flex items-center gap-2 mt-4 pt-2 border-t border-border/50">
+                            {/* Backend Status Icon */}
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <Server className={`h-4 w-4 ${systemStatus === 'offline' ? 'text-destructive' : 'text-green-500'}`} />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Backend Service Status</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+
+                            {/* Database Status Icon */}
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <Database className={`h-4 w-4 ${systemStatus === 'degraded' ? 'text-destructive' : 'text-green-500'}`} />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Database Connection Status</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+
+
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -154,29 +215,31 @@ export const Dashboard: React.FC = () => {
                     </CardContent>
                 </Card>
 
-                {/* Program Uptime */}
+                {/* System Alerts and Notifications */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Program Uptime</CardTitle>
-                        <Clock className="h-4 w-4 text-orange-500" />
+                        <CardTitle className="text-sm font-medium">System Alerts</CardTitle>
+                        <Bell className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{programUptime}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {activeSession ? 'Active program running' : 'No active program'}
-                        </p>
+                        <div className="flex flex-col items-center justify-center py-4 text-center">
+                            <CheckCircle2 className="h-10 w-10 text-green-500 mb-3" />
+                            <h4 className="font-semibold text-sm">No active alerts</h4>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                System is running normally
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Active Program Dashboard */}
-            <ActiveProgramDashboard />
-
             {/* Pinned Sensors Grid */}
             <PinnedSensorsGrid onSettingsClick={() => setSettingsOpen(true)} />
 
-            {/* System Alerts */}
-            <AlertsPanel />
+            {/* Active Program Dashboard */}
+            <ActiveProgramDashboard />
+
+
 
             {/* Settings Dialog */}
             <DashboardSettingsDialog

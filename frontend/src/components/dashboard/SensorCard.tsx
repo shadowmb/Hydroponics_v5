@@ -3,7 +3,7 @@ import { Card, CardContent } from '../ui/card';
 import { Activity, AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
-export type SensorStatus = 'normal' | 'warning' | 'critical' | 'error';
+export type SensorStatus = 'normal' | 'warning' | 'critical' | 'error' | 'success';
 export type TrendDirection = 'up' | 'down' | 'flat' | null;
 
 interface SensorCardProps {
@@ -68,38 +68,64 @@ export const SensorCard: React.FC<SensorCardProps> = ({
     }, [lastUpdate]); // Dependency on the raw prop is fine as long as we parse inside
 
     // Color Logic
-    let cardClass = "border-border";
-    let textClass = "text-foreground";
-    let statusIcon = null;
+    const statusStyles = {
+        normal: {
+            border: 'border-border/50 hover:border-border',
+            bg: 'bg-card',
+            text: 'text-foreground',
+            icon: null
+        },
+        success: {
+            border: 'border-emerald-500/20 hover:border-emerald-500/40',
+            bg: 'bg-emerald-500/5',
+            text: 'text-emerald-500',
+            icon: null
+        },
+        warning: {
+            border: 'border-orange-500/50 hover:border-orange-500',
+            bg: 'bg-orange-500/5',
+            text: 'text-orange-500',
+            icon: null
+        },
+        critical: {
+            border: 'border-red-500/50 hover:border-red-500',
+            bg: 'bg-red-500/10',
+            text: 'text-red-500',
+            icon: <AlertCircle className="h-4 w-4 text-red-500 animate-pulse" />
+        },
+        error: {
+            border: 'border-destructive/50 hover:border-destructive',
+            bg: 'bg-destructive/10',
+            text: 'text-destructive',
+            icon: <AlertCircle className="h-4 w-4 text-destructive" />
+        }
+    };
 
-    if (status === 'critical') {
-        cardClass = "border-destructive bg-destructive/10 animate-in fade-in";
-        textClass = "text-destructive";
-        statusIcon = <AlertCircle className="h-4 w-4 text-destructive animate-pulse" />;
-    } else if (status === 'warning') {
-        cardClass = "border-amber-500 bg-amber-500/10";
-        textClass = "text-amber-500";
-    }
+    const currentStyle = statusStyles[status] || statusStyles.normal;
+
+    const cardClass = `${currentStyle.border} ${currentStyle.bg}`;
+    const textClass = currentStyle.text;
+    const statusIcon = currentStyle.icon;
 
     // Trend Logic
     const renderTrend = () => {
         if (!showTrend) return null;
 
         // Show Flat (-) if null or explicit flat
-        if (trend === 'up') return <TrendingUp className="h-5 w-5 text-emerald-500 animate-pulse" />;
-        if (trend === 'down') return <TrendingDown className="h-5 w-5 text-rose-500 animate-pulse" />;
+        if (trend === 'up') return <TrendingUp className="h-4 w-4 text-emerald-500 animate-pulse" />;
+        if (trend === 'down') return <TrendingDown className="h-4 w-4 text-rose-500 animate-pulse" />;
 
         // Default / Flat state
-        return <Minus className="h-5 w-5 text-muted-foreground/30" />;
+        return <Minus className="h-4 w-4 text-muted-foreground/30" />;
     };
 
     const StatusCard = (
         <Card className={`transition-all duration-300 hover:shadow-md cursor-help ${cardClass}`}>
-            <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
+            <CardContent className="p-3 pb-4">
+                <div className="flex items-start justify-between mb-1">
                     <div className="flex items-center gap-2">
-                        {icon || <Activity className="h-4 w-4 text-muted-foreground" />}
-                        <span className="text-sm font-medium text-muted-foreground truncate max-w-[150px]" title={name}>
+                        {icon || <Activity className="h-3 w-3 text-muted-foreground" />}
+                        <span className="text-xs font-medium text-muted-foreground truncate max-w-[150px]" title={name}>
                             {alias || name}
                         </span>
                     </div>
@@ -108,24 +134,24 @@ export const SensorCard: React.FC<SensorCardProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    {/* Value */}
-                    <div className="flex items-baseline gap-1">
-                        <span className={`text-2xl font-bold tracking-tight ${textClass}`}>
-                            {typeof value === 'number' ? value.toFixed(2) : value}
-                        </span>
-                        {unit && (
-                            <span className="text-sm text-muted-foreground font-medium opacity-80">{unit}</span>
-                        )}
-                    </div>
-
-                    {/* Render Trend Next to Value */}
+                <div className="flex items-center justify-center gap-2">
+                    {/* Render Trend Left of Value */}
                     <div className="flex items-center">
                         {renderTrend()}
                     </div>
+
+                    {/* Value */}
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-xl font-bold tracking-tight ${textClass}`}>
+                            {typeof value === 'number' ? value.toFixed(2) : value}
+                        </span>
+                        {unit && (
+                            <span className="text-xs text-muted-foreground font-medium opacity-80">{unit}</span>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center justify-center gap-2 mt-1">
                     <span className={`text-[10px] uppercase font-bold tracking-wider ${isStale ? 'text-amber-500' : 'text-muted-foreground/60'}`}>
                         {isStale ? '⚠️ No recent data' : timeSince}
                     </span>

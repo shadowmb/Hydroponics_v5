@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import {
     Play, Pause, Square, Clock, Zap, CheckCircle2,
     Circle, Timer, ChevronDown, ChevronRight,
-    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity, CalendarClock, Settings2
+    Sun, Sunrise, Moon, RefreshCw, Trash2, ArrowRight, Pencil, Activity, CalendarClock, Settings2, Ban
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Progress } from '../ui/progress';
@@ -26,7 +26,7 @@ import type { ITimeWindow, ITrigger } from '../programs/types';
 import { AdvancedExecutionLog } from './AdvancedExecutionLog';
 import { VariableConfigModal } from './VariableConfigModal';
 import { NextCheckTimer } from './NextCheckTimer';
-import { ExpiredWindowsDialog } from './ExpiredWindowsDialog';
+import { ResumeProgramDialog, type ResumeContext } from './ResumeProgramDialog';
 import { useSimulation } from '@/context/SimulationContext';
 
 interface AdvancedProgramManagerProps {
@@ -66,6 +66,7 @@ const getStatusColor = (status: string) => {
         case 'active': return 'text-green-600 bg-green-500/10';
         case 'completed': return 'text-blue-600 bg-blue-500/10';
         case 'skipped': return 'text-purple-500 bg-purple-500/10';
+        case 'interrupted': return 'text-orange-500 bg-orange-500/10';
         case 'pending':
         default: return 'text-gray-500 bg-gray-500/10';
     }
@@ -77,6 +78,7 @@ const getBorderColor = (status: string) => {
         case 'active': return 'border-l-green-500';
         case 'completed': return 'border-l-blue-500';
         case 'skipped': return 'border-l-purple-500';
+        case 'interrupted': return 'border-l-orange-500';
         case 'pending':
         default: return 'border-l-gray-400';
     }
@@ -88,6 +90,7 @@ const getStatusIcon = (status: string) => {
         case 'active': return <Play className="h-3 w-3" />;
         case 'completed': return <CheckCircle2 className="h-3 w-3" />;
         case 'skipped': return <ArrowRight className="h-3 w-3" />;
+        case 'interrupted': return <Ban className="h-3 w-3" />;
         case 'pending':
         default: return <Circle className="h-3 w-3" />;
     }
@@ -134,7 +137,7 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     const [editingFullTrigger, setEditingFullTrigger] = useState<ITrigger | null>(null);
     const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false);
     const [editingTriggerWindowId, setEditingTriggerWindowId] = useState<string | null>(null);
-    const [expiredDialogData, setExpiredDialogData] = useState<{ open: boolean, windows: any[] }>({ open: false, windows: [] });
+    const [resumeDialogContext, setResumeDialogContext] = useState<ResumeContext | null>(null);
 
 
     const windows = (program as any).windows || [];
@@ -269,19 +272,31 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
         }
     };
 
-    const handleConfirmExpired = useCallback(async (strategy: 'run' | 'skip') => {
-        setExpiredDialogData(prev => ({ ...prev, open: false })); // Use functional update
+    const handleConfirmResume = useCallback(async (strategy: 'resume_flow' | 'skip_active' | 'stop_program' | 'run_expired' | 'skip_expired' | 'clean_start' | 'terminate_flow') => {
+        setResumeDialogContext(null);
         setProcessing(true);
         try {
-            await activeProgramService.start(undefined, { expiredStrategy: strategy });
-            toast.success(`Program resumed (${strategy === 'skip' ? 'Skipped' : 'Force Run'} expired windows)`);
+            await activeProgramService.start(undefined, { resumeStrategy: strategy });
+
+            if (strategy === 'stop_program') {
+                toast.success('Program Stopped');
+            } else {
+                toast.success('Program Resumed');
+            }
+
+            // Force update to refresh logs and program state
             onUpdate();
+
+            // Small delay to ensure logs are written before refresh
+            setTimeout(() => {
+                onUpdate();
+            }, 500);
         } catch (error) {
             toast.error('Failed to resume with strategy');
         } finally {
             setProcessing(false);
         }
-    }, [onUpdate]); // Add dependency onUpdate
+    }, [onUpdate]);
 
     const handleResume = async () => {
         setProcessing(true);
@@ -289,11 +304,8 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
             const result = await activeProgramService.start();
 
             // Check for confirmation requirement
-            if (result && result.status === 'confirmation_required') {
-                setExpiredDialogData({
-                    open: true,
-                    windows: result.expiredWindows || []
-                });
+            if (result && result.status === 'confirmation_required' && result.resumeContext) {
+                setResumeDialogContext(result.resumeContext);
                 return; // Stop here, wait for user input
             }
 
@@ -623,8 +635,9 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
     // Calculate progress
     const completedCount = windowsState.filter(s => s.status === 'completed').length;
     const skippedCount = windowsState.filter(s => s.status === 'skipped').length;
+    const interruptedCount = windowsState.filter(s => s.status === 'interrupted').length;
     const activeCount = windowsState.filter(s => s.status === 'active').length;
-    const doneCount = completedCount + skippedCount;  // Both count as done
+    const doneCount = completedCount + skippedCount + interruptedCount;  // All count as done
     const totalCount = localWindows.length;
     const progressPercent = totalCount > 0 ? (doneCount / totalCount) * 100 : 0;
 
@@ -846,6 +859,12 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                         {skippedCount} пропуснати
                                     </span>
                                 )}
+                                {interruptedCount > 0 && (
+                                    <span className="flex items-center gap-1 text-orange-500">
+                                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                                        {interruptedCount} прекъснати
+                                    </span>
+                                )}
                                 <span className="flex items-center gap-1 text-gray-500">
                                     <div className="w-2 h-2 rounded-full bg-gray-400" />
                                     {totalCount - doneCount - activeCount} чакащи
@@ -941,7 +960,8 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                                                                 `Пропуснат (до ${new Date(state.skipUntil).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' })})`
                                                                 : 'Пропуснат'
                                                         ) :
-                                                            'Чакащ'}
+                                                            state?.status === 'interrupted' ? 'Прекъснат' :
+                                                                'Чакащ'}
                                             </span>
 
                                             {/* SKIP BUTTON */}
@@ -1320,6 +1340,13 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                 existingWindows={localWindows}
             />
 
+            {/* Resume Dialog */}
+            <ResumeProgramDialog
+                open={!!resumeDialogContext}
+                onConfirm={handleConfirmResume}
+                onCancel={() => setResumeDialogContext(null)}
+            />
+
             {/* Full Trigger Edit Modal */}
             < TriggerModal
                 open={isTriggerModalOpen}
@@ -1330,8 +1357,8 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                 flows={flows}
             />
 
-            {/* Variable Config Modal */}
-            < VariableConfigModal
+            {/* Variable Configuration Modal - Blocks Save until resolved */}
+            <VariableConfigModal
                 isOpen={!!configWindowId}
                 onClose={() => {
                     setConfigWindowId(null);
@@ -1357,14 +1384,6 @@ export const AdvancedProgramManager = ({ program, onUpdate }: AdvancedProgramMan
                         toast.error('Failed to save variables');
                     }
                 }}
-            />
-
-            {/* Expired Windows Dialog */}
-            <ExpiredWindowsDialog
-                open={expiredDialogData.open}
-                expiredWindows={expiredDialogData.windows}
-                onConfirm={handleConfirmExpired}
-                onCancel={() => setExpiredDialogData({ ...expiredDialogData, open: false })}
             />
         </>
     );
